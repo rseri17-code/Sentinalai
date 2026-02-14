@@ -1,0 +1,1 @@
+"""Initialize SentinalAI database schema."""

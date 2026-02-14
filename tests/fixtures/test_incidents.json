@@ -1,0 +1,84 @@
+{
+  "test_incidents": [
+    {
+      "incident_id": "INC12345",
+      "type": "timeout",
+      "summary": "API Gateway timeout spike",
+      "affected_service": "api-gateway",
+      "expected_root_cause_service": "payment-service",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12346",
+      "type": "oomkill",
+      "summary": "user-service OOMKilled",
+      "affected_service": "user-service",
+      "expected_root_cause_service": "user-service",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12347",
+      "type": "error_spike",
+      "summary": "Payment service error spike",
+      "affected_service": "payment-service",
+      "expected_root_cause_service": "payment-service",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12348",
+      "type": "latency",
+      "summary": "search-service response time degradation",
+      "affected_service": "search-service",
+      "expected_root_cause_service": "elasticsearch",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12349",
+      "type": "saturation",
+      "summary": "order-service CPU exhaustion",
+      "affected_service": "order-service",
+      "expected_root_cause_service": "order-service",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12350",
+      "type": "network",
+      "summary": "Inter-service connectivity failure",
+      "affected_service": "inventory-service",
+      "expected_root_cause_service": "kube-dns",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12351",
+      "type": "cascading",
+      "summary": "Cascading failure across checkout flow",
+      "affected_service": "api-gateway",
+      "expected_root_cause_service": "payment-db",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12352",
+      "type": "missing_data",
+      "summary": "notification-service degraded",
+      "affected_service": "notification-service",
+      "expected_root_cause_service": "redis",
+      "severity": "Medium"
+    },
+    {
+      "incident_id": "INC12353",
+      "type": "flapping",
+      "summary": "auth-service intermittent failures",
+      "affected_service": "auth-service",
+      "expected_root_cause_service": "auth-service",
+      "severity": "Medium"
+    },
+    {
+      "incident_id": "INC12354",
+      "type": "silent_failure",
+      "summary": "recommendation-service throughput drop",
+      "affected_service": "recommendation-service",
+      "expected_root_cause_service": "data-pipeline",
+      "severity": "Medium"
+    }
+  ]
+}

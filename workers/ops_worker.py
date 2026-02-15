@@ -10,6 +10,8 @@ from workers.base_worker import BaseWorker
 class OpsWorker(BaseWorker):
     """Worker that interfaces with Moogsoft for incident data."""
 
+    worker_name = "ops_worker"
+
     def __init__(self):
         super().__init__()
         self.register("get_incident_by_id", self._get_incident_by_id)

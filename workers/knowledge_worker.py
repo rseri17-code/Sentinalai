@@ -10,6 +10,8 @@ from workers.base_worker import BaseWorker
 class KnowledgeWorker(BaseWorker):
     """Worker that searches historical incident knowledge base."""
 
+    worker_name = "knowledge_worker"
+
     def __init__(self):
         super().__init__()
         self.register("search_similar", self._search_similar)

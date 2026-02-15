@@ -10,6 +10,8 @@ from workers.base_worker import BaseWorker
 class MetricsWorker(BaseWorker):
     """Worker that interfaces with Sysdig for metrics and events."""
 
+    worker_name = "metrics_worker"
+
     def __init__(self):
         super().__init__()
         self.register("query_metrics", self._query_metrics)

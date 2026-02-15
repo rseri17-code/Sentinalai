@@ -10,6 +10,8 @@ from workers.base_worker import BaseWorker
 class ApmWorker(BaseWorker):
     """Worker that interfaces with Sysdig for golden signals / APM data."""
 
+    worker_name = "apm_worker"
+
     def __init__(self):
         super().__init__()
         self.register("get_golden_signals", self._get_golden_signals)

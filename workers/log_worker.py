@@ -10,6 +10,8 @@ from workers.base_worker import BaseWorker
 class LogWorker(BaseWorker):
     """Worker that interfaces with Splunk for log search and change data."""
 
+    worker_name = "log_worker"
+
     def __init__(self):
         super().__init__()
         self.register("search_logs", self._search_logs)

@@ -12,6 +12,7 @@ Designed to be fully deterministic: same input -> same output.
 
 from __future__ import annotations
 
+import logging
 import re
 from datetime import datetime
 from typing import Any
@@ -22,6 +23,8 @@ from workers.log_worker import LogWorker
 from workers.metrics_worker import MetricsWorker
 from workers.apm_worker import ApmWorker
 from workers.knowledge_worker import KnowledgeWorker
+
+logger = logging.getLogger(__name__)
 
 
 class SentinalAISupervisor:
@@ -46,9 +49,12 @@ class SentinalAISupervisor:
         Returns a dict with keys:
             root_cause, confidence, evidence_timeline, reasoning
         """
+        logger.info("Starting investigation for %s", incident_id)
+
         # Step 1: Fetch incident
         incident = self._fetch_incident(incident_id)
         if not incident:
+            logger.warning("No incident data for %s", incident_id)
             return self._empty_result(incident_id, "No incident data available")
 
         summary = incident.get("summary", "")
@@ -56,12 +62,24 @@ class SentinalAISupervisor:
 
         # Step 2: Classify
         incident_type = classify_incident(summary)
+        logger.info("Classified %s as %s (service=%s)", incident_id, incident_type, service)
 
         # Step 3: Execute playbook
         evidence = self._execute_playbook(incident_type, incident_id, service)
+        logger.info("Playbook complete for %s: %d evidence items", incident_id, len(evidence))
+
+        # Step 3b: Historical context (optional phase 4)
+        historical = self._fetch_historical_context(service, summary)
+        if historical:
+            evidence["historical_context"] = historical
 
         # Step 4: Analyze
-        return self._analyze_evidence(incident_id, incident, incident_type, evidence)
+        result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
+        logger.info(
+            "Investigation complete for %s: confidence=%d",
+            incident_id, result.get("confidence", 0),
+        )
+        return result
 
     # ------------------------------------------------------------------ #
     # Internal: fetch incident
@@ -75,6 +93,21 @@ class SentinalAISupervisor:
             return result.get("incident") if result else None
         except Exception:
             return None
+
+    def _fetch_historical_context(self, service: str, summary: str) -> dict | None:
+        """Optional phase 4: fetch similar historical incidents."""
+        worker = self.workers.get("knowledge_worker")
+        if worker is None:
+            return None
+        try:
+            result = worker.execute(
+                "search_similar", {"service": service, "summary": summary}
+            )
+            if result and result.get("similar_incidents"):
+                return result
+        except Exception:
+            logger.debug("Historical context unavailable for %s", service)
+        return None
 
     # ------------------------------------------------------------------ #
     # Internal: execute playbook
@@ -642,20 +675,26 @@ class SentinalAISupervisor:
         deployment = self._find_deployment(changes)
         cascade_services = self._find_cascade_chain(logs)
 
+        # Identify the origin service from the cascade chain or fall back to incident service
+        origin_service = cascade_services[0] if cascade_services else service
+        downstream_desc = (
+            ", ".join(cascade_services[1:]) if len(cascade_services) > 1
+            else "downstream services"
+        )
+
         if pool_exhaustion and deployment:
             root_cause = (
-                f"database connection pool exhaustion in payment-service "
-                f"caused by slow queries after index drop, cascading to downstream services"
+                f"database connection pool exhaustion in {origin_service} "
+                f"caused by slow queries after index drop, cascading to {downstream_desc}"
             )
             confidence = 85
             reasoning = (
                 f"Cascading failure analysis: A database migration "
                 f"({deployment.get('description', '')}) at "
                 f"{deployment.get('scheduled_start', '')} caused slow queries (full table scans). "
-                f"This led to connection pool exhaustion in payment-service as connections "
-                f"were held longer. The pool exhaustion then cascaded downstream: "
-                f"checkout-service could not process payments, and api-gateway timed out "
-                f"waiting for checkout-service. The cascade propagated through the dependency chain."
+                f"This led to connection pool exhaustion in {origin_service} as connections "
+                f"were held longer. The pool exhaustion then cascaded to {downstream_desc}. "
+                f"The cascade propagated through the dependency chain."
             )
         else:
             root_cause = f"cascading failure from {service}"

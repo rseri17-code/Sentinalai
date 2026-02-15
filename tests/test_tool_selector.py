@@ -6,12 +6,19 @@ means the wrong investigation playbook runs, leading to garbage RCA output.
 These tests exercise every classification path, edge case, and ambiguity.
 """
 
+import os
+import tempfile
+
 import pytest
 from supervisor.tool_selector import (
     classify_incident,
     get_playbook,
     INCIDENT_PLAYBOOKS,
     CLASSIFICATION_KEYWORDS,
+    MCP_TO_WORKER,
+    PHASE_BUDGETS,
+    RATE_LIMITS,
+    ToolSelector,
 )
 
 
@@ -258,6 +265,244 @@ class TestClassificationKeywordsIntegrity:
                 assert kw == kw.lower(), (
                     f"Keyword '{kw}' in {itype} is not lowercase"
                 )
+
+
+# =========================================================================
+# ToolSelector class: YAML-driven selection
+# =========================================================================
+
+class TestToolSelectorInit:
+    """ToolSelector initialization and catalog loading."""
+
+    def test_init_with_default_path(self):
+        """Loads from the default catalog path."""
+        ts = ToolSelector()
+        # May or may not parse depending on YAML validity, but must not crash
+        assert isinstance(ts.catalog, dict)
+
+    def test_init_with_missing_file(self):
+        """Missing catalog file falls back gracefully."""
+        ts = ToolSelector(catalog_path="/nonexistent/path.yaml")
+        assert ts.catalog == {}
+        assert ts.catalog_loaded is False
+
+    def test_init_with_empty_file(self):
+        """Empty YAML file produces empty catalog."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write("")
+            f.flush()
+            ts = ToolSelector(catalog_path=f.name)
+        os.unlink(f.name)
+        assert ts.catalog == {}
+
+    def test_init_with_valid_yaml(self):
+        """Valid YAML loads correctly."""
+        content = "metadata:\n  total_tools: 5\nselection_rules:\n  by_incident_type:\n    timeout:\n      required_tools:\n        - moogsoft.get_incident_by_id\n"
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(content)
+            f.flush()
+            ts = ToolSelector(catalog_path=f.name)
+        os.unlink(f.name)
+        assert ts.catalog_loaded is True
+        assert ts.catalog.get("metadata", {}).get("total_tools") == 5
+
+    def test_init_strips_markdown_fences(self):
+        """Markdown code fences in YAML are stripped before parsing."""
+        content = "key1: value1\n```\nkey2: value2\n```\nkey3: value3\n"
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(content)
+            f.flush()
+            ts = ToolSelector(catalog_path=f.name)
+        os.unlink(f.name)
+        assert ts.catalog_loaded is True
+        assert ts.catalog.get("key1") == "value1"
+
+
+class TestToolSelectorClassify:
+    """ToolSelector.classify_incident_type delegates to module-level function."""
+
+    def test_delegates_to_classify_incident(self):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        assert ts.classify_incident_type("API timeout detected") == "timeout"
+        assert ts.classify_incident_type("OOMKilled") == "oomkill"
+        assert ts.classify_incident_type("nothing matches") == "error_spike"
+
+
+class TestToolSelectorSelectTools:
+    """ToolSelector.select_tools_for_incident returns MCP tool names."""
+
+    def test_fallback_derives_from_playbook(self):
+        """Without catalog, derives tools from hardcoded playbook."""
+        ts = ToolSelector(catalog_path="/nonexistent")
+        tools = ts.select_tools_for_incident("timeout")
+        assert isinstance(tools, list)
+        assert len(tools) >= 3
+        assert "moogsoft.get_incident_by_id" in tools
+
+    def test_with_catalog_uses_selection_rules(self):
+        """With catalog, uses selection_rules."""
+        content = (
+            "selection_rules:\n"
+            "  by_incident_type:\n"
+            "    timeout:\n"
+            "      required_tools:\n"
+            "        - moogsoft.get_incident_by_id\n"
+            "        - splunk.search_oneshot\n"
+            "      optional_tools:\n"
+            "        - signalfx.query_signalfx_metrics\n"
+        )
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(content)
+            f.flush()
+            ts = ToolSelector(catalog_path=f.name)
+        os.unlink(f.name)
+        tools = ts.select_tools_for_incident("timeout")
+        assert "moogsoft.get_incident_by_id" in tools
+        assert "splunk.search_oneshot" in tools
+        assert "signalfx.query_signalfx_metrics" in tools
+
+    def test_unknown_type_falls_back(self):
+        """Unknown incident type falls back to playbook-derived tools."""
+        ts = ToolSelector(catalog_path="/nonexistent")
+        tools = ts.select_tools_for_incident("alien_invasion")
+        assert isinstance(tools, list)
+        assert len(tools) >= 3
+
+    @pytest.mark.parametrize("incident_type", list(INCIDENT_PLAYBOOKS.keys()))
+    def test_all_types_return_tools(self, incident_type):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        tools = ts.select_tools_for_incident(incident_type)
+        assert len(tools) >= 3
+
+
+class TestToolSelectorShouldCallTool:
+    """ToolSelector.should_call_tool checks if a tool is selected."""
+
+    def test_selected_tool_returns_true(self):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        assert ts.should_call_tool("moogsoft.get_incident_by_id", "timeout") is True
+
+    def test_unselected_tool_returns_false(self):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        assert ts.should_call_tool("nonexistent.tool", "timeout") is False
+
+
+class TestToolSelectorPlaybook:
+    """ToolSelector.get_investigation_playbook delegates to get_playbook."""
+
+    @pytest.mark.parametrize("incident_type", list(INCIDENT_PLAYBOOKS.keys()))
+    def test_returns_same_as_module_function(self, incident_type):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        assert ts.get_investigation_playbook(incident_type) == get_playbook(incident_type)
+
+
+class TestToolSelectorWorkflow:
+    """ToolSelector.get_investigation_workflow returns phased workflow."""
+
+    def test_workflow_has_phases(self):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        workflow = ts.get_investigation_workflow("timeout")
+        assert isinstance(workflow, list)
+        assert len(workflow) >= 2
+        phases = [w["phase"] for w in workflow]
+        assert "initial_context" in phases
+        assert "evidence_gathering" in phases
+
+    def test_workflow_initial_context_has_fetch(self):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        workflow = ts.get_investigation_workflow("timeout")
+        initial = [w for w in workflow if w["phase"] == "initial_context"][0]
+        assert initial["steps"][0]["action"] == "get_incident_by_id"
+
+    def test_workflow_has_max_calls(self):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        workflow = ts.get_investigation_workflow("timeout")
+        for phase in workflow:
+            assert "max_calls" in phase
+
+
+class TestToolSelectorBudgets:
+    """ToolSelector.get_phase_budget and get_rate_limit."""
+
+    def test_phase_budget_defaults(self):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        budget = ts.get_phase_budget("evidence_gathering")
+        assert budget.get("max_calls", 0) >= 3 or budget.get("max_seconds", 0) > 0
+
+    def test_rate_limit_defaults(self):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        limit = ts.get_rate_limit("moogsoft")
+        assert "requests_per_minute" in limit
+
+    def test_unknown_server_returns_empty(self):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        assert ts.get_rate_limit("unknown_server") == {}
+
+
+class TestToolSelectorTokenSavings:
+    """ToolSelector.get_token_savings_estimate."""
+
+    def test_returns_savings_info(self):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        savings = ts.get_token_savings_estimate()
+        assert savings["savings_percent"] == 94
+        assert savings["full_catalog_tokens"] > savings["selected_tools_tokens"]
+
+
+class TestToolSelectorMapping:
+    """ToolSelector.map_tool_to_worker and MCP_TO_WORKER constant."""
+
+    def test_map_known_tool(self):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        assert ts.map_tool_to_worker("moogsoft.get_incident_by_id") == "ops_worker"
+        assert ts.map_tool_to_worker("splunk.search_oneshot") == "log_worker"
+        assert ts.map_tool_to_worker("sysdig.golden_signals") == "apm_worker"
+        assert ts.map_tool_to_worker("sysdig.query_metrics") == "metrics_worker"
+        assert ts.map_tool_to_worker("moogsoft.get_historical_analysis") == "knowledge_worker"
+
+    def test_map_unknown_tool_returns_empty(self):
+        ts = ToolSelector(catalog_path="/nonexistent")
+        assert ts.map_tool_to_worker("nonexistent.tool") == ""
+
+    def test_mcp_to_worker_has_key_tools(self):
+        """MCP_TO_WORKER must map all critical investigation tools."""
+        assert "moogsoft.get_incident_by_id" in MCP_TO_WORKER
+        assert "splunk.search_oneshot" in MCP_TO_WORKER
+        assert "sysdig.golden_signals" in MCP_TO_WORKER
+        assert "sysdig.query_metrics" in MCP_TO_WORKER
+        assert "sysdig.get_events" in MCP_TO_WORKER
+        assert "splunk.get_change_data" in MCP_TO_WORKER
+
+    def test_phase_budgets_complete(self):
+        """All four investigation phases must have budgets."""
+        for phase in ("initial_context", "evidence_gathering", "change_correlation", "historical_context"):
+            assert phase in PHASE_BUDGETS
+
+    def test_rate_limits_all_servers(self):
+        """All four MCP servers must have rate limits."""
+        for server in ("moogsoft", "splunk", "sysdig", "signalfx"):
+            assert server in RATE_LIMITS
+
+
+class TestToolSelectorWithRealCatalog:
+    """Test ToolSelector with the actual catalog file from the project."""
+
+    def test_loads_real_catalog(self):
+        """The real catalog in the project should load (markdown fences stripped)."""
+        ts = ToolSelector()  # uses default path
+        # If YAML loaded, check structure; if not, just ensure no crash
+        if ts.catalog_loaded:
+            assert "metadata" in ts.catalog or "selection_rules" in ts.catalog
+
+    def test_selection_rules_property(self):
+        ts = ToolSelector()
+        rules = ts.selection_rules
+        assert isinstance(rules, dict)
+
+    def test_playbooks_property(self):
+        ts = ToolSelector()
+        playbooks = ts.playbooks
+        assert isinstance(playbooks, dict)
 
 
 if __name__ == "__main__":

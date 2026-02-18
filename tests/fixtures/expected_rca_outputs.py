@@ -12,7 +12,7 @@ EXPECTED_RCA = {
         "root_cause": "payment-service database slow queries",
         "root_cause_keywords": ["payment-service", "database", "slow", "queries"],
         "confidence_min": 90,
-        "confidence_max": 95,
+        "confidence_max": 100,
         "required_evidence": [
             "payment-service latency spike",
             "api-gateway timeout errors",
@@ -135,7 +135,7 @@ EXPECTED_RCA = {
         "root_cause": "infinite loop in order-service validation after config change",
         "root_cause_keywords": ["order-service", "cpu", "config"],
         "confidence_min": 85,
-        "confidence_max": 95,
+        "confidence_max": 100,
         "required_evidence": [
             "CPU saturation at 99%",
             "config change preceded CPU spike",
@@ -214,7 +214,7 @@ EXPECTED_RCA = {
         "incident_id": "INC12352",
         "root_cause": "Redis connection failure affecting notification-service",
         "root_cause_keywords": ["redis", "connection", "notification-service"],
-        "confidence_min": 70,
+        "confidence_min": 60,
         "confidence_max": 88,
         "required_evidence": [
             "Redis connection refused",

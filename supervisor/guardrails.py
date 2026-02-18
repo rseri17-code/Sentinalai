@@ -85,7 +85,11 @@ class CircuitState:
 
 
 class CircuitBreakerRegistry:
-    """Registry of circuit breakers, keyed by worker name."""
+    """Registry of circuit breakers, keyed by worker name.
+
+    Can be instantiated per-investigation for isolation, or shared
+    globally for cross-investigation state (e.g., real flaky backends).
+    """
 
     def __init__(self):
         self._circuits: dict[str, CircuitState] = {}
@@ -97,8 +101,13 @@ class CircuitBreakerRegistry:
                 self._circuits[worker_name] = CircuitState()
             return self._circuits[worker_name]
 
+    def reset(self) -> None:
+        """Clear all circuit state. Used between investigations for isolation."""
+        with self._lock:
+            self._circuits.clear()
 
-# Global registry (shared across investigations in the same process)
+
+# Global registry — kept for backward compatibility but prefer per-investigation.
 circuit_registry = CircuitBreakerRegistry()
 
 

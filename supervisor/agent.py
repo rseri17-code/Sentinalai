@@ -18,6 +18,13 @@ from datetime import datetime
 from typing import Any
 
 from supervisor.tool_selector import classify_incident, get_playbook
+from supervisor.receipt import ReceiptCollector
+from supervisor.guardrails import (
+    ExecutionBudget,
+    circuit_registry,
+)
+from supervisor.observability import trace_span
+from supervisor.replay import ReplayStore
 from workers.ops_worker import OpsWorker
 from workers.log_worker import LogWorker
 from workers.metrics_worker import MetricsWorker
@@ -30,7 +37,7 @@ logger = logging.getLogger(__name__)
 class SentinalAISupervisor:
     """Autonomous incident RCA supervisor."""
 
-    def __init__(self):
+    def __init__(self, replay_dir: str | None = None):
         self.workers: dict[str, Any] = {
             "ops_worker": OpsWorker(),
             "log_worker": LogWorker(),
@@ -38,83 +45,133 @@ class SentinalAISupervisor:
             "apm_worker": ApmWorker(),
             "knowledge_worker": KnowledgeWorker(),
         }
+        self._replay_store = ReplayStore(replay_dir) if replay_dir else None
 
     # ------------------------------------------------------------------ #
     # Public API
     # ------------------------------------------------------------------ #
 
-    def investigate(self, incident_id: str) -> dict:
+    def investigate(self, incident_id: str, replay: bool = False) -> dict:
         """Run a full RCA investigation for *incident_id*.
 
         Returns a dict with keys:
             root_cause, confidence, evidence_timeline, reasoning
         """
-        logger.info("Starting investigation for %s", incident_id)
+        # Replay mode: return stored result if available
+        if replay and self._replay_store:
+            stored = self._replay_store.load(incident_id)
+            if stored and "result" in stored:
+                return stored["result"]
 
-        # Step 1: Fetch incident
-        incident = self._fetch_incident(incident_id)
-        if not incident:
-            logger.warning("No incident data for %s", incident_id)
-            return self._empty_result(incident_id, "No incident data available")
+        with trace_span("investigate", case_id=incident_id) as span:
+            receipts = ReceiptCollector(case_id=incident_id)
+            budget = ExecutionBudget(case_id=incident_id)
 
-        summary = incident.get("summary", "")
-        service = incident.get("affected_service", "unknown")
+            logger.info("Starting investigation for %s", incident_id)
 
-        # Step 2: Classify
-        incident_type = classify_incident(summary)
-        logger.info("Classified %s as %s (service=%s)", incident_id, incident_type, service)
+            # Step 1: Fetch incident
+            incident = self._fetch_incident(incident_id, receipts, budget)
+            if not incident:
+                logger.warning("No incident data for %s", incident_id)
+                return self._empty_result(incident_id, "No incident data available")
 
-        # Step 3: Execute playbook
-        evidence = self._execute_playbook(incident_type, incident_id, service)
-        logger.info("Playbook complete for %s: %d evidence items", incident_id, len(evidence))
+            summary = incident.get("summary", "")
+            service = incident.get("affected_service", "unknown")
 
-        # Step 3b: Historical context (optional phase 4)
-        historical = self._fetch_historical_context(service, summary)
-        if historical:
-            evidence["historical_context"] = historical
+            # Step 2: Classify
+            incident_type = classify_incident(summary)
+            span.set_attribute("incident_type", incident_type)
+            span.set_attribute("service", service)
+            logger.info("Classified %s as %s (service=%s)", incident_id, incident_type, service)
 
-        # Step 4: Analyze
-        result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
-        logger.info(
-            "Investigation complete for %s: confidence=%d",
-            incident_id, result.get("confidence", 0),
-        )
-        return result
+            # Step 3: Execute playbook
+            evidence = self._execute_playbook(incident_type, incident_id, service, receipts, budget)
+            logger.info("Playbook complete for %s: %d evidence items", incident_id, len(evidence))
+
+            # Step 3b: Historical context (optional phase 4)
+            historical = self._fetch_historical_context(service, summary, receipts, budget)
+            if historical:
+                evidence["historical_context"] = historical
+
+            # Step 4: Analyze
+            result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
+            span.set_attribute("confidence", result.get("confidence", 0))
+            span.set_attribute("tool_calls", budget.calls_made)
+            logger.info(
+                "Investigation complete for %s: confidence=%d, tool_calls=%d",
+                incident_id, result.get("confidence", 0), budget.calls_made,
+            )
+
+            # Persist replay artifact
+            if self._replay_store:
+                self._replay_store.save(
+                    case_id=incident_id,
+                    receipts=receipts.to_list(),
+                    result=result,
+                    evidence=evidence,
+                )
+
+            return result
 
     # ------------------------------------------------------------------ #
-    # Internal: fetch incident
+    # Internal: fetch incident (with receipts + budget)
     # ------------------------------------------------------------------ #
 
-    def _fetch_incident(self, incident_id: str) -> dict | None:
+    def _fetch_incident(
+        self, incident_id: str,
+        receipts: ReceiptCollector | None = None,
+        budget: ExecutionBudget | None = None,
+    ) -> dict | None:
         try:
+            if budget:
+                budget.record_call()
+            receipt = receipts.start("ops_worker", "get_incident_by_id", {"incident_id": incident_id}) if receipts else None
             result = self.workers["ops_worker"].execute(
                 "get_incident_by_id", {"incident_id": incident_id}
             )
+            if receipt and receipts:
+                receipts.finish(receipt, result)
             return result.get("incident") if result else None
-        except Exception:
+        except Exception as exc:
+            if receipt and receipts:
+                receipts.finish(receipt, None, error=str(exc))
             return None
 
-    def _fetch_historical_context(self, service: str, summary: str) -> dict | None:
+    def _fetch_historical_context(
+        self, service: str, summary: str,
+        receipts: ReceiptCollector | None = None,
+        budget: ExecutionBudget | None = None,
+    ) -> dict | None:
         """Optional phase 4: fetch similar historical incidents."""
         worker = self.workers.get("knowledge_worker")
         if worker is None:
             return None
+        if budget and not budget.can_call():
+            return None
         try:
-            result = worker.execute(
-                "search_similar", {"service": service, "summary": summary}
-            )
+            if budget:
+                budget.record_call()
+            params = {"service": service, "summary": summary}
+            receipt = receipts.start("knowledge_worker", "search_similar", params) if receipts else None
+            result = worker.execute("search_similar", params)
+            if receipt and receipts:
+                receipts.finish(receipt, result)
             if result and result.get("similar_incidents"):
                 return result
-        except Exception:
+        except Exception as exc:
+            if receipt and receipts:
+                receipts.finish(receipt, None, error=str(exc))
             logger.debug("Historical context unavailable for %s", service)
         return None
 
     # ------------------------------------------------------------------ #
-    # Internal: execute playbook
+    # Internal: execute playbook (with receipts + budget + circuit breaker)
     # ------------------------------------------------------------------ #
 
     def _execute_playbook(
-        self, incident_type: str, incident_id: str, service: str
+        self, incident_type: str, incident_id: str, service: str,
+        receipts: ReceiptCollector | None = None,
+        budget: ExecutionBudget | None = None,
     ) -> dict[str, Any]:
         """Run each step in the playbook, collecting evidence."""
         playbook = get_playbook(incident_type)
@@ -125,16 +182,38 @@ class SentinalAISupervisor:
             action = step["action"]
             label = step.get("label", action)
 
+            # Budget check
+            if budget and not budget.can_call():
+                logger.warning("Budget exhausted at step %s for %s", label, incident_id)
+                break
+
+            # Circuit breaker check
+            circuit = circuit_registry.get(worker_name)
+            if circuit.is_open:
+                logger.warning("Circuit open for %s, skipping %s", worker_name, label)
+                evidence[label] = {"error": "circuit_open"}
+                continue
+
             params = self._build_params(step, incident_id, service)
             worker = self.workers.get(worker_name)
             if worker is None:
                 continue
 
+            if budget:
+                budget.record_call()
+
+            receipt = receipts.start(worker_name, action, params) if receipts else None
             try:
                 result = worker.execute(action, params)
                 evidence[label] = result
-            except Exception:
+                circuit.record_success()
+                if receipt and receipts:
+                    receipts.finish(receipt, result)
+            except Exception as exc:
                 evidence[label] = {"error": "worker_unavailable"}
+                circuit.record_failure()
+                if receipt and receipts:
+                    receipts.finish(receipt, None, error=str(exc))
 
         return evidence
 

@@ -1,0 +1,12 @@
+# Core AgentCore SDK
+bedrock-agentcore>=0.1.0
+
+# Fallback HTTP server (used if SDK unavailable)
+fastapi>=0.100.0
+uvicorn>=0.23.0
+
+# Observability (recommended by AgentCore)
+aws-opentelemetry-distro>=0.10.1
+
+# Application dependencies
+pyyaml>=6.0

@@ -1,0 +1,22 @@
+# Amazon Bedrock AgentCore deployment configuration
+# Used by: agentcore configure / agentcore launch
+
+agent:
+  name: sentinalai-observeai
+  entrypoint: agentcore_runtime.py
+  description: >
+    SentinalAI (ObserveAI) - Deterministic incident investigation agent.
+    Performs root cause analysis using rules-first orchestration with
+    evidence-backed outputs and bounded execution.
+
+runtime:
+  port: 8080
+  timeout_seconds: 120
+  memory_mb: 1024
+
+requirements:
+  file: requirements-agentcore.txt
+
+environment:
+  SENTINALAI_REPLAY_DIR: /tmp/sentinalai_replays
+  LOG_LEVEL: INFO

@@ -3,9 +3,10 @@
 Provides OTEL-native tracing with graceful fallback to lightweight
 structured logging when the SDK is not configured or unavailable.
 
-When OTEL_EXPORTER_OTLP_ENDPOINT is set, spans are exported via OTLP
-to the collector (which routes to Splunk HEC).  Otherwise spans are
-logged as structured JSON — zero-cost in tests, full fidelity in prod.
+When OTEL_EXPORTER_OTLP_ENDPOINT is set (default: http://localhost:4318),
+traces and metrics are exported via OTLP/HTTP to the collector (which
+routes to Splunk HEC).  Otherwise spans are logged as structured JSON —
+zero-cost in tests, full fidelity in prod.
 
 GenAI semantic conventions (gen_ai.*) are applied to agent investigation
 spans so Splunk dashboards and eval pipelines can query them natively.
@@ -33,14 +34,16 @@ try:
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.sdk.resources import Resource
-    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
     from opentelemetry import metrics as otel_metrics
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 
-    _otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+    _otlp_endpoint = os.environ.get(
+        "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"
+    )
 
     if _otlp_endpoint:
         _resource = Resource.create({
@@ -48,24 +51,24 @@ try:
             "service.version": "0.1.0",
         })
 
-        # Traces
+        # Traces (OTLP/HTTP)
         _trace_provider = TracerProvider(resource=_resource)
         _trace_provider.add_span_processor(
-            BatchSpanProcessor(OTLPSpanExporter(endpoint=_otlp_endpoint, insecure=True))
+            BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{_otlp_endpoint}/v1/traces"))
         )
         otel_trace.set_tracer_provider(_trace_provider)
         _tracer = otel_trace.get_tracer("sentinalai", "0.1.0")
 
-        # Metrics
+        # Metrics (OTLP/HTTP)
         _metric_reader = PeriodicExportingMetricReader(
-            OTLPMetricExporter(endpoint=_otlp_endpoint, insecure=True),
+            OTLPMetricExporter(endpoint=f"{_otlp_endpoint}/v1/metrics"),
             export_interval_millis=10_000,
         )
         _meter_provider = MeterProvider(resource=_resource, metric_readers=[_metric_reader])
         otel_metrics.set_meter_provider(_meter_provider)
         _meter = otel_metrics.get_meter("sentinalai", "0.1.0")
 
-        logger.info("OTEL tracing + metrics enabled -> %s", _otlp_endpoint)
+        logger.info("OTEL tracing + metrics enabled (HTTP) -> %s", _otlp_endpoint)
     else:
         logger.debug("OTEL_EXPORTER_OTLP_ENDPOINT not set; using lightweight spans")
 

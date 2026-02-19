@@ -22,4 +22,4 @@ environment:
   LOG_LEVEL: INFO
   # OpenTelemetry — set OTEL_EXPORTER_OTLP_ENDPOINT to enable tracing to collector
   OTEL_SERVICE_NAME: sentinalai
-  # OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  # OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318

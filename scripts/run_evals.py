@@ -2,14 +2,19 @@
 """SentinalAI deep eval runner.
 
 Runs all 10 expected incident scenarios through the supervisor,
-computes quality scores per eval dimension, and emits OTEL metrics
-via record_eval_score() so Splunk dashboards populate.
+computes quality scores per eval dimension via both rule-based and
+LLM-as-judge scoring, and emits OTEL metrics to Splunk dashboards.
 
 Usage:
     # With OTEL collector running:
-    OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 python scripts/run_evals.py
+    OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 python scripts/run_evals.py
 
-    # Dry-run (no OTEL, prints results to stdout):
+    # With LLM-as-judge (Bedrock):
+    OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 \
+    AWS_REGION=us-east-1 \
+    python scripts/run_evals.py --llm-judge
+
+    # Dry-run (no OTEL, no Bedrock, prints results to stdout):
     python scripts/run_evals.py
 """
 
@@ -26,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from supervisor.agent import SentinalAISupervisor
 from supervisor.eval_metrics import record_eval_score, record_investigation
+from supervisor.llm_judge import judge_and_record
 from tests.fixtures.expected_rca_outputs import EXPECTED_RCA
 from tests.fixtures.mock_mcp_responses import ALL_MOCKS
 
@@ -164,7 +170,15 @@ def _score_timeline(result: dict, expected: dict) -> float:
     return min(1.0, len(timeline) / 3)
 
 
-def run_eval(incident_id: str) -> dict:
+INCIDENT_TYPES = {
+    "INC12345": "timeout", "INC12346": "oomkill", "INC12347": "error_spike",
+    "INC12348": "latency", "INC12349": "saturation", "INC12350": "network",
+    "INC12351": "cascading", "INC12352": "missing_data", "INC12353": "flapping",
+    "INC12354": "silent_failure",
+}
+
+
+def run_eval(incident_id: str, use_llm_judge: bool = False) -> dict:
     """Run a single eval scenario and return scores."""
     expected = EXPECTED_RCA[incident_id]
     sup = SentinalAISupervisor()
@@ -174,63 +188,66 @@ def run_eval(incident_id: str) -> dict:
     result = sup.investigate(incident_id)
     elapsed_ms = (time.monotonic() - start) * 1000
 
-    # Compute scores
+    incident_type = INCIDENT_TYPES.get(incident_id, "unknown")
+
+    # Rule-based scores (always computed)
     keyword_score = _score_keywords(result, expected)
     confidence_score = _score_confidence_range(result, expected)
     reasoning_score = _score_reasoning_quality(result, expected)
     timeline_score = _score_timeline(result, expected)
     overall = (keyword_score + confidence_score + reasoning_score + timeline_score) / 4
 
-    # Classify incident type from ID
-    incident_types = {
-        "INC12345": "timeout", "INC12346": "oomkill", "INC12347": "error_spike",
-        "INC12348": "latency", "INC12349": "saturation", "INC12350": "network",
-        "INC12351": "cascading", "INC12352": "missing_data", "INC12353": "flapping",
-        "INC12354": "silent_failure",
+    rule_scores = {
+        "root_cause_accuracy": round(keyword_score, 3),
+        "confidence_calibration": round(confidence_score, 3),
+        "reasoning_quality": round(reasoning_score, 3),
+        "timeline_completeness": round(timeline_score, 3),
+        "overall": round(overall, 3),
     }
-    incident_type = incident_types.get(incident_id, "unknown")
 
-    # Emit OTEL eval scores
-    for dimension, score in [
-        ("root_cause_accuracy", keyword_score),
-        ("confidence_calibration", confidence_score),
-        ("reasoning_quality", reasoning_score),
-        ("timeline_completeness", timeline_score),
-        ("overall", overall),
-    ]:
-        record_eval_score(incident_id, incident_type, dimension, score)
+    # Emit rule-based scores as OTEL metrics
+    for dimension, score in rule_scores.items():
+        record_eval_score(incident_id, incident_type, f"rule_based.{dimension}", score)
 
-    return {
+    # LLM-as-judge deep eval (Bedrock) — emits its own OTEL metrics
+    judge_scores = None
+    if use_llm_judge:
+        judge_scores = judge_and_record(incident_id, incident_type, expected, result)
+
+    output = {
         "incident_id": incident_id,
         "incident_type": incident_type,
         "root_cause": result.get("root_cause", ""),
         "confidence": result.get("confidence", 0),
         "elapsed_ms": round(elapsed_ms, 1),
-        "scores": {
-            "root_cause_accuracy": round(keyword_score, 3),
-            "confidence_calibration": round(confidence_score, 3),
-            "reasoning_quality": round(reasoning_score, 3),
-            "timeline_completeness": round(timeline_score, 3),
-            "overall": round(overall, 3),
-        },
+        "scores": rule_scores,
     }
+    if judge_scores:
+        output["llm_judge_scores"] = judge_scores
+
+    return output
 
 
 def main():
+    use_llm_judge = "--llm-judge" in sys.argv
+
     print("=" * 72)
     print("SentinalAI Deep Eval Runner")
+    print(f"  LLM-as-judge: {'ENABLED (Bedrock)' if use_llm_judge else 'disabled (rule-based only)'}")
     print("=" * 72)
 
     results = []
     for incident_id in sorted(EXPECTED_RCA.keys()):
         print(f"\n--- {incident_id} ---")
         try:
-            r = run_eval(incident_id)
+            r = run_eval(incident_id, use_llm_judge=use_llm_judge)
             results.append(r)
             print(f"  Root cause: {r['root_cause'][:80]}")
             print(f"  Confidence: {r['confidence']}")
             print(f"  Duration:   {r['elapsed_ms']}ms")
-            print(f"  Scores:     {json.dumps(r['scores'], indent=None)}")
+            print(f"  Rule scores:  {json.dumps(r['scores'], indent=None)}")
+            if r.get("llm_judge_scores"):
+                print(f"  Judge scores: {json.dumps(r['llm_judge_scores'], indent=None)}")
         except Exception as e:
             print(f"  ERROR: {e}")
             results.append({"incident_id": incident_id, "error": str(e)})
@@ -245,7 +262,7 @@ def main():
         avg_timeline = sum(r["scores"]["timeline_completeness"] for r in scored) / len(scored)
 
         print("\n" + "=" * 72)
-        print("AGGREGATE EVAL SCORES")
+        print("AGGREGATE EVAL SCORES (rule-based)")
         print("=" * 72)
         print(f"  Scenarios run:          {len(scored)}/{len(EXPECTED_RCA)}")
         print(f"  Root cause accuracy:    {avg_accuracy:.1%}")
@@ -253,7 +270,20 @@ def main():
         print(f"  Reasoning quality:      {avg_reasoning:.1%}")
         print(f"  Timeline completeness:  {avg_timeline:.1%}")
         print(f"  Overall:                {avg_overall:.1%}")
-        print("=" * 72)
+
+    # LLM-as-judge summary
+    judged = [r for r in results if r.get("llm_judge_scores")]
+    if judged:
+        print("\n" + "-" * 72)
+        print("AGGREGATE EVAL SCORES (LLM-as-judge)")
+        print("-" * 72)
+        for dim in ["root_cause_accuracy", "causal_reasoning", "evidence_usage",
+                     "timeline_quality", "actionability", "overall"]:
+            vals = [r["llm_judge_scores"][dim] for r in judged if dim in r["llm_judge_scores"]]
+            if vals:
+                print(f"  {dim:30s} {sum(vals)/len(vals):.1%}")
+
+    print("=" * 72)
 
     # Flush metrics if OTEL is configured
     try:

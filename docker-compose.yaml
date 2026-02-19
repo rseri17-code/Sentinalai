@@ -17,7 +17,7 @@ services:
       - SENTINALAI_REPLAY_DIR=/tmp/sentinalai_replays
       - LOG_LEVEL=INFO
       # OTEL SDK auto-configuration
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=sentinalai
       - OTEL_DEPLOYMENT_ENV=${OTEL_DEPLOYMENT_ENV:-dev}
     depends_on:

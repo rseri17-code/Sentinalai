@@ -21,7 +21,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from typing import Any
+
+BEDROCK_TIMEOUT_SECONDS = 30
 
 logger = logging.getLogger("sentinalai.eval.judge")
 
@@ -40,11 +43,17 @@ def _get_bedrock_client():
 
     try:
         import boto3
+        from botocore.config import Config
 
         region = os.environ.get("AWS_REGION", "us-east-1")
         _bedrock_client = boto3.client(
             "bedrock-runtime",
             region_name=region,
+            config=Config(
+                read_timeout=BEDROCK_TIMEOUT_SECONDS,
+                connect_timeout=10,
+                retries={"max_attempts": 2, "mode": "adaptive"},
+            ),
         )
         logger.info("Bedrock client initialized (region=%s)", region)
         return _bedrock_client
@@ -162,7 +171,12 @@ def llm_judge_score(
         response_body = json.loads(response["body"].read())
         content = response_body.get("content", [{}])[0].get("text", "")
 
-        # Parse JSON from response
+        # Strip markdown code fences if LLM wraps JSON in ```json ... ```
+        content = content.strip()
+        md_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", content, re.DOTALL)
+        if md_match:
+            content = md_match.group(1).strip()
+
         scores = json.loads(content)
 
         return {

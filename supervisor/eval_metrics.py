@@ -19,6 +19,7 @@ Metric naming follows OpenTelemetry semantic conventions:
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Any
 
 from supervisor.observability import get_meter
@@ -31,18 +32,23 @@ logger = logging.getLogger("sentinalai.eval")
 # =========================================================================
 
 _instruments: dict[str, Any] = {}
+_instruments_lock = threading.Lock()
 
 
 def _get_or_create(name: str, factory, **kwargs):
-    """Get a cached instrument or create one from the meter."""
+    """Get a cached instrument or create one from the meter (thread-safe)."""
     if name in _instruments:
         return _instruments[name]
-    meter = get_meter()
-    if meter is None:
-        return None
-    inst = factory(name, **kwargs)
-    _instruments[name] = inst
-    return inst
+    with _instruments_lock:
+        # Double-check after acquiring lock
+        if name in _instruments:
+            return _instruments[name]
+        meter = get_meter()
+        if meter is None:
+            return None
+        inst = factory(name, **kwargs)
+        _instruments[name] = inst
+        return inst
 
 
 def _counter(name: str, **kwargs):

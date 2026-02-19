@@ -276,12 +276,17 @@ class SentinalAISupervisor:
                 incident_id, confidence, budget.calls_made,
             )
 
-            # Persist replay artifact
+            # Persist replay artifact (include hypothesis metadata for eval audit)
             if self._replay_store:
+                replay_result = {
+                    **result,
+                    "hypothesis_count": hypothesis_count,
+                    "winner_hypothesis": winner_hypothesis,
+                }
                 self._replay_store.save(
                     case_id=incident_id,
                     receipts=receipts.to_list(),
-                    result=result,
+                    result=replay_result,
                     evidence=evidence,
                 )
 

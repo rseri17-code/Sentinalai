@@ -3,7 +3,7 @@
 Provides OTEL-native tracing with graceful fallback to lightweight
 structured logging when the SDK is not configured or unavailable.
 
-When OTEL_EXPORTER_OTLP_ENDPOINT is set (default: http://localhost:4318),
+When OTEL_EXPORTER_OTLP_ENDPOINT is set (e.g. http://localhost:4318),
 traces and metrics are exported via OTLP/HTTP to the collector (which
 routes to Splunk HEC).  Otherwise spans are logged as structured JSON —
 zero-cost in tests, full fidelity in prod.
@@ -41,9 +41,7 @@ try:
     from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
     from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 
-    _otlp_endpoint = os.environ.get(
-        "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"
-    )
+    _otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "")
 
     if _otlp_endpoint:
         _resource = Resource.create({

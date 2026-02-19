@@ -28,7 +28,20 @@ from supervisor.guardrails import (
     MAX_RETRIES_PER_CALL,
     circuit_registry,
 )
-from supervisor.observability import trace_span
+from supervisor.observability import (
+    trace_span,
+    GENAI_SYSTEM,
+    GENAI_OPERATION_NAME,
+    EVAL_INCIDENT_TYPE,
+    EVAL_SERVICE,
+    EVAL_CONFIDENCE,
+    EVAL_ROOT_CAUSE,
+    EVAL_TOOL_CALLS,
+    EVAL_HYPOTHESIS_COUNT,
+    EVAL_WINNER_NAME,
+    EVAL_EVIDENCE_SOURCES,
+    EVAL_BUDGET_REMAINING,
+)
 from supervisor.replay import ReplayStore
 from workers.ops_worker import OpsWorker
 from workers.log_worker import LogWorker
@@ -163,6 +176,10 @@ class SentinalAISupervisor:
                 return stored["result"]
 
         with trace_span("investigate", case_id=incident_id) as span:
+            # GenAI semantic conventions for agent observability
+            span.set_attribute(GENAI_SYSTEM, "sentinalai")
+            span.set_attribute(GENAI_OPERATION_NAME, "investigate")
+
             receipts = ReceiptCollector(case_id=incident_id)
             budget = ExecutionBudget(case_id=incident_id)
 
@@ -182,8 +199,8 @@ class SentinalAISupervisor:
 
             # Step 2: Classify
             incident_type = classify_incident(summary)
-            span.set_attribute("incident_type", incident_type)
-            span.set_attribute("service", service)
+            span.set_attribute(EVAL_INCIDENT_TYPE, incident_type)
+            span.set_attribute(EVAL_SERVICE, service)
             logger.info("Classified %s as %s (service=%s)", incident_id, incident_type, service)
 
             # Step 3: Execute playbook
@@ -199,8 +216,14 @@ class SentinalAISupervisor:
 
             # Step 4: Analyze
             result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
-            span.set_attribute("confidence", result.get("confidence", 0))
-            span.set_attribute("tool_calls", budget.calls_made)
+
+            # Eval / observability attributes for Splunk dashboards
+            span.set_attribute(EVAL_CONFIDENCE, result.get("confidence", 0))
+            span.set_attribute(EVAL_ROOT_CAUSE, result.get("root_cause", ""))
+            span.set_attribute(EVAL_TOOL_CALLS, budget.calls_made)
+            span.set_attribute(EVAL_BUDGET_REMAINING, budget.max_calls - budget.calls_made)
+            span.set_attribute(EVAL_EVIDENCE_SOURCES, len(evidence))
+
             logger.info(
                 "Investigation complete for %s: confidence=%d, tool_calls=%d",
                 incident_id, result.get("confidence", 0), budget.calls_made,

@@ -1,0 +1,44 @@
+# SentinalAI with OpenTelemetry Collector sidecar
+# Traces, metrics, and logs flow: agent -> OTLP -> collector -> Splunk HEC
+#
+# Usage:
+#   export SPLUNK_HEC_TOKEN=your-token
+#   export SPLUNK_HEC_ENDPOINT=https://your-splunk:8088/services/collector
+#   docker compose up --build
+
+services:
+  sentinalai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SENTINALAI_REPLAY_DIR=/tmp/sentinalai_replays
+      - LOG_LEVEL=INFO
+      # OTEL SDK auto-configuration
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=sentinalai
+      - OTEL_DEPLOYMENT_ENV=${OTEL_DEPLOYMENT_ENV:-dev}
+    depends_on:
+      otel-collector:
+        condition: service_started
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.146.0
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    environment:
+      - SPLUNK_HEC_TOKEN=${SPLUNK_HEC_TOKEN}
+      - SPLUNK_HEC_ENDPOINT=${SPLUNK_HEC_ENDPOINT}
+      - SPLUNK_HEC_INSECURE=${SPLUNK_HEC_INSECURE:-true}
+      - SPLUNK_TRACES_INDEX=${SPLUNK_TRACES_INDEX:-traces}
+      - SPLUNK_METRICS_INDEX=${SPLUNK_METRICS_INDEX:-metrics}
+      - SPLUNK_LOGS_INDEX=${SPLUNK_LOGS_INDEX:-main}
+      - OTEL_DEPLOYMENT_ENV=${OTEL_DEPLOYMENT_ENV:-dev}
+    restart: unless-stopped

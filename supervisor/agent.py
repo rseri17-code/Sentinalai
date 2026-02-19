@@ -42,6 +42,12 @@ from supervisor.observability import (
     EVAL_EVIDENCE_SOURCES,
     EVAL_BUDGET_REMAINING,
 )
+from supervisor.eval_metrics import (
+    record_investigation,
+    record_worker_call,
+    record_evidence_completeness,
+    record_receipt_summary,
+)
 from supervisor.replay import ReplayStore
 from workers.ops_worker import OpsWorker
 from workers.log_worker import LogWorker
@@ -217,16 +223,57 @@ class SentinalAISupervisor:
             # Step 4: Analyze
             result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
 
+            confidence = result.get("confidence", 0)
+            hypothesis_count = result.pop("_hypothesis_count", 0)
+            winner_hypothesis = result.pop("_winner_hypothesis", "none")
+
             # Eval / observability attributes for Splunk dashboards
-            span.set_attribute(EVAL_CONFIDENCE, result.get("confidence", 0))
+            span.set_attribute(EVAL_CONFIDENCE, confidence)
             span.set_attribute(EVAL_ROOT_CAUSE, result.get("root_cause", ""))
             span.set_attribute(EVAL_TOOL_CALLS, budget.calls_made)
             span.set_attribute(EVAL_BUDGET_REMAINING, budget.max_calls - budget.calls_made)
             span.set_attribute(EVAL_EVIDENCE_SOURCES, len(evidence))
+            span.set_attribute(EVAL_HYPOTHESIS_COUNT, hypothesis_count)
+            span.set_attribute(EVAL_WINNER_NAME, winner_hypothesis)
+
+            # Deep eval metrics -> OTEL metrics pipeline -> Splunk
+            elapsed = span.elapsed_ms
+            record_investigation(
+                incident_id=incident_id,
+                incident_type=incident_type,
+                service=service,
+                confidence=confidence,
+                root_cause=result.get("root_cause", ""),
+                tool_calls=budget.calls_made,
+                evidence_sources=len(evidence),
+                hypothesis_count=hypothesis_count,
+                winner_hypothesis=winner_hypothesis,
+                elapsed_ms=elapsed,
+            )
+
+            # Evidence completeness metrics
+            record_evidence_completeness(
+                incident_type=incident_type,
+                logs_available=bool(evidence.get("search_logs")),
+                signals_available=bool(evidence.get("get_golden_signals")),
+                metrics_available=bool(evidence.get("query_metrics") or evidence.get("get_resource_metrics")),
+                events_available=bool(evidence.get("get_events")),
+                changes_available=bool(evidence.get("get_change_data")),
+            )
+
+            # Receipt summary metrics
+            receipt_summary = receipts.summary()
+            record_receipt_summary(
+                incident_type=incident_type,
+                total_calls=receipt_summary["total_calls"],
+                succeeded=receipt_summary["succeeded"],
+                failed=receipt_summary["failed"],
+                total_elapsed_ms=receipt_summary["total_elapsed_ms"],
+            )
 
             logger.info(
                 "Investigation complete for %s: confidence=%d, tool_calls=%d",
-                incident_id, result.get("confidence", 0), budget.calls_made,
+                incident_id, confidence, budget.calls_made,
             )
 
             # Persist replay artifact
@@ -278,17 +325,22 @@ class SentinalAISupervisor:
 
             receipt = receipts.start(worker_name, action, params) if receipts else None
 
+            call_start = time.monotonic()
+
             try:
                 # W4: Timeout guard
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                     future = executor.submit(worker.execute, action, params)
                     result = future.result(timeout=self._call_timeout)
 
+                call_elapsed = (time.monotonic() - call_start) * 1000
                 if receipt and receipts:
                     receipts.finish(receipt, result)
+                record_worker_call(worker_name, action, "success", call_elapsed)
                 return result
 
             except concurrent.futures.TimeoutError:
+                call_elapsed = (time.monotonic() - call_start) * 1000
                 last_error = f"timeout after {self._call_timeout}s"
                 if receipt and receipts:
                     receipt.status = "timeout"
@@ -297,15 +349,18 @@ class SentinalAISupervisor:
                     receipt.elapsed_ms = round(
                         (receipt.end_ts - receipt.start_ts) * 1000, 1
                     )
+                record_worker_call(worker_name, action, "timeout", call_elapsed)
                 logger.warning(
                     "Timeout: %s.%s exceeded %ss",
                     worker_name, action, self._call_timeout,
                 )
 
             except Exception as exc:
+                call_elapsed = (time.monotonic() - call_start) * 1000
                 last_error = str(exc)
                 if receipt and receipts:
                     receipts.finish(receipt, None, error=last_error)
+                record_worker_call(worker_name, action, "error", call_elapsed)
                 logger.warning(
                     "Error in %s.%s: %s (attempt %d/%d)",
                     worker_name, action, exc, attempt + 1, attempts,
@@ -414,10 +469,10 @@ class SentinalAISupervisor:
 
             if isinstance(result, dict) and result.get("error"):
                 evidence[label] = result
-                circuit.record_failure()
+                circuit.record_failure(worker_name)
             else:
                 evidence[label] = result
-                circuit.record_success()
+                circuit.record_success(worker_name)
 
         return evidence
 
@@ -503,6 +558,8 @@ class SentinalAISupervisor:
             "confidence": confidence,
             "evidence_timeline": timeline,
             "reasoning": reasoning,
+            "_hypothesis_count": len(hypotheses),
+            "_winner_hypothesis": winner.name if winner else "none",
         }
 
     # ------------------------------------------------------------------ #

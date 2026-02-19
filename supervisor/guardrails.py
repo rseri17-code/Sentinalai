@@ -15,6 +15,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from supervisor.eval_metrics import record_circuit_breaker_trip, record_budget_exhausted
+
 logger = logging.getLogger(__name__)
 
 # =========================================================================
@@ -76,12 +78,18 @@ class CircuitState:
             return False
         return True
 
-    def record_failure(self) -> None:
+    def record_failure(self, worker_name: str = "") -> None:
+        was_open = self.is_open
         self.failure_count += 1
         self.last_failure_time = time.monotonic()
+        if not was_open and self.is_open and worker_name:
+            record_circuit_breaker_trip(worker_name, "closed_to_open")
 
-    def record_success(self) -> None:
+    def record_success(self, worker_name: str = "") -> None:
+        was_open = self.failure_count >= self.threshold
         self.failure_count = 0
+        if was_open and worker_name:
+            record_circuit_breaker_trip(worker_name, "half_open_to_closed")
 
 
 class CircuitBreakerRegistry:

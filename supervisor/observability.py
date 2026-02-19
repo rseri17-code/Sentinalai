@@ -26,6 +26,7 @@ logger = logging.getLogger("sentinalai.trace")
 # =========================================================================
 
 _tracer = None  # real OTEL tracer, or None
+_meter = None   # real OTEL meter, or None
 
 try:
     from opentelemetry import trace as otel_trace
@@ -34,6 +35,11 @@ try:
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
+    from opentelemetry import metrics as otel_metrics
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+
     _otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "")
 
     if _otlp_endpoint:
@@ -41,18 +47,35 @@ try:
             "service.name": os.environ.get("OTEL_SERVICE_NAME", "sentinalai"),
             "service.version": "0.1.0",
         })
-        _provider = TracerProvider(resource=_resource)
-        _provider.add_span_processor(
+
+        # Traces
+        _trace_provider = TracerProvider(resource=_resource)
+        _trace_provider.add_span_processor(
             BatchSpanProcessor(OTLPSpanExporter(endpoint=_otlp_endpoint, insecure=True))
         )
-        otel_trace.set_tracer_provider(_provider)
+        otel_trace.set_tracer_provider(_trace_provider)
         _tracer = otel_trace.get_tracer("sentinalai", "0.1.0")
-        logger.info("OTEL tracing enabled -> %s", _otlp_endpoint)
+
+        # Metrics
+        _metric_reader = PeriodicExportingMetricReader(
+            OTLPMetricExporter(endpoint=_otlp_endpoint, insecure=True),
+            export_interval_millis=10_000,
+        )
+        _meter_provider = MeterProvider(resource=_resource, metric_readers=[_metric_reader])
+        otel_metrics.set_meter_provider(_meter_provider)
+        _meter = otel_metrics.get_meter("sentinalai", "0.1.0")
+
+        logger.info("OTEL tracing + metrics enabled -> %s", _otlp_endpoint)
     else:
         logger.debug("OTEL_EXPORTER_OTLP_ENDPOINT not set; using lightweight spans")
 
 except ImportError:
     logger.debug("opentelemetry SDK not installed; using lightweight spans")
+
+
+def get_meter():
+    """Return the OTEL meter (or None if SDK not configured)."""
+    return _meter
 
 
 # =========================================================================

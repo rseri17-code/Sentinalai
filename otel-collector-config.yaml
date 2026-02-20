@@ -8,11 +8,13 @@
 #   SPLUNK_METRICS_INDEX    - Splunk index for metrics (default: metrics)
 #   SPLUNK_LOGS_INDEX       - Splunk index for logs    (default: main)
 
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
 receivers:
   otlp:
     protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
 
@@ -24,6 +26,7 @@ processors:
 
   batch:
     send_batch_size: 512
+    send_batch_max_size: 1024
     timeout: 5s
 
   resourcedetection:
@@ -42,6 +45,13 @@ processors:
         value: ${env:OTEL_DEPLOYMENT_ENV:-dev}
         action: upsert
 
+  filter/health:
+    error_mode: ignore
+    traces:
+      span:
+        - 'attributes["http.target"] == "/ping"'
+        - 'attributes["url.path"] == "/ping"'
+
 exporters:
   splunk_hec/traces:
     token: "${env:SPLUNK_HEC_TOKEN}"
@@ -51,6 +61,15 @@ exporters:
     index: "${env:SPLUNK_TRACES_INDEX:-traces}"
     tls:
       insecure_skip_verify: ${env:SPLUNK_HEC_INSECURE:-true}
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+    sending_queue:
+      enabled: true
+      num_consumers: 4
+      queue_size: 1000
 
   splunk_hec/metrics:
     token: "${env:SPLUNK_HEC_TOKEN}"
@@ -61,6 +80,15 @@ exporters:
     use_multi_metric_format: true
     tls:
       insecure_skip_verify: ${env:SPLUNK_HEC_INSECURE:-true}
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+    sending_queue:
+      enabled: true
+      num_consumers: 4
+      queue_size: 1000
 
   splunk_hec/logs:
     token: "${env:SPLUNK_HEC_TOKEN}"
@@ -70,20 +98,32 @@ exporters:
     index: "${env:SPLUNK_LOGS_INDEX:-main}"
     tls:
       insecure_skip_verify: ${env:SPLUNK_HEC_INSECURE:-true}
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+    sending_queue:
+      enabled: true
+      num_consumers: 4
+      queue_size: 1000
 
   # Debug exporter for local development (stdout)
   debug:
     verbosity: basic
 
 service:
+  extensions: [health_check]
   telemetry:
     logs:
       level: info
+    metrics:
+      address: 0.0.0.0:8888
 
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, resourcedetection, attributes/agent_metadata, batch]
+      processors: [memory_limiter, resourcedetection, attributes/agent_metadata, filter/health, batch]
       exporters: [splunk_hec/traces]
 
     metrics:

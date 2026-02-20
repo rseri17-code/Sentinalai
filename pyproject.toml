@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentinalai"
+version = "0.1.0"
+description = "Autonomous incident RCA agent - deterministic, policy-governed SRE agent"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.39.0",
+    "fastapi>=0.104.0",
+    "httpx>=0.25.0",
+    "openai>=1.6.0",
+    "opentelemetry-api>=1.24.0",
+    "opentelemetry-sdk>=1.24.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.24.0",
+    "pgvector>=0.2.4",
+    "psycopg2-binary>=2.9.9",
+    "pydantic>=2.5.0",
+    "pyyaml>=6.0.1",
+    "uvicorn>=0.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "pytest-timeout>=2.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+timeout = 120
+
+[tool.setuptools.packages.find]
+include = ["supervisor*", "workers*", "database*"]

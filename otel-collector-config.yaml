@@ -1,0 +1,97 @@
+# OpenTelemetry Collector configuration for SentinalAI
+# Routes agent traces, metrics, and logs to Splunk via HEC.
+#
+# Environment variables (set in docker-compose or agentcore env):
+#   SPLUNK_HEC_TOKEN        - Splunk HTTP Event Collector token
+#   SPLUNK_HEC_ENDPOINT     - e.g. https://splunk:8088/services/collector
+#   SPLUNK_TRACES_INDEX     - Splunk index for traces  (default: traces)
+#   SPLUNK_METRICS_INDEX    - Splunk index for metrics (default: metrics)
+#   SPLUNK_LOGS_INDEX       - Splunk index for logs    (default: main)
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 2s
+    limit_mib: 256
+    spike_limit_mib: 64
+
+  batch:
+    send_batch_size: 512
+    timeout: 5s
+
+  resourcedetection:
+    detectors: [env, system]
+    timeout: 5s
+
+  attributes/agent_metadata:
+    actions:
+      - key: service.name
+        value: sentinalai
+        action: upsert
+      - key: service.version
+        value: "0.1.0"
+        action: upsert
+      - key: deployment.environment
+        value: ${env:OTEL_DEPLOYMENT_ENV:-dev}
+        action: upsert
+
+exporters:
+  splunk_hec/traces:
+    token: "${env:SPLUNK_HEC_TOKEN}"
+    endpoint: "${env:SPLUNK_HEC_ENDPOINT}"
+    source: sentinalai
+    sourcetype: otel:traces
+    index: "${env:SPLUNK_TRACES_INDEX:-traces}"
+    tls:
+      insecure_skip_verify: ${env:SPLUNK_HEC_INSECURE:-true}
+
+  splunk_hec/metrics:
+    token: "${env:SPLUNK_HEC_TOKEN}"
+    endpoint: "${env:SPLUNK_HEC_ENDPOINT}"
+    source: sentinalai
+    sourcetype: otel:metrics
+    index: "${env:SPLUNK_METRICS_INDEX:-metrics}"
+    use_multi_metric_format: true
+    tls:
+      insecure_skip_verify: ${env:SPLUNK_HEC_INSECURE:-true}
+
+  splunk_hec/logs:
+    token: "${env:SPLUNK_HEC_TOKEN}"
+    endpoint: "${env:SPLUNK_HEC_ENDPOINT}"
+    source: sentinalai
+    sourcetype: otel:logs
+    index: "${env:SPLUNK_LOGS_INDEX:-main}"
+    tls:
+      insecure_skip_verify: ${env:SPLUNK_HEC_INSECURE:-true}
+
+  # Debug exporter for local development (stdout)
+  debug:
+    verbosity: basic
+
+service:
+  telemetry:
+    logs:
+      level: info
+
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, attributes/agent_metadata, batch]
+      exporters: [splunk_hec/traces]
+
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, attributes/agent_metadata, batch]
+      exporters: [splunk_hec/metrics]
+
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, attributes/agent_metadata, batch]
+      exporters: [splunk_hec/logs]

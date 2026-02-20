@@ -1,0 +1,1003 @@
+# SentinalAI MCP Tool Catalog
+
+# Comprehensive tool discovery and selection guide for intelligent RCA agent
+
+# Version: 1.0
+
+# Last Updated: 2024-02-14
+
+metadata:
+total_tools: 89
+mcp_servers:
+- name: moogsoft
+url: http://localhost:5001
+tools: 6
+primary_use: incident_correlation
+- name: splunk
+url: http://localhost:5002
+tools: 16
+primary_use: log_analysis
+- name: sysdig
+url: http://localhost:5003
+tools: 50
+primary_use: infrastructure_metrics
+- name: signalfx
+url: http://localhost:5005
+tools: 17
+primary_use: application_monitoring
+
+# =============================================================================
+
+# TOOL SELECTION HEURISTICS
+
+# =============================================================================
+
+# Use this section to intelligently select tools based on incident characteristics
+
+selection_rules:
+by_incident_type:
+timeout:
+required_tools:
+- moogsoft.get_incident_by_id
+- splunk.search_oneshot
+- sysdig.golden_signals
+optional_tools:
+- signalfx.query_signalfx_metrics
+reasoning: “Timeouts require log analysis for error patterns + latency metrics”
+
+```
+oomkill:
+  required_tools:
+    - splunk.search_oneshot
+    - sysdig.query_metrics
+    - sysdig.get_events
+  optional_tools:
+    - moogsoft.get_historical_analysis
+  reasoning: "OOMKill needs memory trend analysis + event correlation"
+  
+error_spike:
+  required_tools:
+    - splunk.search_oneshot
+    - splunk.app_change_data
+    - sysdig.get_events
+  optional_tools:
+    - splunk.get_change_data
+  reasoning: "Error spikes often correlate with deployments"
+  
+latency:
+  required_tools:
+    - sysdig.golden_signals
+    - sysdig.query_metrics
+    - splunk.search_oneshot
+  optional_tools:
+    - signalfx.query_signalfx_metrics
+  reasoning: "Latency requires performance metrics + dependency analysis"
+  
+resource_saturation:
+  required_tools:
+    - sysdig.query_metrics
+    - sysdig.golden_signals
+    - splunk.get_host_metrics
+  optional_tools:
+    - sysdig.discover_metrics
+  reasoning: "Resource issues need infrastructure metrics"
+```
+
+by_investigation_phase:
+initial_context:
+tools:
+- moogsoft.get_incident_by_id
+- moogsoft.get_critical_incidents
+max_calls: 2
+
+```
+evidence_gathering:
+  tools:
+    - splunk.search_oneshot
+    - sysdig.query_metrics
+    - sysdig.golden_signals
+  max_calls: 5
+  
+change_correlation:
+  tools:
+    - splunk.get_change_data
+    - splunk.app_change_data
+    - sysdig.get_events
+  max_calls: 3
+  
+historical_context:
+  tools:
+    - moogsoft.get_historical_analysis
+    - moogsoft.get_closed_incidents
+  max_calls: 2
+```
+
+# =============================================================================
+
+# MOOGSOFT MCP TOOLS (6 tools)
+
+# =============================================================================
+
+# Primary: Incident correlation and management
+
+moogsoft_tools:
+server: http://localhost:5001
+total: 6
+
+tools:
+get_incidents:
+category: core
+priority: high
+description: “Retrieves AI-correlated incidents from Moogsoft AIOps platform”
+use_when:
+- “Need list of active incidents”
+- “Dashboard/overview required”
+use_case: “Get active incidents for investigation”
+response_fields:
+- incident_id
+- severity
+- status
+- affected_service
+response_time: “< 2 seconds”
+token_cost: low
+
+```
+get_alerts:
+  category: raw_data
+  priority: medium
+  description: "Retrieves raw alert stream before AIOps correlation"
+  use_when:
+    - "Debugging alert correlation"
+    - "Alert storm analysis"
+  use_case: "Debug alert correlation, analyze alert storms"
+  response_fields:
+    - alert_id
+    - source
+    - severity
+    - message
+    - correlation_id
+  response_time: "< 3 seconds"
+  token_cost: medium
+  
+get_critical_incidents:
+  category: priority
+  priority: critical
+  description: "Retrieves P1/Critical severity incidents requiring immediate SRE attention from last 24 hours"
+  use_when:
+    - "On-call dashboard"
+    - "Urgent incident response"
+    - "Starting investigation (no specific incident ID)"
+  use_case: "On-call dashboard, urgent incident response"
+  response_fields:
+    - incident_id
+    - severity
+    - status
+    - description
+    - customer_impact
+    - assignment_group
+    - created_at
+  response_time: "< 2 seconds"
+  token_cost: low
+  investigation_phase: initial_context
+  
+get_incident_by_id:
+  category: detail_view
+  priority: critical
+  description: "Retrieves complete details for specific Moogsoft incident ID with full correlation context and timeline"
+  use_when:
+    - "Have specific incident ID"
+    - "Need complete incident context"
+    - "Deep dive investigation"
+  use_case: "Deep dive investigation, post-mortem analysis"
+  response_fields:
+    - incident_id
+    - severity
+    - correlated_alerts
+    - timeline
+    - comments
+    - affected_services
+  response_time: "< 2 seconds"
+  token_cost: low
+  investigation_phase: initial_context
+  required_for: all_investigations
+  
+get_historical_analysis:
+  category: analytics
+  priority: low
+  description: "Analyzes incident trends over time for capacity planning and reliability engineering"
+  use_when:
+    - "Looking for patterns"
+    - "Similar incident in past"
+    - "Trend analysis"
+  use_case: "Capacity planning, trend analysis, quarterly reviews"
+  response_fields:
+    - analysis_period
+    - total_incidents
+    - trends
+  response_time: "< 5 seconds"
+  token_cost: medium
+  investigation_phase: historical_context
+  
+get_closed_incidents:
+  category: post_mortem
+  priority: medium
+  description: "Retrieves resolved/closed incidents from last 7 days for post-mortem analysis and pattern identification"
+  use_when:
+    - "Learning from past incidents"
+    - "Pattern recognition"
+    - "Similar incident search"
+  use_case: "Learn from past incidents, pattern recognition"
+  response_fields:
+    - incident_id
+    - severity
+    - resolution_time
+    - root_cause
+    - closed_at
+  response_time: "< 3 seconds"
+  token_cost: medium
+  investigation_phase: historical_context
+```
+
+# =============================================================================
+
+# SPLUNK MCP TOOLS (16 tools)
+
+# =============================================================================
+
+# Primary: Log analysis and search
+
+splunk_tools:
+server: http://localhost:5002
+total: 16
+
+tools:
+validate_spl:
+category: query_validation
+priority: low
+description: “Validates SPL queries for syntax errors, performance risks, security issues before execution”
+use_when:
+- “Building complex query”
+- “Query optimization needed”
+use_case: “Pre-flight check before running complex searches”
+response_fields:
+- valid
+- warnings
+- suggestions
+response_time: “< 1 second”
+token_cost: very_low
+
+```
+search_oneshot:
+  category: core_search
+  priority: critical
+  description: "Executes one-time Splunk search query and returns complete results in single response"
+  use_when:
+    - "Need log search results"
+    - "Looking for error patterns"
+    - "Small to medium result sets"
+  use_case: "Quick searches, error pattern detection"
+  response_fields:
+    - results
+    - count
+  response_time: "5-30 seconds"
+  token_cost: high
+  investigation_phase: evidence_gathering
+  performance_note: "Response time varies with query complexity and time range"
+  best_practices:
+    - "Always add time bounds"
+    - "Use index= filter early"
+    - "Add | head 1000 for large results"
+  
+search_export:
+  category: streaming_search
+  priority: medium
+  description: "Runs streaming search queries that return results immediately as found, ideal for large datasets"
+  use_when:
+    - "Large result sets expected"
+    - "Real-time streaming needed"
+  use_case: "Large result sets, real-time streaming"
+  response_fields:
+    - streaming
+    - results
+  response_time: "streaming"
+  token_cost: very_high
+  
+moogsoft_alerts:
+  category: integration
+  priority: low
+  description: "Queries Moogsoft alerts filtered by specific application ID for incident correlation"
+  use_when:
+    - "Cross-referencing Splunk + Moogsoft"
+    - "Application-specific alerts"
+  use_case: "Cross-reference Splunk logs with Moogsoft incidents"
+  response_fields:
+    - alerts
+  response_time: "< 5 seconds"
+  token_cost: medium
+  
+get_indexes:
+  category: configuration
+  priority: very_low
+  description: "Retrieves list of available Splunk indexes with metadata like size, event count, retention"
+  use_when:
+    - "Index discovery needed"
+    - "Planning search strategy"
+  use_case: "Index discovery, capacity planning"
+  response_fields:
+    - indexes
+  response_time: "< 2 seconds"
+  token_cost: low
+  investigation_phase: never_use_in_rca
+  
+get_saved_searches:
+  category: configuration
+  priority: low
+  description: "Lists all saved searches/reports available in Splunk with schedules and descriptions"
+  use_when:
+    - "Looking for pre-built queries"
+    - "Automation opportunities"
+  use_case: "Discover pre-built searches, automation"
+  response_fields:
+    - saved_searches
+  response_time: "< 2 seconds"
+  token_cost: low
+  
+run_saved_search:
+  category: execution
+  priority: medium
+  description: "Executes pre-configured saved search by name and returns results"
+  use_when:
+    - "Known saved search exists"
+    - "Standard report needed"
+  use_case: "Run scheduled reports on-demand"
+  response_fields:
+    - search_name
+    - results
+  response_time: "5-30 seconds"
+  token_cost: high
+  
+app_incident_data:
+  category: application_monitoring
+  priority: medium
+  description: "Queries incident alerts for specific application by first fetching CMDB data for context"
+  use_when:
+    - "Application-specific investigation"
+    - "Need CMDB context"
+  use_case: "Application-specific incident investigation"
+  response_fields:
+    - app_number
+    - incidents
+  response_time: "< 5 seconds"
+  token_cost: medium
+  
+app_change_data:
+  category: change_management
+  priority: high
+  description: "Retrieves change management data for specific application number"
+  use_when:
+    - "Correlating incidents with changes"
+    - "Deployment-related issues"
+  use_case: "Correlate incidents with recent changes"
+  response_fields:
+    - app_number
+    - changes
+  response_time: "< 5 seconds"
+  token_cost: medium
+  investigation_phase: change_correlation
+  incident_types:
+    - error_spike
+    - deployment_issue
+    
+patching_data:
+  category: infrastructure
+  priority: low
+  description: "Queries patching alerts for hostname by first determining OS type from CMDB"
+  use_when:
+    - "Correlating issues with patches"
+    - "Infrastructure changes suspected"
+  use_case: "Correlate issues with recent patches"
+  response_fields:
+    - hostname
+    - os
+    - patches
+  response_time: "< 5 seconds"
+  token_cost: medium
+  
+get_health_status:
+  category: health_monitoring
+  priority: medium
+  description: "Retrieves health status metrics for specific hostname or application number"
+  use_when:
+    - "Quick health check needed"
+    - "Service status verification"
+  use_case: "Quick health check"
+  response_fields:
+    - target
+    - status
+    - metrics
+    - alerts
+  response_time: "< 3 seconds"
+  token_cost: low
+  
+get_incident_data:
+  category: incident_management
+  priority: medium
+  description: "Fetches incident data with optional filtering by specific incident number"
+  use_when:
+    - "ServiceNow incident details needed"
+    - "Cross-referencing incidents"
+  use_case: "Get incident details for investigation"
+  response_fields:
+    - incidents
+  response_time: "< 3 seconds"
+  token_cost: medium
+  
+get_change_data:
+  category: change_management
+  priority: high
+  description: "Retrieves change management records with optional filtering by change number"
+  use_when:
+    - "Checking recent changes"
+    - "Change correlation needed"
+  use_case: "Check recent changes before incident"
+  response_fields:
+    - changes
+  response_time: "< 3 seconds"
+  token_cost: medium
+  investigation_phase: change_correlation
+  
+get_host_metrics:
+  category: performance
+  priority: medium
+  description: "Fetches host performance metrics with optional filtering by hostname"
+  use_when:
+    - "Host-level resource analysis"
+    - "Performance investigation"
+  use_case: "Resource utilization analysis"
+  response_fields:
+    - host
+    - metrics
+  response_time: "< 3 seconds"
+  token_cost: low
+  
+get_config:
+  category: configuration
+  priority: very_low
+  description: "Returns current Splunk server configuration and settings"
+  use_when:
+    - "Never use in RCA investigation"
+  use_case: "Verify server configuration"
+  investigation_phase: never_use_in_rca
+  
+health_check:
+  category: monitoring
+  priority: very_low
+  description: "Performs health check for monitoring and container orchestration systems"
+  use_when:
+    - "Never use in RCA investigation"
+  use_case: "Liveness/readiness probes"
+  investigation_phase: never_use_in_rca
+```
+
+# =============================================================================
+
+# SYSDIG MCP TOOLS (50 tools)
+
+# =============================================================================
+
+# Primary: Infrastructure and Kubernetes monitoring
+
+sysdig_tools:
+server: http://localhost:5003
+total: 50
+
+tool_categories:
+core_monitoring:
+count: 8
+description: “Essential monitoring and metrics tools”
+tools:
+- query_metrics
+- discover_resources
+- get_events
+- environment_status
+- golden_signals
+- discover_metrics
+
+```
+advanced_analytics:
+  count: 4
+  description: "Health intelligence and workload discovery"
+  
+cluster_analysis:
+  count: 8
+  description: "Cluster-level analysis and capacity planning"
+  
+pod_health:
+  count: 4
+  description: "Pod-specific health metrics and diagnostics"
+  
+ai_powered:
+  count: 7
+  description: "AI-driven insights and predictions"
+  
+security:
+  count: 3
+  description: "Security monitoring and analysis"
+  
+query_generation:
+  count: 2
+  description: "PromQL and SQL query builders"
+  
+kubernetes_resources:
+  count: 5
+  description: "K8s resource management"
+  
+performance:
+  count: 4
+  description: "Performance diagnostics"
+  
+optimization:
+  count: 6
+  description: "Resource and cost optimization"
+```
+
+tools:
+query_metrics:
+category: core_monitoring
+priority: critical
+description: “Intelligent metrics query with NLP-based intent classification for Sysdig monitoring data”
+use_when:
+- “Need specific metric data”
+- “Resource utilization analysis”
+- “Performance investigation”
+use_case: “Natural language metric queries”
+response_fields:
+- intent
+- metrics
+response_time: “< 5 seconds”
+token_cost: medium
+investigation_phase: evidence_gathering
+supports_nlp: true
+incident_types:
+- oomkill
+- resource_saturation
+- latency
+
+```
+discover_resources:
+  category: core_monitoring
+  priority: low
+  description: "Discovers available Kubernetes resources across clusters for monitoring setup"
+  use_when:
+    - "Initial setup"
+    - "Resource discovery"
+    - "Unknown environment"
+  use_case: "Initial setup, resource discovery"
+  response_fields:
+    - resources
+  response_time: "< 3 seconds"
+  token_cost: low
+  investigation_phase: rarely_needed
+  
+get_events:
+  category: core_monitoring
+  priority: high
+  description: "Retrieves Sysdig events for incidents, alerts, and system changes"
+  use_when:
+    - "Need event timeline"
+    - "Incident correlation"
+    - "Change detection"
+  use_case: "Event timeline, incident correlation"
+  response_fields:
+    - events
+  response_time: "< 3 seconds"
+  token_cost: medium
+  investigation_phase: evidence_gathering
+  incident_types:
+    - oomkill
+    - deployment_issue
+    - pod_restart
+    
+environment_status:
+  category: core_monitoring
+  priority: medium
+  description: "Provides comprehensive environment status for Kubernetes cluster"
+  use_when:
+    - "Cluster health overview"
+    - "High-level status check"
+  use_case: "Cluster health overview"
+  response_fields:
+    - cluster
+    - status
+    - uptime
+    - nodes
+    - pods
+  response_time: "< 3 seconds"
+  token_cost: low
+  
+golden_signals:
+  category: core_monitoring
+  priority: critical
+  description: "Returns Golden Signals (Latency, Traffic, Errors, Saturation) for SRE monitoring"
+  use_when:
+    - "Service health check"
+    - "SRE investigation"
+    - "Performance analysis"
+  use_case: "SRE dashboards, health checks"
+  response_fields:
+    - latency
+    - traffic
+    - errors
+    - saturation
+  response_time: "< 3 seconds"
+  token_cost: low
+  investigation_phase: evidence_gathering
+  required_for_incident_types:
+    - timeout
+    - latency
+    - error_spike
+  best_practice: "Call early in investigation for quick overview"
+  
+discover_metrics:
+  category: core_monitoring
+  priority: very_low
+  description: "Discovers available Sysdig metrics organized by category for easier navigation"
+  use_when:
+    - "Building dashboards"
+    - "Metric discovery"
+  use_case: "Metric catalog, dashboard building"
+  investigation_phase: never_use_in_rca
+```
+
+# =============================================================================
+
+# SIGNALFX MCP TOOLS (17 tools)
+
+# =============================================================================
+
+# Primary: Application performance monitoring
+
+signalfx_tools:
+server: http://localhost:5005
+total: 17
+
+tools:
+query_signalfx_metrics:
+category: core
+priority: high
+description: “Intelligent NLP tool that processes natural language queries about SignalFX monitoring data”
+use_when:
+- “Application performance analysis”
+- “Service-level metrics”
+use_case: “Natural language queries for metrics”
+response_fields:
+- intent
+- routed_to
+- results
+response_time: “< 5 seconds”
+token_cost: medium
+supports_nlp: true
+investigation_phase: evidence_gathering
+
+```
+get_signalfx_metrics_catalog:
+  category: discovery
+  priority: very_low
+  description: "Retrieves categorized SignalFX metrics catalog for discovery and monitoring setup"
+  use_when:
+    - "Metric discovery"
+    - "Dashboard setup"
+  use_case: "Metric discovery, dashboard setup"
+  investigation_phase: never_use_in_rca
+  
+get_signalfx_active_incidents:
+  category: incidents
+  priority: high
+  description: "Primary tool for getting active SignalFX incidents requiring immediate SRE attention"
+  use_when:
+    - "SignalFX-specific incidents"
+    - "Alternative to Moogsoft"
+  use_case: "On-call, incident dashboard"
+  response_fields:
+    - active_incidents
+  response_time: "< 2 seconds"
+  token_cost: low
+  investigation_phase: initial_context
+```
+
+# =============================================================================
+
+# INVESTIGATION PLAYBOOKS
+
+# =============================================================================
+
+# Pre-defined tool sequences for common incident types
+
+playbooks:
+timeout_investigation:
+name: “Timeout/Connection Failure Investigation”
+incident_types:
+- timeout
+- connection_failure
+tools_sequence:
+- step: 1
+phase: initial_context
+tool: moogsoft.get_incident_by_id
+purpose: “Get incident details and affected service”
+required: true
+
+```
+  - step: 2
+    phase: evidence_gathering
+    tool: splunk.search_oneshot
+    purpose: "Search for timeout error patterns"
+    query_template: "timeout OR connection_timeout | stats count by service"
+    required: true
+    
+  - step: 3
+    phase: evidence_gathering
+    tool: sysdig.golden_signals
+    purpose: "Check service latency metrics"
+    target: "affected_service_from_step_1"
+    required: true
+    
+  - step: 4
+    phase: evidence_gathering
+    tool: splunk.search_oneshot
+    purpose: "Identify downstream dependency from timeout messages"
+    query_template: "Parse timeout messages for downstream service"
+    required: true
+    
+  - step: 5
+    phase: evidence_gathering
+    tool: sysdig.query_metrics
+    purpose: "Check downstream service health"
+    target: "downstream_service_from_step_4"
+    metrics: ["response_time", "error_rate"]
+    required: true
+    
+  - step: 6
+    phase: change_correlation
+    tool: splunk.get_change_data
+    purpose: "Check for recent changes to downstream service"
+    filter: "downstream_service, last 24h"
+    required: false
+    
+timeline_analysis:
+  compare_timestamps:
+    - step_3_latency_start
+    - step_2_timeout_start
+  determine: "Did downstream latency precede upstream timeouts?"
+  
+expected_root_cause_patterns:
+  - "Downstream service latency"
+  - "Database slow queries"
+  - "Network issues"
+```
+
+oomkill_investigation:
+name: “OOMKill/Memory Exhaustion Investigation”
+incident_types:
+- oomkill
+- memory_exhaustion
+tools_sequence:
+- step: 1
+phase: evidence_gathering
+tool: splunk.search_oneshot
+purpose: “Confirm OOMKill events”
+query_template: “OOMKilled”
+required: true
+
+```
+  - step: 2
+    phase: evidence_gathering
+    tool: sysdig.query_metrics
+    purpose: "Get memory usage trends"
+    metric: "memory_usage_bytes"
+    time_range: "last 24 hours"
+    required: true
+    
+  - step: 3
+    phase: evidence_gathering
+    tool: sysdig.get_events
+    purpose: "Get pod restart history"
+    filter: "pod_restart, affected_service"
+    required: true
+    
+  - step: 4
+    phase: evidence_gathering
+    tool: splunk.search_oneshot
+    purpose: "Check application logs for memory issues"
+    query_template: "heap OR memory OR gc"
+    required: true
+    
+analysis_checklist:
+  - "Is memory usage gradually increasing? (indicates memory leak)"
+  - "Are there OOMKill patterns? (regular intervals = leak)"
+  - "Recent deployment correlation?"
+  
+expected_root_cause_patterns:
+  - "Memory leak in application code"
+  - "Insufficient memory limits"
+  - "Cache misconfiguration"
+```
+
+error_spike_investigation:
+name: “Error Spike Investigation”
+incident_types:
+- error_spike
+- exception_increase
+tools_sequence:
+- step: 1
+phase: evidence_gathering
+tool: splunk.search_oneshot
+purpose: “Get error pattern and distribution”
+query_template: “error | stats count by error_type”
+required: true
+
+```
+  - step: 2
+    phase: change_correlation
+    tool: splunk.app_change_data
+    purpose: "Check recent deployments"
+    filter: "affected_service"
+    required: true
+    
+  - step: 3
+    phase: evidence_gathering
+    tool: sysdig.get_events
+    purpose: "Get deployment/change events"
+    filter: "deployment, affected_service"
+    required: true
+    
+  - step: 4
+    phase: evidence_gathering
+    tool: sysdig.golden_signals
+    purpose: "Validate impact on service health"
+    target: "affected_service"
+    required: true
+    
+timeline_analysis:
+  compare_timestamps:
+    - step_2_deployment_time
+    - step_1_error_spike_time
+  determine: "Did deployment precede error spike?"
+  
+expected_root_cause_patterns:
+  - "Bad deployment introduced bugs"
+  - "Configuration change"
+  - "Dependency version mismatch"
+```
+
+# =============================================================================
+
+# TOKEN OPTIMIZATION STRATEGIES
+
+# =============================================================================
+
+token_optimization:
+principles:
+- “Load this catalog once at investigation start”
+- “Use selection_rules to pick tools, not full schemas”
+- “Only load full tool schema when calling the tool”
+- “Cache tool responses, don’t re-call same tool”
+
+tool_selection_workflow:
+step_1: “Classify incident type from initial context”
+step_2: “Look up incident type in selection_rules.by_incident_type”
+step_3: “Get required_tools list (3-5 tools max)”
+step_4: “Load full schemas only for selected tools”
+step_5: “Execute tools, cache results”
+step_6: “If more context needed, consult selection_rules again”
+
+token_costs:
+loading_full_catalog: 0  # This file replaces full catalog
+loading_single_tool_schema: 50-200  # Only load when calling
+tool_response: 200-2000  # Depends on tool
+
+example_token_savings:
+old_approach:
+- “Load all 89 tool schemas: ~8000 tokens”
+- “Parse through all to find relevant: wasted effort”
+- “Total: 8000+ tokens before investigation starts”
+
+```
+new_approach:
+  - "Load this catalog: 0 tokens (pre-loaded knowledge)"
+  - "Select 3-5 relevant tools using rules: instant"
+  - "Load only 3-5 tool schemas: ~500 tokens"
+  - "Total: 500 tokens (94% reduction)"
+```
+
+# =============================================================================
+
+# RATE LIMITS & PERFORMANCE
+
+# =============================================================================
+
+rate_limits:
+moogsoft:
+requests_per_minute: 60
+concurrent_requests: 5
+recommendation: “Cache incident details, poll every 60s”
+
+splunk:
+requests_per_minute: unlimited
+concurrent_searches: 10
+recommendation: “Use saved searches for recurring queries”
+max_search_time: “30 seconds per search”
+
+sysdig:
+requests_per_minute: 100
+concurrent_requests: 10
+recommendation: “Query specific metrics, avoid wildcards”
+
+signalfx:
+requests_per_hour: 1000
+recommendation: “Batch metric queries”
+
+performance_expectations:
+fast_tools:
+- moogsoft.get_incident_by_id  # < 2s
+- moogsoft.get_critical_incidents  # < 2s
+- sysdig.golden_signals  # < 3s
+- splunk.get_change_data  # < 3s
+
+medium_tools:
+- sysdig.query_metrics  # < 5s
+- sysdig.get_events  # < 3s
+- splunk.search_oneshot  # 5-30s (variable)
+
+slow_tools:
+- splunk.search_export  # streaming, variable
+- splunk.run_saved_search  # 5-30s
+
+# =============================================================================
+
+# BEST PRACTICES
+
+# =============================================================================
+
+best_practices:
+tool_calling:
+- “Always start with moogsoft.get_incident_by_id for context”
+- “Call sysdig.golden_signals early for quick health overview”
+- “Use splunk.search_oneshot with time bounds”
+- “Avoid calling discovery tools during investigation”
+- “Cache tool responses, never call same tool twice”
+
+investigation_flow:
+- “Phase 1: Initial context (1-2 tool calls, < 5 seconds)”
+- “Phase 2: Evidence gathering (3-5 tool calls, < 30 seconds)”
+- “Phase 3: Change correlation (1-2 tool calls, < 10 seconds)”
+- “Phase 4: Historical context (optional, 1-2 tool calls)”
+- “Total: 5-10 tool calls, < 60 seconds”
+
+query_optimization:
+splunk:
+- “Always add earliest= and latest= time bounds”
+- “Use index= filter first in query”
+- “Add | head 1000 for large result sets”
+- “Avoid wildcards at start of search terms”
+
+```
+sysdig:
+  - "Request specific metric names, not wildcards"
+  - "Limit time ranges to investigation window"
+  - "Use golden_signals for overview before detailed queries"
+```
+
+# =============================================================================
+
+# VERSION HISTORY
+
+# =============================================================================
+
+version_history:
+v1.0:
+date: “2024-02-14”
+changes:
+- “Initial catalog creation”
+- “89 tools documented across 4 MCP servers”
+- “Investigation playbooks for 3 incident types”
+- “Token optimization strategies”

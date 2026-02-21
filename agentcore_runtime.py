@@ -164,6 +164,13 @@ try:
         except Exception:
             health["database"] = "check_failed"
 
+        # Check AgentCore Memory status
+        try:
+            from supervisor.memory import is_enabled as memory_enabled
+            health["memory"] = "enabled" if memory_enabled() else "disabled"
+        except Exception:
+            health["memory"] = "check_failed"
+
         return health
 
     @app.post("/invocations")
@@ -203,6 +210,11 @@ def _shutdown_handler(signum, frame):
     try:
         from database.connection import dispose
         dispose()
+    except Exception:
+        pass
+    try:
+        from supervisor.memory import dispose as memory_dispose
+        memory_dispose()
     except Exception:
         pass
     raise SystemExit(0)

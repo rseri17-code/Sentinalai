@@ -1,5 +1,5 @@
-# Core AgentCore SDK
-bedrock-agentcore>=0.1.0,<1.0.0
+# Core AgentCore SDK (>=1.1.0 required for MemoryClient)
+bedrock-agentcore>=1.1.0,<2.0.0
 
 # Fallback HTTP server (used if SDK unavailable)
 fastapi>=0.100.0,<1.0.0

@@ -49,6 +49,10 @@ from supervisor.eval_metrics import (
     record_receipt_summary,
 )
 from supervisor.replay import ReplayStore
+from supervisor.memory import (
+    store_investigation_result as _store_to_memory,
+    is_enabled as _memory_enabled,
+)
 from workers.ops_worker import OpsWorker
 from workers.log_worker import LogWorker
 from workers.metrics_worker import MetricsWorker
@@ -289,6 +293,25 @@ class SentinalAISupervisor:
                     result=replay_result,
                     evidence=evidence,
                 )
+
+            # Store in AgentCore Memory (LTM) for future similarity search
+            if _memory_enabled():
+                try:
+                    _store_to_memory(
+                        incident_id=incident_id,
+                        incident_type=incident_type,
+                        service=service,
+                        root_cause=result.get("root_cause", ""),
+                        confidence=confidence,
+                        reasoning=result.get("reasoning", ""),
+                        evidence_summary=(
+                            f"sources={len(evidence)}, "
+                            f"tool_calls={budget.calls_made}, "
+                            f"hypotheses={hypothesis_count}"
+                        ),
+                    )
+                except Exception:
+                    logger.debug("Memory store skipped (non-critical)")
 
             return result
 

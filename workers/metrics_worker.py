@@ -1,10 +1,11 @@
 """Metrics Worker - handles Sysdig metrics operations.
 
-In production this calls MCP server at localhost:5003.
-For testing, the execute() method is monkey-patched with mocks.
+Calls MCP server via AgentCore tool ARN when MCP_SYSDIG_TOOL_ARN is set.
+Falls back to stub response for local dev / testing.
 """
 
 from workers.base_worker import BaseWorker
+from workers.mcp_client import invoke_mcp_tool
 
 
 class MetricsWorker(BaseWorker):
@@ -19,9 +20,17 @@ class MetricsWorker(BaseWorker):
         self.register("get_events", self._get_events)
 
     def _query_metrics(self, params: dict) -> dict:
-        """Query time-series metrics from Sysdig."""
-        return {"metrics": {"metrics": [], "baseline": 0}}
+        """Query time-series metrics from Sysdig via MCP ARN."""
+        return invoke_mcp_tool(
+            "sysdig.query_metrics",
+            "query_metrics",
+            params,
+        )
 
     def _get_events(self, params: dict) -> dict:
-        """Get infrastructure events from Sysdig."""
-        return {"events": []}
+        """Get infrastructure events from Sysdig via MCP ARN."""
+        return invoke_mcp_tool(
+            "sysdig.get_events",
+            "get_events",
+            params,
+        )

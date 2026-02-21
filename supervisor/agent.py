@@ -32,6 +32,9 @@ from supervisor.observability import (
     trace_span,
     GENAI_SYSTEM,
     GENAI_OPERATION_NAME,
+    GENAI_REQUEST_MODEL,
+    GENAI_USAGE_INPUT_TOKENS,
+    GENAI_USAGE_OUTPUT_TOKENS,
     EVAL_INCIDENT_TYPE,
     EVAL_SERVICE,
     EVAL_CONFIDENCE,
@@ -47,12 +50,20 @@ from supervisor.eval_metrics import (
     record_worker_call,
     record_evidence_completeness,
     record_receipt_summary,
+    record_llm_usage,
+    record_judge_scores,
 )
 from supervisor.replay import ReplayStore
 from supervisor.memory import (
     store_investigation_result as _store_to_memory,
     is_enabled as _memory_enabled,
 )
+from supervisor.llm import (
+    refine_hypothesis as _llm_refine,
+    generate_reasoning as _llm_reasoning,
+    is_enabled as _llm_enabled,
+)
+from supervisor.llm_judge import judge_and_record as _judge_and_record
 from workers.ops_worker import OpsWorker
 from workers.log_worker import LogWorker
 from workers.metrics_worker import MetricsWorker
@@ -230,6 +241,15 @@ class SentinalAISupervisor:
             confidence = result.get("confidence", 0)
             hypothesis_count = result.pop("_hypothesis_count", 0)
             winner_hypothesis = result.pop("_winner_hypothesis", "none")
+            llm_metrics = result.pop("_llm_metrics", {})
+
+            # GenAI semantic convention attributes for LLM usage
+            total_input = llm_metrics.get("refine_input_tokens", 0) + llm_metrics.get("reasoning_input_tokens", 0)
+            total_output = llm_metrics.get("refine_output_tokens", 0) + llm_metrics.get("reasoning_output_tokens", 0)
+            if total_input or total_output:
+                span.set_attribute(GENAI_USAGE_INPUT_TOKENS, total_input)
+                span.set_attribute(GENAI_USAGE_OUTPUT_TOKENS, total_output)
+                span.set_attribute(GENAI_REQUEST_MODEL, llm_metrics.get("refine_model_id", ""))
 
             # Eval / observability attributes for Splunk dashboards
             span.set_attribute(EVAL_CONFIDENCE, confidence)
@@ -274,6 +294,32 @@ class SentinalAISupervisor:
                 failed=receipt_summary["failed"],
                 total_elapsed_ms=receipt_summary["total_elapsed_ms"],
             )
+
+            # LLM-as-judge eval scoring (optional, non-blocking)
+            judge_scores = {}
+            try:
+                expected = {
+                    "root_cause": result.get("root_cause", ""),
+                    "root_cause_keywords": [],
+                    "confidence_min": 0,
+                    "confidence_max": 100,
+                }
+                judge_result = _judge_and_record(
+                    incident_id=incident_id,
+                    incident_type=incident_type,
+                    expected=expected,
+                    result=result,
+                )
+                judge_scores = judge_result.get("scores", {})
+                if judge_scores:
+                    record_judge_scores(
+                        incident_id=incident_id,
+                        incident_type=incident_type,
+                        scores=judge_scores,
+                        source=judge_result.get("source", "rule_based"),
+                    )
+            except Exception:
+                logger.debug("Judge scoring skipped (non-critical)")
 
             logger.info(
                 "Investigation complete for %s: confidence=%d, tool_calls=%d",
@@ -541,7 +587,7 @@ class SentinalAISupervisor:
         incident_type: str,
         evidence: dict[str, Any],
     ) -> dict:
-        """Deterministic evidence analysis engine."""
+        """Deterministic evidence analysis engine with optional LLM refinement."""
         summary = incident.get("summary", "")
         service = incident.get("affected_service", "unknown")
 
@@ -567,6 +613,14 @@ class SentinalAISupervisor:
                 corroborating_sources=len(h.evidence_refs),
             )
 
+        # LLM hypothesis refinement (optional, graceful degradation)
+        llm_metrics = {}
+        if _llm_enabled():
+            llm_metrics = self._llm_refine_hypotheses(
+                incident_type, service, summary, hypotheses,
+                logs, signals, metrics, events, changes,
+            )
+
         # W2: Select winner — highest score, deterministic tiebreak by name
         hypotheses.sort(key=lambda h: (-h.base_score, h.name))
         winner = hypotheses[0] if hypotheses else None
@@ -580,7 +634,19 @@ class SentinalAISupervisor:
             confidence = compute_confidence(30, logs, signals, metrics, events, changes)
             reasoning = f"Generic analysis of {service} incident. Insufficient pattern match."
 
-        return {
+        # LLM reasoning generation (optional, enhances winner reasoning)
+        if _llm_enabled() and winner:
+            reasoning_metrics = self._llm_generate_reasoning(
+                incident_type, service, root_cause, reasoning,
+                logs, signals, metrics, events, changes, timeline,
+            )
+            if reasoning_metrics.get("reasoning"):
+                reasoning = reasoning_metrics["reasoning"]
+            llm_metrics.update({
+                k: v for k, v in reasoning_metrics.items() if k != "reasoning"
+            })
+
+        result = {
             "incident_id": incident_id,
             "root_cause": root_cause,
             "confidence": confidence,
@@ -589,6 +655,139 @@ class SentinalAISupervisor:
             "_hypothesis_count": len(hypotheses),
             "_winner_hypothesis": winner.name if winner else "none",
         }
+
+        # Attach LLM usage metrics for OTEL emission
+        if llm_metrics:
+            result["_llm_metrics"] = llm_metrics
+
+        return result
+
+    # ------------------------------------------------------------------ #
+    # LLM-assisted analysis (graceful — never blocks deterministic path)
+    # ------------------------------------------------------------------ #
+
+    def _llm_refine_hypotheses(
+        self,
+        incident_type: str,
+        service: str,
+        summary: str,
+        hypotheses: list[Hypothesis],
+        logs: list[dict],
+        signals: dict,
+        metrics: dict,
+        events: list[dict],
+        changes: list[dict],
+    ) -> dict:
+        """Use LLM to refine and re-rank hypotheses. Returns GenAI metrics."""
+        try:
+            evidence_summary = self._format_evidence_summary(logs, signals, metrics, events, changes)
+            hyp_dicts = [
+                {"name": h.name, "root_cause": h.root_cause, "score": h.base_score, "reasoning": h.reasoning}
+                for h in hypotheses
+            ]
+            result = _llm_refine(incident_type, service, summary, evidence_summary, hyp_dicts)
+
+            refined = result.get("refined_hypotheses", [])
+            if refined and isinstance(refined[0], dict):
+                for r in refined:
+                    for h in hypotheses:
+                        if h.name == r.get("name"):
+                            h.base_score = max(0, min(100, int(r.get("score", h.base_score))))
+                            if r.get("reasoning"):
+                                h.reasoning = r["reasoning"]
+
+            # Record GenAI usage
+            record_llm_usage(
+                operation="refine_hypothesis",
+                model_id=result.get("model_id", ""),
+                input_tokens=result.get("input_tokens", 0),
+                output_tokens=result.get("output_tokens", 0),
+                latency_ms=result.get("latency_ms", 0),
+                incident_type=incident_type,
+            )
+
+            return {
+                "refine_input_tokens": result.get("input_tokens", 0),
+                "refine_output_tokens": result.get("output_tokens", 0),
+                "refine_latency_ms": result.get("latency_ms", 0),
+                "refine_model_id": result.get("model_id", ""),
+            }
+        except Exception as exc:
+            logger.debug("LLM hypothesis refinement skipped: %s", exc)
+            return {}
+
+    def _llm_generate_reasoning(
+        self,
+        incident_type: str,
+        service: str,
+        root_cause: str,
+        fallback_reasoning: str,
+        logs: list[dict],
+        signals: dict,
+        metrics: dict,
+        events: list[dict],
+        changes: list[dict],
+        timeline: list[dict],
+    ) -> dict:
+        """Use LLM to generate enhanced reasoning narrative. Returns reasoning + metrics."""
+        try:
+            evidence_summary = self._format_evidence_summary(logs, signals, metrics, events, changes)
+            timeline_summary = "\n".join(
+                f"  [{e.get('timestamp', '?')}] ({e.get('source', '?')}) {e.get('event', '?')}"
+                for e in timeline[:10]
+            )
+            result = _llm_reasoning(incident_type, service, root_cause, evidence_summary, timeline_summary)
+
+            # Record GenAI usage
+            record_llm_usage(
+                operation="generate_reasoning",
+                model_id=result.get("model_id", ""),
+                input_tokens=result.get("input_tokens", 0),
+                output_tokens=result.get("output_tokens", 0),
+                latency_ms=result.get("latency_ms", 0),
+                incident_type=incident_type,
+            )
+
+            return {
+                "reasoning": result.get("reasoning", ""),
+                "reasoning_input_tokens": result.get("input_tokens", 0),
+                "reasoning_output_tokens": result.get("output_tokens", 0),
+                "reasoning_latency_ms": result.get("latency_ms", 0),
+                "reasoning_model_id": result.get("model_id", ""),
+            }
+        except Exception as exc:
+            logger.debug("LLM reasoning generation skipped: %s", exc)
+            return {"reasoning": ""}
+
+    def _format_evidence_summary(
+        self,
+        logs: list[dict],
+        signals: dict,
+        metrics: dict,
+        events: list[dict],
+        changes: list[dict],
+    ) -> str:
+        """Format evidence into a concise summary for LLM prompts."""
+        parts = []
+        if logs:
+            parts.append(f"Logs: {len(logs)} entries")
+            for log in logs[:3]:
+                parts.append(f"  - [{log.get('level', '?')}] {log.get('message', '')[:120]}")
+        if signals:
+            gs = signals.get("golden_signals", {})
+            parts.append(f"Golden Signals: latency={gs.get('latency', {})}, errors={gs.get('errors', {})}")
+        if metrics:
+            metric_list = metrics.get("metrics", [])
+            parts.append(f"Metrics: {len(metric_list)} data points, pattern={metrics.get('pattern', 'none')}")
+        if events:
+            parts.append(f"Events: {len(events)} entries")
+            for ev in events[:2]:
+                parts.append(f"  - {ev.get('message', '')[:100]}")
+        if changes:
+            parts.append(f"Changes: {len(changes)} entries")
+            for ch in changes[:2]:
+                parts.append(f"  - {ch.get('change_type', '?')}: {ch.get('description', '')[:100]}")
+        return "\n".join(parts) if parts else "No evidence collected"
 
     # ------------------------------------------------------------------ #
     # W2: Hypothesis generation — each analyzer returns Hypothesis objects

@@ -14,6 +14,12 @@ Metric naming follows OpenTelemetry semantic conventions:
   sentinalai.circuit_breaker.*  — resilience
   sentinalai.confidence.*       — calibration
   sentinalai.investigation.*    — latency / phase timing
+
+GenAI semantic conventions (https://opentelemetry.io/docs/specs/semconv/gen-ai/):
+  gen_ai.client.token.usage     — input/output token counts per LLM call
+  gen_ai.client.operation.duration — LLM call latency
+  sentinalai.llm.*              — LLM-specific operational metrics
+  sentinalai.judge.*            — LLM-as-judge eval scores
 """
 
 from __future__ import annotations
@@ -385,4 +391,109 @@ def record_eval_score(
         h.record(score, {
             "incident_type": incident_type,
             "eval_dimension": dimension,
+        })
+
+
+# =========================================================================
+# GenAI Semantic Convention Metrics
+# https://opentelemetry.io/docs/specs/semconv/gen-ai/
+# =========================================================================
+
+def record_llm_usage(
+    operation: str,
+    model_id: str,
+    input_tokens: int,
+    output_tokens: int,
+    latency_ms: float,
+    incident_type: str = "",
+    status: str = "success",
+) -> None:
+    """Record LLM call metrics following GenAI semantic conventions.
+
+    operation: "refine_hypothesis" | "generate_reasoning" | "judge"
+    """
+    attrs = {
+        "gen_ai.system": "aws.bedrock",
+        "gen_ai.request.model": model_id,
+        "gen_ai.operation.name": operation,
+        "status": status,
+    }
+    if incident_type:
+        attrs["incident_type"] = incident_type
+
+    # gen_ai.client.token.usage — input tokens
+    h = _histogram(
+        "gen_ai.client.token.usage",
+        description="GenAI token usage per LLM call",
+        unit="{token}",
+    )
+    if h is not None:
+        h.record(input_tokens, {**attrs, "gen_ai.token.type": "input"})
+        h.record(output_tokens, {**attrs, "gen_ai.token.type": "output"})
+
+    # gen_ai.client.operation.duration — latency in seconds
+    h = _histogram(
+        "gen_ai.client.operation.duration",
+        description="GenAI LLM call duration",
+        unit="s",
+    )
+    if h is not None:
+        h.record(latency_ms / 1000.0, attrs)
+
+    # sentinalai.llm.calls — counter for total LLM calls
+    c = _counter(
+        "sentinalai.llm.calls.total",
+        description="Total LLM calls by operation and model",
+        unit="1",
+    )
+    if c is not None:
+        c.add(1, attrs)
+
+    # sentinalai.llm.tokens — cumulative token counter
+    c = _counter(
+        "sentinalai.llm.tokens.total",
+        description="Cumulative LLM tokens consumed",
+        unit="{token}",
+    )
+    if c is not None:
+        c.add(input_tokens, {**attrs, "gen_ai.token.type": "input"})
+        c.add(output_tokens, {**attrs, "gen_ai.token.type": "output"})
+
+    logger.debug(
+        "genai: op=%s model=%s in=%d out=%d latency=%.1fms",
+        operation, model_id, input_tokens, output_tokens, latency_ms,
+    )
+
+
+def record_judge_scores(
+    incident_id: str,
+    incident_type: str,
+    scores: dict[str, float],
+    source: str = "llm_judge",
+) -> None:
+    """Record LLM-as-judge dimension scores as OTEL metrics."""
+    for dimension, score in scores.items():
+        h = _histogram(
+            "sentinalai.judge.score",
+            description="LLM-as-judge quality scores by dimension",
+            unit="1",
+        )
+        if h is not None:
+            h.record(score, {
+                "incident_type": incident_type,
+                "judge_dimension": dimension,
+                "judge_source": source,
+            })
+
+    # Overall score as a separate metric for dashboards
+    overall = scores.get("overall", 0)
+    h = _histogram(
+        "sentinalai.judge.overall",
+        description="LLM-as-judge overall quality score",
+        unit="1",
+    )
+    if h is not None:
+        h.record(overall, {
+            "incident_type": incident_type,
+            "judge_source": source,
         })

@@ -1,10 +1,12 @@
 # SentinalAI with OpenTelemetry Collector sidecar
-# Traces, metrics, and logs flow: agent -> OTLP -> collector -> Splunk HEC
+# Traces, metrics, and logs flow: agent -> OTLP/HTTP -> collector -> Splunk HEC
 #
 # Usage:
-#   export SPLUNK_HEC_TOKEN=your-token
-#   export SPLUNK_HEC_ENDPOINT=https://your-splunk:8088/services/collector
+#   cp .env.template .env   # fill in values
 #   docker compose up --build
+#
+# Production:
+#   docker compose --profile monitoring up --build -d
 
 services:
   sentinalai:
@@ -15,15 +17,71 @@ services:
       - "8080:8080"
     environment:
       - SENTINALAI_REPLAY_DIR=/tmp/sentinalai_replays
-      - LOG_LEVEL=INFO
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # AI / LLM — Bedrock Converse API (no org-specific endpoints)
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-anthropic.claude-sonnet-4-5-20250929-v1:0}
+      - EVAL_JUDGE_MODEL_ID=${EVAL_JUDGE_MODEL_ID:-anthropic.claude-haiku-4-5-20251001-v1:0}
+      - LLM_ENABLED=${LLM_ENABLED:-true}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.0}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-2048}
+      # MCP Tool ARNs (AgentCore Runtime Engines)
+      - MCP_MOOGSOFT_TOOL_ARN=${MCP_MOOGSOFT_TOOL_ARN:-}
+      - MCP_SPLUNK_TOOL_ARN=${MCP_SPLUNK_TOOL_ARN:-}
+      - MCP_SYSDIG_TOOL_ARN=${MCP_SYSDIG_TOOL_ARN:-}
+      - MCP_SIGNALFX_TOOL_ARN=${MCP_SIGNALFX_TOOL_ARN:-}
+      - MCP_CALL_TIMEOUT_SECONDS=${MCP_CALL_TIMEOUT_SECONDS:-30}
+      - MCP_MAX_RETRIES=${MCP_MAX_RETRIES:-2}
+      # Database (optional)
+      - DATABASE_URL=${DATABASE_URL:-}
+      - DB_POOL_SIZE=${DB_POOL_SIZE:-5}
+      - DB_MAX_OVERFLOW=${DB_MAX_OVERFLOW:-10}
+      - DB_POOL_TIMEOUT=${DB_POOL_TIMEOUT:-30}
+      - DB_POOL_RECYCLE=${DB_POOL_RECYCLE:-1800}
       # OTEL SDK auto-configuration
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=sentinalai
       - OTEL_DEPLOYMENT_ENV=${OTEL_DEPLOYMENT_ENV:-dev}
+      # AgentCore Memory (STM + LTM)
+      - BEDROCK_AGENTCORE_MEMORY_ID=${BEDROCK_AGENTCORE_MEMORY_ID:-}
+      - MEMORY_STM_LAST_K_TURNS=${MEMORY_STM_LAST_K_TURNS:-5}
+      - MEMORY_LTM_TOP_K=${MEMORY_LTM_TOP_K:-3}
+      - MEMORY_LTM_RELEVANCE_THRESHOLD=${MEMORY_LTM_RELEVANCE_THRESHOLD:-0.5}
+      # Investigation tuning
+      - MAX_WORKER_CALLS=${MAX_WORKER_CALLS:-20}
+      - INVESTIGATION_TIMEOUT=${INVESTIGATION_TIMEOUT:-120}
+      - CIRCUIT_BREAKER_THRESHOLD=${CIRCUIT_BREAKER_THRESHOLD:-3}
+      - CIRCUIT_BREAKER_RESET=${CIRCUIT_BREAKER_RESET:-60}
     depends_on:
       otel-collector:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/ping')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+    volumes:
+      - replay-data:/tmp/sentinalai_replays
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.146.0
@@ -31,8 +89,8 @@ services:
     volumes:
       - ./otel-collector-config.yaml:/etc/otel/config.yaml:ro
     ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
+      - "4318:4318"   # OTLP HTTP (primary)
+      - "13133:13133" # Health check extension
     environment:
       - SPLUNK_HEC_TOKEN=${SPLUNK_HEC_TOKEN}
       - SPLUNK_HEC_ENDPOINT=${SPLUNK_HEC_ENDPOINT}
@@ -42,3 +100,28 @@ services:
       - SPLUNK_LOGS_INDEX=${SPLUNK_LOGS_INDEX:-main}
       - OTEL_DEPLOYMENT_ENV=${OTEL_DEPLOYMENT_ENV:-dev}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "25m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  replay-data:
+    driver: local

@@ -1,19 +1,18 @@
 """LLM-as-judge deep eval scorer for SentinalAI.
 
-Uses Amazon Bedrock (or any compatible LLM endpoint) to score agent
+Uses the Bedrock Converse API (via supervisor.llm) to score agent
 investigation outputs across multiple quality dimensions. Results are
 emitted as OTEL metrics via record_eval_score().
 
-Bedrock config is generic — no org-specific endpoints. Set these env
-vars to connect:
-    AWS_REGION              - Bedrock region (default: us-east-1)
-    BEDROCK_MODEL_ID        - Model for judge (default: anthropic.claude-sonnet-4-5-20250929-v1:0)
-    EVAL_JUDGE_MODEL_ID     - Override model specifically for eval judge
-    AWS_ACCESS_KEY_ID       - Standard AWS credentials
-    AWS_SECRET_ACCESS_KEY
-    AWS_SESSION_TOKEN       - (optional, for assumed roles)
+Dimensions scored (each 0.0 to 1.0):
+  - root_cause_accuracy:  Does the root cause match the evidence/expected?
+  - causal_reasoning:     Is the causal chain clear and complete?
+  - evidence_usage:       Are claims backed by specific evidence data?
+  - timeline_quality:     Is the timeline ordered and progression clear?
+  - actionability:        Could an SRE act on this analysis?
 
 Falls back gracefully to rule-based scoring when Bedrock is unavailable.
+All calls emit GenAI semantic convention attributes for OTEL tracing.
 """
 
 from __future__ import annotations
@@ -24,55 +23,21 @@ import os
 import re
 from typing import Any
 
-BEDROCK_TIMEOUT_SECONDS = 30
+from supervisor.llm import converse, is_enabled as llm_is_enabled
 
 logger = logging.getLogger("sentinalai.eval.judge")
 
-# =========================================================================
-# Generic Bedrock client (no org-specific endpoints)
-# =========================================================================
+# Judge uses a cheaper/faster model by default for cost optimisation
+JUDGE_MODEL_ID = os.environ.get("EVAL_JUDGE_MODEL_ID", "anthropic.claude-haiku-4-5-20251001-v1:0")
 
-_bedrock_client = None
-
-
-def _get_bedrock_client():
-    """Lazy-init a Bedrock Runtime client. Returns None if unavailable."""
-    global _bedrock_client
-    if _bedrock_client is not None:
-        return _bedrock_client
-
-    try:
-        import boto3
-        from botocore.config import Config
-
-        region = os.environ.get("AWS_REGION", "us-east-1")
-        _bedrock_client = boto3.client(
-            "bedrock-runtime",
-            region_name=region,
-            config=Config(
-                read_timeout=BEDROCK_TIMEOUT_SECONDS,
-                connect_timeout=10,
-                retries={"max_attempts": 2, "mode": "adaptive"},
-            ),
-        )
-        logger.info("Bedrock client initialized (region=%s)", region)
-        return _bedrock_client
-    except Exception as e:
-        logger.debug("Bedrock unavailable, LLM-as-judge disabled: %s", e)
-        return None
-
-
-def _get_judge_model_id() -> str:
-    """Return the model ID for the judge LLM."""
-    return os.environ.get(
-        "EVAL_JUDGE_MODEL_ID",
-        os.environ.get("BEDROCK_MODEL_ID", "anthropic.claude-sonnet-4-5-20250929-v1:0"),
-    )
-
-
-# =========================================================================
-# LLM-as-judge prompt templates
-# =========================================================================
+JUDGE_DIMENSIONS = [
+    "root_cause_accuracy",
+    "causal_reasoning",
+    "evidence_usage",
+    "timeline_quality",
+    "actionability",
+    "overall",
+]
 
 JUDGE_SYSTEM_PROMPT = """\
 You are an expert SRE evaluating the quality of an automated incident \
@@ -133,67 +98,60 @@ Score each dimension 0.0-1.0."""
 
 
 # =========================================================================
-# Core judge function
+# Core judge function (uses Converse API)
 # =========================================================================
 
 def llm_judge_score(
     incident_id: str,
     expected: dict,
     result: dict,
-) -> dict[str, float] | None:
-    """Score an investigation result using LLM-as-judge via Bedrock.
+) -> dict[str, Any] | None:
+    """Score an investigation result using LLM-as-judge via Bedrock Converse.
 
-    Returns dict of {dimension: score} or None if Bedrock unavailable.
+    Returns dict with:
+        scores: {dimension: score} mapping
+        input_tokens, output_tokens, latency_ms: GenAI usage metrics
+    Or None if LLM unavailable.
     """
-    client = _get_bedrock_client()
-    if client is None:
+    if not llm_is_enabled():
         return None
 
-    model_id = _get_judge_model_id()
     user_prompt = _build_judge_prompt(incident_id, expected, result)
 
+    llm_result = converse(
+        JUDGE_SYSTEM_PROMPT,
+        user_prompt,
+        model_id=JUDGE_MODEL_ID or None,
+        temperature=0.0,
+        max_tokens=1024,
+    )
+
+    if llm_result.get("error") or not llm_result.get("text"):
+        logger.warning("LLM-as-judge failed for %s: %s", incident_id, llm_result.get("error", "empty"))
+        return None
+
+    content = llm_result["text"].strip()
+
+    # Strip markdown code fences if LLM wraps JSON in ```json ... ```
+    md_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", content, re.DOTALL)
+    if md_match:
+        content = md_match.group(1).strip()
+
     try:
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 1024,
-            "temperature": 0.0,
-            "system": JUDGE_SYSTEM_PROMPT,
-            "messages": [{"role": "user", "content": user_prompt}],
-        })
-
-        response = client.invoke_model(
-            modelId=model_id,
-            contentType="application/json",
-            accept="application/json",
-            body=body,
-        )
-
-        response_body = json.loads(response["body"].read())
-        content = response_body.get("content", [{}])[0].get("text", "")
-
-        # Strip markdown code fences if LLM wraps JSON in ```json ... ```
-        content = content.strip()
-        md_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", content, re.DOTALL)
-        if md_match:
-            content = md_match.group(1).strip()
-
-        scores = json.loads(content)
-
+        parsed = json.loads(content)
+        scores = {}
+        for dim in JUDGE_DIMENSIONS:
+            if dim in parsed and "score" in parsed[dim]:
+                scores[dim] = parsed[dim]["score"]
         return {
-            dim: scores[dim]["score"]
-            for dim in [
-                "root_cause_accuracy",
-                "causal_reasoning",
-                "evidence_usage",
-                "timeline_quality",
-                "actionability",
-                "overall",
-            ]
-            if dim in scores and "score" in scores[dim]
+            "scores": scores,
+            "input_tokens": llm_result.get("input_tokens", 0),
+            "output_tokens": llm_result.get("output_tokens", 0),
+            "latency_ms": llm_result.get("latency_ms", 0),
+            "model_id": llm_result.get("model_id", ""),
         }
-
-    except Exception as e:
-        logger.warning("LLM-as-judge failed for %s: %s", incident_id, e)
+    except (json.JSONDecodeError, TypeError, KeyError) as exc:
+        logger.warning("Failed to parse judge response for %s: %s", incident_id, exc)
         return None
 
 
@@ -206,20 +164,31 @@ def judge_and_record(
     incident_type: str,
     expected: dict,
     result: dict,
-) -> dict[str, float]:
+) -> dict[str, Any]:
     """Run LLM-as-judge and emit scores as OTEL metrics.
 
     Falls back to rule-based scores if Bedrock is unavailable.
-    Returns the scores dict regardless of source.
+    Returns dict with scores, source, and GenAI usage metrics.
     """
-    from supervisor.eval_metrics import record_eval_score
+    from supervisor.eval_metrics import record_eval_score, record_llm_usage
 
     # Try LLM-as-judge first
-    scores = llm_judge_score(incident_id, expected, result)
+    judge_result = llm_judge_score(incident_id, expected, result)
     source = "llm_judge"
 
-    if scores is None:
-        # Fallback: rule-based scoring (imported from eval runner)
+    if judge_result is not None:
+        scores = judge_result["scores"]
+        # Record GenAI usage metrics for the judge call
+        record_llm_usage(
+            operation="judge",
+            model_id=judge_result.get("model_id", ""),
+            input_tokens=judge_result.get("input_tokens", 0),
+            output_tokens=judge_result.get("output_tokens", 0),
+            latency_ms=judge_result.get("latency_ms", 0),
+            incident_type=incident_type,
+        )
+    else:
+        # Fallback: rule-based scoring
         source = "rule_based"
         scores = _rule_based_fallback(incident_id, expected, result)
 
@@ -240,7 +209,13 @@ def judge_and_record(
         scores.get("overall", 0),
     )
 
-    return scores
+    return {
+        "scores": scores,
+        "source": source,
+        "input_tokens": judge_result.get("input_tokens", 0) if judge_result else 0,
+        "output_tokens": judge_result.get("output_tokens", 0) if judge_result else 0,
+        "latency_ms": judge_result.get("latency_ms", 0) if judge_result else 0,
+    }
 
 
 def _rule_based_fallback(

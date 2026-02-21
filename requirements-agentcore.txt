@@ -1,17 +1,22 @@
-# Core AgentCore SDK
-bedrock-agentcore>=0.1.0
+# Core AgentCore SDK (>=1.1.0 required for MemoryClient)
+bedrock-agentcore>=1.1.0,<2.0.0
 
 # Fallback HTTP server (used if SDK unavailable)
-fastapi>=0.100.0
-uvicorn>=0.23.0
+fastapi>=0.100.0,<1.0.0
+uvicorn>=0.23.0,<1.0.0
 
 # Observability (recommended by AgentCore)
-aws-opentelemetry-distro>=0.10.1
+aws-opentelemetry-distro>=0.10.1,<1.0.0
 
 # OpenTelemetry SDK + OTLP exporter (traces, metrics, logs to collector via HTTP)
-opentelemetry-api>=1.24.0
-opentelemetry-sdk>=1.24.0
-opentelemetry-exporter-otlp-proto-http>=1.24.0
+opentelemetry-api>=1.24.0,<2.0.0
+opentelemetry-sdk>=1.24.0,<2.0.0
+opentelemetry-exporter-otlp-proto-http>=1.24.0,<2.0.0
+
+# Database (optional — only needed if DATABASE_URL is set)
+sqlalchemy>=2.0.0,<3.0.0
+psycopg2-binary>=2.9.9,<3.0.0
 
 # Application dependencies
-pyyaml>=6.0
+pyyaml>=6.0,<7.0
+boto3>=1.34.0,<2.0.0

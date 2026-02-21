@@ -27,8 +27,8 @@ from supervisor.llm import converse, is_enabled as llm_is_enabled
 
 logger = logging.getLogger("sentinalai.eval.judge")
 
-# Judge can use a separate model for cost optimisation
-JUDGE_MODEL_ID = os.environ.get("EVAL_JUDGE_MODEL_ID", "")
+# Judge uses a cheaper/faster model by default for cost optimisation
+JUDGE_MODEL_ID = os.environ.get("EVAL_JUDGE_MODEL_ID", "anthropic.claude-haiku-4-5-20251001-v1:0")
 
 JUDGE_DIMENSIONS = [
     "root_cause_accuracy",

@@ -49,6 +49,7 @@ MCP_TOOL_ARNS: dict[str, str] = {
     "splunk": os.environ.get("MCP_SPLUNK_TOOL_ARN", ""),
     "sysdig": os.environ.get("MCP_SYSDIG_TOOL_ARN", ""),
     "signalfx": os.environ.get("MCP_SIGNALFX_TOOL_ARN", ""),
+    "dynatrace": os.environ.get("MCP_DYNATRACE_TOOL_ARN", ""),
 }
 
 # Retry / timeout config
@@ -117,11 +118,15 @@ _TOOL_TO_SERVER: dict[str, str] = {
     "sysdig.environment_status": "sysdig",
     "signalfx.query_signalfx_metrics": "signalfx",
     "signalfx.get_signalfx_active_incidents": "signalfx",
+    "dynatrace.get_problems": "dynatrace",
+    "dynatrace.get_metrics": "dynatrace",
+    "dynatrace.get_entities": "dynatrace",
+    "dynatrace.get_events": "dynatrace",
 }
 
 
 def get_server_for_tool(mcp_tool_name: str) -> str:
-    """Map an MCP tool name to its server (moogsoft, splunk, sysdig, signalfx)."""
+    """Map an MCP tool name to its server (moogsoft, splunk, sysdig, signalfx, dynatrace)."""
     return _TOOL_TO_SERVER.get(mcp_tool_name, "")
 
 
@@ -258,6 +263,15 @@ def _stub_response(mcp_tool_name: str, tool_action: str, params: dict) -> dict:
         return {"metrics": {"metrics": [], "baseline": 0}}
 
     if server == "signalfx":
+        if "golden" in tool_action.lower() or "signal" in tool_action.lower():
+            return {"signals": {}}
+        return {"metrics": {}}
+
+    if server == "dynatrace":
+        if "problem" in tool_action.lower():
+            return {"problems": []}
+        if "event" in tool_action.lower():
+            return {"events": []}
         return {"metrics": {}}
 
     return {}

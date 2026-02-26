@@ -162,6 +162,10 @@ MCP_TO_WORKER: dict[str, str] = {
     "sysdig.environment_status": "metrics_worker",
     "signalfx.query_signalfx_metrics": "apm_worker",
     "signalfx.get_signalfx_active_incidents": "ops_worker",
+    "dynatrace.get_problems": "apm_worker",
+    "dynatrace.get_metrics": "apm_worker",
+    "dynatrace.get_entities": "apm_worker",
+    "dynatrace.get_events": "apm_worker",
 }
 
 # Investigation phase budgets
@@ -178,6 +182,7 @@ RATE_LIMITS: dict[str, dict[str, Any]] = {
     "splunk": {"requests_per_minute": 0, "concurrent": 10},  # 0 = unlimited
     "sysdig": {"requests_per_minute": 100, "concurrent": 10},
     "signalfx": {"requests_per_hour": 1000},
+    "dynatrace": {"requests_per_minute": 100, "concurrent": 10},
 }
 
 

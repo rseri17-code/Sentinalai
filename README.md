@@ -53,8 +53,8 @@ Incident In → [Classify] → [Playbook] → [Multi-Hypothesis Scoring] → [Ev
 │       ▼              ▼             ▼                ▼             │
 │  ┌─────────────────────────────────────────────────────────┐     │
 │  │                      Worker Layer                        │     │
-│  │  OpsWorker   LogWorker   MetricsWorker   ApmWorker      │     │
-│  │  (Moogsoft)  (Splunk)    (Sysdig)        (Sysdig)       │     │
+│  │  OpsWorker   LogWorker   MetricsWorker      ApmWorker    │     │
+│  │  (Moogsoft)  (Splunk)    (Sysdig)    (Dynatrace+SignalFx)│     │
 │  │                    KnowledgeWorker (Memory)              │     │
 │  └─────────────────────────────────────────────────────────┘     │
 │       │              │             │                │             │
@@ -62,8 +62,9 @@ Incident In → [Classify] → [Playbook] → [Multi-Hypothesis Scoring] → [Ev
 │  ┌─────────────────────────────────────────────────────────┐     │
 │  │              MCP Tool Servers (Bedrock AgentCore)        │     │
 │  │  moogsoft.get_incident_by_id  splunk.search_oneshot     │     │
-│  │  sysdig.query_metrics         sysdig.golden_signals     │     │
-│  │  splunk.get_change_data       sysdig.get_events         │     │
+│  │  sysdig.query_metrics         dynatrace.get_metrics     │     │
+│  │  splunk.get_change_data       signalfx.query_metrics    │     │
+│  │  sysdig.get_events            dynatrace.get_problems    │     │
 │  └─────────────────────────────────────────────────────────┘     │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -327,7 +328,7 @@ Workers are thin wrappers around MCP tool servers, invoked via Bedrock AgentCore
 | `OpsWorker` | Moogsoft | `get_incident_by_id` |
 | `LogWorker` | Splunk | `search_logs`, `get_change_data` |
 | `MetricsWorker` | Sysdig | `query_metrics`, `get_resource_metrics`, `get_events` |
-| `ApmWorker` | Sysdig | `get_golden_signals`, `check_latency` |
+| `ApmWorker` | Dynatrace + SignalFx | `get_golden_signals`, `check_latency` |
 | `KnowledgeWorker` | AgentCore Memory | `search_similar`, `store_result` |
 
 All workers extend `BaseWorker`, which provides action dispatch, timing, and structured error handling.
@@ -451,6 +452,7 @@ All configuration via environment variables. See `.env.template` for the full re
 | `MCP_SPLUNK_TOOL_ARN` | Splunk MCP server ARN |
 | `MCP_SYSDIG_TOOL_ARN` | Sysdig MCP server ARN |
 | `MCP_SIGNALFX_TOOL_ARN` | SignalFx MCP server ARN |
+| `MCP_DYNATRACE_TOOL_ARN` | Dynatrace MCP server ARN |
 
 When ARNs are not set, workers return stub responses for local development.
 
@@ -581,7 +583,7 @@ Sentinalai/
 │   ├── ops_worker.py         # Moogsoft
 │   ├── log_worker.py         # Splunk
 │   ├── metrics_worker.py     # Sysdig
-│   ├── apm_worker.py         # Sysdig golden signals
+│   ├── apm_worker.py         # Dynatrace + SignalFx APM
 │   ├── knowledge_worker.py   # AgentCore Memory search
 │   └── mcp_client.py         # Bedrock MCP invocation client
 ├── knowledge/

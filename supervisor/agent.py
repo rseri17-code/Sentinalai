@@ -13,6 +13,7 @@ Designed to be fully deterministic: same input -> same output.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
 import concurrent.futures
@@ -64,6 +65,23 @@ from supervisor.llm import (
     is_enabled as _llm_enabled,
 )
 from supervisor.llm_judge import judge_and_record as _judge_and_record
+
+# Institutional knowledge layer (opt-in via env var, graceful degradation)
+_KNOWLEDGE_ENABLED = os.environ.get("KNOWLEDGE_GRAPH_ENABLED", "").lower() in ("1", "true", "yes")
+try:
+    from knowledge.graph_store import GraphStore as _GraphStore
+    from knowledge.retrieval_engine import RetrievalEngine as _RetrievalEngine, compute_retrieval_boost as _retrieval_boost
+    if _KNOWLEDGE_ENABLED:
+        _knowledge_graph: _GraphStore | None = _GraphStore()
+        _knowledge_retrieval: _RetrievalEngine | None = _RetrievalEngine(graph_store=_knowledge_graph)
+    else:
+        _knowledge_graph = None
+        _knowledge_retrieval = None
+    _KNOWLEDGE_AVAILABLE = True
+except ImportError:
+    _knowledge_graph = None  # type: ignore[assignment]
+    _knowledge_retrieval = None  # type: ignore[assignment]
+    _KNOWLEDGE_AVAILABLE = False
 from workers.ops_worker import OpsWorker
 from workers.log_worker import LogWorker
 from workers.metrics_worker import MetricsWorker
@@ -359,6 +377,20 @@ class SentinalAISupervisor:
                 except Exception:
                     logger.debug("Memory store skipped (non-critical)")
 
+            # Persist to institutional knowledge graph (non-blocking)
+            if _KNOWLEDGE_AVAILABLE and _knowledge_graph is not None:
+                try:
+                    _knowledge_graph.persist_investigation(
+                        incident_id=incident_id,
+                        incident_type=incident_type,
+                        service=service,
+                        root_cause=result.get("root_cause", ""),
+                        confidence=confidence,
+                        evidence_refs=list(evidence.keys()),
+                    )
+                except Exception:
+                    logger.debug("Knowledge graph persist skipped (non-critical)")
+
             return result
 
     # ------------------------------------------------------------------ #
@@ -646,12 +678,34 @@ class SentinalAISupervisor:
                 k: v for k, v in reasoning_metrics.items() if k != "reasoning"
             })
 
+        # Institutional knowledge retrieval (proof-gated, additive only)
+        historical_matches: list[dict] = []
+        retrieval_boost = 0.0
+        if _KNOWLEDGE_AVAILABLE and _knowledge_retrieval is not None:
+            try:
+                historical_matches = _knowledge_retrieval.retrieve_similar(
+                    service=service,
+                    incident_type=incident_type,
+                    summary=summary,
+                )
+                if historical_matches and winner:
+                    # Proof-gated: only boost if we already have a winning hypothesis
+                    retrieval_boost = _retrieval_boost(historical_matches)
+                    confidence = min(100, int(confidence + retrieval_boost))
+                    # Without proof artifact, confidence must stay < 80
+                    if not winner.evidence_refs:
+                        confidence = min(confidence, 79)
+            except Exception:
+                logger.debug("Knowledge retrieval skipped (non-critical)")
+
         result = {
             "incident_id": incident_id,
             "root_cause": root_cause,
             "confidence": confidence,
             "evidence_timeline": timeline,
             "reasoning": reasoning,
+            "historical_matches": historical_matches,
+            "retrieval_confidence_boost": retrieval_boost,
             "_hypothesis_count": len(hypotheses),
             "_winner_hypothesis": winner.name if winner else "none",
         }

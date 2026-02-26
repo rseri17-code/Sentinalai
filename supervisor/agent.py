@@ -87,6 +87,8 @@ from workers.log_worker import LogWorker
 from workers.metrics_worker import MetricsWorker
 from workers.apm_worker import ApmWorker
 from workers.knowledge_worker import KnowledgeWorker
+from workers.itsm_worker import ItsmWorker
+from workers.devops_worker import DevopsWorker
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +195,8 @@ class SentinalAISupervisor:
             "metrics_worker": MetricsWorker(),
             "apm_worker": ApmWorker(),
             "knowledge_worker": KnowledgeWorker(),
+            "itsm_worker": ItsmWorker(),
+            "devops_worker": DevopsWorker(),
         }
         self._replay_store = ReplayStore(replay_dir) if replay_dir else None
         self._call_timeout = call_timeout
@@ -242,13 +246,28 @@ class SentinalAISupervisor:
             span.set_attribute(EVAL_SERVICE, service)
             logger.info("Classified %s as %s (service=%s)", incident_id, incident_type, service)
 
+            # Step 2b: ITSM context enrichment (Phase 1 — CI, known errors, similar incidents)
+            itsm_context = self._fetch_itsm_context(service, summary, receipts, budget)
+
             # Step 3: Execute playbook
             evidence = self._execute_playbook(
                 incident_type, incident_id, service, receipts, budget, circuits,
             )
+
+            # Merge ITSM context into evidence for downstream analysis
+            if itsm_context:
+                evidence["itsm_context"] = itsm_context
             logger.info("Playbook complete for %s: %d evidence items", incident_id, len(evidence))
 
-            # Step 3b: Historical context (optional phase 4)
+            # Step 3b: DevOps enrichment (proof-gated — only if change data found)
+            changes = self._extract_changes(evidence)
+            deployment = self._find_deployment(changes)
+            if deployment:
+                devops_context = self._fetch_devops_context(service, deployment, receipts, budget)
+                if devops_context:
+                    evidence["devops_context"] = devops_context
+
+            # Step 3c: Historical context (optional phase 4)
             historical = self._fetch_historical_context(service, summary, receipts, budget)
             if historical:
                 evidence["historical_context"] = historical
@@ -300,7 +319,7 @@ class SentinalAISupervisor:
                 signals_available=bool(evidence.get("get_golden_signals")),
                 metrics_available=bool(evidence.get("query_metrics") or evidence.get("get_resource_metrics")),
                 events_available=bool(evidence.get("get_events")),
-                changes_available=bool(evidence.get("get_change_data")),
+                changes_available=bool(evidence.get("get_change_data") or evidence.get("itsm_context")),
             )
 
             # Receipt summary metrics
@@ -527,6 +546,134 @@ class SentinalAISupervisor:
         return None
 
     # ------------------------------------------------------------------ #
+    # Internal: ITSM context enrichment (ServiceNow Phase 1 hydration)
+    # ------------------------------------------------------------------ #
+
+    def _fetch_itsm_context(
+        self, service: str, summary: str,
+        receipts: ReceiptCollector | None = None,
+        budget: ExecutionBudget | None = None,
+    ) -> dict | None:
+        """Phase 1 enrichment: fetch CI details, similar incidents, and known errors from ServiceNow."""
+        worker = self.workers.get("itsm_worker")
+        if worker is None:
+            return None
+        context: dict[str, Any] = {}
+
+        # CI details — service tier, dependencies, owner, SLA
+        if budget and not budget.can_call():
+            return context or None
+        try:
+            if budget:
+                budget.record_call()
+            params = {"service": service}
+            receipt = receipts.start("itsm_worker", "get_ci_details", params) if receipts else None
+            result = worker.execute("get_ci_details", params)
+            if receipt and receipts:
+                receipts.finish(receipt, result)
+            if result and result.get("ci"):
+                context["ci"] = result["ci"]
+        except Exception as exc:
+            if receipt and receipts:
+                receipts.finish(receipt, None, error=str(exc))
+            logger.debug("ITSM CI lookup unavailable for %s: %s", service, exc)
+
+        # Known errors — check before deep investigation
+        if budget and not budget.can_call():
+            return context or None
+        try:
+            if budget:
+                budget.record_call()
+            params = {"service": service, "summary": summary}
+            receipt = receipts.start("itsm_worker", "get_known_errors", params) if receipts else None
+            result = worker.execute("get_known_errors", params)
+            if receipt and receipts:
+                receipts.finish(receipt, result)
+            if result and result.get("known_errors"):
+                context["known_errors"] = result["known_errors"]
+        except Exception as exc:
+            if receipt and receipts:
+                receipts.finish(receipt, None, error=str(exc))
+            logger.debug("ITSM known error lookup unavailable for %s: %s", service, exc)
+
+        # Similar ServiceNow incidents
+        if budget and not budget.can_call():
+            return context or None
+        try:
+            if budget:
+                budget.record_call()
+            params = {"service": service, "query": summary}
+            receipt = receipts.start("itsm_worker", "search_incidents", params) if receipts else None
+            result = worker.execute("search_incidents", params)
+            if receipt and receipts:
+                receipts.finish(receipt, result)
+            if result and result.get("incidents"):
+                context["similar_incidents"] = result["incidents"]
+        except Exception as exc:
+            if receipt and receipts:
+                receipts.finish(receipt, None, error=str(exc))
+            logger.debug("ITSM incident search unavailable for %s: %s", service, exc)
+
+        return context or None
+
+    # ------------------------------------------------------------------ #
+    # Internal: DevOps enrichment (GitHub — proof-gated Phase 3)
+    # ------------------------------------------------------------------ #
+
+    def _fetch_devops_context(
+        self, service: str, deployment: dict,
+        receipts: ReceiptCollector | None = None,
+        budget: ExecutionBudget | None = None,
+    ) -> dict | None:
+        """Phase 3 proof-gated enrichment: fetch code change details from GitHub.
+
+        Only called when _find_deployment() already found a deployment in
+        ITSM/Splunk change data.  Never used for speculative code searches.
+        """
+        worker = self.workers.get("devops_worker")
+        if worker is None:
+            return None
+        context: dict[str, Any] = {}
+
+        # Recent deployments — PRs/releases in the incident window
+        if budget and not budget.can_call():
+            return context or None
+        try:
+            if budget:
+                budget.record_call()
+            params = {"service": service}
+            receipt = receipts.start("devops_worker", "get_recent_deployments", params) if receipts else None
+            result = worker.execute("get_recent_deployments", params)
+            if receipt and receipts:
+                receipts.finish(receipt, result)
+            if result and result.get("deployments"):
+                context["deployments"] = result["deployments"]
+        except Exception as exc:
+            if receipt and receipts:
+                receipts.finish(receipt, None, error=str(exc))
+            logger.debug("DevOps deployments unavailable for %s: %s", service, exc)
+
+        # Workflow runs — CI/CD pipeline status
+        if budget and not budget.can_call():
+            return context or None
+        try:
+            if budget:
+                budget.record_call()
+            params = {"service": service}
+            receipt = receipts.start("devops_worker", "get_workflow_runs", params) if receipts else None
+            result = worker.execute("get_workflow_runs", params)
+            if receipt and receipts:
+                receipts.finish(receipt, result)
+            if result and result.get("workflow_runs"):
+                context["workflow_runs"] = result["workflow_runs"]
+        except Exception as exc:
+            if receipt and receipts:
+                receipts.finish(receipt, None, error=str(exc))
+            logger.debug("DevOps workflow runs unavailable for %s: %s", service, exc)
+
+        return context or None
+
+    # ------------------------------------------------------------------ #
     # Internal: execute playbook (W1 isolated circuits, W4 timeout, W5 retry)
     # ------------------------------------------------------------------ #
 
@@ -605,6 +752,27 @@ class SentinalAISupervisor:
         elif step["action"] == "get_events":
             params["service"] = service
             params["target"] = service
+        # ITSM (ServiceNow) actions
+        elif step["action"] == "get_ci_details":
+            params["service"] = service
+        elif step["action"] == "search_incidents":
+            params["service"] = service
+            params["query"] = step.get("query_hint", "")
+        elif step["action"] == "get_change_records":
+            params["service"] = service
+        elif step["action"] == "get_known_errors":
+            params["service"] = service
+        # DevOps (GitHub) actions — proof-gated, only called conditionally
+        elif step["action"] == "get_recent_deployments":
+            params["service"] = service
+        elif step["action"] == "get_pr_details":
+            params["repo"] = step.get("repo", "")
+            params["pr_number"] = step.get("pr_number")
+        elif step["action"] == "get_commit_diff":
+            params["repo"] = step.get("repo", "")
+            params["sha"] = step.get("sha", "")
+        elif step["action"] == "get_workflow_runs":
+            params["service"] = service
 
         return params
 
@@ -629,6 +797,10 @@ class SentinalAISupervisor:
         metrics = self._extract_metrics(evidence)
         events = self._extract_events(evidence)
         changes = self._extract_changes(evidence)
+
+        # ITSM + DevOps context (available to analyzers via instance attrs)
+        self._itsm_evidence = self._extract_itsm_context(evidence)
+        self._devops_evidence = self._extract_devops_context(evidence)
 
         # Build timeline from all sources
         timeline = self._build_timeline(logs, signals, metrics, events, changes, incident_type, service)
@@ -978,6 +1150,39 @@ class SentinalAISupervisor:
             )
             dep_time = deployment.get("scheduled_start", deployment.get("actual_start", ""))
             evidence_refs = ["changes:deployment", f"logs:{error_type}", "golden_signals:error_rate"]
+
+            # Enrich with DevOps context if available (proof-gated)
+            devops_detail = ""
+            devops = self._devops_evidence
+            if devops:
+                deploys = devops.get("deployments", [])
+                workflows = devops.get("workflow_runs", [])
+                if deploys:
+                    evidence_refs.append("devops:deployments")
+                    pr_info = deploys[0]
+                    devops_detail = (
+                        f" Code change via PR #{pr_info.get('pr_number', '?')} "
+                        f"by {pr_info.get('author', 'unknown')} "
+                        f"(sha: {pr_info.get('sha', '?')[:8]})."
+                    )
+                if workflows:
+                    evidence_refs.append("devops:workflow_runs")
+                    latest_run = workflows[0]
+                    ci_status = latest_run.get("conclusion", "unknown")
+                    devops_detail += f" CI pipeline status: {ci_status}."
+
+            # Enrich with ITSM context if available
+            itsm_detail = ""
+            itsm = self._itsm_evidence
+            if itsm:
+                if itsm.get("ci"):
+                    evidence_refs.append("itsm:ci_details")
+                    tier = itsm["ci"].get("tier", "")
+                    if tier:
+                        itsm_detail = f" Service tier: {tier}."
+                if deployment.get("rollback_plan"):
+                    itsm_detail += f" Rollback plan: {deployment['rollback_plan']}."
+
             hypotheses.append(Hypothesis(
                 name="deployment_error",
                 root_cause=root_cause,
@@ -991,7 +1196,7 @@ class SentinalAISupervisor:
                     f"causal relationship. Error rate spiked from baseline to "
                     f"{signals.get('golden_signals', {}).get('errors', {}).get('rate', 0) * 100:.0f}% "
                     f"after the deployment. The {error_type} is the specific defect introduced by "
-                    f"the code change."
+                    f"the code change.{devops_detail}{itsm_detail}"
                 ),
             ))
 
@@ -1066,6 +1271,15 @@ class SentinalAISupervisor:
         if cpu > 90 and deployment:
             change_type = deployment.get("change_type", "change")
             evidence_refs = ["golden_signals:cpu_saturation", "changes:config_change", "logs:thread_pool"]
+
+            # DevOps enrichment for saturation after change
+            devops_detail = ""
+            devops = self._devops_evidence
+            if devops and devops.get("workflow_runs"):
+                evidence_refs.append("devops:workflow_runs")
+                ci_status = devops["workflow_runs"][0].get("conclusion", "unknown")
+                devops_detail = f" CI pipeline conclusion: {ci_status}."
+
             hypotheses.append(Hypothesis(
                 name="cpu_after_change",
                 root_cause=(
@@ -1080,7 +1294,7 @@ class SentinalAISupervisor:
                     f"at {deployment.get('scheduled_start', '')} which preceded the CPU spike. "
                     f"Log analysis shows thread pool exhaustion consistent with a runaway "
                     f"loop triggered by the config change. The correlation between the "
-                    f"config change timestamp and CPU spike confirms causality."
+                    f"config change timestamp and CPU spike confirms causality.{devops_detail}"
                 ),
             ))
         elif cpu > 90:
@@ -1381,15 +1595,47 @@ class SentinalAISupervisor:
         return sorted(all_events, key=lambda x: x.get("timestamp", ""))
 
     def _extract_changes(self, evidence: dict) -> list[dict]:
-        """Extract change/deployment data from evidence."""
+        """Extract change/deployment data from evidence (Splunk + ServiceNow)."""
         all_changes = []
         for key, val in evidence.items():
             if not isinstance(val, dict):
                 continue
+            # Splunk change data
             changes = val.get("changes", [])
             if isinstance(changes, list):
                 all_changes.extend(changes)
+            # ServiceNow change records (richer: approval, rollback, CI impact)
+            change_records = val.get("change_records", [])
+            if isinstance(change_records, list):
+                for cr in change_records:
+                    all_changes.append({
+                        "change_id": cr.get("number", ""),
+                        "change_type": cr.get("type", "deployment"),
+                        "description": cr.get("short_description", ""),
+                        "scheduled_start": cr.get("start_date", ""),
+                        "actual_end": cr.get("end_date", ""),
+                        "service": cr.get("service", ""),
+                        "status": cr.get("state", ""),
+                        "requested_by": cr.get("requested_by", ""),
+                        "approval": cr.get("approval", ""),
+                        "risk": cr.get("risk", ""),
+                        "rollback_plan": cr.get("rollback_plan", ""),
+                    })
         return all_changes
+
+    def _extract_itsm_context(self, evidence: dict) -> dict:
+        """Extract ITSM context (CI details, known errors) from evidence."""
+        itsm = evidence.get("itsm_context", {})
+        if not isinstance(itsm, dict):
+            return {}
+        return itsm
+
+    def _extract_devops_context(self, evidence: dict) -> dict:
+        """Extract DevOps context (deployments, workflow runs) from evidence."""
+        devops = evidence.get("devops_context", {})
+        if not isinstance(devops, dict):
+            return {}
+        return devops
 
     # ------------------------------------------------------------------ #
     # Timeline builder
@@ -1525,7 +1771,27 @@ class SentinalAISupervisor:
                         "service": change.get("service", service),
                     })
 
-        source_order = {"golden_signals": 0, "metrics": 1, "events": 2, "logs": 3, "log_summary": 4, "changes": 5}
+        # ITSM change records with richer metadata (approval, risk, rollback)
+        for change in changes:
+            if change.get("rollback_plan") or change.get("approval"):
+                ts = change.get("scheduled_start", change.get("actual_start", ""))
+                if ts:
+                    detail = change.get("description", "unknown change")
+                    if change.get("approval"):
+                        detail += f" [approval: {change['approval']}]"
+                    if change.get("risk"):
+                        detail += f" [risk: {change['risk']}]"
+                    timeline_entries.append({
+                        "timestamp": ts,
+                        "event": f"ITSM Change: {detail}",
+                        "source": "itsm_changes",
+                        "service": change.get("service", service),
+                    })
+
+        source_order = {
+            "golden_signals": 0, "metrics": 1, "events": 2, "logs": 3,
+            "log_summary": 4, "changes": 5, "itsm_changes": 6,
+        }
         timeline_entries.sort(
             key=lambda x: (x.get("timestamp", ""), source_order.get(x.get("source", ""), 9))
         )

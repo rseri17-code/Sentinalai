@@ -214,7 +214,7 @@ class TestGetPlaybook:
         """All worker references must be valid worker names."""
         valid_workers = {
             "ops_worker", "log_worker", "metrics_worker",
-            "apm_worker", "knowledge_worker",
+            "apm_worker", "knowledge_worker", "itsm_worker", "devops_worker",
         }
         playbook = get_playbook(incident_type)
         for step in playbook:
@@ -472,15 +472,28 @@ class TestToolSelectorMapping:
         assert "sysdig.query_metrics" in MCP_TO_WORKER
         assert "sysdig.get_events" in MCP_TO_WORKER
         assert "splunk.get_change_data" in MCP_TO_WORKER
+        # ITSM (ServiceNow)
+        assert "servicenow.get_ci_details" in MCP_TO_WORKER
+        assert "servicenow.search_incidents" in MCP_TO_WORKER
+        assert "servicenow.get_change_records" in MCP_TO_WORKER
+        assert "servicenow.get_known_errors" in MCP_TO_WORKER
+        # DevOps (GitHub)
+        assert "github.get_recent_deployments" in MCP_TO_WORKER
+        assert "github.get_pr_details" in MCP_TO_WORKER
+        assert "github.get_commit_diff" in MCP_TO_WORKER
+        assert "github.get_workflow_runs" in MCP_TO_WORKER
 
     def test_phase_budgets_complete(self):
-        """All four investigation phases must have budgets."""
-        for phase in ("initial_context", "evidence_gathering", "change_correlation", "historical_context"):
+        """All six investigation phases must have budgets."""
+        for phase in (
+            "initial_context", "itsm_context", "evidence_gathering",
+            "change_correlation", "devops_correlation", "historical_context",
+        ):
             assert phase in PHASE_BUDGETS
 
     def test_rate_limits_all_servers(self):
-        """All four MCP servers must have rate limits."""
-        for server in ("moogsoft", "splunk", "sysdig", "signalfx"):
+        """All MCP servers must have rate limits."""
+        for server in ("moogsoft", "splunk", "sysdig", "signalfx", "servicenow", "github"):
             assert server in RATE_LIMITS
 
 

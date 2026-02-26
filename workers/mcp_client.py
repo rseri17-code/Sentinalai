@@ -50,6 +50,8 @@ MCP_TOOL_ARNS: dict[str, str] = {
     "sysdig": os.environ.get("MCP_SYSDIG_TOOL_ARN", ""),
     "signalfx": os.environ.get("MCP_SIGNALFX_TOOL_ARN", ""),
     "dynatrace": os.environ.get("MCP_DYNATRACE_TOOL_ARN", ""),
+    "servicenow": os.environ.get("MCP_SERVICENOW_TOOL_ARN", ""),
+    "github": os.environ.get("MCP_GITHUB_TOOL_ARN", ""),
 }
 
 # Retry / timeout config
@@ -122,6 +124,16 @@ _TOOL_TO_SERVER: dict[str, str] = {
     "dynatrace.get_metrics": "dynatrace",
     "dynatrace.get_entities": "dynatrace",
     "dynatrace.get_events": "dynatrace",
+    # ServiceNow (ITSM)
+    "servicenow.get_ci_details": "servicenow",
+    "servicenow.search_incidents": "servicenow",
+    "servicenow.get_change_records": "servicenow",
+    "servicenow.get_known_errors": "servicenow",
+    # GitHub (DevOps)
+    "github.get_recent_deployments": "github",
+    "github.get_pr_details": "github",
+    "github.get_commit_diff": "github",
+    "github.get_workflow_runs": "github",
 }
 
 
@@ -273,6 +285,28 @@ def _stub_response(mcp_tool_name: str, tool_action: str, params: dict) -> dict:
         if "event" in tool_action.lower():
             return {"events": []}
         return {"metrics": {}}
+
+    if server == "servicenow":
+        if "ci" in tool_action.lower():
+            return {"ci": {}}
+        if "incident" in tool_action.lower():
+            return {"incidents": []}
+        if "change" in tool_action.lower():
+            return {"change_records": []}
+        if "known" in tool_action.lower() or "error" in tool_action.lower():
+            return {"known_errors": []}
+        return {}
+
+    if server == "github":
+        if "deployment" in tool_action.lower():
+            return {"deployments": []}
+        if "pr" in tool_action.lower():
+            return {"pr": {}}
+        if "commit" in tool_action.lower() or "diff" in tool_action.lower():
+            return {"commit": {}}
+        if "workflow" in tool_action.lower():
+            return {"workflow_runs": []}
+        return {}
 
     return {}
 

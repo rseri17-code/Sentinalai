@@ -36,5 +36,8 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
+# Knowledge graph store
+.knowledge_store/
+
 # Third-party reference repos
 amazon-bedrock-agentcore-samples/

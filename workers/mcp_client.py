@@ -237,9 +237,20 @@ class OAuth2CredentialProvider:
     def get_access_token(self) -> str:
         """Return a valid access token, refreshing if expired or near-expiry.
 
-        Thread-safe: concurrent callers wait on the lock during refresh.
+        Uses double-checked locking to minimize contention: concurrent
+        callers skip the lock entirely when a valid cached token exists.
+        Only the first thread to detect expiry acquires the lock and
+        performs the HTTP refresh; late arrivals recheck after acquiring
+        the lock and reuse the freshly-refreshed token.
+
         Returns empty string if token acquisition fails.
         """
+        # Fast path (no lock): return cached token if still valid
+        now = datetime.now(timezone.utc)
+        if self._token and self._expiry and now < self._expiry:
+            return self._token
+
+        # Slow path: acquire lock, recheck, refresh if still expired
         with self._lock:
             now = datetime.now(timezone.utc)
             if self._token and self._expiry and now < self._expiry:
@@ -414,6 +425,95 @@ def _to_gateway_tool_name(mcp_tool_name: str) -> str:
 
 
 # =========================================================================
+# Token-bucket rate limiter (per MCP server)
+# =========================================================================
+
+# Default rate limits per MCP server (requests-per-minute, 0 = unlimited)
+_DEFAULT_RATE_LIMITS: dict[str, int] = {
+    "moogsoft": 60,
+    "splunk": 0,      # unlimited
+    "sysdig": 100,
+    "signalfx": 60,
+    "dynatrace": 100,
+    "servicenow": 60,
+    "github": 30,
+}
+
+
+class _TokenBucket:
+    """Thread-safe token-bucket rate limiter for a single server."""
+
+    __slots__ = ("_capacity", "_tokens", "_refill_rate", "_last_refill", "_lock")
+
+    def __init__(self, requests_per_minute: int) -> None:
+        # 0 means unlimited — set very large capacity
+        if requests_per_minute <= 0:
+            self._capacity = float("inf")
+            self._tokens = float("inf")
+            self._refill_rate = 0.0
+        else:
+            self._capacity = float(requests_per_minute)
+            self._tokens = float(requests_per_minute)
+            self._refill_rate = requests_per_minute / 60.0  # tokens per second
+        self._last_refill = time.monotonic()
+        self._lock = threading.Lock()
+
+    def acquire(self, timeout: float = 5.0) -> bool:
+        """Try to acquire a token.  Returns True if allowed, False if rate-limited.
+
+        Refills tokens based on elapsed time, then consumes one.
+        Blocks up to *timeout* seconds waiting for a token to become available.
+        """
+        if self._capacity == float("inf"):
+            return True
+
+        deadline = time.monotonic() + timeout
+        with self._lock:
+            while True:
+                now = time.monotonic()
+                elapsed = now - self._last_refill
+                self._tokens = min(self._capacity, self._tokens + elapsed * self._refill_rate)
+                self._last_refill = now
+
+                if self._tokens >= 1.0:
+                    self._tokens -= 1.0
+                    return True
+
+                # How long until one token is available?
+                wait = (1.0 - self._tokens) / self._refill_rate if self._refill_rate > 0 else timeout + 1
+                if now + wait > deadline:
+                    return False
+
+                # Release lock while waiting, then reacquire
+                self._lock.release()
+                try:
+                    time.sleep(min(wait, deadline - now))
+                finally:
+                    self._lock.acquire()
+
+
+class RateLimiterRegistry:
+    """Registry of per-server token-bucket rate limiters."""
+
+    def __init__(self, limits: dict[str, int] | None = None) -> None:
+        self._limits = limits or _DEFAULT_RATE_LIMITS
+        self._buckets: dict[str, _TokenBucket] = {}
+        self._lock = threading.Lock()
+
+    def acquire(self, server: str, timeout: float = 5.0) -> bool:
+        """Acquire a rate-limit token for *server*.  Returns False if blocked."""
+        bucket = self._get_bucket(server)
+        return bucket.acquire(timeout)
+
+    def _get_bucket(self, server: str) -> _TokenBucket:
+        with self._lock:
+            if server not in self._buckets:
+                rpm = self._limits.get(server, 0)  # default: unlimited
+                self._buckets[server] = _TokenBucket(rpm)
+            return self._buckets[server]
+
+
+# =========================================================================
 # McpGateway — singleton class fronting all MCP servers via AgentCore
 # =========================================================================
 
@@ -449,13 +549,19 @@ class McpGateway:
 
     _instance: McpGateway | None = None
 
-    def __init__(self, oauth2_provider: OAuth2CredentialProvider | None = None) -> None:
+    def __init__(
+        self,
+        oauth2_provider: OAuth2CredentialProvider | None = None,
+        rate_limiter: RateLimiterRegistry | None = None,
+    ) -> None:
         self._mcp_client = None
         self._tools_cache: dict[str, Any] | None = None
         # Legacy boto3 client for backward compat during migration
         self._boto3_client = None
         # OAuth2 provider (lazy-init from env if not injected)
         self._oauth2_provider = oauth2_provider
+        # Per-server rate limiter (uses defaults if not injected)
+        self._rate_limiter = rate_limiter or RateLimiterRegistry()
 
     @classmethod
     def get_instance(cls) -> McpGateway:
@@ -495,6 +601,14 @@ class McpGateway:
         Returns:
             Response dict from the MCP tool, or error dict on failure.
         """
+        # Rate-limit check (per-server token bucket)
+        server = _TOOL_TO_SERVER.get(mcp_tool_name, "")
+        if server and not self._rate_limiter.acquire(server):
+            logger.warning(
+                "Rate limited: server=%s tool=%s", server, mcp_tool_name,
+            )
+            return {"error": "rate_limited", "server": server, "tool": mcp_tool_name}
+
         # Priority 1: AgentCore gateway (MCP protocol — production path)
         if AGENTCORE_GATEWAY_URL and _MCP_SDK_AVAILABLE:
             return self._invoke_via_gateway(mcp_tool_name, tool_action, params)
@@ -514,8 +628,13 @@ class McpGateway:
 
     def _invoke_via_gateway(
         self, mcp_tool_name: str, tool_action: str, params: dict[str, Any],
+        _is_retry: bool = False,
     ) -> dict[str, Any]:
-        """Invoke via AgentCore gateway using MCPClient + streamablehttp_client."""
+        """Invoke via AgentCore gateway using MCPClient + streamablehttp_client.
+
+        On 401 (Unauthorized), invalidates the OAuth2 token and retries once
+        to handle token expiry during mid-flight requests.
+        """
         gateway_tool_name = _to_gateway_tool_name(mcp_tool_name)
         tool_use_id = f"sentinalai-{uuid.uuid4().hex[:12]}"
 
@@ -557,6 +676,21 @@ class McpGateway:
 
         except Exception as exc:
             elapsed_ms = (time.monotonic() - start) * 1000
+
+            # 401 retry: invalidate OAuth2 token and retry once
+            is_401 = "401" in str(exc) or "Unauthorized" in str(exc)
+            if is_401 and not _is_retry and self._oauth2_provider is not None:
+                logger.warning(
+                    "MCP gateway 401 for %s — invalidating token and retrying",
+                    mcp_tool_name,
+                )
+                self._oauth2_provider.invalidate()
+                # Force new MCPClient with fresh auth headers
+                self._mcp_client = None
+                return self._invoke_via_gateway(
+                    mcp_tool_name, tool_action, params, _is_retry=True,
+                )
+
             logger.error(
                 "MCP gateway call failed: tool=%s error=%s elapsed=%.1fms",
                 mcp_tool_name, exc, elapsed_ms,

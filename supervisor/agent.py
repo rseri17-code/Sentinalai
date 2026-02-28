@@ -235,7 +235,7 @@ class SentinalAISupervisor:
             logger.info("Starting investigation for %s", incident_id)
 
             # Step 1: Fetch incident
-            incident = self._fetch_incident(incident_id, receipts, budget)
+            incident = self._fetch_incident(incident_id, receipts, budget, circuits)
             if not incident:
                 logger.warning("No incident data for %s", incident_id)
                 return self._empty_result(incident_id, "No incident data available")
@@ -250,7 +250,7 @@ class SentinalAISupervisor:
             logger.info("Classified %s as %s (service=%s)", incident_id, incident_type, service)
 
             # Step 2b: ITSM context enrichment (Phase 1 — CI, known errors, similar incidents)
-            itsm_context = self._fetch_itsm_context(service, summary, receipts, budget)
+            itsm_context = self._fetch_itsm_context(service, summary, receipts, budget, circuits)
 
             # Step 3: Execute playbook
             evidence = self._execute_playbook(
@@ -266,12 +266,12 @@ class SentinalAISupervisor:
             changes = self._extract_changes(evidence)
             deployment = self._find_deployment(changes)
             if deployment:
-                devops_context = self._fetch_devops_context(service, deployment, receipts, budget)
+                devops_context = self._fetch_devops_context(service, deployment, receipts, budget, circuits)
                 if devops_context:
                     evidence["devops_context"] = devops_context
 
             # Step 3c: Historical context (optional phase 4)
-            historical = self._fetch_historical_context(service, summary, receipts, budget)
+            historical = self._fetch_historical_context(service, summary, receipts, budget, circuits)
             if historical:
                 evidence["historical_context"] = historical
 
@@ -427,12 +427,23 @@ class SentinalAISupervisor:
         receipts: ReceiptCollector | None,
         budget: ExecutionBudget | None,
         worker_name: str = "",
+        circuits: CircuitBreakerRegistry | None = None,
     ) -> dict:
-        """Call worker.execute() with timeout guard and retry.
+        """Call worker.execute() with circuit breaker, timeout guard, and retry.
 
+        W1: checks circuit breaker before dispatch, records success/failure after.
         W4: wraps call in ThreadPoolExecutor with configurable timeout.
         W5: retries once on failure with exponential backoff.
         """
+        # W1: Circuit breaker check — skip call if circuit is open
+        if circuits:
+            circuit = circuits.get(worker_name)
+            if circuit.is_open:
+                logger.warning(
+                    "Circuit open for %s, skipping %s", worker_name, action,
+                )
+                return {"error": "circuit_open", "worker": worker_name, "action": action}
+
         last_error = ""
         attempts = 1 + self._max_retries  # 1 initial + N retries
 
@@ -465,6 +476,9 @@ class SentinalAISupervisor:
                 if receipt and receipts:
                     receipts.finish(receipt, result)
                 record_worker_call(worker_name, action, "success", call_elapsed)
+                # W1: Record success with circuit breaker
+                if circuits:
+                    circuits.get(worker_name).record_success(worker_name)
                 return result
 
             except concurrent.futures.TimeoutError:
@@ -494,7 +508,9 @@ class SentinalAISupervisor:
                     worker_name, action, exc, attempt + 1, attempts,
                 )
 
-        # All attempts exhausted
+        # All attempts exhausted — record failure with circuit breaker
+        if circuits:
+            circuits.get(worker_name).record_failure(worker_name)
         return {"error": last_error or "worker_unavailable"}
 
     # ------------------------------------------------------------------ #
@@ -505,26 +521,26 @@ class SentinalAISupervisor:
         self, incident_id: str,
         receipts: ReceiptCollector | None = None,
         budget: ExecutionBudget | None = None,
+        circuits: CircuitBreakerRegistry | None = None,
     ) -> dict | None:
-        try:
-            if budget:
-                budget.record_call()
-            receipt = receipts.start("ops_worker", "get_incident_by_id", {"incident_id": incident_id}) if receipts else None
-            result = self.workers["ops_worker"].execute(
-                "get_incident_by_id", {"incident_id": incident_id}
-            )
-            if receipt and receipts:
-                receipts.finish(receipt, result)
-            return result.get("incident") if result else None
-        except Exception as exc:
-            if receipt and receipts:
-                receipts.finish(receipt, None, error=str(exc))
+        if budget and not budget.can_call():
             return None
+        if budget:
+            budget.record_call()
+        result = self._call_worker(
+            self.workers["ops_worker"],
+            "get_incident_by_id",
+            {"incident_id": incident_id},
+            receipts, budget, "ops_worker",
+            circuits=circuits,
+        )
+        return result.get("incident") if result else None
 
     def _fetch_historical_context(
         self, service: str, summary: str,
         receipts: ReceiptCollector | None = None,
         budget: ExecutionBudget | None = None,
+        circuits: CircuitBreakerRegistry | None = None,
     ) -> dict | None:
         """Optional phase 4: fetch similar historical incidents."""
         worker = self.workers.get("knowledge_worker")
@@ -532,20 +548,16 @@ class SentinalAISupervisor:
             return None
         if budget and not budget.can_call():
             return None
-        try:
-            if budget:
-                budget.record_call()
-            params = {"service": service, "summary": summary}
-            receipt = receipts.start("knowledge_worker", "search_similar", params) if receipts else None
-            result = worker.execute("search_similar", params)
-            if receipt and receipts:
-                receipts.finish(receipt, result)
-            if result and result.get("similar_incidents"):
-                return result
-        except Exception as exc:
-            if receipt and receipts:
-                receipts.finish(receipt, None, error=str(exc))
-            logger.debug("Historical context unavailable for %s", service)
+        if budget:
+            budget.record_call()
+        result = self._call_worker(
+            worker, "search_similar",
+            {"service": service, "summary": summary},
+            receipts, budget, "knowledge_worker",
+            circuits=circuits,
+        )
+        if result and result.get("similar_incidents"):
+            return result
         return None
 
     # ------------------------------------------------------------------ #
@@ -556,6 +568,7 @@ class SentinalAISupervisor:
         self, service: str, summary: str,
         receipts: ReceiptCollector | None = None,
         budget: ExecutionBudget | None = None,
+        circuits: CircuitBreakerRegistry | None = None,
     ) -> dict | None:
         """Phase 1 enrichment: fetch CI details, similar incidents, and known errors from ServiceNow."""
         worker = self.workers.get("itsm_worker")
@@ -566,56 +579,38 @@ class SentinalAISupervisor:
         # CI details — service tier, dependencies, owner, SLA
         if budget and not budget.can_call():
             return context or None
-        try:
-            if budget:
-                budget.record_call()
-            params = {"service": service}
-            receipt = receipts.start("itsm_worker", "get_ci_details", params) if receipts else None
-            result = worker.execute("get_ci_details", params)
-            if receipt and receipts:
-                receipts.finish(receipt, result)
-            if result and result.get("ci"):
-                context["ci"] = result["ci"]
-        except Exception as exc:
-            if receipt and receipts:
-                receipts.finish(receipt, None, error=str(exc))
-            logger.debug("ITSM CI lookup unavailable for %s: %s", service, exc)
+        if budget:
+            budget.record_call()
+        result = self._call_worker(
+            worker, "get_ci_details", {"service": service},
+            receipts, budget, "itsm_worker", circuits=circuits,
+        )
+        if result and result.get("ci"):
+            context["ci"] = result["ci"]
 
         # Known errors — check before deep investigation
         if budget and not budget.can_call():
             return context or None
-        try:
-            if budget:
-                budget.record_call()
-            params = {"service": service, "summary": summary}
-            receipt = receipts.start("itsm_worker", "get_known_errors", params) if receipts else None
-            result = worker.execute("get_known_errors", params)
-            if receipt and receipts:
-                receipts.finish(receipt, result)
-            if result and result.get("known_errors"):
-                context["known_errors"] = result["known_errors"]
-        except Exception as exc:
-            if receipt and receipts:
-                receipts.finish(receipt, None, error=str(exc))
-            logger.debug("ITSM known error lookup unavailable for %s: %s", service, exc)
+        if budget:
+            budget.record_call()
+        result = self._call_worker(
+            worker, "get_known_errors", {"service": service, "summary": summary},
+            receipts, budget, "itsm_worker", circuits=circuits,
+        )
+        if result and result.get("known_errors"):
+            context["known_errors"] = result["known_errors"]
 
         # Similar ServiceNow incidents
         if budget and not budget.can_call():
             return context or None
-        try:
-            if budget:
-                budget.record_call()
-            params = {"service": service, "query": summary}
-            receipt = receipts.start("itsm_worker", "search_incidents", params) if receipts else None
-            result = worker.execute("search_incidents", params)
-            if receipt and receipts:
-                receipts.finish(receipt, result)
-            if result and result.get("incidents"):
-                context["similar_incidents"] = result["incidents"]
-        except Exception as exc:
-            if receipt and receipts:
-                receipts.finish(receipt, None, error=str(exc))
-            logger.debug("ITSM incident search unavailable for %s: %s", service, exc)
+        if budget:
+            budget.record_call()
+        result = self._call_worker(
+            worker, "search_incidents", {"service": service, "query": summary},
+            receipts, budget, "itsm_worker", circuits=circuits,
+        )
+        if result and result.get("incidents"):
+            context["similar_incidents"] = result["incidents"]
 
         return context or None
 
@@ -627,6 +622,7 @@ class SentinalAISupervisor:
         self, service: str, deployment: dict,
         receipts: ReceiptCollector | None = None,
         budget: ExecutionBudget | None = None,
+        circuits: CircuitBreakerRegistry | None = None,
     ) -> dict | None:
         """Phase 3 proof-gated enrichment: fetch code change details from GitHub.
 
@@ -641,38 +637,26 @@ class SentinalAISupervisor:
         # Recent deployments — PRs/releases in the incident window
         if budget and not budget.can_call():
             return context or None
-        try:
-            if budget:
-                budget.record_call()
-            params = {"service": service}
-            receipt = receipts.start("devops_worker", "get_recent_deployments", params) if receipts else None
-            result = worker.execute("get_recent_deployments", params)
-            if receipt and receipts:
-                receipts.finish(receipt, result)
-            if result and result.get("deployments"):
-                context["deployments"] = result["deployments"]
-        except Exception as exc:
-            if receipt and receipts:
-                receipts.finish(receipt, None, error=str(exc))
-            logger.debug("DevOps deployments unavailable for %s: %s", service, exc)
+        if budget:
+            budget.record_call()
+        result = self._call_worker(
+            worker, "get_recent_deployments", {"service": service},
+            receipts, budget, "devops_worker", circuits=circuits,
+        )
+        if result and result.get("deployments"):
+            context["deployments"] = result["deployments"]
 
         # Workflow runs — CI/CD pipeline status
         if budget and not budget.can_call():
             return context or None
-        try:
-            if budget:
-                budget.record_call()
-            params = {"service": service}
-            receipt = receipts.start("devops_worker", "get_workflow_runs", params) if receipts else None
-            result = worker.execute("get_workflow_runs", params)
-            if receipt and receipts:
-                receipts.finish(receipt, result)
-            if result and result.get("workflow_runs"):
-                context["workflow_runs"] = result["workflow_runs"]
-        except Exception as exc:
-            if receipt and receipts:
-                receipts.finish(receipt, None, error=str(exc))
-            logger.debug("DevOps workflow runs unavailable for %s: %s", service, exc)
+        if budget:
+            budget.record_call()
+        result = self._call_worker(
+            worker, "get_workflow_runs", {"service": service},
+            receipts, budget, "devops_worker", circuits=circuits,
+        )
+        if result and result.get("workflow_runs"):
+            context["workflow_runs"] = result["workflow_runs"]
 
         return context or None
 
@@ -703,13 +687,6 @@ class SentinalAISupervisor:
                 logger.warning("Budget exhausted at step %s for %s", label, incident_id)
                 break
 
-            # Circuit breaker check (W1: per-investigation)
-            circuit = cb_registry.get(worker_name)
-            if circuit.is_open:
-                logger.warning("Circuit open for %s, skipping %s", worker_name, label)
-                evidence[label] = {"error": "circuit_open"}
-                continue
-
             params = self._build_params(step, incident_id, service)
             worker = self.workers.get(worker_name)
             if worker is None:
@@ -718,17 +695,12 @@ class SentinalAISupervisor:
             if budget:
                 budget.record_call()
 
-            # W4+W5: Call with timeout and retry
+            # W1+W4+W5: Call with circuit breaker, timeout, and retry
             result = self._call_worker(
                 worker, action, params, receipts, budget, worker_name,
+                circuits=cb_registry,
             )
-
-            if isinstance(result, dict) and result.get("error"):
-                evidence[label] = result
-                circuit.record_failure(worker_name)
-            else:
-                evidence[label] = result
-                circuit.record_success(worker_name)
+            evidence[label] = result
 
         return evidence
 

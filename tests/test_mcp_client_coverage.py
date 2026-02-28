@@ -28,6 +28,8 @@ from workers.mcp_client import (
     get_arn_for_tool,
     McpGateway,
     OAuth2CredentialProvider,
+    RateLimiterRegistry,
+    _TokenBucket,
     dispose,
 )
 
@@ -577,3 +579,193 @@ class TestGatewayAuthHeaders:
         gw = McpGateway(oauth2_provider=mock_provider)
         gw.dispose()
         mock_provider.invalidate.assert_called_once()
+
+
+# =========================================================================
+# Token-bucket rate limiter tests
+# =========================================================================
+
+
+class TestTokenBucket:
+    """Tests for the _TokenBucket rate limiter."""
+
+    def test_unlimited_bucket_always_acquires(self):
+        """A bucket with 0 RPM (unlimited) always allows."""
+        bucket = _TokenBucket(0)
+        for _ in range(1000):
+            assert bucket.acquire(timeout=0) is True
+
+    def test_bucket_allows_up_to_capacity(self):
+        """A bucket allows up to capacity requests immediately."""
+        bucket = _TokenBucket(10)  # 10 RPM
+        results = [bucket.acquire(timeout=0) for _ in range(10)]
+        assert all(results)
+
+    def test_bucket_blocks_over_capacity(self):
+        """A bucket rejects requests beyond capacity when timeout=0."""
+        bucket = _TokenBucket(5)  # 5 RPM
+        for _ in range(5):
+            bucket.acquire(timeout=0)
+        assert bucket.acquire(timeout=0) is False
+
+    def test_bucket_refills_over_time(self):
+        """Tokens refill based on elapsed time."""
+        import time as _time
+
+        bucket = _TokenBucket(60)  # 60 RPM = 1/sec
+        for _ in range(60):
+            bucket.acquire(timeout=0)
+        assert bucket.acquire(timeout=0) is False
+        _time.sleep(0.05)  # Wait for ~3 tokens to refill (60/60 * 0.05 = 0.05)
+        # After ~50ms at 1 token/sec, should have ~0.05 tokens, not enough
+        # Wait a bit more
+        _time.sleep(1.0)  # 1 full second = 1 token refilled
+        assert bucket.acquire(timeout=0) is True
+
+
+class TestRateLimiterRegistry:
+    """Tests for RateLimiterRegistry."""
+
+    def test_acquire_unknown_server_unlimited(self):
+        """Unknown servers default to unlimited."""
+        registry = RateLimiterRegistry()
+        assert registry.acquire("unknown_server", timeout=0) is True
+
+    def test_acquire_respects_configured_limit(self):
+        """Configured servers enforce their rate limit."""
+        registry = RateLimiterRegistry({"test_server": 3})
+        for _ in range(3):
+            assert registry.acquire("test_server", timeout=0) is True
+        assert registry.acquire("test_server", timeout=0) is False
+
+    def test_different_servers_independent(self):
+        """Each server has its own bucket."""
+        registry = RateLimiterRegistry({"a": 2, "b": 2})
+        registry.acquire("a", timeout=0)
+        registry.acquire("a", timeout=0)
+        assert registry.acquire("a", timeout=0) is False
+        # Server B should still have tokens
+        assert registry.acquire("b", timeout=0) is True
+
+
+class TestGatewayRateLimiting:
+    """Tests for rate limiting in McpGateway.invoke()."""
+
+    def setup_method(self):
+        McpGateway.reset_instance()
+
+    def teardown_method(self):
+        McpGateway.reset_instance()
+
+    def test_invoke_rate_limited_returns_error(self):
+        """When rate limiter blocks, invoke returns error dict."""
+        mock_limiter = MagicMock(spec=RateLimiterRegistry)
+        mock_limiter.acquire.return_value = False
+
+        gw = McpGateway(rate_limiter=mock_limiter)
+        result = gw.invoke("splunk.search_oneshot", "search_logs", {})
+
+        assert result["error"] == "rate_limited"
+        assert result["server"] == "splunk"
+
+    def test_invoke_proceeds_when_rate_limiter_allows(self):
+        """When rate limiter allows, invoke proceeds to stub."""
+        mock_limiter = MagicMock(spec=RateLimiterRegistry)
+        mock_limiter.acquire.return_value = True
+
+        gw = McpGateway(rate_limiter=mock_limiter)
+        # No gateway URL set, so falls through to stub
+        result = gw.invoke("splunk.search_oneshot", "search_logs", {"query": "test"})
+
+        # Should get a stub response, not a rate limit error
+        assert "error" not in result or result.get("error") != "rate_limited"
+        mock_limiter.acquire.assert_called_once_with("splunk")
+
+    def test_invoke_skips_rate_limit_for_unknown_tool(self):
+        """Unknown tools (no server mapping) skip rate limiting."""
+        mock_limiter = MagicMock(spec=RateLimiterRegistry)
+        gw = McpGateway(rate_limiter=mock_limiter)
+        result = gw.invoke("unknown.tool", "action", {})
+        # Should not have called acquire since server is empty string
+        mock_limiter.acquire.assert_not_called()
+
+
+# =========================================================================
+# OAuth2 401 retry tests
+# =========================================================================
+
+
+class TestGateway401Retry:
+    """Tests for 401 retry logic in _invoke_via_gateway."""
+
+    def setup_method(self):
+        McpGateway.reset_instance()
+
+    def teardown_method(self):
+        McpGateway.reset_instance()
+
+    def test_401_invalidates_token_and_retries(self):
+        """401 error invalidates OAuth2 token and retries once."""
+        mock_provider = MagicMock(spec=OAuth2CredentialProvider)
+        mock_provider.get_auth_headers.return_value = {"Authorization": "Bearer tok"}
+
+        gw = McpGateway(oauth2_provider=mock_provider)
+
+        # Simulate: first call raises 401, retry succeeds (returns stub)
+        call_count = 0
+        original_get_client = gw._get_mcp_client
+
+        def mock_get_client():
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise Exception("HTTP 401 Unauthorized")
+            return None  # Will fall through to stub
+
+        gw._get_mcp_client = mock_get_client
+
+        with patch.object(mc, "AGENTCORE_GATEWAY_URL", "https://gw.example.com"):
+            with patch.object(mc, "_MCP_SDK_AVAILABLE", True):
+                result = gw.invoke("splunk.search_oneshot", "search_logs", {"query": "x"})
+
+        # Token should have been invalidated
+        mock_provider.invalidate.assert_called_once()
+        # Result should be a stub (not error), since retry returned None client
+        assert "gateway_exception" not in result.get("error", "")
+
+    def test_401_does_not_retry_twice(self):
+        """401 on retry does not cause infinite loop."""
+        mock_provider = MagicMock(spec=OAuth2CredentialProvider)
+        mock_provider.get_auth_headers.return_value = {"Authorization": "Bearer tok"}
+
+        gw = McpGateway(oauth2_provider=mock_provider)
+
+        def always_401():
+            raise Exception("HTTP 401 Unauthorized")
+
+        gw._get_mcp_client = always_401
+
+        with patch.object(mc, "AGENTCORE_GATEWAY_URL", "https://gw.example.com"):
+            with patch.object(mc, "_MCP_SDK_AVAILABLE", True):
+                result = gw.invoke("splunk.search_oneshot", "search_logs", {})
+
+        # Should have errored out after one retry
+        assert "error" in result
+        assert "401" in result["error"]
+
+    def test_non_401_error_does_not_retry(self):
+        """Non-401 errors are not retried."""
+        mock_provider = MagicMock(spec=OAuth2CredentialProvider)
+        gw = McpGateway(oauth2_provider=mock_provider)
+
+        def raise_500():
+            raise Exception("HTTP 500 Internal Server Error")
+
+        gw._get_mcp_client = raise_500
+
+        with patch.object(mc, "AGENTCORE_GATEWAY_URL", "https://gw.example.com"):
+            with patch.object(mc, "_MCP_SDK_AVAILABLE", True):
+                result = gw.invoke("splunk.search_oneshot", "search_logs", {})
+
+        assert "error" in result
+        mock_provider.invalidate.assert_not_called()

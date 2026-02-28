@@ -11,6 +11,8 @@ from workers.log_worker import LogWorker
 from workers.metrics_worker import MetricsWorker
 from workers.apm_worker import ApmWorker
 from workers.knowledge_worker import KnowledgeWorker
+from workers.itsm_worker import ItsmWorker
+from workers.devops_worker import DevopsWorker
 from tests.fixtures.mock_mcp_responses import ALL_MOCKS
 
 
@@ -150,6 +152,76 @@ class TestKnowledgeWorker:
     def test_deterministic_output(self):
         r1 = self.worker.execute("search_similar", {"incident_type": "timeout"})
         r2 = self.worker.execute("search_similar", {"incident_type": "timeout"})
+        assert r1 == r2
+
+    def test_unknown_action_returns_empty(self):
+        result = self.worker.execute("nonexistent_action", {})
+        assert isinstance(result, dict)
+
+
+class TestItsmWorker:
+    """Tests for the ServiceNow ITSM worker."""
+
+    def setup_method(self):
+        self.worker = ItsmWorker()
+
+    def test_get_ci_details_returns_dict(self):
+        result = self.worker.execute("get_ci_details", {"service": "payment-service"})
+        assert isinstance(result, dict)
+
+    def test_get_change_records_returns_dict(self):
+        result = self.worker.execute("get_change_records", {"service": "payment-service"})
+        assert isinstance(result, dict)
+
+    def test_search_incidents_returns_dict(self):
+        result = self.worker.execute("search_incidents", {"service": "api-gateway"})
+        assert isinstance(result, dict)
+
+    def test_get_known_errors_returns_dict(self):
+        result = self.worker.execute("get_known_errors", {"service": "payment-service"})
+        assert isinstance(result, dict)
+
+    def test_deterministic_output(self):
+        r1 = self.worker.execute("get_ci_details", {"service": "payment-service"})
+        r2 = self.worker.execute("get_ci_details", {"service": "payment-service"})
+        assert r1 == r2
+
+    def test_unknown_action_returns_empty(self):
+        result = self.worker.execute("nonexistent_action", {})
+        assert isinstance(result, dict)
+
+
+class TestDevopsWorker:
+    """Tests for the GitHub DevOps worker."""
+
+    def setup_method(self):
+        self.worker = DevopsWorker()
+
+    def test_get_recent_deployments_returns_dict(self):
+        result = self.worker.execute("get_recent_deployments", {"service": "payment-service"})
+        assert isinstance(result, dict)
+
+    def test_get_pr_details_returns_dict(self):
+        result = self.worker.execute(
+            "get_pr_details",
+            {"repo": "org/payment-service", "pr_number": 42},
+        )
+        assert isinstance(result, dict)
+
+    def test_get_commit_diff_returns_dict(self):
+        result = self.worker.execute(
+            "get_commit_diff",
+            {"repo": "org/payment-service", "sha": "abc123"},
+        )
+        assert isinstance(result, dict)
+
+    def test_get_workflow_runs_returns_dict(self):
+        result = self.worker.execute("get_workflow_runs", {"service": "payment-service"})
+        assert isinstance(result, dict)
+
+    def test_deterministic_output(self):
+        r1 = self.worker.execute("get_recent_deployments", {"service": "payment-service"})
+        r2 = self.worker.execute("get_recent_deployments", {"service": "payment-service"})
         assert r1 == r2
 
     def test_unknown_action_returns_empty(self):

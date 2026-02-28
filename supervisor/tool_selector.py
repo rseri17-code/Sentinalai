@@ -46,6 +46,7 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
         {"worker": "log_worker", "action": "search_logs", "query_hint": "error {service}", "label": "search_error_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "log_worker", "action": "get_change_data", "label": "check_changes"},
+        {"worker": "itsm_worker", "action": "get_change_records", "label": "check_itsm_changes"},
         {"worker": "metrics_worker", "action": "get_events", "label": "check_events"},
     ],
     "latency": [
@@ -61,6 +62,7 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
         {"worker": "metrics_worker", "action": "query_metrics", "metric_hint": "cpu_usage_percent", "label": "check_cpu_metrics"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "cpu OR thread {service}", "label": "search_cpu_logs"},
         {"worker": "log_worker", "action": "get_change_data", "label": "check_changes"},
+        {"worker": "itsm_worker", "action": "get_change_records", "label": "check_itsm_changes"},
     ],
     "network": [
         {"worker": "ops_worker", "action": "get_incident_by_id", "label": "fetch_incident"},
@@ -68,6 +70,7 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "dns {service}", "label": "search_dns_logs"},
         {"worker": "log_worker", "action": "get_change_data", "label": "check_changes"},
+        {"worker": "itsm_worker", "action": "get_change_records", "label": "check_itsm_changes"},
     ],
     "cascading": [
         {"worker": "ops_worker", "action": "get_incident_by_id", "label": "fetch_incident"},
@@ -75,6 +78,7 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "metrics_worker", "action": "query_metrics", "label": "check_metrics"},
         {"worker": "log_worker", "action": "get_change_data", "label": "check_changes"},
+        {"worker": "itsm_worker", "action": "get_change_records", "label": "check_itsm_changes"},
     ],
     "missing_data": [
         {"worker": "ops_worker", "action": "get_incident_by_id", "label": "fetch_incident"},
@@ -162,13 +166,29 @@ MCP_TO_WORKER: dict[str, str] = {
     "sysdig.environment_status": "metrics_worker",
     "signalfx.query_signalfx_metrics": "apm_worker",
     "signalfx.get_signalfx_active_incidents": "ops_worker",
+    "dynatrace.get_problems": "apm_worker",
+    "dynatrace.get_metrics": "apm_worker",
+    "dynatrace.get_entities": "apm_worker",
+    "dynatrace.get_events": "apm_worker",
+    # ServiceNow (ITSM)
+    "servicenow.get_ci_details": "itsm_worker",
+    "servicenow.search_incidents": "itsm_worker",
+    "servicenow.get_change_records": "itsm_worker",
+    "servicenow.get_known_errors": "itsm_worker",
+    # GitHub (DevOps)
+    "github.get_recent_deployments": "devops_worker",
+    "github.get_pr_details": "devops_worker",
+    "github.get_commit_diff": "devops_worker",
+    "github.get_workflow_runs": "devops_worker",
 }
 
 # Investigation phase budgets
 PHASE_BUDGETS: dict[str, dict[str, Any]] = {
     "initial_context": {"max_calls": 2, "max_seconds": 5},
+    "itsm_context": {"max_calls": 3, "max_seconds": 10},
     "evidence_gathering": {"max_calls": 5, "max_seconds": 30},
     "change_correlation": {"max_calls": 3, "max_seconds": 10},
+    "devops_correlation": {"max_calls": 2, "max_seconds": 10},
     "historical_context": {"max_calls": 2, "max_seconds": 10},
 }
 
@@ -178,6 +198,9 @@ RATE_LIMITS: dict[str, dict[str, Any]] = {
     "splunk": {"requests_per_minute": 0, "concurrent": 10},  # 0 = unlimited
     "sysdig": {"requests_per_minute": 100, "concurrent": 10},
     "signalfx": {"requests_per_hour": 1000},
+    "dynatrace": {"requests_per_minute": 100, "concurrent": 10},
+    "servicenow": {"requests_per_minute": 60, "concurrent": 5},
+    "github": {"requests_per_minute": 30, "concurrent": 3},
 }
 
 
@@ -326,7 +349,10 @@ class ToolSelector:
         Combines playbook steps with phase budgets for a complete workflow.
         """
         playbook = get_playbook(incident_type)
-        phases = ["initial_context", "evidence_gathering", "change_correlation", "historical_context"]
+        phases = [
+            "initial_context", "itsm_context", "evidence_gathering",
+            "change_correlation", "devops_correlation", "historical_context",
+        ]
         workflow = []
 
         for phase in phases:
@@ -335,13 +361,23 @@ class ToolSelector:
 
             if phase == "initial_context":
                 phase_steps = [s for s in playbook if s["action"] == "get_incident_by_id"]
+            elif phase == "itsm_context":
+                phase_steps = [
+                    s for s in playbook
+                    if s["worker"] == "itsm_worker" and s["action"] != "get_change_records"
+                ]
             elif phase == "evidence_gathering":
                 phase_steps = [
                     s for s in playbook
                     if s["action"] in ("search_logs", "get_golden_signals", "query_metrics", "get_events")
                 ]
             elif phase == "change_correlation":
-                phase_steps = [s for s in playbook if s["action"] == "get_change_data"]
+                phase_steps = [
+                    s for s in playbook
+                    if s["action"] in ("get_change_data", "get_change_records")
+                ]
+            elif phase == "devops_correlation":
+                phase_steps = [s for s in playbook if s["worker"] == "devops_worker"]
             elif phase == "historical_context":
                 phase_steps = [s for s in playbook if s["worker"] == "knowledge_worker"]
 
@@ -368,6 +404,14 @@ class ToolSelector:
             ("metrics_worker", "query_metrics"): "sysdig.query_metrics",
             ("metrics_worker", "get_events"): "sysdig.get_events",
             ("knowledge_worker", "search_similar"): "moogsoft.get_historical_analysis",
+            ("itsm_worker", "get_ci_details"): "servicenow.get_ci_details",
+            ("itsm_worker", "search_incidents"): "servicenow.search_incidents",
+            ("itsm_worker", "get_change_records"): "servicenow.get_change_records",
+            ("itsm_worker", "get_known_errors"): "servicenow.get_known_errors",
+            ("devops_worker", "get_recent_deployments"): "github.get_recent_deployments",
+            ("devops_worker", "get_pr_details"): "github.get_pr_details",
+            ("devops_worker", "get_commit_diff"): "github.get_commit_diff",
+            ("devops_worker", "get_workflow_runs"): "github.get_workflow_runs",
         }
         tools = []
         for step in playbook:

@@ -83,4 +83,8 @@ class BaseWorker:
                 },
                 exc_info=True,
             )
-            return {}
+            return {
+                "error": str(exc),
+                "worker": self.worker_name,
+                "action": action,
+            }

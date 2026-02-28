@@ -74,10 +74,12 @@ class TestBaseWorkerErrorHandling:
     def setup_method(self):
         self.worker = ConcreteWorker()
 
-    def test_handler_exception_returns_empty_dict(self):
-        """A failing handler should return {} instead of raising."""
+    def test_handler_exception_returns_error_dict(self):
+        """A failing handler should return error context instead of raising."""
         result = self.worker.execute("fail")
-        assert result == {}
+        assert result["error"] == "something broke"
+        assert result["worker"] == "test_worker"
+        assert result["action"] == "fail"
 
     def test_handler_exception_does_not_propagate(self):
         """execute() must never raise even if the handler does."""

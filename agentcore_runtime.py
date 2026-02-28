@@ -171,6 +171,19 @@ try:
         except Exception:
             health["memory"] = "check_failed"
 
+        # Check MCP gateway connectivity
+        try:
+            from workers.mcp_client import AGENTCORE_GATEWAY_URL
+            if AGENTCORE_GATEWAY_URL:
+                import urllib.request
+                req = urllib.request.Request(AGENTCORE_GATEWAY_URL, method="HEAD")
+                urllib.request.urlopen(req, timeout=3)
+                health["gateway"] = "reachable"
+            else:
+                health["gateway"] = "not_configured"
+        except Exception:
+            health["gateway"] = "unreachable"
+
         return health
 
     @app.post("/invocations")

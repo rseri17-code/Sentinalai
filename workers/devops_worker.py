@@ -1,6 +1,6 @@
 """DevOps Worker - handles GitHub CI/CD and code change operations.
 
-Calls MCP server via AgentCore tool ARN when MCP_GITHUB_TOOL_ARN is set.
+Calls MCP server via AgentCore gateway when configured.
 Falls back to stub response for local dev / testing.
 
 Provides:
@@ -18,8 +18,10 @@ Phase placement:
       in ITSM/Splunk change data. Never used for speculative code trawls.
 """
 
+from __future__ import annotations
+
 from workers.base_worker import BaseWorker
-from workers.mcp_client import invoke_mcp_tool
+from workers.mcp_client import McpGateway
 
 
 class DevopsWorker(BaseWorker):
@@ -27,8 +29,9 @@ class DevopsWorker(BaseWorker):
 
     worker_name = "devops_worker"
 
-    def __init__(self):
+    def __init__(self, gateway: McpGateway | None = None):
         super().__init__()
+        self._gateway = gateway or McpGateway.get_instance()
         self.register("get_recent_deployments", self._get_recent_deployments)
         self.register("get_pr_details", self._get_pr_details)
         self.register("get_commit_diff", self._get_commit_diff)
@@ -51,7 +54,7 @@ class DevopsWorker(BaseWorker):
         repo = params.get("repo", "")
         if not service and not repo:
             return {"error": "service or repo required"}
-        return invoke_mcp_tool(
+        return self._gateway.invoke(
             "github.get_recent_deployments",
             "get_recent_deployments",
             {
@@ -77,7 +80,7 @@ class DevopsWorker(BaseWorker):
         pr_number = params.get("pr_number")
         if not repo or not pr_number:
             return {"error": "repo and pr_number required"}
-        return invoke_mcp_tool(
+        return self._gateway.invoke(
             "github.get_pr_details",
             "get_pr_details",
             {"repo": repo, "pr_number": pr_number},
@@ -100,7 +103,7 @@ class DevopsWorker(BaseWorker):
         sha = params.get("sha", "")
         if not repo or not sha:
             return {"error": "repo and sha required"}
-        return invoke_mcp_tool(
+        return self._gateway.invoke(
             "github.get_commit_diff",
             "get_commit_diff",
             {"repo": repo, "sha": sha},
@@ -124,7 +127,7 @@ class DevopsWorker(BaseWorker):
         repo = params.get("repo", "")
         if not service and not repo:
             return {"error": "service or repo required"}
-        return invoke_mcp_tool(
+        return self._gateway.invoke(
             "github.get_workflow_runs",
             "get_workflow_runs",
             {

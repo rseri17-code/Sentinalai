@@ -2,13 +2,15 @@
 
 Uses Dynatrace and SignalFx for APM data. Both serve the same purpose:
 application-level performance monitoring, golden signals, and problem detection.
-Calls MCP servers via AgentCore tool ARNs. Falls back to stub responses for local dev.
+Calls MCP servers via AgentCore gateway. Falls back to stub responses for local dev.
 """
+
+from __future__ import annotations
 
 import logging
 
 from workers.base_worker import BaseWorker
-from workers.mcp_client import invoke_mcp_tool
+from workers.mcp_client import McpGateway
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +20,9 @@ class ApmWorker(BaseWorker):
 
     worker_name = "apm_worker"
 
-    def __init__(self):
+    def __init__(self, gateway: McpGateway | None = None):
         super().__init__()
+        self._gateway = gateway or McpGateway.get_instance()
         self.register("get_golden_signals", self._get_golden_signals)
         self.register("check_latency", self._get_golden_signals)
 
@@ -33,7 +36,7 @@ class ApmWorker(BaseWorker):
         so the analysis engine gets the broadest APM signal.
         """
         # Primary: Dynatrace APM
-        result = invoke_mcp_tool(
+        result = self._gateway.invoke(
             "dynatrace.get_metrics",
             "get_golden_signals",
             params,
@@ -41,7 +44,7 @@ class ApmWorker(BaseWorker):
 
         # Enrichment: SignalFx APM metrics
         try:
-            signalfx_result = invoke_mcp_tool(
+            signalfx_result = self._gateway.invoke(
                 "signalfx.query_signalfx_metrics",
                 "get_golden_signals",
                 params,

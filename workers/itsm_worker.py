@@ -1,6 +1,6 @@
 """ITSM Worker - handles ServiceNow CMDB and change management operations.
 
-Calls MCP server via AgentCore tool ARN when MCP_SERVICENOW_TOOL_ARN is set.
+Calls MCP server via AgentCore gateway when configured.
 Falls back to stub response for local dev / testing.
 
 Provides:
@@ -19,8 +19,10 @@ Phase placement:
     - get_change_records:    Phase 3 (change_correlation) — ITSM change records
 """
 
+from __future__ import annotations
+
 from workers.base_worker import BaseWorker
-from workers.mcp_client import invoke_mcp_tool
+from workers.mcp_client import McpGateway
 
 
 class ItsmWorker(BaseWorker):
@@ -28,8 +30,9 @@ class ItsmWorker(BaseWorker):
 
     worker_name = "itsm_worker"
 
-    def __init__(self):
+    def __init__(self, gateway: McpGateway | None = None):
         super().__init__()
+        self._gateway = gateway or McpGateway.get_instance()
         self.register("get_ci_details", self._get_ci_details)
         self.register("search_incidents", self._search_incidents)
         self.register("get_change_records", self._get_change_records)
@@ -48,7 +51,7 @@ class ItsmWorker(BaseWorker):
         service = params.get("service", "")
         if not service:
             return {"error": "service required"}
-        return invoke_mcp_tool(
+        return self._gateway.invoke(
             "servicenow.get_ci_details",
             "get_ci_details",
             {"service": service},
@@ -69,7 +72,7 @@ class ItsmWorker(BaseWorker):
         service = params.get("service", "")
         if not service:
             return {"error": "service required"}
-        return invoke_mcp_tool(
+        return self._gateway.invoke(
             "servicenow.search_incidents",
             "search_incidents",
             {
@@ -98,7 +101,7 @@ class ItsmWorker(BaseWorker):
         service = params.get("service", "")
         if not service:
             return {"error": "service required"}
-        return invoke_mcp_tool(
+        return self._gateway.invoke(
             "servicenow.get_change_records",
             "get_change_records",
             {
@@ -121,7 +124,7 @@ class ItsmWorker(BaseWorker):
         service = params.get("service", "")
         if not service:
             return {"error": "service required"}
-        return invoke_mcp_tool(
+        return self._gateway.invoke(
             "servicenow.get_known_errors",
             "get_known_errors",
             {

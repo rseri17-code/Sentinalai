@@ -82,6 +82,7 @@ except ImportError:
     _knowledge_graph = None  # type: ignore[assignment]
     _knowledge_retrieval = None  # type: ignore[assignment]
     _KNOWLEDGE_AVAILABLE = False
+from workers.mcp_client import McpGateway
 from workers.ops_worker import OpsWorker
 from workers.log_worker import LogWorker
 from workers.metrics_worker import MetricsWorker
@@ -188,15 +189,17 @@ class SentinalAISupervisor:
         replay_dir: str | None = None,
         call_timeout: float = CALL_TIMEOUT_SECONDS,
         max_retries: int = MAX_RETRIES_PER_CALL,
+        gateway: McpGateway | None = None,
     ):
+        gw = gateway or McpGateway.get_instance()
         self.workers: dict[str, Any] = {
-            "ops_worker": OpsWorker(),
-            "log_worker": LogWorker(),
-            "metrics_worker": MetricsWorker(),
-            "apm_worker": ApmWorker(),
+            "ops_worker": OpsWorker(gateway=gw),
+            "log_worker": LogWorker(gateway=gw),
+            "metrics_worker": MetricsWorker(gateway=gw),
+            "apm_worker": ApmWorker(gateway=gw),
             "knowledge_worker": KnowledgeWorker(),
-            "itsm_worker": ItsmWorker(),
-            "devops_worker": DevopsWorker(),
+            "itsm_worker": ItsmWorker(gateway=gw),
+            "devops_worker": DevopsWorker(gateway=gw),
         }
         self._replay_store = ReplayStore(replay_dir) if replay_dir else None
         self._call_timeout = call_timeout

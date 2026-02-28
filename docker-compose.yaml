@@ -1,8 +1,10 @@
-# SentinalAI with OpenTelemetry Collector sidecar
+# SentinalAI with OpenTelemetry Collector sidecar and MCP Ambassador proxy
 # Traces, metrics, and logs flow: agent -> OTLP/HTTP -> collector -> Splunk HEC
+# MCP tool calls flow: agent -> mcp-ambassador (auth + audit) -> upstream MCPs
 #
 # Usage:
-#   cp .env.template .env   # fill in values
+#   bash scripts/setup-mcp-ambassador.sh   # create data/cache dirs (first run)
+#   cp .env.template .env                  # fill in values
 #   docker compose up --build
 #
 # Production:
@@ -121,6 +123,56 @@ services:
         max-file: "3"
     security_opt:
       - no-new-privileges:true
+
+  mcp-ambassador:
+    # MCP Ambassador — auth, authz, and audit proxy for all downstream MCP calls.
+    # Source: https://github.com/mcpambassador/server
+    build:
+      context: https://github.com/mcpambassador/server.git
+      dockerfile: Dockerfile
+    image: mcpambassador-server:latest
+    ports:
+      - "8443:8443"             # Main MCP protocol (TLS)
+      - "127.0.0.1:9443:9443"  # Admin API (localhost only)
+    environment:
+      - NODE_ENV=${MCP_AMBASSADOR_NODE_ENV:-production}
+      - MCP_AMBASSADOR_DATA_DIR=/data
+      - MCP_AMBASSADOR_HOST=0.0.0.0
+      - MCP_AMBASSADOR_PORT=8443
+      - MCP_AMBASSADOR_LOG_LEVEL=${LOG_LEVEL:-info}
+      # Admin key — generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      - AMBASSADOR_ADMIN_KEY=${AMBASSADOR_ADMIN_KEY:-}
+      # Upstream MCP URLs — set to activate each downstream tool server
+      - MCP_MOOGSOFT_UPSTREAM_URL=${MCP_MOOGSOFT_UPSTREAM_URL:-}
+      - MCP_SPLUNK_UPSTREAM_URL=${MCP_SPLUNK_UPSTREAM_URL:-}
+      - MCP_SYSDIG_UPSTREAM_URL=${MCP_SYSDIG_UPSTREAM_URL:-}
+      - MCP_SIGNALFX_UPSTREAM_URL=${MCP_SIGNALFX_UPSTREAM_URL:-}
+    volumes:
+      - ./mcp-ambassador/data:/data          # TLS certs, SQLite DB, audit JSONL logs
+      - ./config:/config:ro                  # ambassador-server.yaml (read-only)
+      - ./mcp-ambassador/cache:/tmp          # npm/npx cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "--no-check-certificate", "https://localhost:8443/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "2.0"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "25m"
+        max-file: "3"
 
 volumes:
   replay-data:

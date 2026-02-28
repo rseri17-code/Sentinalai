@@ -41,3 +41,7 @@ Thumbs.db
 
 # Third-party reference repos
 amazon-bedrock-agentcore-samples/
+
+# MCP Ambassador runtime data (TLS certs, SQLite DB, audit logs, npm cache)
+mcp-ambassador/data/
+mcp-ambassador/cache/

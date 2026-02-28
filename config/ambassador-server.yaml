@@ -1,0 +1,55 @@
+# =============================================================================
+# MCP AMBASSADOR SERVER - SentinalAI Configuration
+# =============================================================================
+# Production proxy for SentinalAI's four downstream MCP tool servers.
+# Provides authentication, authorization, and audit for all MCP tool calls.
+#
+# Downstream MCPs: moogsoft, splunk, sysdig, signalfx
+#
+# Source: https://github.com/mcpambassador/server
+# See ADR-009 for downstream MCP integration details.
+# =============================================================================
+
+# Server configuration
+server:
+  # Bind address (0.0.0.0 = all interfaces inside container)
+  host: 0.0.0.0
+
+  # Main MCP protocol port (TLS)
+  port: 8443
+
+  # Admin API port (TLS) - SEC-M9-07: localhost only in production
+  admin_port: 9443
+
+# Downstream MCP connections
+# Each entry maps to one SentinalAI tool server (AgentCore runtime engine
+# in production; HTTP endpoint in local dev).
+# Set MCP_<NAME>_UPSTREAM_URL env var to activate; omit to disable.
+downstream_mcps:
+  # Moogsoft — incident management and alert correlation
+  - name: moogsoft
+    transport: http
+    url: "${MCP_MOOGSOFT_UPSTREAM_URL}"
+    timeout_ms: 30000
+    health_check_interval_ms: 60000
+
+  # Splunk — log analytics and change data
+  - name: splunk
+    transport: http
+    url: "${MCP_SPLUNK_UPSTREAM_URL}"
+    timeout_ms: 30000
+    health_check_interval_ms: 60000
+
+  # Sysdig — container security, metrics, and golden signals
+  - name: sysdig
+    transport: http
+    url: "${MCP_SYSDIG_UPSTREAM_URL}"
+    timeout_ms: 30000
+    health_check_interval_ms: 60000
+
+  # SignalFx — APM metrics and active incidents
+  - name: signalfx
+    transport: http
+    url: "${MCP_SIGNALFX_UPSTREAM_URL}"
+    timeout_ms: 30000
+    health_check_interval_ms: 60000

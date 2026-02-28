@@ -5,6 +5,8 @@ Covers:
 - McpGateway._get_boto3_client lazy init paths
 - McpGateway singleton lifecycle
 - _to_gateway_tool_name mapping (all servers)
+- OAuth2CredentialProvider (client_credentials grant, token caching, refresh)
+- McpGateway._get_auth_headers priority (OAuth2 -> static -> none)
 - _parse_agent_response iterator path
 - invoke_mcp_tool with generic exceptions (non-ClientError)
 - Sysdig stub response branches (signal/golden keywords)
@@ -12,6 +14,7 @@ Covers:
 
 import json
 import pytest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, MagicMock
 
 import workers.mcp_client as mc
@@ -24,6 +27,7 @@ from workers.mcp_client import (
     get_server_for_tool,
     get_arn_for_tool,
     McpGateway,
+    OAuth2CredentialProvider,
     dispose,
 )
 
@@ -284,3 +288,292 @@ class TestInvokeMcpToolExtended:
         assert "error" in result
         assert "DNS failure" in result["error"]
         assert result["tool"] == "sysdig.query_metrics"
+
+
+class TestOAuth2CredentialProvider:
+    """Tests for OAuth2 client_credentials grant with token caching."""
+
+    def test_get_access_token_calls_token_endpoint(self):
+        """Token endpoint is called with client_credentials grant."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "access_token": "test-token-abc123",
+            "expires_in": 3600,
+            "token_type": "Bearer",
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        provider = OAuth2CredentialProvider(
+            client_id="test-client-id",
+            client_secret="test-secret",
+            token_url="https://cognito.example.com/oauth2/token",
+            scope="gateway/mcp.invoke",
+        )
+
+        with patch.object(mc, "_REQUESTS_AVAILABLE", True):
+            with patch.object(mc, "_requests_lib") as mock_requests:
+                mock_requests.post.return_value = mock_response
+                token = provider.get_access_token()
+
+        assert token == "test-token-abc123"
+        call_kwargs = mock_requests.post.call_args
+        assert call_kwargs[1]["data"]["grant_type"] == "client_credentials"
+        assert call_kwargs[1]["data"]["client_id"] == "test-client-id"
+        assert call_kwargs[1]["data"]["client_secret"] == "test-secret"
+        assert call_kwargs[1]["data"]["scope"] == "gateway/mcp.invoke"
+
+    def test_token_is_cached_on_second_call(self):
+        """Second call returns cached token without hitting endpoint."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "access_token": "cached-token",
+            "expires_in": 3600,
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        provider = OAuth2CredentialProvider(
+            client_id="cid", client_secret="csec",
+            token_url="https://example.com/token",
+            refresh_buffer_seconds=60,
+        )
+
+        with patch.object(mc, "_REQUESTS_AVAILABLE", True):
+            with patch.object(mc, "_requests_lib") as mock_requests:
+                mock_requests.post.return_value = mock_response
+                token1 = provider.get_access_token()
+                token2 = provider.get_access_token()
+
+        assert token1 == "cached-token"
+        assert token2 == "cached-token"
+        # Only one HTTP call (cached on second)
+        assert mock_requests.post.call_count == 1
+
+    def test_token_refresh_when_expired(self):
+        """Expired token triggers a new token request."""
+        provider = OAuth2CredentialProvider(
+            client_id="cid", client_secret="csec",
+            token_url="https://example.com/token",
+            refresh_buffer_seconds=60,
+        )
+        # Simulate an already-expired token
+        provider._token = "old-token"
+        provider._expiry = datetime.now(timezone.utc) - timedelta(minutes=5)
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "access_token": "refreshed-token",
+            "expires_in": 7200,
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch.object(mc, "_REQUESTS_AVAILABLE", True):
+            with patch.object(mc, "_requests_lib") as mock_requests:
+                mock_requests.post.return_value = mock_response
+                token = provider.get_access_token()
+
+        assert token == "refreshed-token"
+        assert mock_requests.post.call_count == 1
+
+    def test_invalidate_clears_cached_token(self):
+        """invalidate() forces refresh on next call."""
+        provider = OAuth2CredentialProvider(
+            client_id="cid", client_secret="csec",
+            token_url="https://example.com/token",
+        )
+        provider._token = "valid-token"
+        provider._expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+
+        provider.invalidate()
+        assert provider._token is None
+        assert provider._expiry is None
+
+    def test_get_auth_headers_returns_bearer(self):
+        """get_auth_headers wraps token in Authorization header."""
+        provider = OAuth2CredentialProvider(
+            client_id="cid", client_secret="csec",
+            token_url="https://example.com/token",
+        )
+        provider._token = "my-token"
+        provider._expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+
+        headers = provider.get_auth_headers()
+        assert headers == {"Authorization": "Bearer my-token"}
+
+    def test_returns_empty_when_requests_unavailable(self):
+        """Without requests library, token refresh returns empty string."""
+        provider = OAuth2CredentialProvider(
+            client_id="cid", client_secret="csec",
+            token_url="https://example.com/token",
+        )
+        with patch.object(mc, "_REQUESTS_AVAILABLE", False):
+            token = provider.get_access_token()
+        assert token == ""
+
+    def test_returns_empty_on_http_error(self):
+        """HTTP error from token endpoint returns empty string."""
+        provider = OAuth2CredentialProvider(
+            client_id="cid", client_secret="csec",
+            token_url="https://example.com/token",
+        )
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = Exception("401 Unauthorized")
+
+        with patch.object(mc, "_REQUESTS_AVAILABLE", True):
+            with patch.object(mc, "_requests_lib") as mock_requests:
+                mock_requests.post.return_value = mock_response
+                token = provider.get_access_token()
+
+        assert token == ""
+
+    def test_scope_omitted_when_empty(self):
+        """When scope is empty, it is not included in the request."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "access_token": "no-scope-token",
+            "expires_in": 3600,
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        provider = OAuth2CredentialProvider(
+            client_id="cid", client_secret="csec",
+            token_url="https://example.com/token",
+            scope="",
+        )
+
+        with patch.object(mc, "_REQUESTS_AVAILABLE", True):
+            with patch.object(mc, "_requests_lib") as mock_requests:
+                mock_requests.post.return_value = mock_response
+                provider.get_access_token()
+
+        data = mock_requests.post.call_args[1]["data"]
+        assert "scope" not in data
+
+
+class TestOAuth2FromEnv:
+    """Tests for OAuth2CredentialProvider.from_env() factory."""
+
+    def test_returns_none_when_no_client_id(self):
+        """No provider created when GATEWAY_OAUTH2_CLIENT_ID is empty."""
+        with patch.object(mc, "GATEWAY_OAUTH2_CLIENT_ID", ""):
+            result = OAuth2CredentialProvider.from_env()
+        assert result is None
+
+    def test_creates_provider_with_explicit_token_url(self):
+        """Provider created with explicit token URL."""
+        with patch.object(mc, "GATEWAY_OAUTH2_CLIENT_ID", "my-client"):
+            with patch.object(mc, "GATEWAY_OAUTH2_CLIENT_SECRET", "my-secret"):
+                with patch.object(mc, "GATEWAY_OAUTH2_TOKEN_URL", "https://auth.example.com/token"):
+                    with patch.object(mc, "GATEWAY_OAUTH2_SCOPE", "gw/invoke"):
+                        provider = OAuth2CredentialProvider.from_env()
+
+        assert provider is not None
+        assert provider._client_id == "my-client"
+        assert provider._client_secret == "my-secret"
+        assert provider._token_url == "https://auth.example.com/token"
+        assert provider._scope == "gw/invoke"
+
+    def test_derives_token_url_from_cognito_domain(self):
+        """Token URL auto-derived from Cognito domain + region."""
+        with patch.object(mc, "GATEWAY_OAUTH2_CLIENT_ID", "my-client"):
+            with patch.object(mc, "GATEWAY_OAUTH2_CLIENT_SECRET", "my-secret"):
+                with patch.object(mc, "GATEWAY_OAUTH2_TOKEN_URL", ""):
+                    with patch.object(mc, "GATEWAY_COGNITO_DOMAIN", "my-pool"):
+                        with patch.object(mc, "AWS_REGION", "eu-west-1"):
+                            with patch.object(mc, "GATEWAY_OAUTH2_SCOPE", ""):
+                                provider = OAuth2CredentialProvider.from_env()
+
+        assert provider is not None
+        assert provider._token_url == "https://my-pool.auth.eu-west-1.amazoncognito.com/oauth2/token"
+
+    def test_returns_none_when_no_token_url(self):
+        """No provider when neither token URL nor Cognito domain is set."""
+        with patch.object(mc, "GATEWAY_OAUTH2_CLIENT_ID", "my-client"):
+            with patch.object(mc, "GATEWAY_OAUTH2_TOKEN_URL", ""):
+                with patch.object(mc, "GATEWAY_COGNITO_DOMAIN", ""):
+                    result = OAuth2CredentialProvider.from_env()
+        assert result is None
+
+    def test_returns_none_when_no_client_secret(self):
+        """No provider when no client secret source is available."""
+        with patch.object(mc, "GATEWAY_OAUTH2_CLIENT_ID", "my-client"):
+            with patch.object(mc, "GATEWAY_OAUTH2_TOKEN_URL", "https://auth.example.com/token"):
+                with patch.object(mc, "GATEWAY_OAUTH2_CLIENT_SECRET", ""):
+                    with patch.object(mc, "GATEWAY_OAUTH2_SECRET_ARN", ""):
+                        result = OAuth2CredentialProvider.from_env()
+        assert result is None
+
+    def test_fetches_secret_from_asm(self):
+        """Client secret fetched from Secrets Manager when ARN is set."""
+        with patch.object(mc, "GATEWAY_OAUTH2_CLIENT_ID", "my-client"):
+            with patch.object(mc, "GATEWAY_OAUTH2_TOKEN_URL", "https://auth.example.com/token"):
+                with patch.object(mc, "GATEWAY_OAUTH2_CLIENT_SECRET", ""):
+                    with patch.object(mc, "GATEWAY_OAUTH2_SECRET_ARN", "arn:aws:sm:us-east-1:123:secret:gw-secret"):
+                        with patch("workers.mcp_client._fetch_secret_from_asm", return_value="asm-secret"):
+                            with patch.object(mc, "GATEWAY_OAUTH2_SCOPE", ""):
+                                provider = OAuth2CredentialProvider.from_env()
+
+        assert provider is not None
+        assert provider._client_secret == "asm-secret"
+
+
+class TestGatewayAuthHeaders:
+    """Tests for McpGateway._get_auth_headers priority chain."""
+
+    def setup_method(self):
+        McpGateway.reset_instance()
+
+    def teardown_method(self):
+        McpGateway.reset_instance()
+
+    def test_oauth2_provider_takes_priority(self):
+        """OAuth2 provider headers take priority over static token."""
+        mock_provider = MagicMock(spec=OAuth2CredentialProvider)
+        mock_provider.get_auth_headers.return_value = {"Authorization": "Bearer oauth2-token"}
+
+        gw = McpGateway(oauth2_provider=mock_provider)
+        headers = gw._get_auth_headers()
+
+        assert headers == {"Authorization": "Bearer oauth2-token"}
+        mock_provider.get_auth_headers.assert_called_once()
+
+    def test_static_token_when_no_oauth2(self):
+        """Static Bearer token used when OAuth2 not configured."""
+        gw = McpGateway()
+        # Prevent lazy-init of OAuth2 from env
+        gw._oauth2_provider = None
+
+        with patch.object(mc, "GATEWAY_OAUTH2_CLIENT_ID", ""):
+            with patch.object(mc, "GATEWAY_ACCESS_TOKEN", "static-token-xyz"):
+                headers = gw._get_auth_headers()
+
+        assert headers == {"Authorization": "Bearer static-token-xyz"}
+
+    def test_no_auth_when_nothing_configured(self):
+        """Empty headers when no auth method is configured."""
+        gw = McpGateway()
+        gw._oauth2_provider = None
+
+        with patch.object(mc, "GATEWAY_OAUTH2_CLIENT_ID", ""):
+            with patch.object(mc, "GATEWAY_ACCESS_TOKEN", ""):
+                headers = gw._get_auth_headers()
+
+        assert headers == {}
+
+    def test_fallback_to_static_when_oauth2_fails(self):
+        """Falls through to static token when OAuth2 returns empty headers."""
+        mock_provider = MagicMock(spec=OAuth2CredentialProvider)
+        mock_provider.get_auth_headers.return_value = {}  # Token acquisition failed
+
+        gw = McpGateway(oauth2_provider=mock_provider)
+
+        with patch.object(mc, "GATEWAY_ACCESS_TOKEN", "fallback-token"):
+            headers = gw._get_auth_headers()
+
+        assert headers == {"Authorization": "Bearer fallback-token"}
+
+    def test_dispose_invalidates_oauth2_provider(self):
+        """dispose() calls invalidate on the OAuth2 provider."""
+        mock_provider = MagicMock(spec=OAuth2CredentialProvider)
+        gw = McpGateway(oauth2_provider=mock_provider)
+        gw.dispose()
+        mock_provider.invalidate.assert_called_once()

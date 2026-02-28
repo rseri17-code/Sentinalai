@@ -13,8 +13,17 @@ Requires (production):
     - strands-agents SDK  (strands.tools.mcp.MCPClient)
     - mcp SDK             (mcp.client.streamable_http)
     - AGENTCORE_GATEWAY_URL env var set to the gateway endpoint
-    - GATEWAY_ACCESS_TOKEN env var for CUSTOM_JWT auth, OR
+    - OAuth2 client credentials (GATEWAY_OAUTH2_CLIENT_ID + token URL), OR
+    - GATEWAY_ACCESS_TOKEN env var for static CUSTOM_JWT auth, OR
       AWS credentials for AWS_IAM (SigV4) auth
+
+Authentication priority:
+    1. OAuth2 client_credentials grant (if GATEWAY_OAUTH2_CLIENT_ID is set)
+       - Automatic token acquisition from Cognito token endpoint
+       - In-memory caching with 10-minute pre-expiry refresh
+       - Client secret from env var or AWS Secrets Manager
+    2. Static Bearer token (if GATEWAY_ACCESS_TOKEN is set)
+    3. No auth (local dev / tests)
 
 Enterprise architecture (AgentCore gateway pattern):
     Worker -> McpGateway.invoke()
@@ -23,6 +32,12 @@ Enterprise architecture (AgentCore gateway pattern):
                 -> AgentCore Gateway (bedrock-agentcore)
                     -> Gateway Target (Lambda / OpenAPI / MCP server)
                         -> Backend API
+
+OAuth2 two-legged flow (client_credentials):
+    Agent (TOKEN-A) -> AgentCore Gateway
+        Gateway validates TOKEN-A, maps audience
+        Gateway mints TOKEN-B (per-resource) via credential provider
+        Gateway -> Resource MCP Server (TOKEN-B) -> Backend API
 
 Gateway target naming convention:
     Tools exposed through the gateway use triple-underscore naming:
@@ -47,8 +62,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 logger = logging.getLogger("sentinalai.mcp_client")
@@ -85,8 +102,21 @@ AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
 # AgentCore Gateway URL — single endpoint for all MCP targets
 AGENTCORE_GATEWAY_URL = os.environ.get("AGENTCORE_GATEWAY_URL", "")
 
-# Authentication
+# Authentication — static Bearer token (fallback if OAuth2 not configured)
 GATEWAY_ACCESS_TOKEN = os.environ.get("GATEWAY_ACCESS_TOKEN", "")
+
+# OAuth2 client_credentials configuration (preferred auth method)
+GATEWAY_OAUTH2_CLIENT_ID = os.environ.get("GATEWAY_OAUTH2_CLIENT_ID", "")
+GATEWAY_OAUTH2_CLIENT_SECRET = os.environ.get("GATEWAY_OAUTH2_CLIENT_SECRET", "")
+GATEWAY_OAUTH2_TOKEN_URL = os.environ.get("GATEWAY_OAUTH2_TOKEN_URL", "")
+GATEWAY_OAUTH2_SCOPE = os.environ.get("GATEWAY_OAUTH2_SCOPE", "")
+# Optional: ARN of Secrets Manager secret holding client_secret
+GATEWAY_OAUTH2_SECRET_ARN = os.environ.get("GATEWAY_OAUTH2_SECRET_ARN", "")
+# Optional: Cognito User Pool ID (to auto-derive token_url if not provided)
+GATEWAY_COGNITO_USER_POOL_ID = os.environ.get("GATEWAY_COGNITO_USER_POOL_ID", "")
+GATEWAY_COGNITO_DOMAIN = os.environ.get("GATEWAY_COGNITO_DOMAIN", "")
+# Token refresh buffer (seconds before expiry to trigger refresh)
+_TOKEN_REFRESH_BUFFER = int(os.environ.get("GATEWAY_TOKEN_REFRESH_BUFFER_SECONDS", "600"))
 
 # Legacy per-server ARNs (backward compat — deprecated in favor of gateway URL)
 MCP_TOOL_ARNS: dict[str, str] = {
@@ -107,6 +137,199 @@ MCP_MAX_RETRIES = int(os.environ.get("MCP_MAX_RETRIES", "2"))
 def _has_any_arn() -> bool:
     """Check if any MCP tool ARN is configured (legacy check)."""
     return any(arn for arn in MCP_TOOL_ARNS.values())
+
+
+# Optional HTTP library for OAuth2 token requests
+try:
+    import requests as _requests_lib
+    _REQUESTS_AVAILABLE = True
+except ImportError:
+    _requests_lib = None  # type: ignore[assignment]
+    _REQUESTS_AVAILABLE = False
+
+
+# =========================================================================
+# OAuth2 Credential Provider — client_credentials grant with token caching
+# =========================================================================
+
+class OAuth2CredentialProvider:
+    """Manages OAuth2 access tokens via client_credentials grant.
+
+    Implements the two-legged OAuth flow used by AgentCore gateways:
+    - Agent authenticates to Cognito with client_id + client_secret
+    - Receives an M2M access token (TOKEN-A) with configured scopes
+    - Token is cached in memory and refreshed automatically before expiry
+
+    The AgentCore gateway then validates TOKEN-A and uses its own
+    credential provider to mint per-resource tokens (TOKEN-B/C) for
+    downstream MCP targets (Splunk, ServiceNow, GitHub, etc.).
+
+    Thread-safe: uses a lock for token refresh operations.
+    """
+
+    def __init__(
+        self,
+        client_id: str,
+        client_secret: str,
+        token_url: str,
+        scope: str = "",
+        refresh_buffer_seconds: int = 600,
+    ) -> None:
+        self._client_id = client_id
+        self._client_secret = client_secret
+        self._token_url = token_url
+        self._scope = scope
+        self._refresh_buffer = timedelta(seconds=refresh_buffer_seconds)
+        self._token: str | None = None
+        self._expiry: datetime | None = None
+        self._lock = threading.Lock()
+
+    @classmethod
+    def from_env(cls) -> OAuth2CredentialProvider | None:
+        """Create a provider from environment variables, or None if not configured.
+
+        Resolves the token URL from either:
+        - GATEWAY_OAUTH2_TOKEN_URL (explicit)
+        - GATEWAY_COGNITO_DOMAIN + AWS_REGION (Cognito convention)
+
+        Resolves client_secret from either:
+        - GATEWAY_OAUTH2_CLIENT_SECRET (env var)
+        - GATEWAY_OAUTH2_SECRET_ARN (fetched from Secrets Manager at init)
+        """
+        client_id = GATEWAY_OAUTH2_CLIENT_ID
+        if not client_id:
+            return None
+
+        # Resolve token URL
+        token_url = GATEWAY_OAUTH2_TOKEN_URL
+        if not token_url and GATEWAY_COGNITO_DOMAIN:
+            token_url = (
+                f"https://{GATEWAY_COGNITO_DOMAIN}"
+                f".auth.{AWS_REGION}.amazoncognito.com/oauth2/token"
+            )
+        if not token_url:
+            logger.warning(
+                "GATEWAY_OAUTH2_CLIENT_ID is set but no token URL configured "
+                "(set GATEWAY_OAUTH2_TOKEN_URL or GATEWAY_COGNITO_DOMAIN)"
+            )
+            return None
+
+        # Resolve client secret
+        client_secret = GATEWAY_OAUTH2_CLIENT_SECRET
+        if not client_secret and GATEWAY_OAUTH2_SECRET_ARN:
+            client_secret = _fetch_secret_from_asm(GATEWAY_OAUTH2_SECRET_ARN)
+        if not client_secret:
+            logger.warning(
+                "GATEWAY_OAUTH2_CLIENT_ID is set but no client secret configured "
+                "(set GATEWAY_OAUTH2_CLIENT_SECRET or GATEWAY_OAUTH2_SECRET_ARN)"
+            )
+            return None
+
+        scope = GATEWAY_OAUTH2_SCOPE
+        return cls(
+            client_id=client_id,
+            client_secret=client_secret,
+            token_url=token_url,
+            scope=scope,
+            refresh_buffer_seconds=_TOKEN_REFRESH_BUFFER,
+        )
+
+    def get_access_token(self) -> str:
+        """Return a valid access token, refreshing if expired or near-expiry.
+
+        Thread-safe: concurrent callers wait on the lock during refresh.
+        Returns empty string if token acquisition fails.
+        """
+        with self._lock:
+            now = datetime.now(timezone.utc)
+            if self._token and self._expiry and now < self._expiry:
+                return self._token
+            return self._refresh()
+
+    def get_auth_headers(self) -> dict[str, str]:
+        """Return Authorization headers with a valid Bearer token."""
+        token = self.get_access_token()
+        if token:
+            return {"Authorization": f"Bearer {token}"}
+        return {}
+
+    def invalidate(self) -> None:
+        """Force token refresh on next call (e.g., after a 401 response)."""
+        with self._lock:
+            self._token = None
+            self._expiry = None
+
+    def _refresh(self) -> str:
+        """Acquire a new token via client_credentials grant.
+
+        Called under lock. Returns the new token or empty string on failure.
+        """
+        if not _REQUESTS_AVAILABLE:
+            logger.warning("requests library not installed — OAuth2 token refresh disabled")
+            return ""
+
+        try:
+            data: dict[str, str] = {
+                "grant_type": "client_credentials",
+                "client_id": self._client_id,
+                "client_secret": self._client_secret,
+            }
+            if self._scope:
+                data["scope"] = self._scope
+
+            response = _requests_lib.post(
+                self._token_url,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                data=data,
+                timeout=10,
+            )
+            response.raise_for_status()
+            body = response.json()
+
+            self._token = body["access_token"]
+            expires_in = body.get("expires_in", 3600)
+            self._expiry = (
+                datetime.now(timezone.utc)
+                + timedelta(seconds=expires_in)
+                - self._refresh_buffer
+            )
+            logger.info(
+                "OAuth2 token acquired: expires_in=%ds scope=%s",
+                expires_in, self._scope or "(default)",
+            )
+            return self._token
+
+        except Exception as exc:
+            logger.error("OAuth2 token refresh failed: %s", exc)
+            self._token = None
+            self._expiry = None
+            return ""
+
+
+def _fetch_secret_from_asm(secret_arn: str) -> str:
+    """Fetch a client_secret from AWS Secrets Manager.
+
+    Returns the secret string, or empty string on failure.
+    Used when GATEWAY_OAUTH2_SECRET_ARN is set instead of a direct secret.
+    """
+    if not _BOTO3_AVAILABLE:
+        logger.warning("boto3 not available — cannot fetch secret from Secrets Manager")
+        return ""
+    try:
+        sm = boto3.client("secretsmanager", region_name=AWS_REGION)
+        response = sm.get_secret_value(SecretId=secret_arn)
+        secret_str = response.get("SecretString", "")
+        # Support both plain string and JSON {"client_secret": "..."} formats
+        if secret_str.startswith("{"):
+            try:
+                secret_dict = json.loads(secret_str)
+                return secret_dict.get("client_secret", secret_dict.get("secret", secret_str))
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return secret_str
+    except Exception as exc:
+        logger.error("Failed to fetch secret from Secrets Manager (%s): %s", secret_arn, exc)
+        return ""
 
 
 # ---------------------------------------------------------------------------
@@ -204,11 +427,16 @@ class McpGateway:
     Every worker MUST route MCP calls through a gateway instance.
     The gateway owns:
       - MCPClient lifecycle (lazy init, singleton)
+      - OAuth2 credential provider (client_credentials + token caching)
       - Tool name mapping (internal dotted -> gateway triple-underscore)
       - Transport (streamablehttp_client via MCP protocol)
-      - Authentication (Bearer token / CUSTOM_JWT)
       - Stub fallback (local dev / tests when gateway URL not set)
       - Structured logging at the transport boundary
+
+    Authentication priority:
+      1. OAuth2 client_credentials (if GATEWAY_OAUTH2_CLIENT_ID is set)
+      2. Static Bearer token (if GATEWAY_ACCESS_TOKEN is set)
+      3. No auth headers (local dev / tests)
 
     Usage:
         gateway = McpGateway.get_instance()
@@ -221,11 +449,13 @@ class McpGateway:
 
     _instance: McpGateway | None = None
 
-    def __init__(self) -> None:
+    def __init__(self, oauth2_provider: OAuth2CredentialProvider | None = None) -> None:
         self._mcp_client = None
         self._tools_cache: dict[str, Any] | None = None
         # Legacy boto3 client for backward compat during migration
         self._boto3_client = None
+        # OAuth2 provider (lazy-init from env if not injected)
+        self._oauth2_provider = oauth2_provider
 
     @classmethod
     def get_instance(cls) -> McpGateway:
@@ -333,8 +563,38 @@ class McpGateway:
             )
             return {"error": f"gateway_exception: {exc}", "tool": mcp_tool_name}
 
+    def _get_auth_headers(self) -> dict[str, str]:
+        """Resolve authentication headers using the configured auth method.
+
+        Priority:
+            1. OAuth2 credential provider (client_credentials with auto-refresh)
+            2. Static Bearer token (GATEWAY_ACCESS_TOKEN env var)
+            3. Empty dict (no auth — local dev / tests)
+        """
+        # Lazy-init OAuth2 provider from env on first call
+        if self._oauth2_provider is None:
+            self._oauth2_provider = OAuth2CredentialProvider.from_env()
+
+        # Priority 1: OAuth2 client_credentials
+        if self._oauth2_provider is not None:
+            headers = self._oauth2_provider.get_auth_headers()
+            if headers:
+                return headers
+            # OAuth2 configured but token acquisition failed — fall through
+
+        # Priority 2: Static Bearer token
+        if GATEWAY_ACCESS_TOKEN:
+            return {"Authorization": f"Bearer {GATEWAY_ACCESS_TOKEN}"}
+
+        # Priority 3: No auth
+        return {}
+
     def _get_mcp_client(self):
-        """Lazily create the MCPClient connected to the AgentCore gateway."""
+        """Lazily create the MCPClient connected to the AgentCore gateway.
+
+        The transport factory lambda calls _get_auth_headers() on each
+        connection so that refreshed OAuth2 tokens are picked up automatically.
+        """
         if self._mcp_client is not None:
             return self._mcp_client
         if not _MCP_SDK_AVAILABLE:
@@ -347,14 +607,14 @@ class McpGateway:
             if not gateway_url.endswith("/mcp"):
                 gateway_url = f"{gateway_url}/mcp"
 
-            headers = {}
-            if GATEWAY_ACCESS_TOKEN:
-                headers["Authorization"] = f"Bearer {GATEWAY_ACCESS_TOKEN}"
+            # Capture self for the lambda so auth headers are resolved
+            # dynamically on each connection (picks up refreshed tokens).
+            gw_self = self
 
             self._mcp_client = MCPClient(
                 lambda: streamablehttp_client(
                     url=gateway_url,
-                    headers=headers,
+                    headers=gw_self._get_auth_headers(),
                 ),
             )
             logger.info("MCPClient connected to AgentCore gateway: %s", gateway_url)
@@ -461,10 +721,12 @@ class McpGateway:
     # ------------------------------------------------------------------ #
 
     def dispose(self) -> None:
-        """Release clients and cached state."""
+        """Release clients, tokens, and cached state."""
         self._mcp_client = None
         self._boto3_client = None
         self._tools_cache = None
+        if self._oauth2_provider is not None:
+            self._oauth2_provider.invalidate()
 
 
 # =========================================================================

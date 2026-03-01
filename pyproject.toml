@@ -46,7 +46,7 @@ addopts = "-v --tb=short"
 timeout = 120
 
 [tool.coverage.run]
-source = ["supervisor", "workers", "database"]
+source = ["supervisor", "workers", "database", "knowledge"]
 omit = ["tests/*", "scripts/*"]
 
 [tool.coverage.report]
@@ -59,4 +59,4 @@ exclude_lines = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["supervisor*", "workers*", "database*"]
+include = ["supervisor*", "workers*", "database*", "knowledge*"]

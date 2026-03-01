@@ -7,9 +7,9 @@ identifying the root cause with high confidence, and completing investigations i
 
 INVESTIGATION PROTOCOL:
 1. Retrieve incident details from Moogsoft
-2. Classify incident type (timeout, oomkill, error_spike, latency, saturation, network)
-3. Select appropriate investigation playbook
-4. Gather evidence from relevant tools (Splunk logs, Sysdig metrics, Dynatrace APM)
+2. Classify incident type (timeout, oomkill, error_spike, latency, saturation, network, cascading, missing_data, flapping, silent_failure)
+3. Select appropriate investigation playbook (3-5 targeted tool calls per type)
+4. Gather evidence from relevant tools (Splunk logs, Sysdig metrics, Dynatrace/SignalFx APM, ServiceNow ITSM, GitHub DevOps)
 5. Correlate evidence chronologically
 6. Determine root cause with confidence level
 7. Generate reasoning that explains causality

@@ -99,8 +99,13 @@ def check_health() -> dict:
     if engine is None:
         return {"database": "not_configured"}
     try:
+        try:
+            from sqlalchemy import text
+            stmt = text("SELECT 1")
+        except ImportError:
+            stmt = "SELECT 1"
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(stmt)
         return {"database": "healthy"}
     except Exception as e:
         return {"database": "unhealthy", "error": str(e)}

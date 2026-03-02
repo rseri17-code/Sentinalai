@@ -16,6 +16,7 @@ EXPOSE 8080
 COPY supervisor/ supervisor/
 COPY workers/ workers/
 COPY database/ database/
+COPY knowledge/ knowledge/
 COPY agentcore_runtime.py .
 
 # Health check

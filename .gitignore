@@ -41,3 +41,6 @@ Thumbs.db
 
 # Third-party reference repos
 amazon-bedrock-agentcore-samples/
+
+# Claude Code
+.claude/

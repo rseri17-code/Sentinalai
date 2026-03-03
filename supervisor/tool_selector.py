@@ -260,9 +260,10 @@ def classify_incident_llm(summary: str) -> str | None:
 
         if candidate in VALID_INCIDENT_TYPES:
             logger.info(
-                "LLM classified incident as %r for summary=%r",
+                "LLM classified incident as %r for summary=%r model_id=%s",
                 candidate,
                 summary[:120],
+                result.get("model_id", "unknown"),
             )
             return candidate
 
@@ -284,7 +285,18 @@ def classify_incident_llm(summary: str) -> str | None:
 
 
 def get_playbook(incident_type: str) -> list[dict]:
-    """Return the investigation playbook for *incident_type*."""
+    """Return the investigation playbook for *incident_type*.
+
+    G4.3: Logs a warning when an unknown incident type is received rather
+    than silently defaulting. The default to error_spike is preserved for
+    backward compatibility, but the warning enables audit trail detection
+    of unexpected classification values.
+    """
+    if incident_type not in INCIDENT_PLAYBOOKS:
+        logger.warning(
+            "Unknown incident_type %r — defaulting to error_spike playbook",
+            incident_type,
+        )
     return INCIDENT_PLAYBOOKS.get(incident_type, INCIDENT_PLAYBOOKS["error_spike"])
 
 

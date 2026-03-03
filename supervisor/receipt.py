@@ -2,17 +2,26 @@
 
 Every worker call produces a Receipt that tracks:
 - tool/action invoked, with parameters
-- timing (start, end, elapsed)
+- timing (start, end, elapsed) — both monotonic and wall-clock
 - result summary (count, status, error)
 - correlation ID for tracing
+- policy decision reference (which policy authorized this call)
+- OTEL trace ID linkage for cross-correlation
+- optional full output capture (gated by RECEIPT_CAPTURE_OUTPUT)
 """
 
 from __future__ import annotations
 
+import os
 import time
 import uuid
 from dataclasses import dataclass, field, asdict
+from datetime import datetime, timezone
 from typing import Any
+
+
+# G5.1: Gate full output capture behind env var
+RECEIPT_CAPTURE_OUTPUT = os.environ.get("RECEIPT_CAPTURE_OUTPUT", "").lower() in ("1", "true", "yes")
 
 
 @dataclass
@@ -30,10 +39,23 @@ class Receipt:
     result_count: int = 0
     error: str = ""
     case_id: str = ""
+    # G5.2: Policy decision reference — records which rule authorized the call
+    policy_ref: str = ""
+    # G5.3: Wall-clock timestamps (ISO 8601) for cross-system correlation
+    wall_clock_start: str = ""
+    wall_clock_end: str = ""
+    # G5.4: OTEL trace ID linkage for cross-correlation with distributed traces
+    trace_id: str = ""
+    # G5.1: Full output capture (when RECEIPT_CAPTURE_OUTPUT is enabled)
+    output: dict | None = field(default=None, repr=False)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize for persistence / replay."""
-        return asdict(self)
+        d = asdict(self)
+        # Omit output field if not captured to keep payloads small
+        if d.get("output") is None:
+            d.pop("output", None)
+        return d
 
     @classmethod
     def from_dict(cls, data: dict) -> Receipt:
@@ -63,11 +85,19 @@ def _count_results(result: dict | None) -> int:
 class ReceiptCollector:
     """Collects receipts for a single investigation case."""
 
-    def __init__(self, case_id: str = ""):
+    def __init__(self, case_id: str = "", trace_id: str = ""):
         self.case_id = case_id
+        # G5.4: Store the OTEL trace ID for the investigation
+        self.trace_id = trace_id
         self.receipts: list[Receipt] = []
 
-    def start(self, tool: str, action: str, params: dict) -> Receipt:
+    def start(
+        self,
+        tool: str,
+        action: str,
+        params: dict,
+        policy_ref: str = "",
+    ) -> Receipt:
         """Create and register a new receipt (call this before the worker call)."""
         receipt = Receipt(
             tool=tool,
@@ -75,6 +105,9 @@ class ReceiptCollector:
             params=_redact_params(params),
             case_id=self.case_id,
             start_ts=time.monotonic(),
+            wall_clock_start=datetime.now(timezone.utc).isoformat(),
+            policy_ref=policy_ref,
+            trace_id=self.trace_id,
         )
         self.receipts.append(receipt)
         return receipt
@@ -83,12 +116,16 @@ class ReceiptCollector:
         """Finalize a receipt after the worker call completes."""
         receipt.end_ts = time.monotonic()
         receipt.elapsed_ms = round((receipt.end_ts - receipt.start_ts) * 1000, 1)
+        receipt.wall_clock_end = datetime.now(timezone.utc).isoformat()
         if error:
             receipt.status = "error"
             receipt.error = error
         else:
             receipt.status = "success"
             receipt.result_count = _count_results(result)
+            # G5.1: Capture full output when enabled
+            if RECEIPT_CAPTURE_OUTPUT and result is not None:
+                receipt.output = _redact_output(result)
 
     def to_list(self) -> list[dict]:
         """Serialize all receipts."""
@@ -116,3 +153,19 @@ def _redact_params(params: dict) -> dict:
         k: "***REDACTED***" if k.lower() in redact_keys else v
         for k, v in params.items()
     }
+
+
+def _redact_output(result: dict) -> dict:
+    """Redact sensitive fields from output before storing in receipt."""
+    if not isinstance(result, dict):
+        return result
+    redact_keys = {"password", "token", "secret", "api_key", "authorization", "credentials"}
+    redacted = {}
+    for k, v in result.items():
+        if k.lower() in redact_keys:
+            redacted[k] = "***REDACTED***"
+        elif isinstance(v, dict):
+            redacted[k] = _redact_output(v)
+        else:
+            redacted[k] = v
+    return redacted

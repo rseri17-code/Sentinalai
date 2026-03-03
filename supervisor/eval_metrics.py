@@ -459,10 +459,51 @@ def record_llm_usage(
         c.add(input_tokens, {**attrs, "gen_ai.token.type": "input"})
         c.add(output_tokens, {**attrs, "gen_ai.token.type": "output"})
 
+    # G7.2: Cost estimation metric based on token counts and model pricing
+    estimated_cost = estimate_llm_cost(model_id, input_tokens, output_tokens)
+    if estimated_cost > 0:
+        h = _histogram(
+            "sentinalai.investigation.estimated_cost",
+            description="Estimated cost per LLM call in USD",
+            unit="USD",
+        )
+        if h is not None:
+            h.record(estimated_cost, attrs)
+
     logger.debug(
-        "genai: op=%s model=%s in=%d out=%d latency=%.1fms",
-        operation, model_id, input_tokens, output_tokens, latency_ms,
+        "genai: op=%s model=%s in=%d out=%d latency=%.1fms cost=$%.6f",
+        operation, model_id, input_tokens, output_tokens, latency_ms, estimated_cost,
     )
+
+
+# =========================================================================
+# G7.2: Cost estimation for FinOps dashboards
+# =========================================================================
+
+# Pricing per 1K tokens (approximate, in USD)
+_MODEL_PRICING: dict[str, dict[str, float]] = {
+    "anthropic.claude-3-5-sonnet": {"input": 0.003, "output": 0.015},
+    "anthropic.claude-3-haiku": {"input": 0.00025, "output": 0.00125},
+    "anthropic.claude-3-sonnet": {"input": 0.003, "output": 0.015},
+    "anthropic.claude-3-opus": {"input": 0.015, "output": 0.075},
+    "amazon.titan-text-premier": {"input": 0.0005, "output": 0.0015},
+    "amazon.titan-text-lite": {"input": 0.00015, "output": 0.0002},
+}
+
+# Default pricing for unknown models
+_DEFAULT_PRICING = {"input": 0.003, "output": 0.015}
+
+
+def estimate_llm_cost(model_id: str, input_tokens: int, output_tokens: int) -> float:
+    """Estimate cost in USD for an LLM call based on token counts and model pricing."""
+    pricing = _DEFAULT_PRICING
+    for model_prefix, model_pricing in _MODEL_PRICING.items():
+        if model_prefix in model_id:
+            pricing = model_pricing
+            break
+    input_cost = (input_tokens / 1000.0) * pricing["input"]
+    output_cost = (output_tokens / 1000.0) * pricing["output"]
+    return round(input_cost + output_cost, 8)
 
 
 def record_judge_scores(

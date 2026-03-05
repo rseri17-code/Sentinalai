@@ -184,6 +184,11 @@ def compute_confidence(
 class SentinalAISupervisor:
     """Autonomous incident RCA supervisor."""
 
+    # G6.1: Per-investigation wall-clock deadline (seconds)
+    INVESTIGATION_DEADLINE_SECONDS = float(
+        os.environ.get("INVESTIGATION_DEADLINE_SECONDS", "120")
+    )
+
     def __init__(
         self,
         replay_dir: str | None = None,
@@ -204,6 +209,8 @@ class SentinalAISupervisor:
         self._replay_store = ReplayStore(replay_dir) if replay_dir else None
         self._call_timeout = call_timeout
         self._max_retries = max_retries
+        # G6.2: Shared ThreadPoolExecutor (reused across calls within investigation)
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
 
     # ------------------------------------------------------------------ #
     # Public API
@@ -225,6 +232,9 @@ class SentinalAISupervisor:
             # GenAI semantic conventions for agent observability
             span.set_attribute(GENAI_SYSTEM, "sentinalai")
             span.set_attribute(GENAI_OPERATION_NAME, "investigate")
+
+            # G6.1: Per-investigation wall-clock deadline
+            self._investigation_deadline = time.monotonic() + self.INVESTIGATION_DEADLINE_SECONDS
 
             receipts = ReceiptCollector(case_id=incident_id)
             budget = ExecutionBudget(case_id=incident_id)
@@ -428,13 +438,24 @@ class SentinalAISupervisor:
         budget: ExecutionBudget | None,
         worker_name: str = "",
         circuits: CircuitBreakerRegistry | None = None,
+        policy_ref: str = "",
     ) -> dict:
         """Call worker.execute() with circuit breaker, timeout guard, and retry.
 
         W1: checks circuit breaker before dispatch, records success/failure after.
         W4: wraps call in ThreadPoolExecutor with configurable timeout.
         W5: retries once on failure with exponential backoff.
+        G6.1: checks per-investigation wall-clock deadline before each call.
+        G6.2: uses shared ThreadPoolExecutor instead of creating one per call.
+        G7.1: wraps each call in a child trace_span for per-tool OTEL spans.
         """
+        # G6.1: Check investigation deadline
+        if hasattr(self, '_investigation_deadline') and time.monotonic() > self._investigation_deadline:
+            logger.warning(
+                "Investigation deadline exceeded, skipping %s.%s", worker_name, action,
+            )
+            return {"error": "investigation_deadline_exceeded", "worker": worker_name, "action": action}
+
         # W1: Circuit breaker check — skip call if circuit is open
         if circuits:
             circuit = circuits.get(worker_name)
@@ -443,6 +464,10 @@ class SentinalAISupervisor:
                     "Circuit open for %s, skipping %s", worker_name, action,
                 )
                 return {"error": "circuit_open", "worker": worker_name, "action": action}
+
+        # Build policy_ref if not provided
+        if not policy_ref and budget:
+            policy_ref = f"budget:remaining={budget.remaining()}"
 
         last_error = ""
         attempts = 1 + self._max_retries  # 1 initial + N retries
@@ -462,17 +487,24 @@ class SentinalAISupervisor:
                 if budget:
                     budget.record_call()
 
-            receipt = receipts.start(worker_name, action, params) if receipts else None
+            receipt = receipts.start(worker_name, action, params, policy_ref=policy_ref) if receipts else None
 
             call_start = time.monotonic()
 
             try:
-                # W4: Timeout guard
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                    future = executor.submit(worker.execute, action, params)
+                # G7.1: Per-tool child OTEL span
+                with trace_span(f"tool:{worker_name}.{action}", case_id=receipts.case_id if receipts else "") as tool_span:
+                    tool_span.set_attribute("worker_name", worker_name)
+                    tool_span.set_attribute("action", action)
+
+                    # W4: Timeout guard using shared executor (G6.2)
+                    future = self._executor.submit(worker.execute, action, params)
                     result = future.result(timeout=self._call_timeout)
 
-                call_elapsed = (time.monotonic() - call_start) * 1000
+                    call_elapsed = (time.monotonic() - call_start) * 1000
+                    tool_span.set_attribute("status", "success")
+                    tool_span.set_attribute("elapsed_ms", round(call_elapsed, 1))
+
                 if receipt and receipts:
                     receipts.finish(receipt, result)
                 record_worker_call(worker_name, action, "success", call_elapsed)

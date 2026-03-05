@@ -586,6 +586,7 @@ class McpGateway:
         mcp_tool_name: str,
         tool_action: str,
         params: dict[str, Any],
+        user_identity: str | None = None,
     ) -> dict[str, Any]:
         """Invoke an MCP tool via the AgentCore gateway.
 
@@ -597,10 +598,15 @@ class McpGateway:
             mcp_tool_name: Internal dotted tool name (e.g. "splunk.search_oneshot")
             tool_action: The action/method on the MCP server
             params: Parameters to pass to the tool
+            user_identity: Optional user identity string to propagate via
+                X-User-Identity header for downstream authorization (G3.2).
 
         Returns:
             Response dict from the MCP tool, or error dict on failure.
         """
+        # G3.2: Store user identity for header propagation
+        self._current_user_identity = user_identity
+
         # Rate-limit check (per-server token bucket)
         server = _TOOL_TO_SERVER.get(mcp_tool_name, "")
         if server and not self._rate_limiter.acquire(server):
@@ -704,24 +710,32 @@ class McpGateway:
             1. OAuth2 credential provider (client_credentials with auto-refresh)
             2. Static Bearer token (GATEWAY_ACCESS_TOKEN env var)
             3. Empty dict (no auth — local dev / tests)
+
+        G3.2: Includes X-User-Identity header when user identity is available.
         """
+        headers: dict[str, str] = {}
+
         # Lazy-init OAuth2 provider from env on first call
         if self._oauth2_provider is None:
             self._oauth2_provider = OAuth2CredentialProvider.from_env()
 
         # Priority 1: OAuth2 client_credentials
         if self._oauth2_provider is not None:
-            headers = self._oauth2_provider.get_auth_headers()
-            if headers:
-                return headers
+            auth_headers = self._oauth2_provider.get_auth_headers()
+            if auth_headers:
+                headers.update(auth_headers)
             # OAuth2 configured but token acquisition failed — fall through
 
         # Priority 2: Static Bearer token
-        if GATEWAY_ACCESS_TOKEN:
-            return {"Authorization": f"Bearer {GATEWAY_ACCESS_TOKEN}"}
+        if not headers and GATEWAY_ACCESS_TOKEN:
+            headers["Authorization"] = f"Bearer {GATEWAY_ACCESS_TOKEN}"
 
-        # Priority 3: No auth
-        return {}
+        # G3.2: Propagate user identity to downstream MCPs
+        user_identity = getattr(self, "_current_user_identity", None)
+        if user_identity:
+            headers["X-User-Identity"] = user_identity
+
+        return headers
 
     def _get_mcp_client(self):
         """Lazily create the MCPClient connected to the AgentCore gateway.

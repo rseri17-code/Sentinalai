@@ -1,0 +1,116 @@
+# Remediation Template Overrides for SentinalAI
+# ------------------------------------------------
+# Ops teams can modify this file to customize remediation guidance
+# without changing code in supervisor/remediation.py.
+#
+# These overrides take precedence over code defaults.
+# Only fields you specify here will be overridden; all other fields
+# retain their code-default values.
+#
+# Valid incident types: timeout, oomkill, error_spike, latency,
+#   saturation, network, cascading, missing_data, flapping, silent_failure
+#
+# Valid risk_level values: low, medium, high, critical
+#
+# Example: to override timeout immediate_actions only:
+#   overrides:
+#     timeout:
+#       immediate_actions:
+#         - "Check downstream service health dashboards"
+#         - "Increase timeout threshold if below SLA budget"
+
+overrides:
+  timeout:
+    immediate_actions:
+      - "Check downstream service health dashboards"
+      - "Increase timeout threshold if below SLA budget"
+    permanent_fix:
+      - "Add circuit breakers with fallback responses"
+      - "Optimize slow queries identified in APM traces"
+    runbook_hint: "runbook/timeout-investigation.md"
+
+  oomkill:
+    immediate_actions:
+      - "Restart affected pod and verify recovery"
+      - "Increase memory limits to 2x current allocation"
+    permanent_fix:
+      - "Profile application for memory leaks using heap dumps"
+      - "Implement automatic heap dump capture on OOM events"
+      - "Review garbage collection tuning parameters"
+    runbook_hint: "runbook/oomkill-response.md"
+
+  error_spike:
+    immediate_actions:
+      - "Rollback last deployment via CI/CD pipeline"
+      - "Enable feature flag rollback for affected features"
+    permanent_fix:
+      - "Improve integration test coverage for error paths"
+      - "Add canary deployment stage to CI/CD pipeline"
+    runbook_hint: "runbook/error-spike-response.md"
+
+  latency:
+    immediate_actions:
+      - "Scale horizontally to handle current load"
+      - "Check database connection pool utilization"
+    permanent_fix:
+      - "Optimize slow queries identified in APM traces"
+      - "Add caching layer for frequently accessed data"
+      - "Review and tune connection pool sizing"
+    runbook_hint: "runbook/latency-investigation.md"
+
+  saturation:
+    immediate_actions:
+      - "Scale up/out affected resources"
+      - "Identify and kill runaway processes consuming excess resources"
+    permanent_fix:
+      - "Implement horizontal pod autoscaling with appropriate thresholds"
+      - "Add resource quotas per namespace"
+      - "Right-size instances based on historical utilization data"
+    runbook_hint: "runbook/saturation-response.md"
+
+  network:
+    immediate_actions:
+      - "Check DNS resolution for affected services"
+      - "Verify network policies and security groups"
+      - "Restart affected pods to refresh network connections"
+    permanent_fix:
+      - "Implement DNS caching with appropriate TTLs"
+      - "Add network redundancy across availability zones"
+    runbook_hint: "runbook/network-troubleshooting.md"
+
+  cascading:
+    immediate_actions:
+      - "Isolate failing service to prevent further cascade"
+      - "Activate circuit breakers on affected dependencies"
+    permanent_fix:
+      - "Add bulkhead patterns to isolate failure domains"
+      - "Implement graceful degradation for non-critical paths"
+      - "Review and update service dependency graph"
+    runbook_hint: "runbook/cascading-failure-response.md"
+
+  missing_data:
+    immediate_actions:
+      - "Check data pipeline health and lag metrics"
+      - "Verify connectivity to upstream data sources"
+    permanent_fix:
+      - "Add data freshness monitoring with alerting"
+      - "Implement fallback data sources for critical pipelines"
+    runbook_hint: "runbook/missing-data-investigation.md"
+
+  flapping:
+    immediate_actions:
+      - "Stabilize service with fixed replica count"
+      - "Disable or widen problematic health check thresholds"
+    permanent_fix:
+      - "Fix connection pool leaks causing resource exhaustion"
+      - "Tune health check intervals and thresholds"
+    runbook_hint: "runbook/flapping-service-response.md"
+
+  silent_failure:
+    immediate_actions:
+      - "Restart stale pipeline jobs and verify data flow"
+      - "Invalidate caches that may be serving stale data"
+    permanent_fix:
+      - "Add throughput alerting for critical data paths"
+      - "Implement data freshness SLOs with automated alerts"
+    runbook_hint: "runbook/silent-failure-response.md"

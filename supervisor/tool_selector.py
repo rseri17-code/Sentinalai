@@ -105,17 +105,75 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
 
 # Keywords used to classify an incident from its summary
 CLASSIFICATION_KEYWORDS: dict[str, list[str]] = {
-    "timeout": ["timeout", "timed out", "request timeout"],
-    "oomkill": ["oomkill", "oom", "out of memory", "killed"],
-    "error_spike": ["error spike", "error rate", "exception", "500"],
-    "latency": ["latency", "slow", "response time"],
-    "saturation": ["cpu", "saturation", "exhaustion", "disk full"],
-    "network": ["connectivity", "connection refused", "dns", "network"],
-    "cascading": ["cascading", "cascade", "multiple services"],
-    "missing_data": ["degraded", "missing data", "partial"],
-    "flapping": ["flapping", "intermittent", "sporadic"],
-    "silent_failure": ["throughput drop", "throughput", "stale", "silent"],
+    "timeout": [
+        "timeout", "timed out", "request timeout",
+        "deadline", "gateway timeout", "504",
+        "upstream timeout",
+    ],
+    "oomkill": [
+        "oomkill", "oom", "out of memory", "killed",
+        "memory pressure", "container killed", "cgroup",
+        "memory limit", "heap exhaustion",
+    ],
+    "error_spike": [
+        "error spike", "error rate", "exception", "500",
+        "5xx", "502", "503", "internal server error",
+        "exception rate", "unhandled exception", "panic", "crash",
+    ],
+    "latency": [
+        "latency", "slow", "response time",
+        "p95", "p99", "sla breach",
+        "degraded performance", "high latency",
+    ],
+    "saturation": [
+        "cpu", "saturation", "exhaustion", "disk full",
+        "cpu throttle", "inode", "file descriptor",
+        "thread exhaustion", "resource limit",
+    ],
+    "network": [
+        "connectivity", "connection refused", "dns", "network",
+        "econnrefused", "socket timeout", "network unreachable",
+        "certificate", "tls", "ssl",
+    ],
+    "cascading": [
+        "cascading", "cascade", "multiple services",
+        "circuit breaker", "dependency failure",
+        "upstream", "downstream", "chain",
+    ],
+    "missing_data": [
+        "degraded", "missing data", "partial",
+        "data gap", "stale data", "no metrics",
+        "telemetry gap", "null values",
+    ],
+    "flapping": [
+        "flapping", "intermittent", "sporadic",
+        "oscillating", "bouncing", "unstable",
+        "up-down", "recovering-failing",
+    ],
+    "silent_failure": [
+        "throughput drop", "throughput", "stale", "silent",
+        "zero traffic", "no requests",
+        "queue backup", "backpressure",
+    ],
 }
+
+
+# =========================================================================
+# Valid incident types — canonical set used for validation everywhere
+# =========================================================================
+
+VALID_INCIDENT_TYPES: set[str] = frozenset(INCIDENT_PLAYBOOKS.keys())
+
+# =========================================================================
+# Sentinel: indicates whether the last classify_incident call used LLM
+# =========================================================================
+
+_last_classification_used_llm: bool = False
+
+
+def last_classification_used_llm() -> bool:
+    """Return True if the most recent classify_incident() call used the LLM fallback."""
+    return _last_classification_used_llm
 
 
 # =========================================================================
@@ -126,17 +184,119 @@ def classify_incident(summary: str) -> str:
     """Classify an incident by its summary text.
 
     Returns one of the playbook keys, or ``"error_spike"`` as default.
+
+    Classification strategy:
+    1. Deterministic keyword matching (primary, fast, no cost)
+    2. LLM-based classification (fallback, only when keywords default to
+       error_spike AND ``LLM_ENABLED=true``)
+    3. Safe default ``"error_spike"`` when both paths fail
     """
+    global _last_classification_used_llm
+    _last_classification_used_llm = False
+
     summary_lower = summary.lower()
     for incident_type, keywords in CLASSIFICATION_KEYWORDS.items():
         for kw in keywords:
             if kw in summary_lower:
                 return incident_type
+
+    # No keyword matched — try LLM fallback if enabled
+    llm_enabled = os.environ.get("LLM_ENABLED", "false").lower() in ("true", "1", "yes")
+    if llm_enabled:
+        llm_result = classify_incident_llm(summary)
+        if llm_result is not None:
+            _last_classification_used_llm = True
+            return llm_result
+
     return "error_spike"
 
 
+def classify_incident_llm(summary: str) -> str | None:
+    """Classify an incident using the LLM when keyword matching fails.
+
+    This function is only called when keyword-based classification defaults
+    to ``error_spike`` and ``LLM_ENABLED`` is true.
+
+    Args:
+        summary: The raw incident summary text.
+
+    Returns:
+        A valid incident type string, or ``None`` if the LLM fails or
+        returns an invalid type (caller will fall back to ``"error_spike"``).
+    """
+    # Lazy import to avoid hard dependency on llm module at import time
+    from supervisor.llm import converse  # noqa: C0415
+
+    valid_types_str = ", ".join(sorted(VALID_INCIDENT_TYPES))
+    system_prompt = (
+        "You are an incident classification engine for an SRE platform. "
+        "Given an incident summary, respond with EXACTLY ONE of these incident types:\n"
+        f"{valid_types_str}\n\n"
+        "Rules:\n"
+        "- Respond with ONLY the incident type, nothing else.\n"
+        "- No punctuation, no explanation, no extra text.\n"
+        "- If uncertain, respond with: error_spike"
+    )
+
+    try:
+        result = converse(
+            system_prompt=system_prompt,
+            user_message=summary,
+            temperature=0.0,
+            max_tokens=50,
+        )
+
+        if result.get("error"):
+            logger.warning(
+                "LLM classification failed for summary=%r: %s",
+                summary[:120],
+                result["error"],
+            )
+            return None
+
+        raw_text = result.get("text", "").strip().lower()
+        # Extract only the incident type (LLM might add whitespace/newlines)
+        candidate = raw_text.split()[0] if raw_text else ""
+
+        if candidate in VALID_INCIDENT_TYPES:
+            logger.info(
+                "LLM classified incident as %r for summary=%r model_id=%s",
+                candidate,
+                summary[:120],
+                result.get("model_id", "unknown"),
+            )
+            return candidate
+
+        logger.warning(
+            "LLM returned invalid incident type %r for summary=%r; "
+            "falling back to default",
+            raw_text[:60],
+            summary[:120],
+        )
+        return None
+
+    except Exception as exc:
+        logger.error(
+            "LLM classification exception for summary=%r: %s",
+            summary[:120],
+            exc,
+        )
+        return None
+
+
 def get_playbook(incident_type: str) -> list[dict]:
-    """Return the investigation playbook for *incident_type*."""
+    """Return the investigation playbook for *incident_type*.
+
+    G4.3: Logs a warning when an unknown incident type is received rather
+    than silently defaulting. The default to error_spike is preserved for
+    backward compatibility, but the warning enables audit trail detection
+    of unexpected classification values.
+    """
+    if incident_type not in INCIDENT_PLAYBOOKS:
+        logger.warning(
+            "Unknown incident_type %r — defaulting to error_spike playbook",
+            incident_type,
+        )
     return INCIDENT_PLAYBOOKS.get(incident_type, INCIDENT_PLAYBOOKS["error_spike"])
 
 

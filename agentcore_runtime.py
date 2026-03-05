@@ -9,6 +9,11 @@ Can be run in two modes:
 2. Standalone (FastAPI):        uvicorn agentcore_runtime:app --host 0.0.0.0 --port 8080
 
 The SDK approach is preferred for production deployment on AgentCore.
+
+Security (G3.3/G3.4/G3.5):
+- Optional Bearer token authentication on /invocations (AUTH_REQUIRED=true)
+- Agent identity whitelist (ALLOWED_AGENT_IDS comma-separated)
+- Secrets Manager mandate warning in production (ENVIRONMENT=production)
 """
 
 from __future__ import annotations
@@ -23,6 +28,76 @@ import uuid
 from typing import Any
 
 logger = logging.getLogger("sentinalai.agentcore")
+
+# =========================================================================
+# G3.3: Authentication configuration
+# =========================================================================
+
+AUTH_REQUIRED = os.environ.get("AUTH_REQUIRED", "false").lower() in ("true", "1", "yes")
+AUTH_TOKEN = os.environ.get("SENTINALAI_AUTH_TOKEN", "")
+
+# G3.4: Agent identity whitelist (comma-separated list of allowed agent IDs)
+_allowed_ids = os.environ.get("ALLOWED_AGENT_IDS", "")
+ALLOWED_AGENT_IDS: set[str] = {
+    aid.strip() for aid in _allowed_ids.split(",") if aid.strip()
+} if _allowed_ids else set()
+
+# G3.5: Environment tag for secrets mandate
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()
+
+
+def _validate_auth(authorization: str | None) -> tuple[bool, str]:
+    """Validate the Authorization header (G3.3).
+
+    Returns (is_valid, error_message). error_message is empty on success.
+    """
+    if not AUTH_REQUIRED:
+        return True, ""
+
+    if not authorization:
+        return False, "Missing Authorization header"
+
+    if not authorization.startswith("Bearer "):
+        return False, "Authorization header must use Bearer scheme"
+
+    token = authorization[7:]
+    if not token:
+        return False, "Empty Bearer token"
+
+    if AUTH_TOKEN and token != AUTH_TOKEN:
+        return False, "Invalid authentication token"
+
+    return True, ""
+
+
+def _validate_agent_identity(agent_id: str | None) -> tuple[bool, str]:
+    """Validate the agent identity against the allowlist (G3.4).
+
+    Returns (is_valid, error_message). If no allowlist is configured,
+    all agents are allowed.
+    """
+    if not ALLOWED_AGENT_IDS:
+        return True, ""
+    if not agent_id:
+        return False, "Missing agent identity (X-Agent-ID header required)"
+    if agent_id not in ALLOWED_AGENT_IDS:
+        return False, f"Agent not in allowlist"
+    return True, ""
+
+
+def _check_production_secrets_config() -> None:
+    """G3.5: Warn at startup if production uses env var secrets instead of Secrets Manager."""
+    if ENVIRONMENT != "production":
+        return
+    secret_arn = os.environ.get("GATEWAY_OAUTH2_SECRET_ARN", "")
+    client_secret = os.environ.get("GATEWAY_OAUTH2_CLIENT_SECRET", "")
+    if client_secret and not secret_arn:
+        logger.warning(
+            "SECURITY: Production environment using GATEWAY_OAUTH2_CLIENT_SECRET env var "
+            "instead of GATEWAY_OAUTH2_SECRET_ARN (Secrets Manager). "
+            "Set GATEWAY_OAUTH2_SECRET_ARN for production deployments."
+        )
+
 
 # =========================================================================
 # Attempt to use the official AgentCore SDK; fall back to FastAPI
@@ -188,7 +263,31 @@ try:
 
     @app.post("/invocations")
     async def invocations(request: Request) -> JSONResponse:
-        """Investigation endpoint following AgentCore contract."""
+        """Investigation endpoint following AgentCore contract.
+
+        G3.3: Validates Bearer token authentication when AUTH_REQUIRED=true.
+        G3.4: Validates agent identity against allowlist when ALLOWED_AGENT_IDS is set.
+        """
+        # G3.3: Authentication check
+        auth_header = request.headers.get("authorization")
+        is_valid, auth_error = _validate_auth(auth_header)
+        if not is_valid:
+            logger.warning("Authentication failed: %s", auth_error)
+            return JSONResponse(
+                status_code=401,
+                content={"error": auth_error},
+            )
+
+        # G3.4: Agent identity whitelist check
+        agent_id = request.headers.get("x-agent-id")
+        is_valid, agent_error = _validate_agent_identity(agent_id)
+        if not is_valid:
+            logger.warning("Agent identity check failed: %s", agent_error)
+            return JSONResponse(
+                status_code=403,
+                content={"error": agent_error},
+            )
+
         try:
             body = await request.json()
         except (json.JSONDecodeError, ValueError):
@@ -244,6 +343,9 @@ def main() -> None:
         level=getattr(logging, log_level, logging.INFO),
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
     )
+
+    # G3.5: Check production secrets configuration
+    _check_production_secrets_config()
 
     # Register graceful shutdown
     signal.signal(signal.SIGTERM, _shutdown_handler)

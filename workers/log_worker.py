@@ -6,8 +6,13 @@ Falls back to stub response for local dev / testing.
 
 from __future__ import annotations
 
+import logging
+
+from supervisor.guardrails import validate_query
 from workers.base_worker import BaseWorker
 from workers.mcp_client import McpGateway
+
+logger = logging.getLogger(__name__)
 
 
 class LogWorker(BaseWorker):
@@ -22,7 +27,18 @@ class LogWorker(BaseWorker):
         self.register("get_change_data", self._get_change_data)
 
     def _search_logs(self, params: dict) -> dict:
-        """Search Splunk logs via AgentCore gateway."""
+        """Search Splunk logs via AgentCore gateway.
+
+        Validates the query against the policy allowlist before dispatching
+        to the MCP gateway (remediation for G1.1 — validate_query was dead code).
+        """
+        query = params.get("query", "")
+        if query:
+            is_valid, reason = validate_query(query)
+            if not is_valid:
+                logger.warning("Query rejected by policy: %s (query=%r)", reason, query[:120])
+                return {"error": f"query_rejected: {reason}", "logs": {"results": [], "count": 0}}
+
         return self._gateway.invoke(
             "splunk.search_oneshot",
             "search_logs",

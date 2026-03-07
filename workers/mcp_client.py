@@ -441,9 +441,16 @@ _DEFAULT_RATE_LIMITS: dict[str, int] = {
 
 
 class _TokenBucket:
-    """Thread-safe token-bucket rate limiter for a single server."""
+    """Thread-safe token-bucket rate limiter for a single server.
+
+    Efficiency: non-blocking fast path when tokens are available.
+    Sleep is capped at 0.5s per iteration to prevent thread starvation.
+    """
 
     __slots__ = ("_capacity", "_tokens", "_refill_rate", "_last_refill", "_lock")
+
+    # Max sleep per iteration to avoid thread starvation in concurrent workloads
+    _MAX_SLEEP_SECONDS = 0.5
 
     def __init__(self, requests_per_minute: int) -> None:
         # 0 means unlimited — set very large capacity
@@ -463,14 +470,22 @@ class _TokenBucket:
 
         Refills tokens based on elapsed time, then consumes one.
         Blocks up to *timeout* seconds waiting for a token to become available.
+        Sleep is capped per iteration to prevent thread starvation under
+        concurrent ThreadPoolExecutor workloads.
         """
         if self._capacity == float("inf"):
             return True
 
         deadline = time.monotonic() + timeout
         with self._lock:
+            first_try = True
             while True:
                 now = time.monotonic()
+                # Allow the first attempt even with timeout=0
+                if not first_try and now >= deadline:
+                    return False
+                first_try = False
+
                 elapsed = now - self._last_refill
                 self._tokens = min(self._capacity, self._tokens + elapsed * self._refill_rate)
                 self._last_refill = now
@@ -479,29 +494,47 @@ class _TokenBucket:
                     self._tokens -= 1.0
                     return True
 
+                # Non-blocking: if timeout=0, fail immediately after first check
+                if timeout <= 0:
+                    return False
+
                 # How long until one token is available?
                 wait = (1.0 - self._tokens) / self._refill_rate if self._refill_rate > 0 else timeout + 1
                 if now + wait > deadline:
                     return False
 
                 # Release lock while waiting, then reacquire
+                # Cap sleep to prevent thread starvation in pooled executors
+                sleep_time = min(wait, deadline - now, self._MAX_SLEEP_SECONDS)
                 self._lock.release()
                 try:
-                    time.sleep(min(wait, deadline - now))
+                    time.sleep(sleep_time)
                 finally:
                     self._lock.acquire()
 
 
 class RateLimiterRegistry:
-    """Registry of per-server token-bucket rate limiters."""
+    """Registry of per-server token-bucket rate limiters.
 
-    def __init__(self, limits: dict[str, int] | None = None) -> None:
+    Set ``unlimited=True`` (or env RATE_LIMITER_DISABLED=1) to bypass all
+    rate limiting — useful for tests and local dev where stub responses
+    are instant and rate limits cause unnecessary thread contention.
+    """
+
+    def __init__(
+        self,
+        limits: dict[str, int] | None = None,
+        unlimited: bool = False,
+    ) -> None:
         self._limits = limits or _DEFAULT_RATE_LIMITS
         self._buckets: dict[str, _TokenBucket] = {}
         self._lock = threading.Lock()
+        self._unlimited = unlimited or os.environ.get("RATE_LIMITER_DISABLED", "").lower() in ("1", "true", "yes")
 
     def acquire(self, server: str, timeout: float = 5.0) -> bool:
         """Acquire a rate-limit token for *server*.  Returns False if blocked."""
+        if self._unlimited:
+            return True
         bucket = self._get_bucket(server)
         return bucket.acquire(timeout)
 
@@ -560,8 +593,12 @@ class McpGateway:
         self._boto3_client = None
         # OAuth2 provider (lazy-init from env if not injected)
         self._oauth2_provider = oauth2_provider
-        # Per-server rate limiter (uses defaults if not injected)
-        self._rate_limiter = rate_limiter or RateLimiterRegistry()
+        # Fast-path: when no gateway is configured, skip rate limiting for stubs
+        # (stubs are instant in-memory responses — no external service to protect)
+        stub_mode = not AGENTCORE_GATEWAY_URL
+        self._rate_limiter = rate_limiter or RateLimiterRegistry(
+            unlimited=stub_mode,
+        )
 
     @classmethod
     def get_instance(cls) -> McpGateway:

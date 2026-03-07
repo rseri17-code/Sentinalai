@@ -27,6 +27,7 @@ from supervisor.guardrails import (
     CircuitBreakerRegistry,
     CALL_TIMEOUT_SECONDS,
     MAX_RETRIES_PER_CALL,
+    MAX_CONCURRENT_WORKERS,
     circuit_registry,
 )
 from supervisor.observability import (
@@ -232,9 +233,17 @@ class SentinalAISupervisor:
         self._call_timeout = call_timeout
         self._max_retries = max_retries
         # G6.2: Shared ThreadPoolExecutor (reused across calls within investigation)
-        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+        # Sized to match MAX_CONCURRENT_WORKERS from guardrails
+        self._executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=MAX_CONCURRENT_WORKERS,
+            thread_name_prefix="sentinalai-worker",
+        )
         # Separate executor for parallel playbook dispatch (avoids deadlock with _call_worker)
-        self._parallel_executor = concurrent.futures.ThreadPoolExecutor(max_workers=7)
+        # Sized to max workers + 2 for overhead (historical context, devops enrichment)
+        self._parallel_executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=len(self.workers) + 2,
+            thread_name_prefix="sentinalai-parallel",
+        )
 
     # ------------------------------------------------------------------ #
     # Public API
@@ -301,7 +310,13 @@ class SentinalAISupervisor:
                 severity.level, severity.label, severity.source, severity.budget,
             )
 
-            # Step 3: Execute playbook
+            # Step 3: Execute playbook + historical context in parallel
+            # Historical context targets knowledge_worker (independent of playbook workers)
+            # so we can overlap them to cut wall-clock time.
+            historical_future = self._parallel_executor.submit(
+                self._fetch_historical_context, service, summary, receipts, budget, circuits,
+            )
+
             evidence = self._execute_playbook(
                 incident_type, incident_id, service, receipts, budget, circuits,
             )
@@ -309,6 +324,16 @@ class SentinalAISupervisor:
             # Merge ITSM context into evidence for downstream analysis
             if itsm_context:
                 evidence["itsm_context"] = itsm_context
+
+            # Collect historical context (ran in parallel with playbook)
+            try:
+                historical = historical_future.result(timeout=self._call_timeout)
+            except Exception:
+                historical = None
+                logger.debug("Historical context retrieval failed (non-critical)")
+            if historical:
+                evidence["historical_context"] = historical
+
             logger.info("Playbook complete for %s: %d evidence items", incident_id, len(evidence))
 
             # Step 3b: DevOps enrichment (proof-gated — only if change data found)
@@ -318,11 +343,6 @@ class SentinalAISupervisor:
                 devops_context = self._fetch_devops_context(service, deployment, receipts, budget, circuits)
                 if devops_context:
                     evidence["devops_context"] = devops_context
-
-            # Step 3c: Historical context (optional phase 4)
-            historical = self._fetch_historical_context(service, summary, receipts, budget, circuits)
-            if historical:
-                evidence["historical_context"] = historical
 
             # Step 4: Analyze
             result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
@@ -881,8 +901,10 @@ class SentinalAISupervisor:
             future = self._parallel_executor.submit(_run_worker_group, worker_name, steps)
             futures[future] = worker_name
 
-        # Collect results (timeout per-group = call_timeout * steps)
-        for future in concurrent.futures.as_completed(futures, timeout=self._call_timeout * len(playbook)):
+        # Collect results — bounded by investigation deadline, not just call_timeout
+        remaining_budget = self._investigation_deadline - time.monotonic() if hasattr(self, '_investigation_deadline') else self._call_timeout * len(playbook)
+        group_timeout = max(1.0, min(remaining_budget, self._call_timeout * len(playbook)))
+        for future in concurrent.futures.as_completed(futures, timeout=group_timeout):
             try:
                 results = future.result(timeout=self._call_timeout * 2)
                 for label, result in results:

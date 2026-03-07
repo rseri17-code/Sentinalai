@@ -10,6 +10,7 @@ Provides:
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 from dataclasses import dataclass, field
@@ -23,15 +24,21 @@ logger = logging.getLogger(__name__)
 # Execution limits
 # =========================================================================
 
-MAX_TOOL_CALLS_PER_CASE = 20
+MAX_TOOL_CALLS_PER_CASE = int(
+    os.environ.get("INVESTIGATION_BUDGET_MAX_CALLS", "20")
+)
 MAX_RETRIES_PER_CALL = 2
-CALL_TIMEOUT_SECONDS = 30.0
+CALL_TIMEOUT_SECONDS = float(
+    os.environ.get("MCP_CALL_TIMEOUT_SECONDS", "30")
+)
 MAX_CONCURRENT_WORKERS = 5
 
 PHASE_CALL_LIMITS: dict[str, int] = {
     "initial_context": 2,
+    "itsm_enrichment": 3,
     "evidence_gathering": 8,
     "change_correlation": 3,
+    "devops_enrichment": 2,
     "historical_context": 2,
 }
 
@@ -156,6 +163,8 @@ def validate_query(query: str) -> tuple[bool, str]:
     """Validate a Splunk query against the policy.
 
     Returns (is_valid, reason).
+    Queries are checked against an allowlist and rejected if they
+    contain injection patterns (|, eval, lookup, delete).
     """
     if not query or not query.strip():
         return False, "empty query"
@@ -167,5 +176,9 @@ def validate_query(query: str) -> tuple[bool, str]:
     for d in dangerous:
         if d in query_lower:
             return False, f"blocked pattern: {d}"
+
+    # Validate against allowlist: at least one allowed term must appear
+    if not any(term in query_lower for term in SPLUNK_QUERY_ALLOWLIST):
+        return False, "query does not match any allowed pattern"
 
     return True, "ok"

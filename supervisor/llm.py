@@ -210,10 +210,12 @@ def refine_hypothesis(
     if not is_enabled():
         return {"refined_hypotheses": hypotheses, "input_tokens": 0, "output_tokens": 0, "latency_ms": 0}
 
+    from supervisor.system_prompt import SUPERVISOR_SYSTEM_PROMPT
+
     system_prompt = (
-        "You are an expert SRE performing root cause analysis. "
-        "Given the incident evidence and initial hypotheses, refine the analysis. "
-        "Re-rank hypotheses by likelihood. Adjust confidence scores (0-100). "
+        SUPERVISOR_SYSTEM_PROMPT + "\n\n"
+        "TASK: Refine and re-rank the given hypotheses based on evidence. "
+        "Adjust confidence scores (0-100). "
         "Provide concise reasoning for the top hypothesis. "
         "Respond in JSON format: {\"hypotheses\": [{\"name\": str, \"root_cause\": str, "
         "\"score\": int, \"reasoning\": str}]}"
@@ -271,9 +273,11 @@ def generate_reasoning(
     if not is_enabled():
         return {"reasoning": "", "input_tokens": 0, "output_tokens": 0, "latency_ms": 0}
 
+    from supervisor.system_prompt import SUPERVISOR_SYSTEM_PROMPT
+
     system_prompt = (
-        "You are an expert SRE writing a root cause analysis report. "
-        "Write a clear, concise explanation of the root cause. "
+        SUPERVISOR_SYSTEM_PROMPT + "\n\n"
+        "TASK: Write a clear, concise root cause analysis report. "
         "Reference specific evidence from the timeline. "
         "Explain the causal chain. Keep it under 200 words."
     )

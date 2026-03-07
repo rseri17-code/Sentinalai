@@ -1,0 +1,35 @@
+[
+  {
+    "incident_id": "INC-SAMPLE-001",
+    "root_cause": "Database connection pool exhaustion due to unclosed connections from payment service",
+    "root_cause_keywords": ["connection pool", "database", "exhaustion", "unclosed"],
+    "incident_type": "saturation",
+    "service": "payment-service",
+    "severity": 2,
+    "required_evidence": ["logs", "metrics", "golden_signals"],
+    "expected_confidence_min": 70,
+    "expected_confidence_max": 95
+  },
+  {
+    "incident_id": "INC-SAMPLE-002",
+    "root_cause": "Downstream auth-service timeout causing cascading 504 errors in API gateway",
+    "root_cause_keywords": ["timeout", "auth-service", "cascading", "504", "gateway"],
+    "incident_type": "timeout",
+    "service": "api-gateway",
+    "severity": 1,
+    "required_evidence": ["logs", "golden_signals", "metrics"],
+    "expected_confidence_min": 65,
+    "expected_confidence_max": 90
+  },
+  {
+    "incident_id": "INC-SAMPLE-003",
+    "root_cause": "Memory leak in order-processor causing OOMKill after deployment v2.3.1",
+    "root_cause_keywords": ["memory leak", "OOMKill", "order-processor", "deployment"],
+    "incident_type": "oomkill",
+    "service": "order-processor",
+    "severity": 2,
+    "required_evidence": ["logs", "metrics", "events", "changes"],
+    "expected_confidence_min": 60,
+    "expected_confidence_max": 85
+  }
+]

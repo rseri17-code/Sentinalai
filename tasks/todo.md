@@ -37,3 +37,33 @@
 1. **High-complexity functions** — 5 functions at D/E grade in agent.py and mcp_client.py
    require architectural review before refactoring.
 2. **OTEL init coverage** — Lines 34-71 in observability.py are module-level init code.
+
+---
+
+## Cycle 2 — 2026-03-08
+
+### Plan
+
+- [x] Phase 0: Environment baseline
+  - Python 3.11.14, 37 source files, 49 test files
+  - Tools: ruff 0.15.4, bandit 1.9.4, radon 6.0.1, pytest 9.0.2
+  - Missing: mypy (not installed), boto3 (not installed)
+- [ ] Phase 1: Validate
+- [ ] Phase 2: Scan
+- [ ] Phase 3: AgentCore drift check
+- [ ] Phase 4: Python practices check
+- [ ] Phase 5: Reason
+- [ ] Phase 6: Fix
+- [ ] Phase 7: Write missing tests
+- [ ] Phase 8: Retest
+- [ ] Phase 9: Exit check
+
+### Metrics
+
+| Metric | Start | End | Delta |
+|--------|-------|-----|-------|
+
+### Escalation Log
+
+1. **mypy not installed** — Cannot run type checking. Skipping per L5.
+2. **boto3 not installed** — AgentCore SDK drift check limited to static review.

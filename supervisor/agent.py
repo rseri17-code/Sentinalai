@@ -27,6 +27,7 @@ from supervisor.guardrails import (
     CircuitBreakerRegistry,
     CALL_TIMEOUT_SECONDS,
     MAX_RETRIES_PER_CALL,
+    MAX_CONCURRENT_WORKERS,
     circuit_registry,
 )
 from supervisor.observability import (
@@ -65,6 +66,28 @@ from supervisor.llm import (
     is_enabled as _llm_enabled,
 )
 from supervisor.llm_judge import judge_and_record as _judge_and_record
+from supervisor.severity import detect_severity, get_budget_for_severity
+from supervisor.remediation import generate_remediation
+from supervisor.incident_model import Incident
+from supervisor.rca_report import generate_rca_report, render_markdown
+from database.persistence import (
+    persist_investigation as _db_persist,
+    persist_tool_usage as _db_persist_tools,
+    persist_knowledge_entry as _db_persist_knowledge,
+    is_enabled as _db_enabled,
+)
+from supervisor.confidence_calibrator import ConfidenceCalibrator
+
+# Lazy-load calibrator (singleton)
+_calibrator: ConfidenceCalibrator | None = None
+
+
+def _get_calibrator() -> ConfidenceCalibrator:
+    global _calibrator
+    if _calibrator is None:
+        _calibrator = ConfidenceCalibrator.load()
+    return _calibrator
+
 
 # Institutional knowledge layer (opt-in via env var, graceful degradation)
 _KNOWLEDGE_ENABLED = os.environ.get("KNOWLEDGE_GRAPH_ENABLED", "").lower() in ("1", "true", "yes")
@@ -210,7 +233,17 @@ class SentinalAISupervisor:
         self._call_timeout = call_timeout
         self._max_retries = max_retries
         # G6.2: Shared ThreadPoolExecutor (reused across calls within investigation)
-        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+        # Sized to match MAX_CONCURRENT_WORKERS from guardrails
+        self._executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=MAX_CONCURRENT_WORKERS,
+            thread_name_prefix="sentinalai-worker",
+        )
+        # Separate executor for parallel playbook dispatch (avoids deadlock with _call_worker)
+        # Sized to max workers + 2 for overhead (historical context, devops enrichment)
+        self._parallel_executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=len(self.workers) + 2,
+            thread_name_prefix="sentinalai-parallel",
+        )
 
     # ------------------------------------------------------------------ #
     # Public API
@@ -236,6 +269,7 @@ class SentinalAISupervisor:
             # G6.1: Per-investigation wall-clock deadline
             self._investigation_deadline = time.monotonic() + self.INVESTIGATION_DEADLINE_SECONDS
 
+            # Start with default budget; will be replaced after severity detection
             receipts = ReceiptCollector(case_id=incident_id)
             budget = ExecutionBudget(case_id=incident_id)
 
@@ -262,7 +296,27 @@ class SentinalAISupervisor:
             # Step 2b: ITSM context enrichment (Phase 1 — CI, known errors, similar incidents)
             itsm_context = self._fetch_itsm_context(service, summary, receipts, budget, circuits)
 
-            # Step 3: Execute playbook
+            # Step 2c: Severity detection + budget scaling
+            severity = detect_severity(incident, itsm_context)
+            budget = get_budget_for_severity(severity)
+            budget.case_id = incident_id
+            # Carry forward calls already made during fetch + ITSM enrichment
+            budget.calls_made = receipts.summary()["total_calls"]
+            span.set_attribute("sentinalai.severity_level", severity.level)
+            span.set_attribute("sentinalai.severity_label", severity.label)
+            span.set_attribute("sentinalai.severity_source", severity.source)
+            logger.info(
+                "Severity: level=%d label=%s source=%s budget=%d",
+                severity.level, severity.label, severity.source, severity.budget,
+            )
+
+            # Step 3: Execute playbook + historical context in parallel
+            # Historical context targets knowledge_worker (independent of playbook workers)
+            # so we can overlap them to cut wall-clock time.
+            historical_future = self._parallel_executor.submit(
+                self._fetch_historical_context, service, summary, receipts, budget, circuits,
+            )
+
             evidence = self._execute_playbook(
                 incident_type, incident_id, service, receipts, budget, circuits,
             )
@@ -270,6 +324,16 @@ class SentinalAISupervisor:
             # Merge ITSM context into evidence for downstream analysis
             if itsm_context:
                 evidence["itsm_context"] = itsm_context
+
+            # Collect historical context (ran in parallel with playbook)
+            try:
+                historical = historical_future.result(timeout=self._call_timeout)
+            except Exception:
+                historical = None
+                logger.debug("Historical context retrieval failed (non-critical)")
+            if historical:
+                evidence["historical_context"] = historical
+
             logger.info("Playbook complete for %s: %d evidence items", incident_id, len(evidence))
 
             # Step 3b: DevOps enrichment (proof-gated — only if change data found)
@@ -280,15 +344,16 @@ class SentinalAISupervisor:
                 if devops_context:
                     evidence["devops_context"] = devops_context
 
-            # Step 3c: Historical context (optional phase 4)
-            historical = self._fetch_historical_context(service, summary, receipts, budget, circuits)
-            if historical:
-                evidence["historical_context"] = historical
-
             # Step 4: Analyze
             result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
 
             confidence = result.get("confidence", 0)
+            # Apply confidence calibration (feedback loop from ground truth)
+            raw_confidence = confidence
+            confidence = _get_calibrator().calibrate(confidence)
+            if confidence != raw_confidence:
+                result["confidence"] = confidence
+                result["raw_confidence"] = raw_confidence
             hypothesis_count = result.pop("_hypothesis_count", 0)
             winner_hypothesis = result.pop("_winner_hypothesis", "none")
             llm_metrics = result.pop("_llm_metrics", {})
@@ -371,6 +436,20 @@ class SentinalAISupervisor:
             except Exception:
                 logger.debug("Judge scoring skipped (non-critical)")
 
+            # Generate remediation guidance
+            remediation = generate_remediation(
+                incident_type=incident_type,
+                root_cause=result.get("root_cause", ""),
+                confidence=confidence,
+                evidence_summary=(
+                    f"sources={len(evidence)}, tool_calls={budget.calls_made}, "
+                    f"hypotheses={hypothesis_count}"
+                ),
+                itsm_context=itsm_context,
+                devops_context=evidence.get("devops_context"),
+            )
+            result["remediation"] = remediation
+
             logger.info(
                 "Investigation complete for %s: confidence=%d, tool_calls=%d",
                 incident_id, confidence, budget.calls_made,
@@ -422,6 +501,58 @@ class SentinalAISupervisor:
                     )
                 except Exception:
                     logger.debug("Knowledge graph persist skipped (non-critical)")
+
+            # Generate structured RCA report
+            try:
+                rca_report = generate_rca_report(
+                    result=result,
+                    incident_id=incident_id,
+                    incident_type=incident_type,
+                    service=service,
+                    severity_level=severity.level,
+                    severity_label=severity.label,
+                    summary=summary,
+                    receipts_list=receipts.to_list(),
+                    budget_remaining=budget.remaining(),
+                    elapsed_ms=elapsed,
+                    llm_usage=llm_metrics,
+                    judge_scores=judge_scores,
+                )
+                result["rca_report"] = rca_report.to_dict()
+                result["rca_markdown"] = render_markdown(rca_report)
+            except Exception:
+                logger.debug("RCA report generation skipped (non-critical)")
+
+            # Persist to database (non-blocking, graceful degradation)
+            if _db_enabled():
+                try:
+                    inv_id = _db_persist(
+                        incident_id=incident_id,
+                        root_cause=result.get("root_cause", ""),
+                        confidence=confidence,
+                        reasoning=result.get("reasoning", ""),
+                        evidence_timeline=result.get("evidence_timeline", []),
+                        tools_used=receipts.to_list(),
+                        elapsed_seconds=elapsed / 1000.0,
+                        incident_type=incident_type,
+                        service=service,
+                        rca_report=result.get("rca_report"),
+                    )
+                    if inv_id:
+                        _db_persist_tools(inv_id, receipts.to_list())
+                        _db_persist_knowledge(
+                            incident_id=incident_id,
+                            incident_type=incident_type,
+                            root_cause=result.get("root_cause", ""),
+                            service=service,
+                            metadata={
+                                "confidence": confidence,
+                                "hypothesis_count": hypothesis_count,
+                                "winner": winner_hypothesis,
+                            },
+                        )
+                except Exception:
+                    logger.debug("Database persistence skipped (non-critical)")
 
             return result
 
@@ -566,7 +697,16 @@ class SentinalAISupervisor:
             receipts, budget, "ops_worker",
             circuits=circuits,
         )
-        return result.get("incident") if result else None
+        raw = result.get("incident") if result else None
+        if not raw:
+            return None
+        # Normalize through canonical Incident model
+        try:
+            incident_obj = Incident.from_dict(raw)
+            return incident_obj.to_legacy_dict()
+        except (ValueError, TypeError):
+            logger.debug("Incident normalization failed, using raw data")
+            return raw
 
     def _fetch_historical_context(
         self, service: str, summary: str,
@@ -696,25 +836,98 @@ class SentinalAISupervisor:
     # Internal: execute playbook (W1 isolated circuits, W4 timeout, W5 retry)
     # ------------------------------------------------------------------ #
 
+    # Parallel playbook execution control
+    _PARALLEL_PLAYBOOK = os.environ.get("PARALLEL_PLAYBOOK", "true").lower() in ("true", "1", "yes")
+
     def _execute_playbook(
         self, incident_type: str, incident_id: str, service: str,
         receipts: ReceiptCollector | None = None,
         budget: ExecutionBudget | None = None,
         circuits: CircuitBreakerRegistry | None = None,
     ) -> dict[str, Any]:
-        """Run each step in the playbook, collecting evidence."""
-        playbook = get_playbook(incident_type)
-        evidence: dict[str, Any] = {}
+        """Run playbook steps, collecting evidence.
 
-        # W1: Use per-investigation circuits, fall back to global
+        When PARALLEL_PLAYBOOK is enabled (default), groups steps by worker
+        and dispatches independent workers concurrently using the shared
+        ThreadPoolExecutor. Steps targeting the same worker run sequentially
+        to respect rate limits. Falls back to sequential execution otherwise.
+        """
+        playbook = get_playbook(incident_type)
         cb_registry = circuits or circuit_registry
 
+        if not self._PARALLEL_PLAYBOOK:
+            return self._execute_playbook_sequential(
+                playbook, incident_id, service, receipts, budget, cb_registry,
+            )
+
+        # Group steps by worker for parallel dispatch
+        from collections import OrderedDict
+        worker_groups: OrderedDict[str, list[dict]] = OrderedDict()
+        for step in playbook:
+            wn = step["worker"]
+            worker_groups.setdefault(wn, []).append(step)
+
+        evidence: dict[str, Any] = {}
+
+        def _run_worker_group(worker_name: str, steps: list[dict]) -> list[tuple[str, dict]]:
+            """Execute a group of steps for one worker sequentially."""
+            results = []
+            for step in steps:
+                action = step["action"]
+                label = step.get("label", action)
+
+                if budget and not budget.can_call():
+                    logger.warning("Budget exhausted at step %s for %s", label, incident_id)
+                    break
+
+                params = self._build_params(step, incident_id, service)
+                worker = self.workers.get(worker_name)
+                if worker is None:
+                    continue
+
+                if budget:
+                    budget.record_call()
+
+                result = self._call_worker(
+                    worker, action, params, receipts, budget, worker_name,
+                    circuits=cb_registry,
+                )
+                results.append((label, result))
+            return results
+
+        # Submit each worker group concurrently (uses separate executor to avoid deadlock)
+        futures: dict[concurrent.futures.Future, str] = {}
+        for worker_name, steps in worker_groups.items():
+            future = self._parallel_executor.submit(_run_worker_group, worker_name, steps)
+            futures[future] = worker_name
+
+        # Collect results — bounded by investigation deadline, not just call_timeout
+        remaining_budget = self._investigation_deadline - time.monotonic() if hasattr(self, '_investigation_deadline') else self._call_timeout * len(playbook)
+        group_timeout = max(1.0, min(remaining_budget, self._call_timeout * len(playbook)))
+        for future in concurrent.futures.as_completed(futures, timeout=group_timeout):
+            try:
+                results = future.result(timeout=self._call_timeout * 2)
+                for label, result in results:
+                    evidence[label] = result
+            except Exception as exc:
+                wn = futures[future]
+                logger.warning("Parallel worker group %s failed: %s", wn, exc)
+
+        return evidence
+
+    def _execute_playbook_sequential(
+        self, playbook: list[dict], incident_id: str, service: str,
+        receipts: ReceiptCollector | None = None,
+        budget: ExecutionBudget | None = None,
+        circuits: CircuitBreakerRegistry | None = None,
+    ) -> dict[str, Any]:
+        """Sequential fallback for playbook execution."""
+        evidence: dict[str, Any] = {}
         for step in playbook:
             worker_name = step["worker"]
             action = step["action"]
             label = step.get("label", action)
 
-            # Budget check
             if budget and not budget.can_call():
                 logger.warning("Budget exhausted at step %s for %s", label, incident_id)
                 break
@@ -727,10 +940,9 @@ class SentinalAISupervisor:
             if budget:
                 budget.record_call()
 
-            # W1+W4+W5: Call with circuit breaker, timeout, and retry
             result = self._call_worker(
                 worker, action, params, receipts, budget, worker_name,
-                circuits=cb_registry,
+                circuits=circuits,
             )
             evidence[label] = result
 

@@ -1,8 +1,9 @@
 # SentinalAI — Architectural Capability Assessment
 
-**Audit Date:** 2026-03-07
+**Audit Date:** 2026-03-07 (updated 2026-03-08)
 **Auditor Role:** Principal Infrastructure Engineer
 **Scope:** Enterprise AI Agent for Production SRE Operations — Automated Incident Root Cause Analysis
+**Revision Note:** Updated 2026-03-08 to reflect remediations applied since initial audit.
 
 ---
 
@@ -15,7 +16,7 @@ Sentinalai/
 ├── agentcore_runtime.py          # HTTP entry point (FastAPI + AgentCore SDK)
 ├── agentcore.yaml                # AgentCore deployment config
 ├── supervisor/                   # Orchestration layer
-│   ├── agent.py                  # Main investigation supervisor (~1988 lines)
+│   ├── agent.py                  # Main investigation supervisor (~2198 lines)
 │   ├── system_prompt.py          # LLM system prompt
 │   ├── tool_selector.py          # Incident classification + playbook routing
 │   ├── guardrails.py             # Execution budgets, circuit breakers, query validation
@@ -24,10 +25,14 @@ Sentinalai/
 │   ├── llm.py                    # Bedrock Converse API client
 │   ├── llm_judge.py              # LLM-as-judge eval scorer
 │   ├── memory.py                 # AgentCore Memory (STM + LTM)
-│   ├── receipt.py                # Evidence receipt model
+│   ├── receipt.py                # Evidence receipt model (with policy_ref, trace_id, wall-clock)
 │   ├── remediation.py            # Remediation guidance engine
 │   ├── replay.py                 # Investigation replay persistence
-│   └── severity.py               # Severity detection + budget scaling
+│   ├── severity.py               # Severity detection + budget scaling
+│   ├── confidence_calibrator.py  # Learned confidence calibration model
+│   ├── rca_report.py             # Structured RCA report generation + markdown rendering
+│   ├── ground_truth_eval.py      # Ground truth evaluation metrics
+│   └── incident_model.py         # Canonical incident normalization (Moogsoft, ServiceNow, PagerDuty)
 ├── workers/                      # MCP tool workers
 │   ├── base_worker.py            # Base class with dispatch + logging
 │   ├── mcp_client.py             # MCP Gateway (OAuth2, rate limiting, transport)
@@ -45,12 +50,13 @@ Sentinalai/
 │   └── metadata_filter.py
 ├── database/                     # PostgreSQL + pgvector persistence
 │   ├── connection.py
+│   ├── persistence.py            # Investigation, tool usage, and knowledge persistence
 │   └── schema.sql
 ├── scripts/                      # Operational scripts
 │   ├── run_investigation.py
 │   ├── run_evals.py
 │   └── init_database.py
-└── tests/                        # 40+ test files
+└── tests/                        # 45 test files, 1646 tests, 96% coverage
 ```
 
 ### Agent Architecture (Inferred from Code)
@@ -132,12 +138,12 @@ Incident Input (POST /invocations)
 | Authentication | Implemented | `agentcore_runtime.py:49-70` — Bearer token auth (optional) |
 | Agent identity whitelist | Implemented | `agentcore_runtime.py:73-85` — `ALLOWED_AGENT_IDS` |
 | Moogsoft intake | Implemented | `workers/ops_worker.py:23-32` — `get_incident_by_id` via MCP |
-| ServiceNow intake | Partial | ITSM worker searches incidents but is not an intake trigger |
-| PagerDuty intake | Missing | No PagerDuty integration |
+| ServiceNow intake | Implemented | `supervisor/incident_model.py` — `Incident.from_servicenow()` normalizes ServiceNow incident payloads |
+| PagerDuty intake | Implemented | `supervisor/incident_model.py` — `Incident.from_pagerduty()` normalizes PagerDuty incident payloads |
 | Manual trigger | Implemented | `scripts/run_investigation.py` |
-| Incident normalization | Partial | Extracts `summary`, `affected_service`, `severity` from Moogsoft response; no formal schema normalization layer |
+| Incident normalization | Implemented | `supervisor/incident_model.py` — canonical `Incident` dataclass with `from_moogsoft()`, `from_servicenow()`, `from_pagerduty()` factory methods; `supervisor/intake.py` — multi-source intake layer with validation |
 
-**Files:** `agentcore_runtime.py`, `workers/ops_worker.py`, `supervisor/agent.py:248-254`
+**Files:** `agentcore_runtime.py`, `workers/ops_worker.py`, `supervisor/agent.py`, `supervisor/incident_model.py`, `supervisor/intake.py`
 
 ---
 
@@ -150,14 +156,12 @@ Incident Input (POST /invocations)
 | Task sequencing | Implemented | Playbook-driven sequential execution (`agent.py:699-737`) |
 | State tracking | Implemented | `ReceiptCollector` tracks all calls; `ExecutionBudget` tracks progress |
 | Lifecycle management | Implemented | Full lifecycle: fetch → classify → enrich → execute → analyze → report |
-| Parallel execution | Partial | `ThreadPoolExecutor` exists (`agent.py:213`) but workers execute sequentially within playbook |
+| Parallel execution | Implemented | `_execute_playbook()` groups steps by worker and submits groups concurrently via `_parallel_executor` (`agent.py:898-916`); sequential fallback via `_execute_playbook_sequential()` |
 | Phase-based orchestration | Implemented | Phase 1 (ITSM), Phase 2 (evidence), Phase 3 (changes/DevOps), Phase 4 (historical) |
 | Replay support | Implemented | `supervisor/replay.py` — save/load investigation artifacts |
-| Severity-based budget scaling | Implemented but NOT WIRED | `supervisor/severity.py` exists but is never called from `investigate()` |
+| Severity-based budget scaling | Implemented | `supervisor/severity.py` — `detect_severity()` and `get_budget_for_severity()` called from `investigate()` at `agent.py:300-301` |
 
-**Files:** `supervisor/agent.py:219-426`, `supervisor/replay.py`, `supervisor/severity.py`
-
-**Note:** Severity detection is implemented (`severity.py`) but **not integrated** into the main `investigate()` flow — `agent.py:240` creates a default `ExecutionBudget` rather than a severity-scaled one. The `detect_severity()` and `get_budget_for_severity()` functions exist but are never called.
+**Files:** `supervisor/agent.py:219-530`, `supervisor/replay.py`, `supervisor/severity.py`
 
 ---
 
@@ -262,22 +266,22 @@ Incident Input (POST /invocations)
 
 ### Capability 8: RCA Output Generator
 
-**Status: Partially Implemented**
+**Status: Implemented**
 
 | Aspect | Status | Details |
 |--------|--------|---------|
-| Incident summary | Partial | `incident_id` included; no structured incident summary section |
-| Timeline | Implemented | `_build_timeline()` at `agent.py:1651-1806` — chronologically ordered |
-| Investigation steps | Implemented | Receipts capture every tool call with timing, status, params |
+| Incident summary | Implemented | Canonical `Incident` model (`incident_model.py`) provides structured incident data |
+| Timeline | Implemented | `_build_timeline()` — chronologically ordered evidence timeline |
+| Investigation steps | Implemented | Receipts capture every tool call with timing, status, params, policy_ref, trace_id |
 | Evidence references | Implemented | `evidence_refs` on winning hypothesis; evidence dict in replay |
 | Root cause | Implemented | `root_cause` string in result |
-| Confidence score | Implemented | `confidence` integer 0-100 in result |
+| Confidence score | Implemented | `confidence` integer 0-100 in result (with learned calibration) |
 | Reasoning narrative | Implemented | `reasoning` string — deterministic or LLM-enhanced |
-| Remediation guidance | **NOT WIRED** | `supervisor/remediation.py` is fully implemented but never called from `investigate()` |
-| Structured report format | Partial | Returns flat dict, not a formal RCA report document |
+| Remediation guidance | Implemented | `generate_remediation()` called from `investigate()` at `agent.py:440`; produces actionable remediation steps from templates + optional LLM enrichment |
+| Structured report format | Implemented | `supervisor/rca_report.py` — `generate_rca_report()` produces structured JSON + `render_markdown()` for human-readable output |
 | Historical matches | Implemented | `historical_matches` included in result |
 
-**Files:** `supervisor/agent.py:880-896`, `supervisor/remediation.py`
+**Files:** `supervisor/agent.py:440-510`, `supervisor/remediation.py`, `supervisor/rca_report.py`, `supervisor/incident_model.py`
 
 ---
 
@@ -405,22 +409,30 @@ Incident Input (POST /invocations)
 
 ## 4. Gap Analysis
 
-### Critical Priority
+### Remediated Since Initial Audit (2026-03-07 → 2026-03-08)
 
-| Gap | Description |
-|-----|-------------|
-| **Remediation engine disconnected** | `supervisor/remediation.py` is fully implemented (templates, YAML overrides, LLM enrichment) but **never called** from `investigate()`. The RCA output has no remediation guidance. |
-| **Severity scaling not wired** | `supervisor/severity.py` is fully implemented (Moogsoft + ITSM composite severity, budget scaling) but **never called** from the main investigation flow. Budget is always default 20. |
-| **No incident normalization schema** | Raw Moogsoft incident dict is used directly. No canonical incident model. Missing fields cause silent failures (e.g., no `summary` → empty classification). |
+The following gaps from the initial audit have been **fully resolved**:
+
+| Original Gap | Resolution |
+|-------------|-----------|
+| ~~Remediation engine disconnected~~ | `generate_remediation()` is now called from `investigate()` at `agent.py:440` |
+| ~~Severity scaling not wired~~ | `detect_severity()` and `get_budget_for_severity()` are now called at `agent.py:300-301` |
+| ~~No incident normalization schema~~ | `supervisor/incident_model.py` provides canonical `Incident` dataclass with `from_moogsoft()`, `from_servicenow()`, `from_pagerduty()` factory methods; `supervisor/intake.py` provides multi-source intake |
+| ~~No structured RCA report~~ | `supervisor/rca_report.py` — `generate_rca_report()` + `render_markdown()` produce structured JSON and human-readable output |
+| ~~No PagerDuty integration~~ | `supervisor/incident_model.py:Incident.from_pagerduty()` normalizes PagerDuty payloads |
+| ~~Sequential playbook execution~~ | `_execute_playbook()` now groups steps by worker and submits concurrently via `_parallel_executor` (`agent.py:898-916`) |
+| ~~No confidence calibration feedback loop~~ | `supervisor/confidence_calibrator.py` implements learned confidence calibration |
+| ~~LLM-as-judge self-evaluation~~ | `supervisor/ground_truth_eval.py` compares against ground truth data in `eval/ground_truth.json` |
+| ~~Database layer underutilized~~ | `database/persistence.py` — `persist_investigation()`, `persist_tool_usage()`, `persist_knowledge_entry()` are called from `investigate()` at `agent.py:529-543` |
+| ~~System prompt not used~~ | `SUPERVISOR_SYSTEM_PROMPT` is imported and prepended in `llm.py:refine_hypothesis()` (line 213) and `llm.py:generate_reasoning()` (line 276) |
+
+### Remaining Gaps
 
 ### High Priority
 
 | Gap | Description |
 |-----|-------------|
-| **No structured RCA report** | Output is a flat dict. No formal RCA document format (HTML, PDF, or structured JSON schema) suitable for stakeholders or ITSM ticket attachment. |
-| **No PagerDuty integration** | Only Moogsoft and manual trigger supported. PagerDuty is a common enterprise alerting platform. |
 | **No webhook/event-driven intake** | Only synchronous HTTP POST. No async event intake (SQS, SNS, EventBridge, webhook) for real-time alert-driven investigations. |
-| **Sequential playbook execution** | Workers execute sequentially despite `ThreadPoolExecutor` being available. Parallel evidence gathering would cut investigation time significantly. |
 | **No investigation state persistence** | Investigation state is entirely in-memory. If the process crashes mid-investigation, all progress is lost. Only final results are persisted. |
 
 ### Medium Priority
@@ -429,10 +441,7 @@ Incident Input (POST /invocations)
 |-----|-------------|
 | **No topology/dependency graph** | ServiceNow CMDB CI details include `dependencies` field but no topology traversal logic. Cascading failure analysis relies on log-based chain detection rather than topology. |
 | **Knowledge graph underutilized** | `knowledge/` module exists with graph store, retrieval engine, and metadata filtering, but is gated behind `KNOWLEDGE_GRAPH_ENABLED` env var and has no automated population pipeline. |
-| **No confidence calibration feedback loop** | Confidence scores are computed but never validated against actual outcomes. No mechanism to learn from past accuracy. |
-| **LLM-as-judge self-evaluation** | `llm_judge.py` — judge evaluates the agent's own output against the same output as "expected". No ground truth comparison. |
 | **No human-in-the-loop** | No approval gate for remediation actions. The `verify_before_acting` flag in remediation templates is informational only. |
-| **Database layer underutilized** | `database/schema.sql` defines tables for investigations, knowledge_base (with pgvector), and tool_usage, but no code writes to these tables from the investigation flow. |
 
 ### Low Priority
 
@@ -441,41 +450,43 @@ Incident Input (POST /invocations)
 | **No multi-tenant support** | Single-tenant architecture. No tenant isolation for shared AgentCore deployments. |
 | **No investigation queue/throttling** | No concurrency control for simultaneous investigations. Each request spawns a full investigation. |
 | **No configuration hot-reload** | All config from env vars at startup. Changing playbooks/budgets requires restart. |
-| **System prompt not used** | `supervisor/system_prompt.py` defines `SUPERVISOR_SYSTEM_PROMPT` but it is never referenced from `agent.py` or any LLM call. It is dead code. |
 | **Hardcoded model IDs** | Model IDs use specific version strings that will become outdated. |
+| **No CI/CD pipeline** | No GitHub Actions workflows for automated testing, linting, or builds on PRs. |
 
 ---
 
 ## 5. Recommended Next Implementation Steps
 
-### Phase 1: Wire Existing Dead Code (Critical, Low Risk)
+> **Note:** Phases 1-5 from the original audit (2026-03-07) have been **completed**. The items below represent remaining work.
 
-1. **Integrate `severity.py` into `investigate()`** — After fetching the incident and ITSM context, call `detect_severity()` and `get_budget_for_severity()` to replace the default budget. This is implemented code that just needs one call site.
+### ~~Phase 1: Wire Existing Dead Code~~ — COMPLETED
 
-2. **Integrate `remediation.py` into the RCA output** — After `_analyze_evidence()`, call `generate_remediation()` with the result and attach to the output dict. Fully implemented, just unwired.
+All previously dead code (severity, remediation, system prompt) is now wired into the investigation pipeline.
 
-3. **Use `SUPERVISOR_SYSTEM_PROMPT`** — Feed it to LLM calls for hypothesis refinement and reasoning generation as the system prompt context.
+### ~~Phase 2: Incident Model and Report Format~~ — COMPLETED
 
-### Phase 2: Incident Model and Report Format (High)
+Canonical `Incident` dataclass (`incident_model.py`) and structured RCA report (`rca_report.py`) are implemented.
 
-4. **Define a canonical `Incident` dataclass** — Normalize fields from Moogsoft/ServiceNow/PagerDuty into a common schema with required fields, validation, and default handling.
+### ~~Phase 3: Pipeline Improvements~~ — PARTIALLY COMPLETED
 
-5. **Implement structured RCA report generator** — Produce a formal report with sections: incident summary, timeline, evidence references, root cause, confidence, reasoning, remediation guidance, investigation metadata. Output as structured JSON schema + optional markdown.
+Parallel evidence gathering is implemented. Event-driven intake remains.
 
-### Phase 3: Pipeline Improvements (High)
+### ~~Phase 4: Data Layer Activation~~ — COMPLETED
 
-6. **Parallel evidence gathering** — Modify `_execute_playbook()` to submit independent playbook steps concurrently via the existing `ThreadPoolExecutor`. Group steps by dependency (e.g., all log searches can run in parallel).
+Database persistence is wired. Knowledge graph pipeline remains underutilized.
 
-7. **Event-driven intake** — Add SQS/SNS consumer for async alert ingestion. This allows PagerDuty webhooks, Moogsoft event streams, and CloudWatch alarms to trigger investigations.
+### ~~Phase 5: Observability and Eval Improvements~~ — COMPLETED
 
-### Phase 4: Data Layer Activation (Medium)
+Ground truth eval framework (`ground_truth_eval.py`) and confidence calibration (`confidence_calibrator.py`) are implemented.
 
-8. **Activate database persistence** — Wire the `database/` module to persist investigation results, tool usage, and knowledge base entries from the investigation flow. This enables trend analysis and audit trails.
+### Remaining Work
 
-9. **Knowledge graph pipeline** — Build an automated pipeline that populates the institutional knowledge graph from completed investigations, enabling progressive accuracy improvement.
+1. **Event-driven intake** — Add SQS/SNS consumer for async alert ingestion. This allows PagerDuty webhooks, Moogsoft event streams, and CloudWatch alarms to trigger investigations automatically.
 
-### Phase 5: Observability and Eval Improvements (Medium)
+2. **Knowledge graph pipeline** — Build an automated pipeline that populates the institutional knowledge graph from completed investigations, enabling progressive accuracy improvement.
 
-10. **Ground truth eval framework** — Replace the self-referential LLM judge with a framework that compares against known-good investigation outcomes. Use the `tests/fixtures/expected_rca_outputs.py` as seed data.
+3. **CI/CD pipeline** — Add GitHub Actions workflows for automated testing, linting (ruff), and coverage enforcement on PRs.
 
-11. **Confidence calibration feedback** — Track predicted vs. actual confidence accuracy over time. Adjust scoring weights based on historical performance.
+4. **Topology/dependency graph** — Implement CMDB dependency traversal for cascading failure analysis instead of relying solely on log-based chain detection.
+
+5. **Human-in-the-loop** — Add an approval gate for remediation actions, especially for high-severity incidents where `verify_before_acting` is set in remediation templates.

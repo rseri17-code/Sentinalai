@@ -8,13 +8,11 @@ Validates that the agent meets 2029-ready performance targets:
 - Concurrent multi-incident throughput scales linearly
 """
 
-import os
 import time
 import threading
 import concurrent.futures
 from unittest.mock import patch
 
-import pytest
 
 from supervisor.agent import SentinalAISupervisor
 from supervisor.guardrails import (

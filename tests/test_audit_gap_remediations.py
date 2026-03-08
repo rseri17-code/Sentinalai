@@ -9,7 +9,6 @@ from __future__ import annotations
 import time
 from unittest.mock import patch, MagicMock
 
-import pytest
 
 from supervisor.receipt import Receipt, ReceiptCollector
 from supervisor.guardrails import validate_query, ExecutionBudget

@@ -1,7 +1,6 @@
 """Tests for the LLM-as-judge evaluator."""
 
 import json
-import pytest
 from unittest.mock import patch, MagicMock
 
 import supervisor.llm as llm_module

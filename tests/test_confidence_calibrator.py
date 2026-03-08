@@ -6,7 +6,6 @@ update, reset, and calibration report.
 
 from __future__ import annotations
 
-import json
 
 import pytest
 

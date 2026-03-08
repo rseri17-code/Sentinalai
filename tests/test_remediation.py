@@ -29,7 +29,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import supervisor.remediation as rem_module
 from supervisor.remediation import (
     REMEDIATION_TEMPLATES,
     VALID_INCIDENT_TYPES,

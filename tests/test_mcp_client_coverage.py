@@ -12,8 +12,6 @@ Covers:
 - Sysdig stub response branches (signal/golden keywords)
 """
 
-import json
-import pytest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, MagicMock
 
@@ -24,13 +22,10 @@ from workers.mcp_client import (
     _parse_agent_response,
     _has_any_arn,
     _to_gateway_tool_name,
-    get_server_for_tool,
-    get_arn_for_tool,
     McpGateway,
     OAuth2CredentialProvider,
     RateLimiterRegistry,
     _TokenBucket,
-    dispose,
 )
 
 
@@ -271,7 +266,7 @@ class TestInvokeMcpToolExtended:
         gw = McpGateway.get_instance()
         gw._boto3_client = mock_client
 
-        result = invoke_mcp_tool(
+        invoke_mcp_tool(
             "splunk.search_oneshot", "search",
             {"session_id": "custom-session-123"},
         )
@@ -685,7 +680,7 @@ class TestGatewayRateLimiting:
         """Unknown tools (no server mapping) skip rate limiting."""
         mock_limiter = MagicMock(spec=RateLimiterRegistry)
         gw = McpGateway(rate_limiter=mock_limiter)
-        result = gw.invoke("unknown.tool", "action", {})
+        gw.invoke("unknown.tool", "action", {})
         # Should not have called acquire since server is empty string
         mock_limiter.acquire.assert_not_called()
 
@@ -713,8 +708,6 @@ class TestGateway401Retry:
 
         # Simulate: first call raises 401, retry succeeds (returns stub)
         call_count = 0
-        original_get_client = gw._get_mcp_client
-
         def mock_get_client():
             nonlocal call_count
             call_count += 1

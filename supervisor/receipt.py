@@ -155,12 +155,12 @@ def _redact_params(params: dict) -> dict:
     }
 
 
-def _redact_output(result: dict) -> dict:
+def _redact_output(result: dict[str, Any]) -> dict[str, Any]:
     """Redact sensitive fields from output before storing in receipt."""
     if not isinstance(result, dict):
         return result
     redact_keys = {"password", "token", "secret", "api_key", "authorization", "credentials"}
-    redacted = {}
+    redacted: dict[str, Any] = {}
     for k, v in result.items():
         if k.lower() in redact_keys:
             redacted[k] = "***REDACTED***"

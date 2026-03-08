@@ -6,17 +6,13 @@ legacy invocation, OAuth2 secrets manager, and stub responses.
 """
 
 import json
-import time
-import pytest
-from unittest.mock import Mock, MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 from workers.mcp_client import (
     McpGateway,
     _stub_response,
     _to_gateway_tool_name,
     _fetch_secret_from_asm,
-    get_server_for_tool,
-    get_arn_for_tool,
     _get_client,
 )
 
@@ -47,7 +43,6 @@ class TestFetchSecretFromASM:
 
     def _patch_boto3(self, get_secret_return):
         """Helper to inject a mock boto3 into the mcp_client module."""
-        import workers.mcp_client as mod
         mock_boto3 = MagicMock()
         sm_client = MagicMock()
         sm_client.get_secret_value.return_value = get_secret_return
@@ -258,7 +253,7 @@ class TestGatewayInvocation:
         gw._mcp_client = mock_client
 
         with patch("workers.mcp_client.AGENTCORE_GATEWAY_URL", "https://gateway.test"):
-            result = gw._invoke_via_gateway("splunk.search_oneshot", "search_oneshot", {})
+            gw._invoke_via_gateway("splunk.search_oneshot", "search_oneshot", {})
 
         mock_oauth2.invalidate.assert_called_once()
 
@@ -429,7 +424,7 @@ class TestStaticMethods:
             gw = MagicMock()
             gw._get_boto3_client.return_value = None
             mock_inst.return_value = gw
-            result = _get_client()
+            _get_client()
             gw._get_boto3_client.assert_called_once()
 
 

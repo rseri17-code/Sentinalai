@@ -10,23 +10,20 @@ emission without a running collector.
 
 import json
 import pytest
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 
 import supervisor.eval_metrics as eval_metrics_module
 import supervisor.llm as llm_module
 import supervisor.observability as obs_module
 from supervisor.eval_metrics import (
-    record_investigation,
     record_judge_scores,
     record_llm_usage,
     record_eval_score,
 )
 from supervisor.llm_judge import (
     judge_and_record,
-    _rule_based_fallback,
 )
 from supervisor.agent import SentinalAISupervisor
-from tests.fixtures.mock_mcp_responses import ALL_MOCKS
 from tests.test_supervisor import _build_mock_workers
 
 

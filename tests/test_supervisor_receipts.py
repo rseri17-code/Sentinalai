@@ -1,10 +1,6 @@
 """Tests for supervisor receipt collection and replay integration."""
 
-import json
-import tempfile
-from pathlib import Path
 
-import pytest
 
 from supervisor.agent import SentinalAISupervisor
 from supervisor.replay import ReplayStore

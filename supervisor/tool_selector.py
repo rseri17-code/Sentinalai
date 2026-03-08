@@ -162,7 +162,7 @@ CLASSIFICATION_KEYWORDS: dict[str, list[str]] = {
 # Valid incident types — canonical set used for validation everywhere
 # =========================================================================
 
-VALID_INCIDENT_TYPES: set[str] = frozenset(INCIDENT_PLAYBOOKS.keys())
+VALID_INCIDENT_TYPES: frozenset[str] = frozenset(INCIDENT_PLAYBOOKS.keys())
 
 # =========================================================================
 # Sentinel: indicates whether the last classify_incident call used LLM

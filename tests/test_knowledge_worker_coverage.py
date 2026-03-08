@@ -4,7 +4,6 @@ Covers lines 45-62 (search_similar when memory enabled) and 80-95
 (store_result when memory enabled) that are missed by the base test suite.
 """
 
-import pytest
 from unittest.mock import patch, MagicMock
 
 from workers.knowledge_worker import KnowledgeWorker

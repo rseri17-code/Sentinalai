@@ -9,7 +9,7 @@ Validates:
 """
 
 import pytest
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import patch, MagicMock
 
 
 class TestGetDatabaseUrl:
@@ -70,7 +70,6 @@ class TestGetEngine:
         with patch.dict("sys.modules", {}):
             with patch("database.connection.get_database_url", return_value="postgresql://user:pass@localhost/db"):
                 # Patch the imports inside get_engine
-                import importlib
                 with patch.object(db, "_engine", None):
                     # We need to mock the dynamic import
                     mock_sa = MagicMock()
@@ -147,7 +146,7 @@ class TestGetConnection:
         db._engine = None
 
         with pytest.raises(RuntimeError, match="Database not configured"):
-            with db.get_connection() as conn:
+            with db.get_connection():
                 pass
 
     def test_commits_on_success(self):
@@ -172,7 +171,7 @@ class TestGetConnection:
         db._engine = mock_engine
 
         with pytest.raises(ValueError):
-            with db.get_connection() as conn:
+            with db.get_connection():
                 raise ValueError("bad query")
 
         mock_conn.rollback.assert_called_once()

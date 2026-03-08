@@ -67,7 +67,7 @@ class TestLLMFallbackTriggered:
     @patch("supervisor.tool_selector.classify_incident_llm", return_value="latency")
     def test_llm_called_when_no_keyword_match(self, mock_llm):
         """Summary with no keyword hits should trigger LLM fallback."""
-        result = classify_incident("payment-svc p95 breached SLA")
+        classify_incident("payment-svc p95 breached SLA")
         # p95 IS now in the expanded keywords, so let's use a truly unmatched summary
         # Actually p95 is in latency keywords, so this will match keywords.
         # Use a summary with zero keyword hits instead.

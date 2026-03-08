@@ -7,8 +7,7 @@ Validates:
 - Config parsing and defaults
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 
 # =========================================================================
@@ -683,7 +682,6 @@ class TestLTMRoundtrip:
     def test_store_then_search_roundtrip(self, monkeypatch):
         """LTM end-to-end: store an investigation, then search finds it."""
         import supervisor.memory as mem
-        import json
         monkeypatch.setattr(mem, "_sdk_available", True)
         monkeypatch.setattr(mem, "MEMORY_ID", "test-id")
         role_mock = MagicMock()
@@ -747,6 +745,5 @@ class TestRuntimeMemoryHealth:
         import supervisor.memory as mem
         monkeypatch.setattr(mem, "MEMORY_ID", "")
 
-        from agentcore_runtime import _handle_invocation
         # Verify the memory module is importable and reports status
         assert mem.is_enabled() is False

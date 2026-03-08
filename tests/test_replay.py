@@ -1,10 +1,7 @@
 """Tests for investigation replay system."""
 
-import json
-import tempfile
 from pathlib import Path
 
-import pytest
 
 from supervisor.replay import ReplayStore, replay_investigation
 

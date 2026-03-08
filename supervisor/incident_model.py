@@ -15,7 +15,6 @@ Usage:
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any
@@ -158,9 +157,9 @@ class Incident:
         severity = 2 if urgency == "high" else 4
 
         service_data = data.get("service", {})
-        service_name = (
+        service_name = str(
             service_data.get("summary", service_data.get("name", "unknown"))
-            if isinstance(service_data, dict) else str(service_data)
+            if isinstance(service_data, dict) else service_data
         )
 
         return cls(
@@ -272,5 +271,5 @@ def _extract_pd_assignee(data: dict) -> str:
         if isinstance(first, dict):
             assignee = first.get("assignee", {})
             if isinstance(assignee, dict):
-                return assignee.get("summary", assignee.get("name", ""))
+                return str(assignee.get("summary", assignee.get("name", "")))
     return ""

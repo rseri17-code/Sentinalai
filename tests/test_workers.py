@@ -4,7 +4,6 @@ Validates determinism, correct dispatching, and error handling.
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock
 
 from workers.ops_worker import OpsWorker
 from workers.log_worker import LogWorker
@@ -13,7 +12,6 @@ from workers.apm_worker import ApmWorker
 from workers.knowledge_worker import KnowledgeWorker
 from workers.itsm_worker import ItsmWorker
 from workers.devops_worker import DevopsWorker
-from tests.fixtures.mock_mcp_responses import ALL_MOCKS
 
 
 class TestOpsWorker:

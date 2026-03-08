@@ -8,12 +8,10 @@ TDD tests written before implementation. Validates:
 - Integration: proof-gated retrieval, confidence boost cap, persistence
 """
 
-import json
 import os
 import tempfile
 import time
 
-import pytest
 from unittest.mock import patch, MagicMock
 
 

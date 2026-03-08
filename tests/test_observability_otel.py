@@ -6,16 +6,12 @@ trace_span OTEL integration paths.
 """
 
 import pytest
-from unittest.mock import patch, MagicMock, PropertyMock
-import os
+from unittest.mock import MagicMock
 
 from supervisor.observability import (
     Span,
     trace_span,
-    _log_span,
     get_meter,
-    GENAI_SYSTEM,
-    EVAL_CONFIDENCE,
 )
 
 
@@ -97,7 +93,7 @@ class TestOtelSdkInitialization:
             obs_mod.otel_trace = mock_otel_trace
 
             with pytest.raises(ValueError):
-                with trace_span("test_span") as span:
+                with trace_span("test_span"):
                     raise ValueError("test error")
 
             mock_otel_span.set_status.assert_called_once()

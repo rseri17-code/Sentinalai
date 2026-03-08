@@ -7,7 +7,6 @@ logging, timing metrics, and WorkerError propagation.
 
 import logging
 import pytest
-from unittest.mock import Mock
 
 from workers.base_worker import BaseWorker, WorkerError
 

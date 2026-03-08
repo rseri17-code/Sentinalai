@@ -81,7 +81,7 @@ def _validate_agent_identity(agent_id: str | None) -> tuple[bool, str]:
     if not agent_id:
         return False, "Missing agent identity (X-Agent-ID header required)"
     if agent_id not in ALLOWED_AGENT_IDS:
-        return False, f"Agent not in allowlist"
+        return False, "Agent not in allowlist"
     return True, ""
 
 

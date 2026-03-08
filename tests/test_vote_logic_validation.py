@@ -12,7 +12,6 @@ final answer, confidence score, and evidence-to-claim linkage.
 
 from __future__ import annotations
 
-import re
 import time
 from unittest.mock import Mock, MagicMock
 
@@ -20,7 +19,6 @@ import pytest
 
 from supervisor.agent import SentinalAISupervisor
 from supervisor.guardrails import circuit_registry
-from supervisor.receipt import ReceiptCollector
 from supervisor.replay import ReplayStore
 from tests.fixtures.mock_mcp_responses import ALL_MOCKS
 from tests.fixtures.expected_rca_outputs import EXPECTED_RCA
@@ -355,7 +353,6 @@ class TestToolFailureScenario:
             worker_overrides={"metrics_worker": _exploding_metrics},
         )
         # Check that at least some receipts show error
-        error_receipts = [r for r in report["receipts"] if r["status"] == "error"]
         # Note: errors may not always appear in receipts since the mock intercepts
         # at a different level — this validates the infrastructure
         assert len(report["receipts"]) > 0, "No receipts at all"

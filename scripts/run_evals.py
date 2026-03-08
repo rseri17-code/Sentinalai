@@ -21,7 +21,6 @@ Usage:
 from __future__ import annotations
 
 import json
-import re
 import sys
 import time
 from pathlib import Path
@@ -30,10 +29,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from supervisor.agent import SentinalAISupervisor
-from supervisor.eval_metrics import record_eval_score, record_investigation
+from supervisor.eval_metrics import record_eval_score
 from supervisor.llm_judge import judge_and_record
 from tests.fixtures.expected_rca_outputs import EXPECTED_RCA
-from tests.fixtures.mock_mcp_responses import ALL_MOCKS
 
 
 def _build_mock_workers(sup: SentinalAISupervisor, incident_id: str):

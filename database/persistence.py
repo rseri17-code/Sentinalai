@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
 
 from database.connection import get_engine
 

@@ -1,29 +1,22 @@
 # SentinalAI — Lessons Learned
 
 ## Lesson 0 — SEED
-
-CONTEXT:    Test failures during improvement cycles
-MISTAKE:    Modifying test assertions to make tests pass
-CORRECTION: Always fix the code under test, not the test assertions
-RULE:       Never modify a test assertion to make a test pass. Fix the code under test. If the assertion is genuinely wrong, escalate.
+RULE: Never modify a test assertion to make a test pass. Fix the code under test. If the assertion is genuinely wrong, escalate.
 
 ## Lesson 1 — SEED
-
-CONTEXT:    Fixes touching hypothesis scoring path
-MISTAKE:    Not verifying determinism after scoring changes
-CORRECTION: Run determinism tests immediately after any scoring change
-RULE:       Any fix touching the hypothesis scoring path must be followed immediately by running tests/test_determinism.py before proceeding.
+RULE: Any fix touching the hypothesis scoring path must be followed immediately by running determinism tests before proceeding.
 
 ## Lesson 2 — SEED
-
-CONTEXT:    Parsing AgentCore/boto3 API responses
-MISTAKE:    Using dict["key"] access on response fields
-CORRECTION: Use .get("key") or explicit KeyError handling with logging
-RULE:       AgentCore response fields must never be accessed with dict["key"]. Always use .get("key") or explicit KeyError handling with logging.
+RULE: AgentCore response fields must never be accessed with dict["key"]. Always use .get("key") or explicit KeyError handling with logging.
 
 ## Lesson 3 — SEED
+RULE: Do not batch fixes across module boundaries in a single edit. Maximum 3 files per batch. Module boundary = one batch limit.
 
-CONTEXT:    Batching fixes across multiple modules
-MISTAKE:    Changing too many files at once across module boundaries
-CORRECTION: Limit to 3 files per batch, one module boundary per batch
-RULE:       Do not batch fixes across module boundaries in a single edit. Maximum 3 files per batch. Module boundary = one batch limit.
+## Lesson 4 — SEED
+RULE: Only modify files in the allowlist (supervisor/, workers/, database/, knowledge/, tests/, tasks/). Never modify Dockerfile, docker-compose.yaml, agentcore_runtime.py, pyproject.toml, or .env.template without explicit user instruction.
+
+## Lesson 5 — SEED
+RULE: Do not run pip install. If a scan tool is missing, log it in the Escalation Log and skip that scan.
+
+## Lesson 6 — SEED
+RULE: Radon D/E complexity findings are informational only. They do not block exit gates. Log them in the Escalation Log for architectural review.

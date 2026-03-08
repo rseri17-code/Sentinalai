@@ -225,7 +225,7 @@ def classify_incident_llm(summary: str) -> str | None:
         returns an invalid type (caller will fall back to ``"error_spike"``).
     """
     # Lazy import to avoid hard dependency on llm module at import time
-    from supervisor.llm import converse  # noqa: C0415
+    from supervisor.llm import converse  # noqa: PLC0415
 
     valid_types_str = ", ".join(sorted(VALID_INCIDENT_TYPES))
     system_prompt = (

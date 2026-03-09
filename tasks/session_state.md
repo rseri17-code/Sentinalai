@@ -1,8 +1,8 @@
 # SentinalAI — Session State
 
-mode: ANALYZE
+mode: DOCUMENT
 branch: claude/sentinalai-tdd-build-meInJ
-active_investigation: none
+active_investigation: deterministic path coverage → 100%
 session_start: 2026-03-09T11:50:00Z
 spec_version: 5.0
 initial_snapshot:

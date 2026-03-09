@@ -141,3 +141,39 @@ Skills: typing_and_static_analysis, failing_test_root_cause
 ### Escalation Log
 
 1. **gh CLI not available** — Network restricted. Cannot check GitHub issues or CI runs.
+
+---
+
+## Cycle 5 — 2026-03-09 (V5.0 spec)
+
+### Lifecycle
+recall → discover → analyze → plan → implement → verify → harden → document
+
+### Task
+Reduce all Radon D/F grade functions to C or better (CC <= 15)
+Skill: complexity_reduction
+
+### Plan
+- [x] ANALYZE: Identify 6 D/F functions across agent.py, tool_selector.py, mcp_client.py
+- [x] PLAN: Spec 3 batches of extract-method refactors (spec.md)
+- [x] IMPLEMENT Batch 1: _stub_response dispatch table, get_investigation_workflow phase mapping
+- [x] IMPLEMENT Batch 2: _build_timeline source-specific extractors
+- [x] IMPLEMENT Batch 3: investigate → _record_observability + _run_judge_scoring helpers
+- [x] VERIFY: V1-V5 all pass (1718 passed, 0 failed, 96.51%, radon 0 D/F)
+- [x] HARDEN: ruff 0, mypy 0 (with --ignore-missing-imports), determinism 61/61 pass
+- [x] DOCUMENT: commit, push, task files updated
+
+### Metrics
+
+| Metric | Start | End | Delta |
+|--------|-------|-----|-------|
+| Tests passed | 1718 | 1718 | = |
+| Tests failed | 0 | 0 | = |
+| Coverage | 96.56% | 96.51% | -0.05% |
+| Radon D/F functions | 6 | 0 | -6 |
+| Ruff findings | 0 | 0 | = |
+| Mypy errors | 0 | 0 | = |
+
+### Escalation Log
+
+1. **Coverage -0.05%** — Minor drop from extracted helper methods that inherit partial coverage. Still well above 96% threshold.

@@ -503,6 +503,32 @@ class ToolSelector:
             "strategy": "Load 3-5 tools per incident instead of all 89",
         }
 
+    @staticmethod
+    def _steps_for_phase(phase: str, playbook: list[dict]) -> list[dict]:
+        """Filter playbook steps belonging to a given investigation phase."""
+        if phase == "initial_context":
+            return [s for s in playbook if s["action"] == "get_incident_by_id"]
+        if phase == "itsm_context":
+            return [
+                s for s in playbook
+                if s["worker"] == "itsm_worker" and s["action"] != "get_change_records"
+            ]
+        if phase == "evidence_gathering":
+            return [
+                s for s in playbook
+                if s["action"] in ("search_logs", "get_golden_signals", "query_metrics", "get_events")
+            ]
+        if phase == "change_correlation":
+            return [
+                s for s in playbook
+                if s["action"] in ("get_change_data", "get_change_records")
+            ]
+        if phase == "devops_correlation":
+            return [s for s in playbook if s["worker"] == "devops_worker"]
+        if phase == "historical_context":
+            return [s for s in playbook if s["worker"] == "knowledge_worker"]
+        return []
+
     def get_investigation_workflow(self, incident_type: str) -> list[dict]:
         """Return a phased investigation workflow for the incident type.
 
@@ -517,29 +543,7 @@ class ToolSelector:
 
         for phase in phases:
             budget = self.get_phase_budget(phase)
-            phase_steps = []
-
-            if phase == "initial_context":
-                phase_steps = [s for s in playbook if s["action"] == "get_incident_by_id"]
-            elif phase == "itsm_context":
-                phase_steps = [
-                    s for s in playbook
-                    if s["worker"] == "itsm_worker" and s["action"] != "get_change_records"
-                ]
-            elif phase == "evidence_gathering":
-                phase_steps = [
-                    s for s in playbook
-                    if s["action"] in ("search_logs", "get_golden_signals", "query_metrics", "get_events")
-                ]
-            elif phase == "change_correlation":
-                phase_steps = [
-                    s for s in playbook
-                    if s["action"] in ("get_change_data", "get_change_records")
-                ]
-            elif phase == "devops_correlation":
-                phase_steps = [s for s in playbook if s["worker"] == "devops_worker"]
-            elif phase == "historical_context":
-                phase_steps = [s for s in playbook if s["worker"] == "knowledge_worker"]
+            phase_steps = self._steps_for_phase(phase, playbook)
 
             if phase_steps:
                 workflow.append({

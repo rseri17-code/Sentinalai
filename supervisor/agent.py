@@ -358,83 +358,16 @@ class SentinalAISupervisor:
             winner_hypothesis = result.pop("_winner_hypothesis", "none")
             llm_metrics = result.pop("_llm_metrics", {})
 
-            # GenAI semantic convention attributes for LLM usage
-            total_input = llm_metrics.get("refine_input_tokens", 0) + llm_metrics.get("reasoning_input_tokens", 0)
-            total_output = llm_metrics.get("refine_output_tokens", 0) + llm_metrics.get("reasoning_output_tokens", 0)
-            if total_input or total_output:
-                span.set_attribute(GENAI_USAGE_INPUT_TOKENS, total_input)
-                span.set_attribute(GENAI_USAGE_OUTPUT_TOKENS, total_output)
-                span.set_attribute(GENAI_REQUEST_MODEL, llm_metrics.get("refine_model_id", ""))
-
-            # Eval / observability attributes for Splunk dashboards
-            span.set_attribute(EVAL_CONFIDENCE, confidence)
-            span.set_attribute(EVAL_ROOT_CAUSE, result.get("root_cause", ""))
-            span.set_attribute(EVAL_TOOL_CALLS, budget.calls_made)
-            span.set_attribute(EVAL_BUDGET_REMAINING, budget.max_calls - budget.calls_made)
-            span.set_attribute(EVAL_EVIDENCE_SOURCES, len(evidence))
-            span.set_attribute(EVAL_HYPOTHESIS_COUNT, hypothesis_count)
-            span.set_attribute(EVAL_WINNER_NAME, winner_hypothesis)
-
-            # Deep eval metrics -> OTEL metrics pipeline -> Splunk
+            # Phase: Observe — span attributes + deep-eval metrics
+            self._record_observability(
+                span, result, evidence, budget, receipts,
+                incident_id, incident_type, service, confidence,
+                hypothesis_count, winner_hypothesis, llm_metrics,
+            )
             elapsed = span.elapsed_ms
-            record_investigation(
-                incident_id=incident_id,
-                incident_type=incident_type,
-                service=service,
-                confidence=confidence,
-                root_cause=result.get("root_cause", ""),
-                tool_calls=budget.calls_made,
-                evidence_sources=len(evidence),
-                hypothesis_count=hypothesis_count,
-                winner_hypothesis=winner_hypothesis,
-                elapsed_ms=elapsed,
-            )
 
-            # Evidence completeness metrics
-            record_evidence_completeness(
-                incident_type=incident_type,
-                logs_available=bool(evidence.get("search_logs")),
-                signals_available=bool(evidence.get("get_golden_signals")),
-                metrics_available=bool(evidence.get("query_metrics") or evidence.get("get_resource_metrics")),
-                events_available=bool(evidence.get("get_events")),
-                changes_available=bool(evidence.get("get_change_data") or evidence.get("itsm_context")),
-            )
-
-            # Receipt summary metrics
-            receipt_summary = receipts.summary()
-            record_receipt_summary(
-                incident_type=incident_type,
-                total_calls=receipt_summary["total_calls"],
-                succeeded=receipt_summary["succeeded"],
-                failed=receipt_summary["failed"],
-                total_elapsed_ms=receipt_summary["total_elapsed_ms"],
-            )
-
-            # LLM-as-judge eval scoring (optional, non-blocking)
-            judge_scores = {}
-            try:
-                expected = {
-                    "root_cause": result.get("root_cause", ""),
-                    "root_cause_keywords": [],
-                    "confidence_min": 0,
-                    "confidence_max": 100,
-                }
-                judge_result = _judge_and_record(
-                    incident_id=incident_id,
-                    incident_type=incident_type,
-                    expected=expected,
-                    result=result,
-                )
-                judge_scores = judge_result.get("scores", {})
-                if judge_scores:
-                    record_judge_scores(
-                        incident_id=incident_id,
-                        incident_type=incident_type,
-                        scores=judge_scores,
-                        source=judge_result.get("source", "rule_based"),
-                    )
-            except Exception:
-                logger.debug("Judge scoring skipped (non-critical)")
+            # Phase: Evaluate — LLM-as-judge scoring
+            judge_scores = self._run_judge_scoring(incident_id, incident_type, result)
 
             # Generate remediation guidance
             remediation = generate_remediation(
@@ -455,110 +388,267 @@ class SentinalAISupervisor:
                 incident_id, confidence, budget.calls_made,
             )
 
-            # Persist replay artifact (include hypothesis metadata for eval audit)
-            if self._replay_store:
-                replay_result = {
-                    **result,
-                    "hypothesis_count": hypothesis_count,
-                    "winner_hypothesis": winner_hypothesis,
-                }
-                self._replay_store.save(
-                    case_id=incident_id,
-                    receipts=receipts.to_list(),
-                    result=replay_result,
-                    evidence=evidence,
-                )
-
-            # Store in AgentCore Memory (LTM) for future similarity search
-            if _memory_enabled():
-                try:
-                    _store_to_memory(
-                        incident_id=incident_id,
-                        incident_type=incident_type,
-                        service=service,
-                        root_cause=result.get("root_cause", ""),
-                        confidence=confidence,
-                        reasoning=result.get("reasoning", ""),
-                        evidence_summary=(
-                            f"sources={len(evidence)}, "
-                            f"tool_calls={budget.calls_made}, "
-                            f"hypotheses={hypothesis_count}"
-                        ),
-                    )
-                except Exception:
-                    logger.debug("Memory store skipped (non-critical)")
-
-            # Persist to institutional knowledge graph (non-blocking)
-            if _KNOWLEDGE_AVAILABLE and _knowledge_graph is not None:
-                try:
-                    _knowledge_graph.persist_investigation(
-                        incident_id=incident_id,
-                        incident_type=incident_type,
-                        service=service,
-                        root_cause=result.get("root_cause", ""),
-                        confidence=confidence,
-                        evidence_refs=list(evidence.keys()),
-                    )
-                except Exception:
-                    logger.debug("Knowledge graph persist skipped (non-critical)")
-
-            # Generate structured RCA report
-            try:
-                rca_report = generate_rca_report(
-                    result=result,
-                    incident_id=incident_id,
-                    incident_type=incident_type,
-                    service=service,
-                    severity_level=severity.level,
-                    severity_label=severity.label,
-                    summary=summary,
-                    receipts_list=receipts.to_list(),
-                    budget_remaining=budget.remaining(),
-                    elapsed_ms=elapsed,
-                    llm_usage=llm_metrics,
-                    judge_scores=judge_scores,
-                )
-                result["rca_report"] = rca_report.to_dict()
-                result["rca_markdown"] = render_markdown(rca_report)
-            except Exception:
-                logger.debug("RCA report generation skipped (non-critical)")
-
-            # Persist to database (non-blocking, graceful degradation)
-            if _db_enabled():
-                try:
-                    inv_id = _db_persist(
-                        incident_id=incident_id,
-                        root_cause=result.get("root_cause", ""),
-                        confidence=confidence,
-                        reasoning=result.get("reasoning", ""),
-                        evidence_timeline=result.get("evidence_timeline", []),
-                        tools_used=receipts.to_list(),
-                        elapsed_seconds=elapsed / 1000.0,
-                        incident_type=incident_type,
-                        service=service,
-                        rca_report=result.get("rca_report"),
-                    )
-                    if inv_id:
-                        _db_persist_tools(inv_id, receipts.to_list())
-                        _db_persist_knowledge(
-                            incident_id=incident_id,
-                            incident_type=incident_type,
-                            root_cause=result.get("root_cause", ""),
-                            service=service,
-                            metadata={
-                                "confidence": confidence,
-                                "hypothesis_count": hypothesis_count,
-                                "winner": winner_hypothesis,
-                            },
-                        )
-                except Exception:
-                    logger.debug("Database persistence skipped (non-critical)")
+            # Phase: Persist — replay, memory, knowledge graph, RCA report, DB
+            self._persist_results(
+                result, incident_id, incident_type, service, evidence,
+                receipts, budget, confidence, hypothesis_count,
+                winner_hypothesis, severity, summary, llm_metrics,
+                judge_scores, elapsed,
+            )
 
             return result
 
     # ------------------------------------------------------------------ #
+    # Internal: post-analysis phase helpers (extracted from investigate)
+    # ------------------------------------------------------------------ #
+
+    def _record_observability(
+        self,
+        span: Any,
+        result: dict,
+        evidence: dict,
+        budget: "ExecutionBudget",
+        receipts: "ReceiptCollector",
+        incident_id: str,
+        incident_type: str,
+        service: str,
+        confidence: int,
+        hypothesis_count: int,
+        winner_hypothesis: str,
+        llm_metrics: dict,
+    ) -> None:
+        """Record OTEL span attributes and deep-eval metrics."""
+        # GenAI semantic convention attributes for LLM usage
+        total_input = llm_metrics.get("refine_input_tokens", 0) + llm_metrics.get("reasoning_input_tokens", 0)
+        total_output = llm_metrics.get("refine_output_tokens", 0) + llm_metrics.get("reasoning_output_tokens", 0)
+        if total_input or total_output:
+            span.set_attribute(GENAI_USAGE_INPUT_TOKENS, total_input)
+            span.set_attribute(GENAI_USAGE_OUTPUT_TOKENS, total_output)
+            span.set_attribute(GENAI_REQUEST_MODEL, llm_metrics.get("refine_model_id", ""))
+
+        # Eval / observability attributes for Splunk dashboards
+        span.set_attribute(EVAL_CONFIDENCE, confidence)
+        span.set_attribute(EVAL_ROOT_CAUSE, result.get("root_cause", ""))
+        span.set_attribute(EVAL_TOOL_CALLS, budget.calls_made)
+        span.set_attribute(EVAL_BUDGET_REMAINING, budget.max_calls - budget.calls_made)
+        span.set_attribute(EVAL_EVIDENCE_SOURCES, len(evidence))
+        span.set_attribute(EVAL_HYPOTHESIS_COUNT, hypothesis_count)
+        span.set_attribute(EVAL_WINNER_NAME, winner_hypothesis)
+
+        # Deep eval metrics -> OTEL metrics pipeline -> Splunk
+        elapsed = span.elapsed_ms
+        record_investigation(
+            incident_id=incident_id,
+            incident_type=incident_type,
+            service=service,
+            confidence=confidence,
+            root_cause=result.get("root_cause", ""),
+            tool_calls=budget.calls_made,
+            evidence_sources=len(evidence),
+            hypothesis_count=hypothesis_count,
+            winner_hypothesis=winner_hypothesis,
+            elapsed_ms=elapsed,
+        )
+
+        # Evidence completeness metrics
+        record_evidence_completeness(
+            incident_type=incident_type,
+            logs_available=bool(evidence.get("search_logs")),
+            signals_available=bool(evidence.get("get_golden_signals")),
+            metrics_available=bool(evidence.get("query_metrics") or evidence.get("get_resource_metrics")),
+            events_available=bool(evidence.get("get_events")),
+            changes_available=bool(evidence.get("get_change_data") or evidence.get("itsm_context")),
+        )
+
+        # Receipt summary metrics
+        receipt_summary = receipts.summary()
+        record_receipt_summary(
+            incident_type=incident_type,
+            total_calls=receipt_summary["total_calls"],
+            succeeded=receipt_summary["succeeded"],
+            failed=receipt_summary["failed"],
+            total_elapsed_ms=receipt_summary["total_elapsed_ms"],
+        )
+
+    def _run_judge_scoring(
+        self, incident_id: str, incident_type: str, result: dict,
+    ) -> dict:
+        """Run LLM-as-judge eval scoring (optional, non-blocking). Returns judge scores dict."""
+        try:
+            expected = {
+                "root_cause": result.get("root_cause", ""),
+                "root_cause_keywords": [],
+                "confidence_min": 0,
+                "confidence_max": 100,
+            }
+            judge_result = _judge_and_record(
+                incident_id=incident_id,
+                incident_type=incident_type,
+                expected=expected,
+                result=result,
+            )
+            scores = judge_result.get("scores", {})
+            if scores:
+                record_judge_scores(
+                    incident_id=incident_id,
+                    incident_type=incident_type,
+                    scores=scores,
+                    source=judge_result.get("source", "rule_based"),
+                )
+            return scores
+        except Exception:
+            logger.debug("Judge scoring skipped (non-critical)")
+            return {}
+
+    def _persist_results(
+        self,
+        result: dict,
+        incident_id: str,
+        incident_type: str,
+        service: str,
+        evidence: dict,
+        receipts: "ReceiptCollector",
+        budget: "ExecutionBudget",
+        confidence: int,
+        hypothesis_count: int,
+        winner_hypothesis: str,
+        severity: Any,
+        summary: str,
+        llm_metrics: dict,
+        judge_scores: dict,
+        elapsed: float,
+    ) -> None:
+        """Persist investigation results to replay store, memory, knowledge graph, and DB."""
+        # Persist replay artifact
+        if self._replay_store:
+            replay_result = {
+                **result,
+                "hypothesis_count": hypothesis_count,
+                "winner_hypothesis": winner_hypothesis,
+            }
+            self._replay_store.save(
+                case_id=incident_id,
+                receipts=receipts.to_list(),
+                result=replay_result,
+                evidence=evidence,
+            )
+
+        # Store in AgentCore Memory (LTM) for future similarity search
+        if _memory_enabled():
+            try:
+                _store_to_memory(
+                    incident_id=incident_id,
+                    incident_type=incident_type,
+                    service=service,
+                    root_cause=result.get("root_cause", ""),
+                    confidence=confidence,
+                    reasoning=result.get("reasoning", ""),
+                    evidence_summary=(
+                        f"sources={len(evidence)}, "
+                        f"tool_calls={budget.calls_made}, "
+                        f"hypotheses={hypothesis_count}"
+                    ),
+                )
+            except Exception:
+                logger.debug("Memory store skipped (non-critical)")
+
+        # Persist to institutional knowledge graph (non-blocking)
+        if _KNOWLEDGE_AVAILABLE and _knowledge_graph is not None:
+            try:
+                _knowledge_graph.persist_investigation(
+                    incident_id=incident_id,
+                    incident_type=incident_type,
+                    service=service,
+                    root_cause=result.get("root_cause", ""),
+                    confidence=confidence,
+                    evidence_refs=list(evidence.keys()),
+                )
+            except Exception:
+                logger.debug("Knowledge graph persist skipped (non-critical)")
+
+        # Generate structured RCA report
+        try:
+            rca_report = generate_rca_report(
+                result=result,
+                incident_id=incident_id,
+                incident_type=incident_type,
+                service=service,
+                severity_level=severity.level,
+                severity_label=severity.label,
+                summary=summary,
+                receipts_list=receipts.to_list(),
+                budget_remaining=budget.remaining(),
+                elapsed_ms=elapsed,
+                llm_usage=llm_metrics,
+                judge_scores=judge_scores,
+            )
+            result["rca_report"] = rca_report.to_dict()
+            result["rca_markdown"] = render_markdown(rca_report)
+        except Exception:
+            logger.debug("RCA report generation skipped (non-critical)")
+
+        # Persist to database (non-blocking, graceful degradation)
+        if _db_enabled():
+            try:
+                inv_id = _db_persist(
+                    incident_id=incident_id,
+                    root_cause=result.get("root_cause", ""),
+                    confidence=confidence,
+                    reasoning=result.get("reasoning", ""),
+                    evidence_timeline=result.get("evidence_timeline", []),
+                    tools_used=receipts.to_list(),
+                    elapsed_seconds=elapsed / 1000.0,
+                    incident_type=incident_type,
+                    service=service,
+                    rca_report=result.get("rca_report"),
+                )
+                if inv_id:
+                    _db_persist_tools(inv_id, receipts.to_list())
+                    _db_persist_knowledge(
+                        incident_id=incident_id,
+                        incident_type=incident_type,
+                        root_cause=result.get("root_cause", ""),
+                        service=service,
+                        metadata={
+                            "confidence": confidence,
+                            "hypothesis_count": hypothesis_count,
+                            "winner": winner_hypothesis,
+                        },
+                    )
+            except Exception:
+                logger.debug("Database persistence skipped (non-critical)")
+
+    # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
     # ------------------------------------------------------------------ #
+
+    def _check_call_preconditions(
+        self, worker_name: str, action: str,
+        circuits: CircuitBreakerRegistry | None,
+    ) -> dict | None:
+        """Check deadline and circuit breaker before a worker call. Returns error dict or None."""
+        if hasattr(self, '_investigation_deadline') and time.monotonic() > self._investigation_deadline:
+            logger.warning("Investigation deadline exceeded, skipping %s.%s", worker_name, action)
+            return {"error": "investigation_deadline_exceeded", "worker": worker_name, "action": action}
+        if circuits:
+            circuit = circuits.get(worker_name)
+            if circuit.is_open:
+                logger.warning("Circuit open for %s, skipping %s", worker_name, action)
+                return {"error": "circuit_open", "worker": worker_name, "action": action}
+        return None
+
+    def _record_timeout(
+        self, receipt: Any, receipts: ReceiptCollector | None,
+        worker_name: str, action: str, call_elapsed: float,
+    ) -> None:
+        """Record a timeout outcome on receipt and metrics."""
+        if receipt and receipts:
+            receipt.status = "timeout"
+            receipt.error = f"timeout after {self._call_timeout}s"
+            receipt.end_ts = time.monotonic()
+            receipt.elapsed_ms = round((receipt.end_ts - receipt.start_ts) * 1000, 1)
+        record_worker_call(worker_name, action, "timeout", call_elapsed)
+        logger.warning("Timeout: %s.%s exceeded %ss", worker_name, action, self._call_timeout)
 
     def _call_worker(
         self,
@@ -580,58 +670,35 @@ class SentinalAISupervisor:
         G6.2: uses shared ThreadPoolExecutor instead of creating one per call.
         G7.1: wraps each call in a child trace_span for per-tool OTEL spans.
         """
-        # G6.1: Check investigation deadline
-        if hasattr(self, '_investigation_deadline') and time.monotonic() > self._investigation_deadline:
-            logger.warning(
-                "Investigation deadline exceeded, skipping %s.%s", worker_name, action,
-            )
-            return {"error": "investigation_deadline_exceeded", "worker": worker_name, "action": action}
+        blocked = self._check_call_preconditions(worker_name, action, circuits)
+        if blocked:
+            return blocked
 
-        # W1: Circuit breaker check — skip call if circuit is open
-        if circuits:
-            circuit = circuits.get(worker_name)
-            if circuit.is_open:
-                logger.warning(
-                    "Circuit open for %s, skipping %s", worker_name, action,
-                )
-                return {"error": "circuit_open", "worker": worker_name, "action": action}
-
-        # Build policy_ref if not provided
         if not policy_ref and budget:
             policy_ref = f"budget:remaining={budget.remaining()}"
 
         last_error = ""
-        attempts = 1 + self._max_retries  # 1 initial + N retries
+        attempts = 1 + self._max_retries
 
         for attempt in range(attempts):
             if attempt > 0:
-                # W5: Exponential backoff before retry
-                backoff_s = 0.01 * (2 ** (attempt - 1))  # 10ms, 20ms, ...
+                backoff_s = 0.01 * (2 ** (attempt - 1))
                 time.sleep(backoff_s)
-                logger.info(
-                    "Retrying %s.%s (attempt %d/%d)",
-                    worker_name, action, attempt + 1, attempts,
-                )
-                # Check budget before retry
+                logger.info("Retrying %s.%s (attempt %d/%d)", worker_name, action, attempt + 1, attempts)
                 if budget and not budget.can_call():
                     break
                 if budget:
                     budget.record_call()
 
             receipt = receipts.start(worker_name, action, params, policy_ref=policy_ref) if receipts else None
-
             call_start = time.monotonic()
 
             try:
-                # G7.1: Per-tool child OTEL span
                 with trace_span(f"tool:{worker_name}.{action}", case_id=receipts.case_id if receipts else "") as tool_span:
                     tool_span.set_attribute("worker_name", worker_name)
                     tool_span.set_attribute("action", action)
-
-                    # W4: Timeout guard using shared executor (G6.2)
                     future = self._executor.submit(worker.execute, action, params)
                     result = future.result(timeout=self._call_timeout)
-
                     call_elapsed = (time.monotonic() - call_start) * 1000
                     tool_span.set_attribute("status", "success")
                     tool_span.set_attribute("elapsed_ms", round(call_elapsed, 1))
@@ -639,7 +706,6 @@ class SentinalAISupervisor:
                 if receipt and receipts:
                     receipts.finish(receipt, result)
                 record_worker_call(worker_name, action, "success", call_elapsed)
-                # W1: Record success with circuit breaker
                 if circuits:
                     circuits.get(worker_name).record_success(worker_name)
                 return result
@@ -647,18 +713,7 @@ class SentinalAISupervisor:
             except concurrent.futures.TimeoutError:
                 call_elapsed = (time.monotonic() - call_start) * 1000
                 last_error = f"timeout after {self._call_timeout}s"
-                if receipt and receipts:
-                    receipt.status = "timeout"
-                    receipt.error = last_error
-                    receipt.end_ts = time.monotonic()
-                    receipt.elapsed_ms = round(
-                        (receipt.end_ts - receipt.start_ts) * 1000, 1
-                    )
-                record_worker_call(worker_name, action, "timeout", call_elapsed)
-                logger.warning(
-                    "Timeout: %s.%s exceeded %ss",
-                    worker_name, action, self._call_timeout,
-                )
+                self._record_timeout(receipt, receipts, worker_name, action, call_elapsed)
 
             except Exception as exc:
                 call_elapsed = (time.monotonic() - call_start) * 1000
@@ -666,12 +721,8 @@ class SentinalAISupervisor:
                 if receipt and receipts:
                     receipts.finish(receipt, None, error=last_error)
                 record_worker_call(worker_name, action, "error", call_elapsed)
-                logger.warning(
-                    "Error in %s.%s: %s (attempt %d/%d)",
-                    worker_name, action, exc, attempt + 1, attempts,
-                )
+                logger.warning("Error in %s.%s: %s (attempt %d/%d)", worker_name, action, exc, attempt + 1, attempts)
 
-        # All attempts exhausted — record failure with circuit breaker
         if circuits:
             circuits.get(worker_name).record_failure(worker_name)
         return {"error": last_error or "worker_unavailable"}
@@ -736,6 +787,21 @@ class SentinalAISupervisor:
     # Internal: ITSM context enrichment (ServiceNow Phase 1 hydration)
     # ------------------------------------------------------------------ #
 
+    def _budgeted_worker_call(
+        self, worker: Any, action: str, params: dict,
+        worker_name: str,
+        receipts: ReceiptCollector | None, budget: ExecutionBudget | None,
+        circuits: CircuitBreakerRegistry | None,
+    ) -> dict | None:
+        """Check budget, record call, invoke worker. Returns None if budget exhausted."""
+        if budget and not budget.can_call():
+            return None
+        if budget:
+            budget.record_call()
+        return self._call_worker(
+            worker, action, params, receipts, budget, worker_name, circuits=circuits,
+        )
+
     def _fetch_itsm_context(
         self, service: str, summary: str,
         receipts: ReceiptCollector | None = None,
@@ -749,39 +815,33 @@ class SentinalAISupervisor:
         context: dict[str, Any] = {}
 
         # CI details — service tier, dependencies, owner, SLA
-        if budget and not budget.can_call():
-            return context or None
-        if budget:
-            budget.record_call()
-        result = self._call_worker(
+        result = self._budgeted_worker_call(
             worker, "get_ci_details", {"service": service},
-            receipts, budget, "itsm_worker", circuits=circuits,
+            "itsm_worker", receipts, budget, circuits,
         )
-        if result and result.get("ci"):
+        if result is None:
+            return context or None
+        if result.get("ci"):
             context["ci"] = result["ci"]
 
         # Known errors — check before deep investigation
-        if budget and not budget.can_call():
-            return context or None
-        if budget:
-            budget.record_call()
-        result = self._call_worker(
+        result = self._budgeted_worker_call(
             worker, "get_known_errors", {"service": service, "summary": summary},
-            receipts, budget, "itsm_worker", circuits=circuits,
+            "itsm_worker", receipts, budget, circuits,
         )
-        if result and result.get("known_errors"):
+        if result is None:
+            return context or None
+        if result.get("known_errors"):
             context["known_errors"] = result["known_errors"]
 
         # Similar ServiceNow incidents
-        if budget and not budget.can_call():
-            return context or None
-        if budget:
-            budget.record_call()
-        result = self._call_worker(
+        result = self._budgeted_worker_call(
             worker, "search_incidents", {"service": service, "query": summary},
-            receipts, budget, "itsm_worker", circuits=circuits,
+            "itsm_worker", receipts, budget, circuits,
         )
-        if result and result.get("incidents"):
+        if result is None:
+            return context or None
+        if result.get("incidents"):
             context["similar_incidents"] = result["incidents"]
 
         return context or None
@@ -1859,6 +1919,118 @@ class SentinalAISupervisor:
     # Timeline builder
     # ------------------------------------------------------------------ #
 
+    def _timeline_from_signals(self, signals: dict, signal_service: str) -> list[dict]:
+        """Extract timeline entries from golden signal anomalies."""
+        anomaly_start = signals.get("anomaly_start", "")
+        if not anomaly_start:
+            return []
+        gs = signals.get("golden_signals", {})
+        description = self._describe_anomaly(
+            signals.get("anomaly_type", ""), signal_service,
+            gs.get("latency", {}), gs.get("errors", {}), gs.get("saturation", {}),
+        )
+        return [{"timestamp": anomaly_start, "event": description,
+                 "source": "golden_signals", "service": signal_service}]
+
+    def _timeline_from_metrics(self, metrics: dict, service: str) -> list[dict]:
+        """Extract timeline entries from metric data."""
+        entries: list[dict] = []
+        metric_list = metrics.get("metrics", [])
+        baseline = metrics.get("baseline", 0)
+        if not isinstance(metric_list, list) or not metric_list:
+            return entries
+
+        first = metric_list[0]
+        name = first.get("name", "metric")
+        value = first.get("value", 0)
+        ts = first.get("timestamp", "")
+
+        if baseline and value and value > baseline * 2:
+            entries.append({"timestamp": ts, "source": "metrics", "service": service,
+                            "event": f"{name} spike to {value} (baseline: {baseline}) on {service}"})
+
+        pattern = metrics.get("pattern", "")
+        mem_limit = metrics.get("limit", 0)
+        if pattern == "gradual_increase" and mem_limit:
+            entries.append({"timestamp": ts, "source": "metrics", "service": service,
+                            "event": f"gradual memory increase detected on {service} "
+                                     f"(limit: {mem_limit / 1e9:.0f}GB) - memory saturation"})
+
+        pool_max = metrics.get("pool_max", 0)
+        if pool_max:
+            for m in metric_list:
+                if m.get("value", 0) >= pool_max:
+                    entries.append({"timestamp": m.get("timestamp", ""), "source": "metrics",
+                                    "service": service,
+                                    "event": f"connection pool exhaustion on {service} ({m['value']}/{pool_max})"})
+                    break
+        return entries
+
+    def _timeline_from_events(self, events: list[dict], service: str) -> list[dict]:
+        """Extract timeline entries from infrastructure events."""
+        entries: list[dict] = []
+        for event in events:
+            msg = event.get("message", "")
+            entries.append({"timestamp": event.get("timestamp", ""), "event": msg,
+                            "source": "events", "service": service})
+            if "oomkill" in msg.lower():
+                entries.append({"timestamp": event.get("timestamp", ""),
+                                "event": f"OOMKill event: {msg}",
+                                "source": "events", "service": service})
+        return entries
+
+    def _timeline_from_logs(self, logs: list[dict], service: str) -> list[dict]:
+        """Extract timeline entries from log data."""
+        entries: list[dict] = []
+        timeout_logs: list[str] = []
+        for log in logs[:5]:
+            log_service = log.get("service", service)
+            log_msg = log.get("message", "")
+            entries.append({"timestamp": log.get("_time", ""), "event": log_msg,
+                            "source": "logs", "service": log_service})
+            if "timeout" in log_msg.lower():
+                timeout_logs.append(log_service)
+        if timeout_logs:
+            svc = timeout_logs[0]
+            entries.append({
+                "timestamp": logs[0].get("_time", "") if logs else "",
+                "event": f"{svc} timeout errors detected ({len(timeout_logs)} occurrences)",
+                "source": "log_summary", "service": svc,
+            })
+        return entries
+
+    def _timeline_from_changes(self, changes: list[dict], incident_type: str, service: str) -> list[dict]:
+        """Extract timeline entries from change and ITSM records."""
+        entries: list[dict] = []
+        change_correlated_types = {
+            "error_spike", "saturation", "cascading", "network", "missing_data",
+        }
+        if changes and incident_type in change_correlated_types:
+            for change in changes:
+                ts = change.get("scheduled_start", change.get("actual_start", ""))
+                if ts:
+                    entries.append({
+                        "timestamp": ts,
+                        "event": f"Change: {change.get('description', 'unknown change')} "
+                                 f"({change.get('change_type', 'unknown')})",
+                        "source": "changes", "service": change.get("service", service),
+                    })
+        # ITSM change records with richer metadata (approval, risk, rollback)
+        for change in changes:
+            if change.get("rollback_plan") or change.get("approval"):
+                ts = change.get("scheduled_start", change.get("actual_start", ""))
+                if ts:
+                    detail = change.get("description", "unknown change")
+                    if change.get("approval"):
+                        detail += f" [approval: {change['approval']}]"
+                    if change.get("risk"):
+                        detail += f" [risk: {change['risk']}]"
+                    entries.append({
+                        "timestamp": ts, "event": f"ITSM Change: {detail}",
+                        "source": "itsm_changes", "service": change.get("service", service),
+                    })
+        return entries
+
     def _build_timeline(
         self,
         logs: list[dict],
@@ -1870,151 +2042,27 @@ class SentinalAISupervisor:
         service: str,
     ) -> list[dict]:
         """Build a chronologically-ordered evidence timeline."""
-        timeline_entries: list[dict] = []
-
         signal_service = service
         if incident_type == "timeout":
             downstream = self._find_downstream_service(logs)
             if downstream:
                 signal_service = downstream
 
-        anomaly_start = signals.get("anomaly_start", "")
-        anomaly_type = signals.get("anomaly_type", "")
-        if anomaly_start:
-            gs = signals.get("golden_signals", {})
-            latency = gs.get("latency", {})
-            errors = gs.get("errors", {})
-            saturation = gs.get("saturation", {})
-
-            description = self._describe_anomaly(anomaly_type, signal_service, latency, errors, saturation)
-            timeline_entries.append({
-                "timestamp": anomaly_start,
-                "event": description,
-                "source": "golden_signals",
-                "service": signal_service,
-            })
-
-        metric_list = metrics.get("metrics", [])
-        baseline = metrics.get("baseline", 0)
-        if isinstance(metric_list, list) and metric_list:
-            first_metric = metric_list[0]
-            metric_name = first_metric.get("name", "metric")
-            metric_value = first_metric.get("value", 0)
-            metric_ts = first_metric.get("timestamp", "")
-
-            if baseline and metric_value and metric_value > baseline * 2:
-                timeline_entries.append({
-                    "timestamp": metric_ts,
-                    "event": f"{metric_name} spike to {metric_value} (baseline: {baseline}) on {service}",
-                    "source": "metrics",
-                    "service": service,
-                })
-
-            pattern = metrics.get("pattern", "")
-            mem_limit = metrics.get("limit", 0)
-            if pattern == "gradual_increase" and mem_limit:
-                timeline_entries.append({
-                    "timestamp": metric_ts,
-                    "event": f"gradual memory increase detected on {service} "
-                             f"(limit: {mem_limit / 1e9:.0f}GB) - memory saturation",
-                    "source": "metrics",
-                    "service": service,
-                })
-
-            pool_max = metrics.get("pool_max", 0)
-            if pool_max:
-                for m in metric_list:
-                    if m.get("value", 0) >= pool_max:
-                        timeline_entries.append({
-                            "timestamp": m.get("timestamp", ""),
-                            "event": f"connection pool exhaustion on {service} ({m['value']}/{pool_max})",
-                            "source": "metrics",
-                            "service": service,
-                        })
-                        break
-
-        for event in events:
-            event_msg = event.get("message", "")
-            timeline_entries.append({
-                "timestamp": event.get("timestamp", ""),
-                "event": event_msg,
-                "source": "events",
-                "service": service,
-            })
-            if "oomkill" in event_msg.lower():
-                timeline_entries.append({
-                    "timestamp": event.get("timestamp", ""),
-                    "event": f"OOMKill event: {event_msg}",
-                    "source": "events",
-                    "service": service,
-                })
-
-        timeout_logs = []
-        error_logs = []
-        for log in logs[:5]:
-            log_service = log.get("service", service)
-            log_msg = log.get("message", "")
-            timeline_entries.append({
-                "timestamp": log.get("_time", ""),
-                "event": log_msg,
-                "source": "logs",
-                "service": log_service,
-            })
-            if "timeout" in log_msg.lower():
-                timeout_logs.append(log_service)
-            if log.get("level") == "ERROR":
-                error_logs.append(log_service)
-
-        if timeout_logs:
-            svc = timeout_logs[0]
-            timeline_entries.append({
-                "timestamp": logs[0].get("_time", "") if logs else "",
-                "event": f"{svc} timeout errors detected ({len(timeout_logs)} occurrences)",
-                "source": "log_summary",
-                "service": svc,
-            })
-
-        change_correlated_types = {
-            "error_spike", "saturation", "cascading", "network", "missing_data",
-        }
-        if changes and incident_type in change_correlated_types:
-            for change in changes:
-                ts = change.get("scheduled_start", change.get("actual_start", ""))
-                if ts:
-                    timeline_entries.append({
-                        "timestamp": ts,
-                        "event": f"Change: {change.get('description', 'unknown change')} "
-                                 f"({change.get('change_type', 'unknown')})",
-                        "source": "changes",
-                        "service": change.get("service", service),
-                    })
-
-        # ITSM change records with richer metadata (approval, risk, rollback)
-        for change in changes:
-            if change.get("rollback_plan") or change.get("approval"):
-                ts = change.get("scheduled_start", change.get("actual_start", ""))
-                if ts:
-                    detail = change.get("description", "unknown change")
-                    if change.get("approval"):
-                        detail += f" [approval: {change['approval']}]"
-                    if change.get("risk"):
-                        detail += f" [risk: {change['risk']}]"
-                    timeline_entries.append({
-                        "timestamp": ts,
-                        "event": f"ITSM Change: {detail}",
-                        "source": "itsm_changes",
-                        "service": change.get("service", service),
-                    })
+        entries: list[dict] = []
+        entries.extend(self._timeline_from_signals(signals, signal_service))
+        entries.extend(self._timeline_from_metrics(metrics, service))
+        entries.extend(self._timeline_from_events(events, service))
+        entries.extend(self._timeline_from_logs(logs, service))
+        entries.extend(self._timeline_from_changes(changes, incident_type, service))
 
         source_order = {
             "golden_signals": 0, "metrics": 1, "events": 2, "logs": 3,
             "log_summary": 4, "changes": 5, "itsm_changes": 6,
         }
-        timeline_entries.sort(
+        entries.sort(
             key=lambda x: (x.get("timestamp", ""), source_order.get(x.get("source", ""), 9))
         )
-
-        return timeline_entries
+        return entries
 
     def _describe_anomaly(
         self,

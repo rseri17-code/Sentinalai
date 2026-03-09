@@ -17,7 +17,6 @@ import os
 import re
 import time
 import concurrent.futures
-from datetime import datetime
 from typing import Any
 
 from supervisor.tool_selector import classify_incident, get_playbook
@@ -77,6 +76,14 @@ from database.persistence import (
     is_enabled as _db_enabled,
 )
 from supervisor.confidence_calibrator import ConfidenceCalibrator
+from workers.mcp_client import McpGateway
+from workers.ops_worker import OpsWorker
+from workers.log_worker import LogWorker
+from workers.metrics_worker import MetricsWorker
+from workers.apm_worker import ApmWorker
+from workers.knowledge_worker import KnowledgeWorker
+from workers.itsm_worker import ItsmWorker
+from workers.devops_worker import DevopsWorker
 
 # Lazy-load calibrator (singleton)
 _calibrator: ConfidenceCalibrator | None = None
@@ -95,8 +102,9 @@ try:
     from knowledge.graph_store import GraphStore as _GraphStore
     from knowledge.retrieval_engine import RetrievalEngine as _RetrievalEngine, compute_retrieval_boost as _retrieval_boost
     if _KNOWLEDGE_ENABLED:
-        _knowledge_graph: _GraphStore | None = _GraphStore()
-        _knowledge_retrieval: _RetrievalEngine | None = _RetrievalEngine(graph_store=_knowledge_graph)
+        _kg = _GraphStore()
+        _knowledge_graph: _GraphStore | None = _kg
+        _knowledge_retrieval: _RetrievalEngine | None = _RetrievalEngine(graph_store=_kg)
     else:
         _knowledge_graph = None
         _knowledge_retrieval = None
@@ -105,14 +113,6 @@ except ImportError:
     _knowledge_graph = None  # type: ignore[assignment]
     _knowledge_retrieval = None  # type: ignore[assignment]
     _KNOWLEDGE_AVAILABLE = False
-from workers.mcp_client import McpGateway
-from workers.ops_worker import OpsWorker
-from workers.log_worker import LogWorker
-from workers.metrics_worker import MetricsWorker
-from workers.apm_worker import ApmWorker
-from workers.knowledge_worker import KnowledgeWorker
-from workers.itsm_worker import ItsmWorker
-from workers.devops_worker import DevopsWorker
 
 logger = logging.getLogger(__name__)
 
@@ -1547,8 +1547,8 @@ class SentinalAISupervisor:
             hypotheses.append(Hypothesis(
                 name="dns_after_maintenance",
                 root_cause=(
-                    f"dns resolution failure after dns server maintenance "
-                    f"causing inter-service connectivity failures"
+                    "dns resolution failure after dns server maintenance "
+                    "causing inter-service connectivity failures"
                 ),
                 base_score=80,
                 evidence_refs=evidence_refs,
@@ -1567,7 +1567,7 @@ class SentinalAISupervisor:
                 root_cause=f"dns resolution failure affecting {service}",
                 base_score=65,
                 evidence_refs=["logs:dns_failure"],
-                reasoning=f"DNS resolution failures detected but no maintenance event found.",
+                reasoning="DNS resolution failures detected but no maintenance event found.",
             ))
 
         hypotheses.append(Hypothesis(
@@ -1622,7 +1622,7 @@ class SentinalAISupervisor:
             root_cause=f"cascading failure from {service}",
             base_score=50,
             evidence_refs=[],
-            reasoning=f"Cascading failure detected but root trigger unclear.",
+            reasoning="Cascading failure detected but root trigger unclear.",
         ))
 
         return hypotheses
@@ -1675,7 +1675,6 @@ class SentinalAISupervisor:
     def _analyze_flapping(self, service, summary, logs, signals, metrics, events, changes, timeline):
         hypotheses = []
         pool_pattern = self._detect_sawtooth_pattern(metrics)
-        gs = signals.get("golden_signals", {})
         anomaly_type = signals.get("anomaly_type", "")
 
         if pool_pattern or "intermittent" in anomaly_type:
@@ -1703,7 +1702,7 @@ class SentinalAISupervisor:
             root_cause=f"intermittent failures in {service}",
             base_score=40,
             evidence_refs=[],
-            reasoning=f"Intermittent failures detected but pattern unclear.",
+            reasoning="Intermittent failures detected but pattern unclear.",
         ))
 
         return hypotheses
@@ -1741,7 +1740,7 @@ class SentinalAISupervisor:
                 root_cause=f"data pipeline failure affecting {service}",
                 base_score=62,
                 evidence_refs=["logs:pipeline_failure"],
-                reasoning=f"Pipeline failure detected but downstream impact unclear.",
+                reasoning="Pipeline failure detected but downstream impact unclear.",
             ))
 
         hypotheses.append(Hypothesis(

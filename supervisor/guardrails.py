@@ -13,10 +13,9 @@ import logging
 import os
 import threading
 import time
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
-from supervisor.eval_metrics import record_circuit_breaker_trip, record_budget_exhausted
+from supervisor.eval_metrics import record_circuit_breaker_trip
 
 logger = logging.getLogger(__name__)
 

@@ -1,9 +1,7 @@
 """Tests for execution guardrails."""
 
-import os
 import time
 
-import pytest
 
 from supervisor.guardrails import (
     ExecutionBudget,

@@ -10,7 +10,6 @@ import os
 import time
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 
 # =========================================================================
@@ -65,7 +64,7 @@ class TestG1_1_ValidateQueryInLogWorker:
         gw.invoke.return_value = {"logs": {"results": [], "count": 0}}
         worker = LogWorker(gateway=gw)
 
-        result = worker.execute("search_logs", {"service": "payment-svc"})
+        worker.execute("search_logs", {"service": "payment-svc"})
         gw.invoke.assert_called_once()
 
 
@@ -77,7 +76,6 @@ class TestG3_3_AuthenticationEndpoint:
     """G3.3: /invocations endpoint validates Bearer token when AUTH_REQUIRED=true."""
 
     def test_validate_auth_passes_when_not_required(self):
-        from agentcore_runtime import _validate_auth
 
         with patch.dict(os.environ, {"AUTH_REQUIRED": "false"}, clear=False):
             # Re-import to pick up env var change

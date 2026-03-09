@@ -7,8 +7,6 @@ Covers:
 - generate_reasoning max_tokens override
 """
 
-import json
-import pytest
 from unittest.mock import patch, MagicMock
 
 import supervisor.llm as llm_module
@@ -16,8 +14,6 @@ from supervisor.llm import (
     converse,
     refine_hypothesis,
     generate_reasoning,
-    is_enabled,
-    _disabled_response,
 )
 
 
@@ -102,7 +98,7 @@ class TestConverseExtended:
         }
 
         with patch.object(llm_module, "_get_client", return_value=mock_client):
-            result = converse("sys", "msg", temperature=0.5)
+            converse("sys", "msg", temperature=0.5)
 
         call_kwargs = mock_client.converse.call_args[1]
         assert call_kwargs["inferenceConfig"]["temperature"] == 0.5
@@ -119,7 +115,7 @@ class TestConverseExtended:
         }
 
         with patch.object(llm_module, "_get_client", return_value=mock_client):
-            result = converse("sys", "msg", max_tokens=512)
+            converse("sys", "msg", max_tokens=512)
 
         call_kwargs = mock_client.converse.call_args[1]
         assert call_kwargs["inferenceConfig"]["maxTokens"] == 512

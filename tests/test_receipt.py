@@ -1,8 +1,6 @@
 """Tests for evidence receipt system."""
 
-import time
 
-import pytest
 
 from supervisor.receipt import (
     Receipt,

@@ -74,7 +74,7 @@ except ImportError:
     logger.debug("opentelemetry SDK not installed; using lightweight spans")
 
 
-def get_meter():
+def get_meter() -> object | None:
     """Return the OTEL meter (or None if SDK not configured)."""
     return _meter
 
@@ -191,7 +191,7 @@ def trace_span(
         span.set_attribute("error", str(exc))
         span.end(status="error")
         _log_span(span)
-        if otel_span is not None:
+        if otel_span is not None and otel_ctx is not None:
             otel_span.set_status(otel_trace.StatusCode.ERROR, str(exc))
             _mirror_to_otel(span, otel_span)
             otel_ctx.__exit__(type(exc), exc, exc.__traceback__)
@@ -199,7 +199,7 @@ def trace_span(
     else:
         span.end(status="ok")
         _log_span(span)
-        if otel_span is not None:
+        if otel_span is not None and otel_ctx is not None:
             otel_span.set_status(otel_trace.StatusCode.OK)
             _mirror_to_otel(span, otel_span)
             otel_ctx.__exit__(None, None, None)

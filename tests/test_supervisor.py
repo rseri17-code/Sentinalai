@@ -4,10 +4,9 @@ Tests define production quality - code must pass ALL tests.
 """
 
 import time
-import re
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, MagicMock
 
 from supervisor.agent import SentinalAISupervisor
 from tests.fixtures.mock_mcp_responses import ALL_MOCKS
@@ -259,7 +258,6 @@ class TestSupervisorWithMocks:
 
     def test_error_spike_deployment_INC12347(self):
         """Test investigation of error spike after deployment."""
-        expected = EXPECTED_RCA["INC12347"]
         result, _ = self._run("INC12347")
 
         root_cause = result["root_cause"].lower()

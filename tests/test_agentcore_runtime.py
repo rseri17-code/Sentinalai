@@ -1,6 +1,5 @@
 """Tests for AgentCore runtime adapter."""
 
-import pytest
 
 from agentcore_runtime import _handle_invocation
 

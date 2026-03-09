@@ -1,9 +1,7 @@
 """Tests for severity detection and investigation budget scaling."""
 
-import pytest
 
 from supervisor.severity import (
-    InvestigationSeverity,
     normalize_moogsoft_severity,
     normalize_itsm_tier,
     detect_severity,

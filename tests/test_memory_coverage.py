@@ -10,8 +10,6 @@ Covers:
 - get_long_term_records with session error
 """
 
-import json
-import pytest
 from unittest.mock import patch, MagicMock
 
 import supervisor.memory as mem

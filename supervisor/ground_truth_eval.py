@@ -37,11 +37,9 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import os
 import re
 from dataclasses import dataclass, field, asdict
-from typing import Any
 
 logger = logging.getLogger("sentinalai.eval.ground_truth")
 

@@ -7,13 +7,10 @@ functions with a real meter, and record_budget_exhausted /
 record_circuit_breaker_trip / record_llm_usage with instruments.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import patch, MagicMock
 
 from supervisor.eval_metrics import (
     _get_or_create,
-    _counter,
-    _histogram,
     _up_down_counter,
     _confidence_bracket,
     record_investigation,
@@ -26,7 +23,6 @@ from supervisor.eval_metrics import (
     record_llm_usage,
     record_judge_scores,
     _instruments,
-    _instruments_lock,
 )
 
 

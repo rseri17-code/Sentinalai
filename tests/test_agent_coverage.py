@@ -6,16 +6,12 @@ ITSM/DevOps enrichment, budget edge cases, helper methods, and
 evidence formatting.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch, PropertyMock
-import time
+from unittest.mock import Mock, MagicMock, patch
 
 from supervisor.agent import (
     SentinalAISupervisor,
     Hypothesis,
-    compute_confidence,
 )
-from tests.fixtures.mock_mcp_responses import ALL_MOCKS
 from tests.test_supervisor import _build_mock_workers
 
 
@@ -272,7 +268,7 @@ class TestMemoryStorePaths:
         sup = _supervisor_with_mocks("INC12345")
         with patch("supervisor.agent._memory_enabled", return_value=True), \
              patch("supervisor.agent._store_to_memory") as mock_store:
-            result = sup.investigate("INC12345")
+            sup.investigate("INC12345")
             mock_store.assert_called_once()
             call_kwargs = mock_store.call_args
             assert call_kwargs[1]["incident_id"] == "INC12345"
@@ -299,7 +295,7 @@ class TestKnowledgeGraphPersistPaths:
         mock_graph = MagicMock()
         with patch("supervisor.agent._KNOWLEDGE_AVAILABLE", True), \
              patch("supervisor.agent._knowledge_graph", mock_graph):
-            result = sup.investigate("INC12345")
+            sup.investigate("INC12345")
             mock_graph.persist_investigation.assert_called_once()
 
     def test_knowledge_graph_persist_exception_graceful(self):

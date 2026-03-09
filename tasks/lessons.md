@@ -47,3 +47,9 @@ RULE: Radon will flag agent.py and mcp_client.py. Fix by extracting at natural p
 
 ## Lesson 15 — SEED
 RULE: test_determinism.py and test_scoring_purity.py must exist before any scoring or classifier work begins. Create them if missing.
+
+## Lesson 16 — 2026-03-09
+CONTEXT: Installing boto3 caused 24 test failures in test_analyzer_branches.py.
+MISTAKE: Assumed installing a declared dependency (boto3) would be safe. The test fixture only mocked 5 of 9 workers, and with boto3 present, code paths reached the unmocked workers.
+CORRECTION: After installing any dependency, run the full test suite immediately. Fix test fixtures before proceeding.
+RULE: When installing a new dependency, run the full suite before any other work. Mock fixtures must cover ALL workers with at least a noop, not just the ones under test.

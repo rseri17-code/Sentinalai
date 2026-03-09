@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import os
 from contextlib import contextmanager
-from typing import Generator
+from typing import Any, Generator
 
 logger = logging.getLogger("sentinalai.db")
 
@@ -99,6 +99,7 @@ def check_health() -> dict:
     if engine is None:
         return {"database": "not_configured"}
     try:
+        stmt: Any
         try:
             from sqlalchemy import text
             stmt = text("SELECT 1")

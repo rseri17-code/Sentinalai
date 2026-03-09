@@ -104,3 +104,40 @@ Skill: coverage_expansion
 1. **mypy not installed** — Cannot run type checking. Skipping per L5.
 2. **gh CLI not available** — Network restricted. Cannot check GitHub issues or CI runs.
 3. **agent.py deterministic path** — compute_confidence and tiebreak already at 100%. Remaining 38 uncovered lines are in non-deterministic paths (DB persistence, LLM, ITSM/DevOps enrichment).
+
+---
+
+## Cycle 4 — 2026-03-09 (V5.0 spec)
+
+### Lifecycle
+recall → discover → analyze → plan → implement → verify → harden → document
+
+### Task
+Install mypy + boto3 → fix mypy errors → fix boto3-triggered test failures
+Skills: typing_and_static_analysis, failing_test_root_cause
+
+### Plan
+- [x] Install mypy (1.19.1) and boto3 (1.42.63)
+- [x] Add mypy to dev dependencies in pyproject.toml
+- [x] ANALYZE: 4 mypy errors in eval_metrics.py (3) and connection.py (1)
+- [x] IMPLEMENT: Fix get_meter() return type (object→Any), fix stmt type annotation
+- [x] ANALYZE: 24 test failures caused by boto3 install (Pattern 5)
+- [x] IMPLEMENT: Fix _make_supervisor_with_data mock setup — noop all workers first
+- [x] VERIFY: V1-V4 all pass (1718 passed, 0 failed, 96.56%)
+- [x] HARDEN: bandit 0, ruff 0, mypy 0
+- [x] DOCUMENT: commit, push, knowledge base + lesson updated
+
+### Metrics
+
+| Metric | Start | End | Delta |
+|--------|-------|-----|-------|
+| Tests passed | 1707 | 1718 | +11 |
+| Tests failed | 0 | 0 | = |
+| Coverage | 96.29% | 96.56% | +0.27% |
+| Mypy errors | 4 (unblocked) | 0 | -4 |
+| Ruff findings | 0 | 0 | = |
+| Bandit HIGH | 0 | 0 | = |
+
+### Escalation Log
+
+1. **gh CLI not available** — Network restricted. Cannot check GitHub issues or CI runs.

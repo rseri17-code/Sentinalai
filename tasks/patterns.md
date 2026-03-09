@@ -27,3 +27,10 @@ Root cause: Edge paths (ImportError fallbacks, phase filtering branches, circuit
 Fix: Write targeted tests for each uncovered line — mock imports for ImportError paths, create YAML catalogs with phase config for filtering paths, call record_success with worker_name after circuit open for metric callbacks
 Test: `pytest --cov=supervisor/tool_selector --cov=supervisor/guardrails --cov-report=term-missing` shows 100%
 Seen: 2026-03-09
+
+## Pattern 5: Test failures after installing boto3
+Signature: Tests in test_analyzer_branches.py fail with `TypeError: Object of type MagicMock is not JSON serializable` after installing boto3
+Root cause: Test fixture `_make_supervisor_with_data` replaces all workers with MagicMock but only sets `.execute` on 5 of 9 workers. With boto3 installed, LLM/ITSM/DevOps code paths execute further, and unmocked workers return MagicMock values that fail JSON serialization in span_end logging.
+Fix: Set `.execute = Mock(side_effect=mock_noop)` on ALL workers before overriding specific ones.
+Test: `pytest tests/test_analyzer_branches.py` — 25 passed
+Seen: 2026-03-09

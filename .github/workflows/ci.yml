@@ -1,0 +1,170 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  LLM_ENABLED: "false"
+  CALIBRATION_ENABLED: "false"
+  AWS_ACCESS_KEY_ID: "testing"
+  AWS_SECRET_ACCESS_KEY: "testing"
+  AWS_DEFAULT_REGION: "us-east-1"
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check . --output-format=github
+
+  typecheck:
+    name: Type check (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]" mypy types-requests types-PyYAML
+      - run: mypy supervisor workers knowledge --ignore-missing-imports
+
+  security:
+    name: Security scan (bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install bandit
+      - run: bandit -r supervisor workers knowledge database -ll -f json -o bandit-report.json || true
+      - run: |
+          python3 -c "
+          import json, sys
+          with open('bandit-report.json') as f:
+              data = json.load(f)
+          results = data.get('results', [])
+          high = [r for r in results if r['issue_severity'] == 'HIGH']
+          crit = [r for r in results if r['issue_severity'] == 'CRITICAL']
+          print(f'HIGH: {len(high)}, CRITICAL: {len(crit)}')
+          if high or crit:
+              print('FAIL: HIGH or CRITICAL security findings')
+              for r in high + crit:
+                  print(f'  {r[\"filename\"]}:{r[\"line_number\"]} - {r[\"issue_text\"]}')
+              sys.exit(1)
+          "
+
+  test-py311:
+    name: Tests (Python 3.11)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: |
+          python -m pytest --tb=short \
+            --cov=supervisor --cov=workers --cov=knowledge --cov=database \
+            --cov-report=term-missing --cov-report=xml -q
+
+  test-py312:
+    name: Tests (Python 3.12)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: |
+          python -m pytest --tb=short \
+            --cov=supervisor --cov=workers --cov=knowledge --cov=database \
+            --cov-report=term-missing -q
+
+  determinism:
+    name: Determinism tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest tests/test_determinism.py -v
+
+  scoring-purity:
+    name: Scoring purity tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest tests/test_scoring_purity.py -v
+
+  complexity:
+    name: Complexity check (radon)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install radon
+      - run: |
+          radon cc supervisor workers knowledge database -a -nc 2>&1 | tee radon-report.txt
+          echo "--- Complexity report generated (informational) ---"
+
+  coverage-check:
+    name: Coverage gate (>=80%)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: |
+          python -m pytest --tb=no \
+            --cov=supervisor --cov=workers --cov=knowledge --cov=database \
+            --cov-report=term-missing --cov-fail-under=80 -q
+
+  ci-gate:
+    name: CI Gate
+    needs:
+      - lint
+      - typecheck
+      - security
+      - test-py311
+      - test-py312
+      - determinism
+      - scoring-purity
+      - coverage-check
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          echo "Checking CI gate..."
+          if [ "${{ needs.lint.result }}" != "success" ] || \
+             [ "${{ needs.typecheck.result }}" != "success" ] || \
+             [ "${{ needs.security.result }}" != "success" ] || \
+             [ "${{ needs.test-py311.result }}" != "success" ] || \
+             [ "${{ needs.test-py312.result }}" != "success" ] || \
+             [ "${{ needs.determinism.result }}" != "success" ] || \
+             [ "${{ needs.scoring-purity.result }}" != "success" ] || \
+             [ "${{ needs.coverage-check.result }}" != "success" ]; then
+            echo "FAIL: One or more required jobs failed"
+            exit 1
+          fi
+          echo "PASS: All CI jobs succeeded"

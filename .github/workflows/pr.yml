@@ -1,0 +1,72 @@
+name: PR Quality Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+env:
+  LLM_ENABLED: "false"
+  CALIBRATION_ENABLED: "false"
+  AWS_ACCESS_KEY_ID: "testing"
+  AWS_SECRET_ACCESS_KEY: "testing"
+  AWS_DEFAULT_REGION: "us-east-1"
+
+jobs:
+  changed-files:
+    name: Detect changed files
+    runs-on: ubuntu-latest
+    outputs:
+      python_changed: ${{ steps.changes.outputs.python }}
+      workflow_changed: ${{ steps.changes.outputs.workflows }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            python:
+              - '**/*.py'
+            workflows:
+              - '.github/workflows/**'
+
+  lint-changed:
+    name: Lint changed files
+    needs: changed-files
+    if: needs.changed-files.outputs.python_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check . --output-format=github
+
+  test-changed:
+    name: Test suite
+    needs: changed-files
+    if: needs.changed-files.outputs.python_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: |
+          python -m pytest --tb=short \
+            --cov=supervisor --cov=workers --cov=knowledge --cov=database \
+            --cov-report=term-missing --cov-fail-under=80 -q
+
+  determinism-check:
+    name: Determinism check
+    needs: changed-files
+    if: needs.changed-files.outputs.python_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest tests/test_determinism.py tests/test_scoring_purity.py -v

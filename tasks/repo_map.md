@@ -32,7 +32,7 @@ Incident In → [Fetch] → [Classify] → [Playbook] → [Multi-Hypothesis Scor
 ### workers/ — Action dispatch
 | File | Lines | Purpose |
 |------|-------|---------|
-| mcp_client.py | ~432 | AgentCore gateway + OAuth2 + rate limiting |
+| mcp_client.py | ~1056 | AgentCore gateway + OAuth2 + rate limiting |
 | base_worker.py | ~34 | Base action dispatch + timing |
 | ops_worker.py | ~14 | Moogsoft integration |
 | log_worker.py | ~23 | Splunk integration |
@@ -57,7 +57,7 @@ Incident In → [Fetch] → [Classify] → [Playbook] → [Multi-Hypothesis Scor
 | persistence.py | Data persistence layer |
 
 ### tests/ — Test suite
-- 49+ test files, 1646+ tests
+- 49+ test files, 1707+ tests
 - 96.29% coverage
 - Key test files: test_determinism.py, test_scoring_purity.py
 
@@ -70,3 +70,4 @@ Incident In → [Fetch] → [Classify] → [Playbook] → [Multi-Hypothesis Scor
 - Python: 3.11.14
 - Coverage floor: 80% (pyproject.toml)
 - Test timeout: 120s
+- Spec version: 5.0

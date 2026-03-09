@@ -67,3 +67,40 @@
 
 1. **mypy not installed** — Cannot run type checking. Skipping per L5.
 2. **boto3 not installed** — AgentCore SDK drift check limited to static review.
+
+---
+
+## Cycle 3 — 2026-03-09 (V5.0 spec)
+
+### Lifecycle
+recall → discover → analyze → plan → implement → verify → harden → document
+
+### Task
+Deterministic path coverage → 100% for tool_selector.py + guardrails.py
+Skill: coverage_expansion
+
+### Plan
+- [x] ANALYZE: Identify uncovered lines in deterministic path files
+- [x] PLAN: Map gaps to test strategies
+- [x] IMPLEMENT: Write 9 targeted tests (4 tool_selector, 2 guardrails, 3 agent helpers)
+- [x] VERIFY: V1-V4 all pass (1716 passed, 0 failed, 96.59%)
+- [x] HARDEN: bandit 0, ruff 0
+- [x] DOCUMENT: commit, push, knowledge base updated
+
+### Metrics
+
+| Metric | Start | End | Delta |
+|--------|-------|-----|-------|
+| Tests passed | 1707 | 1716 | +9 |
+| Tests failed | 0 | 0 | = |
+| Coverage | 96.29% | 96.59% | +0.30% |
+| tool_selector.py | 96% | 100% | +4% |
+| guardrails.py | 96% | 100% | +4% |
+| Ruff findings | 0 | 0 | = |
+| Bandit HIGH | 0 | 0 | = |
+
+### Escalation Log
+
+1. **mypy not installed** — Cannot run type checking. Skipping per L5.
+2. **gh CLI not available** — Network restricted. Cannot check GitHub issues or CI runs.
+3. **agent.py deterministic path** — compute_confidence and tiebreak already at 100%. Remaining 38 uncovered lines are in non-deterministic paths (DB persistence, LLM, ITSM/DevOps enrichment).

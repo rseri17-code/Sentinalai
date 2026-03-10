@@ -825,6 +825,21 @@ class TestAnalysisHelpers:
         desc = self.sup._describe_anomaly("custom_anomaly", "svc", {}, {}, {})
         assert "custom_anomaly" in desc
 
+    def test_find_backend_event_no_match(self):
+        """Line 2111: _find_backend_event returns empty string when no log matches."""
+        logs = [{"message": "unrelated error in payment service"}]
+        assert self.sup._find_backend_event(logs, "redis") == ""
+
+    def test_find_backend_event_empty_logs(self):
+        """_find_backend_event returns empty string for empty log list."""
+        assert self.sup._find_backend_event([], "redis") == ""
+
+    def test_is_gradual_increase_too_few_points(self):
+        """Line 2115: _is_gradual_increase returns False with < 3 data points."""
+        assert self.sup._is_gradual_increase([]) is False
+        assert self.sup._is_gradual_increase([{"value": 1}]) is False
+        assert self.sup._is_gradual_increase([{"value": 1}, {"value": 2}]) is False
+
 
 # =========================================================================
 # GenAI span attributes

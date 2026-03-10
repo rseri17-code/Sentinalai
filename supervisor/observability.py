@@ -74,7 +74,7 @@ except ImportError:
     logger.debug("opentelemetry SDK not installed; using lightweight spans")
 
 
-def get_meter() -> object | None:
+def get_meter() -> Any | None:
     """Return the OTEL meter (or None if SDK not configured)."""
     return _meter
 

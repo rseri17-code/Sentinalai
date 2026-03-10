@@ -76,6 +76,33 @@ class TestCircuitBreakerRegistry:
         c2 = reg.get("worker_b")
         assert c1 is not c2
 
+    def test_reset_clears_all_circuits(self):
+        """Lines 120-121: reset() clears all circuit state."""
+        reg = CircuitBreakerRegistry()
+        reg.get("worker_a").record_failure()
+        reg.get("worker_b").record_failure()
+        reg.reset()
+        # After reset, getting a worker returns a fresh CircuitState
+        c = reg.get("worker_a")
+        assert c.failure_count == 0
+        assert not c.is_open
+
+
+class TestCircuitStateMetricsCallbacks:
+    """Test that record_success triggers the half_open_to_closed metric callback."""
+
+    def test_record_success_emits_metric_on_recovery(self):
+        """Line 98: record_success when was_open and worker_name given."""
+        from unittest.mock import patch
+        cs = CircuitState(threshold=2)
+        cs.record_failure()
+        cs.record_failure()
+        assert cs.is_open
+        with patch("supervisor.guardrails.record_circuit_breaker_trip") as mock_trip:
+            cs.record_success(worker_name="test_worker")
+        assert not cs.is_open
+        mock_trip.assert_called_once_with("test_worker", "half_open_to_closed")
+
 
 class TestValidateQuery:
     def test_valid_query(self):

@@ -497,6 +497,97 @@ class TestToolSelectorMapping:
             assert server in RATE_LIMITS
 
 
+class TestToolSelectorEdgePaths:
+    """Tests for uncovered edge paths in ToolSelector."""
+
+    def test_load_catalog_without_yaml(self):
+        """Line 392-394: PyYAML not installed falls back gracefully."""
+        import builtins
+        from unittest.mock import patch
+
+        real_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "yaml":
+                raise ImportError("No module named 'yaml'")
+            return real_import(name, *args, **kwargs)
+
+        ts = ToolSelector.__new__(ToolSelector)
+        ts.catalog = {}
+        ts.catalog_loaded = False
+        with patch("builtins.__import__", side_effect=mock_import):
+            ts._load_catalog("/some/path.yaml")
+        assert ts.catalog == {}
+        assert ts.catalog_loaded is False
+
+    def test_select_tools_with_phase_filter(self):
+        """Lines 451-452: phase filter returns filtered tools when matches exist."""
+        content = (
+            "selection_rules:\n"
+            "  by_incident_type:\n"
+            "    timeout:\n"
+            "      required_tools:\n"
+            "        - moogsoft.get_incident_by_id\n"
+            "        - splunk.search_oneshot\n"
+            "      optional_tools:\n"
+            "        - signalfx.query_signalfx_metrics\n"
+            "  by_investigation_phase:\n"
+            "    initial_context:\n"
+            "      tools:\n"
+            "        - moogsoft.get_incident_by_id\n"
+        )
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(content)
+            f.flush()
+            ts = ToolSelector(catalog_path=f.name)
+        os.unlink(f.name)
+        tools = ts.select_tools_for_incident("timeout", investigation_phase="initial_context")
+        assert tools == ["moogsoft.get_incident_by_id"]
+
+    def test_select_tools_phase_filter_no_match_returns_all(self):
+        """Line 452: phase filter with no overlapping tools returns all tools."""
+        content = (
+            "selection_rules:\n"
+            "  by_incident_type:\n"
+            "    timeout:\n"
+            "      required_tools:\n"
+            "        - moogsoft.get_incident_by_id\n"
+            "        - splunk.search_oneshot\n"
+            "  by_investigation_phase:\n"
+            "    initial_context:\n"
+            "      tools:\n"
+            "        - nonexistent.tool\n"
+        )
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(content)
+            f.flush()
+            ts = ToolSelector(catalog_path=f.name)
+        os.unlink(f.name)
+        tools = ts.select_tools_for_incident("timeout", investigation_phase="initial_context")
+        # No overlap → returns all_tools unfiltered
+        assert "moogsoft.get_incident_by_id" in tools
+        assert "splunk.search_oneshot" in tools
+
+    def test_get_phase_budget_from_catalog(self):
+        """Line 486: phase budget from catalog config overrides defaults."""
+        content = (
+            "selection_rules:\n"
+            "  by_investigation_phase:\n"
+            "    evidence_gathering:\n"
+            "      max_calls: 12\n"
+            "      tools:\n"
+            "        - splunk.search_oneshot\n"
+        )
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(content)
+            f.flush()
+            ts = ToolSelector(catalog_path=f.name)
+        os.unlink(f.name)
+        budget = ts.get_phase_budget("evidence_gathering")
+        assert budget["max_calls"] == 12
+        assert "tools" in budget
+
+
 class TestToolSelectorWithRealCatalog:
     """Test ToolSelector with the actual catalog file from the project."""
 

@@ -43,8 +43,12 @@ def _make_supervisor_with_data(incident_data, log_data=None, signals_data=None,
     def mock_knowledge(action, params):
         return {"similar_incidents": []}
 
+    def mock_noop(action, params):
+        return {}
+
     for name in supervisor.workers:
         supervisor.workers[name] = MagicMock()
+        supervisor.workers[name].execute = Mock(side_effect=mock_noop)
 
     supervisor.workers["ops_worker"].execute = Mock(side_effect=mock_ops)
     supervisor.workers["log_worker"].execute = Mock(side_effect=mock_logs)

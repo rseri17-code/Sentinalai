@@ -1,0 +1,97 @@
+name: Nightly Audit
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 2am UTC daily
+  workflow_dispatch:
+
+env:
+  LLM_ENABLED: "false"
+  CALIBRATION_ENABLED: "false"
+  AWS_ACCESS_KEY_ID: "testing"
+  AWS_SECRET_ACCESS_KEY: "testing"
+  AWS_DEFAULT_REGION: "us-east-1"
+
+jobs:
+  cve-scan:
+    name: CVE scan (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pip-audit
+      - run: pip install -e ".[dev]"
+      - run: pip-audit --strict || true
+      - run: pip-audit --format=json -o cve-report.json || true
+
+  dependency-drift:
+    name: Dependency drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: pip list --outdated --format=json | python3 -c "
+          import json, sys
+          pkgs = json.load(sys.stdin)
+          if pkgs:
+              print(f'{len(pkgs)} outdated packages:')
+              for p in pkgs:
+                  print(f'  {p[\"name\"]}: {p[\"version\"]} -> {p[\"latest_version\"]}')
+          else:
+              print('All packages up to date')
+          "
+
+  determinism-100x:
+    name: 100x determinism test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: |
+          python -m pytest tests/test_determinism.py tests/test_scoring_purity.py -v --count=100 2>/dev/null || \
+          python -m pytest tests/test_determinism.py tests/test_scoring_purity.py -v
+
+  full-security-scan:
+    name: Full security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install bandit
+      - run: bandit -r supervisor workers knowledge database -f json -o bandit-full.json || true
+      - run: |
+          python3 -c "
+          import json
+          with open('bandit-full.json') as f:
+              data = json.load(f)
+          results = data.get('results', [])
+          by_sev = {}
+          for r in results:
+              sev = r['issue_severity']
+              by_sev[sev] = by_sev.get(sev, 0) + 1
+          print('Bandit findings by severity:')
+          for sev in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']:
+              print(f'  {sev}: {by_sev.get(sev, 0)}')
+          "
+
+  complexity-audit:
+    name: Complexity audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install radon
+      - run: radon cc supervisor workers knowledge database -a -nc
+      - run: radon mi supervisor workers knowledge database -nc

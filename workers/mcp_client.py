@@ -999,58 +999,78 @@ def _parse_agent_response(response: dict) -> dict[str, Any]:
 # Stub responses (fallback when gateway not configured)
 # =========================================================================
 
+def _stub_moogsoft(action: str, params: dict) -> dict:
+    incident_id = params.get("incident_id", "unknown")
+    return {"incident": {"incident_id": incident_id, "status": "pending"}}
+
+
+def _stub_splunk(action: str, params: dict) -> dict:
+    if "change" in action:
+        return {"changes": []}
+    return {"logs": {"results": [], "count": 0}}
+
+
+def _stub_sysdig(action: str, params: dict) -> dict:
+    if "event" in action:
+        return {"events": []}
+    if "golden" in action or "signal" in action:
+        return {"signals": {}}
+    return {"metrics": {"metrics": [], "baseline": 0}}
+
+
+def _stub_signalfx(action: str, params: dict) -> dict:
+    if "golden" in action or "signal" in action:
+        return {"signals": {}}
+    return {"metrics": {}}
+
+
+def _stub_dynatrace(action: str, params: dict) -> dict:
+    if "problem" in action:
+        return {"problems": []}
+    if "event" in action:
+        return {"events": []}
+    return {"metrics": {}}
+
+
+def _stub_servicenow(action: str, params: dict) -> dict:
+    if "incident" in action:
+        return {"incidents": []}
+    if "ci_detail" in action or action == "get_ci_details":
+        return {"ci": {}}
+    if "change" in action:
+        return {"change_records": []}
+    if "known" in action or "error" in action:
+        return {"known_errors": []}
+    return {"ci": {}}
+
+
+def _stub_github(action: str, params: dict) -> dict:
+    if "deployment" in action:
+        return {"deployments": []}
+    if "pr" in action:
+        return {"pr": {}}
+    if "commit" in action or "diff" in action:
+        return {"commit": {}}
+    if "workflow" in action:
+        return {"workflow_runs": []}
+    return {}
+
+
+_STUB_DISPATCH: dict[str, Any] = {
+    "moogsoft": _stub_moogsoft,
+    "splunk": _stub_splunk,
+    "sysdig": _stub_sysdig,
+    "signalfx": _stub_signalfx,
+    "dynatrace": _stub_dynatrace,
+    "servicenow": _stub_servicenow,
+    "github": _stub_github,
+}
+
+
 def _stub_response(mcp_tool_name: str, tool_action: str, params: dict) -> dict:
     """Return a minimal stub response for local dev / tests."""
     server = get_server_for_tool(mcp_tool_name)
-
-    if server == "moogsoft":
-        incident_id = params.get("incident_id", "unknown")
-        return {"incident": {"incident_id": incident_id, "status": "pending"}}
-
-    if server == "splunk":
-        if "change" in tool_action.lower():
-            return {"changes": []}
-        return {"logs": {"results": [], "count": 0}}
-
-    if server == "sysdig":
-        if "event" in tool_action.lower():
-            return {"events": []}
-        if "golden" in tool_action.lower() or "signal" in tool_action.lower():
-            return {"signals": {}}
-        return {"metrics": {"metrics": [], "baseline": 0}}
-
-    if server == "signalfx":
-        if "golden" in tool_action.lower() or "signal" in tool_action.lower():
-            return {"signals": {}}
-        return {"metrics": {}}
-
-    if server == "dynatrace":
-        if "problem" in tool_action.lower():
-            return {"problems": []}
-        if "event" in tool_action.lower():
-            return {"events": []}
-        return {"metrics": {}}
-
-    if server == "servicenow":
-        if "incident" in tool_action.lower():
-            return {"incidents": []}
-        if "ci_detail" in tool_action.lower() or tool_action.lower() == "get_ci_details":
-            return {"ci": {}}
-        if "change" in tool_action.lower():
-            return {"change_records": []}
-        if "known" in tool_action.lower() or "error" in tool_action.lower():
-            return {"known_errors": []}
-        return {"ci": {}}
-
-    if server == "github":
-        if "deployment" in tool_action.lower():
-            return {"deployments": []}
-        if "pr" in tool_action.lower():
-            return {"pr": {}}
-        if "commit" in tool_action.lower() or "diff" in tool_action.lower():
-            return {"commit": {}}
-        if "workflow" in tool_action.lower():
-            return {"workflow_runs": []}
+    handler = _STUB_DISPATCH.get(server)
+    if handler is None:
         return {}
-
-    return {}
+    return handler(tool_action.lower(), params)

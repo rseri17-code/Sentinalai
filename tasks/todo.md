@@ -67,3 +67,113 @@
 
 1. **mypy not installed** — Cannot run type checking. Skipping per L5.
 2. **boto3 not installed** — AgentCore SDK drift check limited to static review.
+
+---
+
+## Cycle 3 — 2026-03-09 (V5.0 spec)
+
+### Lifecycle
+recall → discover → analyze → plan → implement → verify → harden → document
+
+### Task
+Deterministic path coverage → 100% for tool_selector.py + guardrails.py
+Skill: coverage_expansion
+
+### Plan
+- [x] ANALYZE: Identify uncovered lines in deterministic path files
+- [x] PLAN: Map gaps to test strategies
+- [x] IMPLEMENT: Write 9 targeted tests (4 tool_selector, 2 guardrails, 3 agent helpers)
+- [x] VERIFY: V1-V4 all pass (1716 passed, 0 failed, 96.59%)
+- [x] HARDEN: bandit 0, ruff 0
+- [x] DOCUMENT: commit, push, knowledge base updated
+
+### Metrics
+
+| Metric | Start | End | Delta |
+|--------|-------|-----|-------|
+| Tests passed | 1707 | 1716 | +9 |
+| Tests failed | 0 | 0 | = |
+| Coverage | 96.29% | 96.59% | +0.30% |
+| tool_selector.py | 96% | 100% | +4% |
+| guardrails.py | 96% | 100% | +4% |
+| Ruff findings | 0 | 0 | = |
+| Bandit HIGH | 0 | 0 | = |
+
+### Escalation Log
+
+1. **mypy not installed** — Cannot run type checking. Skipping per L5.
+2. **gh CLI not available** — Network restricted. Cannot check GitHub issues or CI runs.
+3. **agent.py deterministic path** — compute_confidence and tiebreak already at 100%. Remaining 38 uncovered lines are in non-deterministic paths (DB persistence, LLM, ITSM/DevOps enrichment).
+
+---
+
+## Cycle 4 — 2026-03-09 (V5.0 spec)
+
+### Lifecycle
+recall → discover → analyze → plan → implement → verify → harden → document
+
+### Task
+Install mypy + boto3 → fix mypy errors → fix boto3-triggered test failures
+Skills: typing_and_static_analysis, failing_test_root_cause
+
+### Plan
+- [x] Install mypy (1.19.1) and boto3 (1.42.63)
+- [x] Add mypy to dev dependencies in pyproject.toml
+- [x] ANALYZE: 4 mypy errors in eval_metrics.py (3) and connection.py (1)
+- [x] IMPLEMENT: Fix get_meter() return type (object→Any), fix stmt type annotation
+- [x] ANALYZE: 24 test failures caused by boto3 install (Pattern 5)
+- [x] IMPLEMENT: Fix _make_supervisor_with_data mock setup — noop all workers first
+- [x] VERIFY: V1-V4 all pass (1718 passed, 0 failed, 96.56%)
+- [x] HARDEN: bandit 0, ruff 0, mypy 0
+- [x] DOCUMENT: commit, push, knowledge base + lesson updated
+
+### Metrics
+
+| Metric | Start | End | Delta |
+|--------|-------|-----|-------|
+| Tests passed | 1707 | 1718 | +11 |
+| Tests failed | 0 | 0 | = |
+| Coverage | 96.29% | 96.56% | +0.27% |
+| Mypy errors | 4 (unblocked) | 0 | -4 |
+| Ruff findings | 0 | 0 | = |
+| Bandit HIGH | 0 | 0 | = |
+
+### Escalation Log
+
+1. **gh CLI not available** — Network restricted. Cannot check GitHub issues or CI runs.
+
+---
+
+## Cycle 5 — 2026-03-09 (V5.0 spec)
+
+### Lifecycle
+recall → discover → analyze → plan → implement → verify → harden → document
+
+### Task
+Reduce all Radon D/F grade functions to C or better (CC <= 15)
+Skill: complexity_reduction
+
+### Plan
+- [x] ANALYZE: Identify 6 D/F functions across agent.py, tool_selector.py, mcp_client.py
+- [x] PLAN: Spec 3 batches of extract-method refactors (spec.md)
+- [x] IMPLEMENT Batch 1: _stub_response dispatch table, get_investigation_workflow phase mapping
+- [x] IMPLEMENT Batch 2: _build_timeline source-specific extractors
+- [x] IMPLEMENT Batch 3: investigate → _record_observability + _run_judge_scoring helpers
+- [x] VERIFY: V1-V5 all pass (1718 passed, 0 failed, 96.51%, radon 0 D/F)
+- [x] HARDEN: ruff 0, mypy 0 (with --ignore-missing-imports), determinism 61/61 pass
+- [x] DOCUMENT: commit, push, task files updated
+
+### Metrics
+
+| Metric | Start | End | Delta |
+|--------|-------|-----|-------|
+| Tests passed | 1718 | 1718 | = |
+| Tests failed | 0 | 0 | = |
+| Coverage | 96.56% | 96.51% | -0.05% |
+| Radon D/F functions | 6 | 0 | -6 |
+| Ruff findings | 0 | 0 | = |
+| Mypy errors | 0 | 0 | = |
+
+### Escalation Log
+
+1. **Coverage -0.05%** — Minor drop from extracted helper methods that inherit partial coverage. Still well above 96% threshold.

@@ -177,3 +177,40 @@ Skill: complexity_reduction
 ### Escalation Log
 
 1. **Coverage -0.05%** — Minor drop from extracted helper methods that inherit partial coverage. Still well above 96% threshold.
+
+---
+
+## Cycle 6 — 2026-03-13 (V5.0 spec)
+
+### Lifecycle
+recall → discover → analyze → plan → implement → verify → harden → document
+
+### Task
+Fix mypy type stub errors + expand coverage for apm_worker, ops_worker, replay
+Skills: typing_and_static_analysis, coverage_expansion
+
+### Plan
+- [x] Phase 0: Environment baseline — 1718 passed, 96.94%, ruff 0, mypy 3, bandit 0H, radon 0D/F
+- [x] Phase 1: Fix mypy errors — install types-PyYAML + types-requests (3 → 0 errors)
+- [x] Phase 2: Write 7 targeted tests — ops_worker (2), apm_worker (3), replay (2)
+- [x] Phase 3: Verify — 1725 passed, 0 failed, 97.19% coverage, all gates pass
+- [x] Phase 4: Document + commit + push
+
+### Metrics
+
+| Metric | Start | End | Delta |
+|--------|-------|-----|-------|
+| Tests passed | 1718 | 1725 | +7 |
+| Tests failed | 0 | 0 | = |
+| Coverage | 96.94% | 97.19% | +0.25% |
+| apm_worker.py | 90% | 100% | +10% |
+| ops_worker.py | 93% | 100% | +7% |
+| replay.py | 92% | 100% | +8% |
+| Mypy errors | 3 | 0 | -3 |
+| Ruff findings | 0 | 0 | = |
+| Bandit HIGH | 0 | 0 | = |
+| Radon D/F | 0 | 0 | = |
+
+### Escalation Log
+
+None — all gates pass.

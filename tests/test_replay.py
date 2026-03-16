@@ -52,6 +52,22 @@ class TestReplayStore:
         assert loaded["evidence"] == evidence
 
 
+    def test_load_corrupted_json_returns_none(self, tmp_path):
+        """Corrupted JSON file must return None, not raise."""
+        store = ReplayStore(str(tmp_path))
+        # Write a valid-looking filename but with invalid JSON content
+        bad_file = tmp_path / "INC_BAD_20240101T000000Z.json"
+        bad_file.write_text("not valid json {{{")
+
+        result = store.load("INC_BAD")
+        assert result is None
+
+    def test_list_cases_missing_dir_returns_empty(self):
+        """list_cases on nonexistent dir must return empty list."""
+        store = ReplayStore("/tmp/sentinalai_test_nonexistent_dir_abc123")
+        assert store.list_cases() == []
+
+
 class TestReplayInvestigation:
     def test_replay_returns_stored_result(self, tmp_path):
         store = ReplayStore(str(tmp_path))

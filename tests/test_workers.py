@@ -4,6 +4,7 @@ Validates determinism, correct dispatching, and error handling.
 """
 
 import pytest
+from unittest.mock import MagicMock
 
 from workers.ops_worker import OpsWorker
 from workers.log_worker import LogWorker
@@ -47,6 +48,17 @@ class TestOpsWorker:
         """Unknown action should return empty dict, not raise."""
         result = self.worker.execute("nonexistent_action", {})
         assert isinstance(result, dict)
+
+    def test_get_incident_missing_id_returns_error(self):
+        """get_incident_by_id with no id param returns error dict."""
+        result = self.worker.execute("get_incident_by_id", {})
+        assert result.get("error") == "incident_id required"
+
+    def test_get_incident_id_key_alias(self):
+        """get_incident_by_id accepts 'id' as alias for incident_id."""
+        result = self.worker.execute("get_incident_by_id", {"id": "INC99999"})
+        assert isinstance(result, dict)
+        assert "error" not in result or result.get("error") != "incident_id required"
 
 
 class TestLogWorker:
@@ -131,6 +143,35 @@ class TestApmWorker:
 
     def test_unknown_action_returns_empty(self):
         result = self.worker.execute("nonexistent_action", {})
+        assert isinstance(result, dict)
+
+    def test_signalfx_enrichment_exception_is_swallowed(self):
+        """SignalFx exception must not propagate — enrichment is non-critical."""
+        gateway = MagicMock()
+        gateway.invoke.side_effect = [
+            {"latency_ms": 42},   # Dynatrace primary call succeeds
+            RuntimeError("SignalFx timeout"),  # SignalFx enrichment fails
+        ]
+        worker = ApmWorker(gateway=gateway)
+        result = worker.execute("get_golden_signals", {"service": "api-gw"})
+        assert isinstance(result, dict)
+        assert result.get("latency_ms") == 42
+        assert "signalfx_apm" not in result
+
+    def test_signalfx_enrichment_merged_when_successful(self):
+        """SignalFx result is merged into response when available."""
+        gateway = MagicMock()
+        gateway.invoke.side_effect = [
+            {"latency_ms": 30},
+            {"error_rate": 0.01},
+        ]
+        worker = ApmWorker(gateway=gateway)
+        result = worker.execute("get_golden_signals", {"service": "api-gw"})
+        assert result.get("signalfx_apm") == {"error_rate": 0.01}
+
+    def test_check_latency_alias_dispatches(self):
+        """check_latency is a registered alias for get_golden_signals."""
+        result = self.worker.execute("check_latency", {"service": "payment-service"})
         assert isinstance(result, dict)
 
 

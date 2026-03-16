@@ -84,6 +84,7 @@ from workers.apm_worker import ApmWorker
 from workers.knowledge_worker import KnowledgeWorker
 from workers.itsm_worker import ItsmWorker
 from workers.devops_worker import DevopsWorker
+from workers.confluence_worker import ConfluenceWorker
 
 # Lazy-load calibrator (singleton)
 _calibrator: ConfidenceCalibrator | None = None
@@ -228,6 +229,7 @@ class SentinalAISupervisor:
             "knowledge_worker": KnowledgeWorker(),
             "itsm_worker": ItsmWorker(gateway=gw),
             "devops_worker": DevopsWorker(gateway=gw),
+            "confluence_worker": ConfluenceWorker(gateway=gw),
         }
         self._replay_store = ReplayStore(replay_dir) if replay_dir else None
         self._call_timeout = call_timeout
@@ -296,6 +298,11 @@ class SentinalAISupervisor:
             # Step 2b: ITSM context enrichment (Phase 1 — CI, known errors, similar incidents)
             itsm_context = self._fetch_itsm_context(service, summary, receipts, budget, circuits)
 
+            # Step 2b2: Confluence enrichment (Phase 1 — runbooks + post-mortems)
+            confluence_context = self._fetch_confluence_context(
+                service, summary, incident_type, receipts, budget, circuits,
+            )
+
             # Step 2c: Severity detection + budget scaling
             severity = detect_severity(incident, itsm_context)
             budget = get_budget_for_severity(severity)
@@ -324,6 +331,10 @@ class SentinalAISupervisor:
             # Merge ITSM context into evidence for downstream analysis
             if itsm_context:
                 evidence["itsm_context"] = itsm_context
+
+            # Merge Confluence context (runbooks + post-mortems) into evidence
+            if confluence_context:
+                evidence["confluence_context"] = confluence_context
 
             # Collect historical context (ran in parallel with playbook)
             try:
@@ -843,6 +854,45 @@ class SentinalAISupervisor:
             return context or None
         if result.get("incidents"):
             context["similar_incidents"] = result["incidents"]
+
+        return context or None
+
+    # ------------------------------------------------------------------ #
+    # Internal: Confluence enrichment (runbooks / post-mortems — Phase 1)
+    # ------------------------------------------------------------------ #
+
+    def _fetch_confluence_context(
+        self, service: str, summary: str, incident_type: str,
+        receipts: ReceiptCollector | None = None,
+        budget: ExecutionBudget | None = None,
+        circuits: CircuitBreakerRegistry | None = None,
+    ) -> dict | None:
+        """Phase 1 enrichment: fetch runbooks and post-mortems from Confluence."""
+        worker = self.workers.get("confluence_worker")
+        if worker is None:
+            return None
+        context: dict[str, Any] = {}
+
+        # Runbooks — operational procedures for the service
+        result = self._budgeted_worker_call(
+            worker, "search_runbooks", {"service": service, "query": summary},
+            "confluence_worker", receipts, budget, circuits,
+        )
+        if result is None:
+            return context or None
+        if result.get("runbooks"):
+            context["runbooks"] = result["runbooks"]
+
+        # Post-mortems — historical failure analyses for this service/type
+        result = self._budgeted_worker_call(
+            worker, "search_postmortems",
+            {"service": service, "incident_type": incident_type},
+            "confluence_worker", receipts, budget, circuits,
+        )
+        if result is None:
+            return context or None
+        if result.get("postmortems"):
+            context["postmortems"] = result["postmortems"]
 
         return context or None
 
@@ -1907,6 +1957,13 @@ class SentinalAISupervisor:
         if not isinstance(itsm, dict):
             return {}
         return itsm
+
+    def _extract_confluence_context(self, evidence: dict) -> dict:
+        """Extract Confluence context (runbooks, post-mortems) from evidence."""
+        confluence = evidence.get("confluence_context", {})
+        if not isinstance(confluence, dict):
+            return {}
+        return confluence
 
     def _extract_devops_context(self, evidence: dict) -> dict:
         """Extract DevOps context (deployments, workflow runs) from evidence."""

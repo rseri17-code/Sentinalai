@@ -127,6 +127,7 @@ MCP_TOOL_ARNS: dict[str, str] = {
     "dynatrace": os.environ.get("MCP_DYNATRACE_TOOL_ARN", ""),
     "servicenow": os.environ.get("MCP_SERVICENOW_TOOL_ARN", ""),
     "github": os.environ.get("MCP_GITHUB_TOOL_ARN", ""),
+    "confluence": os.environ.get("MCP_CONFLUENCE_TOOL_ARN", ""),
 }
 
 # Retry / timeout config
@@ -387,6 +388,10 @@ _TOOL_TO_SERVER: dict[str, str] = {
     "github.get_pr_details": "github",
     "github.get_commit_diff": "github",
     "github.get_workflow_runs": "github",
+    # Confluence (documentation / runbooks / post-mortems)
+    "confluence.search_runbooks": "confluence",
+    "confluence.search_postmortems": "confluence",
+    "confluence.get_page": "confluence",
 }
 
 # Server -> default AgentCore gateway target name mapping.
@@ -401,6 +406,7 @@ _SERVER_TO_TARGET: dict[str, str] = {
     "dynatrace": os.environ.get("AGENTCORE_TARGET_DYNATRACE", "DynatraceTarget"),
     "servicenow": os.environ.get("AGENTCORE_TARGET_SERVICENOW", "ServiceNowTarget"),
     "github": os.environ.get("AGENTCORE_TARGET_GITHUB", "GitHubTarget"),
+    "confluence": os.environ.get("AGENTCORE_TARGET_CONFLUENCE", "ConfluenceTarget"),
 }
 
 
@@ -1056,6 +1062,16 @@ def _stub_github(action: str, params: dict) -> dict:
     return {}
 
 
+def _stub_confluence(action: str, params: dict) -> dict:
+    if "runbook" in action:
+        return {"runbooks": []}
+    if "postmortem" in action:
+        return {"postmortems": []}
+    if "page" in action:
+        return {"page": {}}
+    return {}
+
+
 _STUB_DISPATCH: dict[str, Any] = {
     "moogsoft": _stub_moogsoft,
     "splunk": _stub_splunk,
@@ -1064,6 +1080,7 @@ _STUB_DISPATCH: dict[str, Any] = {
     "dynatrace": _stub_dynatrace,
     "servicenow": _stub_servicenow,
     "github": _stub_github,
+    "confluence": _stub_confluence,
 }
 
 

@@ -24,6 +24,7 @@ from supervisor.receipt import ReceiptCollector
 from supervisor.guardrails import (
     ExecutionBudget,
     CircuitBreakerRegistry,
+    LoopCheckpoint,
     CALL_TIMEOUT_SECONDS,
     MAX_RETRIES_PER_CALL,
     MAX_CONCURRENT_WORKERS,
@@ -961,13 +962,18 @@ class SentinalAISupervisor:
         and dispatches independent workers concurrently using the shared
         ThreadPoolExecutor. Steps targeting the same worker run sequentially
         to respect rate limits. Falls back to sequential execution otherwise.
+
+        A LoopCheckpoint is used throughout to detect stalled investigations
+        and trigger early exit if no progress is made across two checkpoints.
         """
         playbook = get_playbook(incident_type)
         cb_registry = circuits or circuit_registry
+        loop_checkpoint = LoopCheckpoint()
 
         if not self._PARALLEL_PLAYBOOK:
             return self._execute_playbook_sequential(
                 playbook, incident_id, service, receipts, budget, cb_registry,
+                loop_checkpoint=loop_checkpoint,
             )
 
         # Group steps by worker for parallel dispatch
@@ -1023,6 +1029,20 @@ class SentinalAISupervisor:
                 wn = futures[future]
                 logger.warning("Parallel worker group %s failed: %s", wn, exc)
 
+            # Loop-operator checkpoint after each worker group completes
+            if budget is not None and loop_checkpoint.should_check(budget):
+                escalation = loop_checkpoint.check(set(evidence.keys()), 0)
+                if escalation:
+                    logger.warning(
+                        "Loop escalation in parallel playbook for %s: %s",
+                        incident_id, escalation["escalation_trigger"],
+                    )
+                    evidence["_loop_escalation"] = escalation
+                    # Cancel remaining futures (best-effort)
+                    for f in futures:
+                        f.cancel()
+                    break
+
         return evidence
 
     def _execute_playbook_sequential(
@@ -1030,8 +1050,13 @@ class SentinalAISupervisor:
         receipts: ReceiptCollector | None = None,
         budget: ExecutionBudget | None = None,
         circuits: CircuitBreakerRegistry | None = None,
+        loop_checkpoint: LoopCheckpoint | None = None,
     ) -> dict[str, Any]:
-        """Sequential fallback for playbook execution."""
+        """Sequential fallback for playbook execution.
+
+        If loop_checkpoint is provided, checks for stall escalation after
+        every LOOP_CHECKPOINT_INTERVAL calls and breaks early if stalled.
+        """
         evidence: dict[str, Any] = {}
         for step in playbook:
             worker_name = step["worker"]
@@ -1055,6 +1080,20 @@ class SentinalAISupervisor:
                 circuits=circuits,
             )
             evidence[label] = result
+
+            # Loop-operator checkpoint: check progress every N calls
+            if loop_checkpoint is not None and budget is not None:
+                if loop_checkpoint.should_check(budget):
+                    escalation = loop_checkpoint.check(
+                        set(evidence.keys()), 0,  # score updated post-analysis
+                    )
+                    if escalation:
+                        logger.warning(
+                            "Loop escalation triggered for %s: %s",
+                            incident_id, escalation["escalation_trigger"],
+                        )
+                        evidence["_loop_escalation"] = escalation
+                        break
 
         return evidence
 

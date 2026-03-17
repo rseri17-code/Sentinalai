@@ -13,7 +13,7 @@ import logging
 import os
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from supervisor.eval_metrics import record_circuit_breaker_trip
 
@@ -181,3 +181,94 @@ def validate_query(query: str) -> tuple[bool, str]:
         return False, "query does not match any allowed pattern"
 
     return True, "ok"
+
+
+# =========================================================================
+# Loop-operator: checkpoint-based progress monitoring
+# =========================================================================
+
+# How many worker calls between progress checkpoints
+LOOP_CHECKPOINT_INTERVAL = int(os.environ.get("LOOP_CHECKPOINT_INTERVAL", "4"))
+
+# How many consecutive no-progress checkpoints before escalation
+LOOP_MAX_STALL_CHECKPOINTS = int(os.environ.get("LOOP_MAX_STALL_CHECKPOINTS", "2"))
+
+
+@dataclass
+class LoopCheckpoint:
+    """Tracks evidence progress across investigation checkpoints.
+
+    A checkpoint passes when evidence grows or a hypothesis improves.
+    Two consecutive failed checkpoints trigger an escalation.
+
+    Usage::
+
+        cp = LoopCheckpoint()
+        # ... call workers, add evidence ...
+        if cp.should_check(budget):
+            escalation = cp.check(evidence_keys, top_score)
+            if escalation:
+                # surface escalation to user / emit OTEL
+    """
+
+    checkpoint_interval: int = LOOP_CHECKPOINT_INTERVAL
+    max_stall_checkpoints: int = LOOP_MAX_STALL_CHECKPOINTS
+
+    _last_evidence_keys: frozenset = field(default_factory=frozenset)
+    _last_top_score: int = 0
+    _stall_count: int = 0
+    _checkpoint_number: int = 0
+
+    def should_check(self, budget: "ExecutionBudget") -> bool:
+        """Return True if it's time for a checkpoint (every N calls)."""
+        return (budget.calls_made > 0 and
+                budget.calls_made % self.checkpoint_interval == 0)
+
+    def check(
+        self,
+        evidence_keys: set[str],
+        top_score: int,
+    ) -> dict | None:
+        """Evaluate progress since the last checkpoint.
+
+        Returns an escalation dict if stall limit exceeded, otherwise None.
+        """
+        self._checkpoint_number += 1
+        current_keys = frozenset(k for k in evidence_keys if k not in
+                                  ("itsm_context", "confluence_context",
+                                   "historical_context", "devops_context"))
+        new_keys = current_keys - self._last_evidence_keys
+        score_improved = top_score >= self._last_top_score + 5
+
+        made_progress = bool(new_keys) or score_improved
+
+        self._last_evidence_keys = current_keys
+        self._last_top_score = top_score
+
+        if made_progress:
+            self._stall_count = 0
+            return None
+
+        self._stall_count += 1
+        logger.debug(
+            "Loop checkpoint #%d: no progress (stall=%d/%d)",
+            self._checkpoint_number, self._stall_count, self.max_stall_checkpoints,
+        )
+
+        if self._stall_count >= self.max_stall_checkpoints:
+            return {
+                "escalation_trigger": "no_progress",
+                "checkpoint_number": self._checkpoint_number,
+                "stall_count": self._stall_count,
+                "evidence_keys": sorted(current_keys),
+                "top_score": top_score,
+                "recommendation": "Return partial result with LOW CONFIDENCE prefix.",
+            }
+
+        return None
+
+    @property
+    def stall_count(self) -> int:
+        return self._stall_count
+
+

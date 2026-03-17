@@ -42,5 +42,7 @@ Thumbs.db
 # Third-party reference repos
 amazon-bedrock-agentcore-samples/
 
-# Claude Code
-.claude/
+# Claude Code — exclude runtime/session files but track project config
+.claude/session-log.jsonl
+.claude/audit.jsonl
+.claude/session-state.json

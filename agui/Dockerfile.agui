@@ -1,0 +1,33 @@
+# AG UI BFF Dockerfile
+# Runs alongside the main agent on port 8081
+
+FROM python:3.11-slim AS base
+
+# Security: non-root user
+RUN groupadd -r agui && useradd -r -g agui -u 1001 agui
+
+WORKDIR /app
+
+# Install dependencies
+COPY agui/requirements-agui.txt requirements-agui.txt
+RUN pip install --no-cache-dir -r requirements-agui.txt
+
+# Copy source
+COPY agui/ agui/
+COPY supervisor/ supervisor/
+
+# Ensure supervisor package is importable
+COPY pyproject.toml pyproject.toml
+
+# Ownership
+RUN chown -R agui:agui /app
+
+USER agui
+
+EXPOSE 8081
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8081/ping')"
+
+CMD ["python", "-m", "agui.main"]

@@ -47,6 +47,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
 timeout = 120
+asyncio_mode = "auto"
 
 [tool.coverage.run]
 source = ["supervisor", "workers", "database", "knowledge"]

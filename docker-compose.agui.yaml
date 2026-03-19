@@ -1,0 +1,70 @@
+version: "3.9"
+
+# AG UI stack: BFF + Frontend dev server
+# Run alongside existing docker-compose.yaml
+
+services:
+  agui-bff:
+    build:
+      context: .
+      dockerfile: agui/Dockerfile.agui
+    ports:
+      - "8081:8081"
+    environment:
+      # AG UI config
+      AGUI_BFF_PORT: "8081"
+      AGUI_AUTH_REQUIRED: "false"         # Set to true in production
+      AGUI_JWT_SECRET: "dev-secret-change-in-production"
+      AGUI_CORS_ORIGINS: "http://localhost:5173,http://localhost:3000"
+      AGUI_ENABLED: "true"
+      AGUI_DEV_RELOAD: "false"
+
+      # Storage (optional — falls back to in-memory/local)
+      AGUI_DYNAMODB_TABLE: "agui-state"
+      AGUI_S3_BUCKET: "agui-receipts"
+      AGUI_LOCAL_RECEIPT_DIR: "/tmp/agui-receipts"
+
+      # AWS (required for DynamoDB + S3 in production)
+      AWS_REGION: "${AWS_REGION:-us-east-1}"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:-}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:-}"
+
+      # Connect to existing agent
+      AGENTCORE_AGENT_URL: "http://sentinalai:8080"
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8081/ping')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    volumes:
+      - agui-receipts:/tmp/agui-receipts
+
+    networks:
+      - agui-net
+      - sentinalai-net
+
+  agui-ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile.ui
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_BFF_URL: "http://localhost:8081"
+      VITE_WS_URL: "ws://localhost:8081"
+    depends_on:
+      agui-bff:
+        condition: service_healthy
+    networks:
+      - agui-net
+
+volumes:
+  agui-receipts:
+
+networks:
+  agui-net:
+  sentinalai-net:
+    external: true

@@ -19,11 +19,12 @@ import time
 import concurrent.futures
 from typing import Any
 
-from supervisor.tool_selector import classify_incident, get_playbook
+from supervisor.tool_selector import classify_incident, get_playbook, is_meta_query
 from supervisor.receipt import ReceiptCollector
 from supervisor.guardrails import (
     ExecutionBudget,
     CircuitBreakerRegistry,
+    LoopCheckpoint,
     CALL_TIMEOUT_SECONDS,
     MAX_RETRIES_PER_CALL,
     MAX_CONCURRENT_WORKERS,
@@ -257,11 +258,22 @@ class SentinalAISupervisor:
         Returns a dict with keys:
             root_cause, confidence, evidence_timeline, reasoning
         """
-        # Replay mode: return stored result if available
+        # Replay mode: re-execute analysis from stored evidence for determinism verification
+        # (not just cache return — the stored evidence is replayed through the analysis engine)
         if replay and self._replay_store:
             stored = self._replay_store.load(incident_id)
-            if stored and "result" in stored:
-                return stored["result"]
+            if stored:
+                stored_evidence = dict(stored.get("evidence", {}))
+                stored_incident = stored_evidence.pop("_incident", None)
+                stored_incident_type = stored_evidence.pop("_incident_type", "error_spike")
+                if stored_incident and stored_evidence:
+                    logger.info("Replaying investigation for %s from stored evidence", incident_id)
+                    return self._analyze_evidence(
+                        incident_id, stored_incident, stored_incident_type, stored_evidence
+                    )
+                # Fallback: return cached result if evidence not available
+                if stored.get("result"):
+                    return stored["result"]
 
         with trace_span("investigate", case_id=incident_id) as span:
             # GenAI semantic conventions for agent observability
@@ -289,7 +301,25 @@ class SentinalAISupervisor:
             summary = incident.get("summary", "")
             service = incident.get("affected_service", "unknown")
 
-            # Step 2: Classify
+            # Step 2: Classify — cache incident on self so _build_params can time-anchor queries
+            self._current_incident = incident
+
+            # G-10: Detect meta-queries (questions / lookup requests) before classification
+            if is_meta_query(summary):
+                logger.info("Meta-query detected for %s, skipping investigation", incident_id)
+                return {
+                    "incident_id": incident_id,
+                    "root_cause": "META_QUERY_NOT_INCIDENT",
+                    "confidence": 0,
+                    "evidence_timeline": [],
+                    "reasoning": (
+                        f"Input appears to be a question rather than an active incident: "
+                        f"'{summary[:200]}'. "
+                        "Please provide an incident summary describing a failure condition "
+                        "(e.g., 'payments-api returning 5xx errors', 'checkout OOMKilled in prod')."
+                    ),
+                }
+
             incident_type = classify_incident(summary)
             span.set_attribute(EVAL_INCIDENT_TYPE, incident_type)
             span.set_attribute(EVAL_SERVICE, service)
@@ -321,7 +351,7 @@ class SentinalAISupervisor:
             # Historical context targets knowledge_worker (independent of playbook workers)
             # so we can overlap them to cut wall-clock time.
             historical_future = self._parallel_executor.submit(
-                self._fetch_historical_context, service, summary, receipts, budget, circuits,
+                self._fetch_historical_context, service, summary, incident_type, receipts, budget, circuits,
             )
 
             evidence = self._execute_playbook(
@@ -404,7 +434,7 @@ class SentinalAISupervisor:
                 result, incident_id, incident_type, service, evidence,
                 receipts, budget, confidence, hypothesis_count,
                 winner_hypothesis, severity, summary, llm_metrics,
-                judge_scores, elapsed,
+                judge_scores, elapsed, incident=incident,
             )
 
             return result
@@ -528,8 +558,19 @@ class SentinalAISupervisor:
         llm_metrics: dict,
         judge_scores: dict,
         elapsed: float,
+        incident: dict | None = None,
     ) -> None:
         """Persist investigation results to replay store, memory, knowledge graph, and DB."""
+        # G-2: Inject hypothesis metadata so generate_rca_report can find them
+        # (they were popped from result before this call so the public result stays clean,
+        #  but rca_report needs them)
+        result.setdefault("hypothesis_count", hypothesis_count)
+        result.setdefault("winner_hypothesis", winner_hypothesis)
+
+        # G-1: Surface receipts in the result so callers get a full audit trail
+        if "receipts" not in result:
+            result["receipts"] = receipts.to_list()
+
         # Persist replay artifact
         if self._replay_store:
             replay_result = {
@@ -537,11 +578,17 @@ class SentinalAISupervisor:
                 "hypothesis_count": hypothesis_count,
                 "winner_hypothesis": winner_hypothesis,
             }
+            # G-6: Store incident + incident_type so replay can re-execute analysis
+            # rather than just returning the cached result
+            evidence_with_meta = dict(evidence)
+            if incident:
+                evidence_with_meta["_incident"] = incident
+            evidence_with_meta["_incident_type"] = incident_type
             self._replay_store.save(
                 case_id=incident_id,
                 receipts=receipts.to_list(),
                 result=replay_result,
-                evidence=evidence,
+                evidence=evidence_with_meta,
             )
 
         # Store in AgentCore Memory (LTM) for future similarity search
@@ -771,12 +818,16 @@ class SentinalAISupervisor:
             return raw
 
     def _fetch_historical_context(
-        self, service: str, summary: str,
+        self, service: str, summary: str, incident_type: str = "",
         receipts: ReceiptCollector | None = None,
         budget: ExecutionBudget | None = None,
         circuits: CircuitBreakerRegistry | None = None,
     ) -> dict | None:
-        """Optional phase 4: fetch similar historical incidents."""
+        """Optional phase 4: fetch similar historical incidents.
+
+        G-8: incident_type is included in the search so memory retrieval is
+        type-filtered rather than service-only.
+        """
         worker = self.workers.get("knowledge_worker")
         if worker is None:
             return None
@@ -786,7 +837,7 @@ class SentinalAISupervisor:
             budget.record_call()
         result = self._call_worker(
             worker, "search_similar",
-            {"service": service, "summary": summary},
+            {"service": service, "summary": summary, "incident_type": incident_type},
             receipts, budget, "knowledge_worker",
             circuits=circuits,
         )
@@ -961,13 +1012,18 @@ class SentinalAISupervisor:
         and dispatches independent workers concurrently using the shared
         ThreadPoolExecutor. Steps targeting the same worker run sequentially
         to respect rate limits. Falls back to sequential execution otherwise.
+
+        A LoopCheckpoint is used throughout to detect stalled investigations
+        and trigger early exit if no progress is made across two checkpoints.
         """
         playbook = get_playbook(incident_type)
         cb_registry = circuits or circuit_registry
+        loop_checkpoint = LoopCheckpoint()
 
         if not self._PARALLEL_PLAYBOOK:
             return self._execute_playbook_sequential(
                 playbook, incident_id, service, receipts, budget, cb_registry,
+                loop_checkpoint=loop_checkpoint,
             )
 
         # Group steps by worker for parallel dispatch
@@ -1023,6 +1079,20 @@ class SentinalAISupervisor:
                 wn = futures[future]
                 logger.warning("Parallel worker group %s failed: %s", wn, exc)
 
+            # Loop-operator checkpoint after each worker group completes
+            if budget is not None and loop_checkpoint.should_check(budget):
+                escalation = loop_checkpoint.check(set(evidence.keys()), 0)
+                if escalation:
+                    logger.warning(
+                        "Loop escalation in parallel playbook for %s: %s",
+                        incident_id, escalation["escalation_trigger"],
+                    )
+                    evidence["_loop_escalation"] = escalation
+                    # Cancel remaining futures (best-effort)
+                    for f in futures:
+                        f.cancel()
+                    break
+
         return evidence
 
     def _execute_playbook_sequential(
@@ -1030,8 +1100,13 @@ class SentinalAISupervisor:
         receipts: ReceiptCollector | None = None,
         budget: ExecutionBudget | None = None,
         circuits: CircuitBreakerRegistry | None = None,
+        loop_checkpoint: LoopCheckpoint | None = None,
     ) -> dict[str, Any]:
-        """Sequential fallback for playbook execution."""
+        """Sequential fallback for playbook execution.
+
+        If loop_checkpoint is provided, checks for stall escalation after
+        every LOOP_CHECKPOINT_INTERVAL calls and breaks early if stalled.
+        """
         evidence: dict[str, Any] = {}
         for step in playbook:
             worker_name = step["worker"]
@@ -1056,7 +1131,49 @@ class SentinalAISupervisor:
             )
             evidence[label] = result
 
+            # Loop-operator checkpoint: check progress every N calls
+            if loop_checkpoint is not None and budget is not None:
+                if loop_checkpoint.should_check(budget):
+                    escalation = loop_checkpoint.check(
+                        set(evidence.keys()), 0,  # score updated post-analysis
+                    )
+                    if escalation:
+                        logger.warning(
+                            "Loop escalation triggered for %s: %s",
+                            incident_id, escalation["escalation_trigger"],
+                        )
+                        evidence["_loop_escalation"] = escalation
+                        break
+
         return evidence
+
+    def _get_change_time_window(self) -> int:
+        """Return change record lookback window in hours anchored to the incident time.
+
+        If the current incident has a created_at field, compute the elapsed hours since
+        then (plus a 2-hour buffer) capped at 48h.  Falls back to 24h when unavailable.
+        """
+        incident = getattr(self, "_current_incident", None)
+        if not incident:
+            return 24
+        created_at = incident.get("created_at", "") or incident.get("start_time", "")
+        if not created_at:
+            return 24
+        try:
+            from datetime import datetime, timezone
+            if isinstance(created_at, str):
+                # Handle ISO 8601 with or without timezone
+                created_at = created_at.replace("Z", "+00:00")
+                dt = datetime.fromisoformat(created_at)
+            else:
+                return 24
+            now = datetime.now(timezone.utc)
+            elapsed_hours = (now - dt).total_seconds() / 3600
+            # Look back 2 hours before incident creation plus elapsed investigation time
+            window = max(4, min(48, int(elapsed_hours + 2)))
+            return window
+        except Exception:
+            return 24
 
     def _build_params(self, step: dict, incident_id: str, service: str) -> dict:
         """Build parameters for a playbook step."""
@@ -1070,6 +1187,8 @@ class SentinalAISupervisor:
             params["service"] = service
         elif step["action"] == "get_change_data":
             params["service"] = service
+            # G-4: anchor change queries to incident time window
+            params["time_window_hours"] = self._get_change_time_window()
         elif step["action"] in ("get_golden_signals", "check_latency"):
             params["service"] = service
             params["target"] = service
@@ -1089,6 +1208,8 @@ class SentinalAISupervisor:
             params["query"] = step.get("query_hint", "")
         elif step["action"] == "get_change_records":
             params["service"] = service
+            # G-4: anchor ITSM change queries to the incident time window
+            params["time_window_hours"] = self._get_change_time_window()
         elif step["action"] == "get_known_errors":
             params["service"] = service
         # DevOps (GitHub) actions — proof-gated, only called conditionally
@@ -1198,6 +1319,17 @@ class SentinalAISupervisor:
                         confidence = min(confidence, 79)
             except Exception:
                 logger.debug("Knowledge retrieval skipped (non-critical)")
+
+        # G-5: Fail-closed — qualify root_cause string when confidence is insufficient
+        # so callers never act on an unqualified guess
+        _MINIMUM_ACTIONABLE_CONFIDENCE = 30
+        if confidence < _MINIMUM_ACTIONABLE_CONFIDENCE:
+            root_cause = (
+                f"INSUFFICIENT EVIDENCE: {service} — confidence {confidence}/100. "
+                "Manual investigation required."
+            )
+        elif confidence < 50 and not root_cause.startswith("LOW CONFIDENCE"):
+            root_cause = f"LOW CONFIDENCE: {root_cause}"
 
         result = {
             "incident_id": incident_id,
@@ -1394,6 +1526,19 @@ class SentinalAISupervisor:
             evidence_refs = ["golden_signals:latency_spike", "logs:timeout"]
             if changes:
                 evidence_refs.append("changes:deployment")
+            # G-7: check ITSM topology to confirm downstream is a known dependency
+            topology_detail = ""
+            ci = (self._itsm_evidence or {}).get("ci", {})
+            deps = ci.get("dependencies", [])
+            if deps:
+                evidence_refs.append("itsm:topology")
+                dep_names = [str(d) for d in deps]
+                if downstream in dep_names:
+                    topology_detail = (
+                        f" CMDB confirms {downstream} is a registered dependency of {service}."
+                    )
+                else:
+                    topology_detail = f" CMDB-registered dependencies: {', '.join(dep_names[:3])}."
             hypotheses.append(Hypothesis(
                 name="downstream_slow_queries",
                 root_cause=f"{downstream} database slow queries causing upstream timeouts",
@@ -1407,7 +1552,7 @@ class SentinalAISupervisor:
                     f"The first event in the timeline was {downstream} latency at the anomaly start, "
                     f"which then caused cascading timeouts. The causal chain is clear: "
                     f"database slow queries in {downstream} led to request timeouts before "
-                    f"the api-gateway timeout threshold was reached."
+                    f"the api-gateway timeout threshold was reached.{topology_detail}"
                 ),
             ))
 
@@ -1500,15 +1645,22 @@ class SentinalAISupervisor:
                     ci_status = latest_run.get("conclusion", "unknown")
                     devops_detail += f" CI pipeline status: {ci_status}."
 
-            # Enrich with ITSM context if available
+            # G-7: Enrich with ITSM topology (service tier + dependency graph)
             itsm_detail = ""
             itsm = self._itsm_evidence
             if itsm:
-                if itsm.get("ci"):
+                ci = itsm.get("ci", {})
+                if ci:
                     evidence_refs.append("itsm:ci_details")
-                    tier = itsm["ci"].get("tier", "")
+                    tier = ci.get("tier", "")
                     if tier:
                         itsm_detail = f" Service tier: {tier}."
+                    # G-7: surface CI dependency topology so blast-radius is visible
+                    deps = ci.get("dependencies", [])
+                    if deps:
+                        evidence_refs.append("itsm:topology")
+                        dep_list = ", ".join(str(d) for d in deps[:4])
+                        itsm_detail += f" Downstream dependencies: {dep_list}."
                 if deployment.get("rollback_plan"):
                     itsm_detail += f" Rollback plan: {deployment['rollback_plan']}."
 
@@ -1878,6 +2030,11 @@ class SentinalAISupervisor:
     # Data extraction helpers
     # ------------------------------------------------------------------ #
 
+    @staticmethod
+    def _log_timestamp(log: dict) -> str:
+        """Normalize log timestamp across Splunk (_time), generic (timestamp), and short (ts) keys."""
+        return log.get("_time") or log.get("timestamp") or log.get("ts") or ""
+
     def _extract_logs(self, evidence: dict) -> list[dict]:
         """Extract log entries from evidence."""
         all_logs = []
@@ -1889,7 +2046,7 @@ class SentinalAISupervisor:
                 results = logs_data.get("results", [])
                 if isinstance(results, list):
                     all_logs.extend(results)
-        return sorted(all_logs, key=lambda x: x.get("_time", ""))
+        return sorted(all_logs, key=self._log_timestamp)
 
     def _extract_signals(self, evidence: dict) -> dict:
         """Extract golden signals from evidence."""
@@ -1920,7 +2077,7 @@ class SentinalAISupervisor:
             events = val.get("events", [])
             if isinstance(events, list):
                 all_events.extend(events)
-        return sorted(all_events, key=lambda x: x.get("timestamp", ""))
+        return sorted(all_events, key=lambda x: x.get("timestamp") or x.get("_time") or x.get("ts") or "")
 
     def _extract_changes(self, evidence: dict) -> list[dict]:
         """Extract change/deployment data from evidence (Splunk + ServiceNow)."""
@@ -2028,10 +2185,12 @@ class SentinalAISupervisor:
         entries: list[dict] = []
         for event in events:
             msg = event.get("message", "")
-            entries.append({"timestamp": event.get("timestamp", ""), "event": msg,
+            # G-3: normalize timestamp key (timestamp / _time / ts)
+            ts = event.get("timestamp") or event.get("_time") or event.get("ts") or ""
+            entries.append({"timestamp": ts, "event": msg,
                             "source": "events", "service": service})
             if "oomkill" in msg.lower():
-                entries.append({"timestamp": event.get("timestamp", ""),
+                entries.append({"timestamp": ts,
                                 "event": f"OOMKill event: {msg}",
                                 "source": "events", "service": service})
         return entries
@@ -2043,14 +2202,16 @@ class SentinalAISupervisor:
         for log in logs[:5]:
             log_service = log.get("service", service)
             log_msg = log.get("message", "")
-            entries.append({"timestamp": log.get("_time", ""), "event": log_msg,
+            # G-3: normalize timestamp key (Splunk _time, generic timestamp, or ts)
+            ts = self._log_timestamp(log)
+            entries.append({"timestamp": ts, "event": log_msg,
                             "source": "logs", "service": log_service})
             if "timeout" in log_msg.lower():
                 timeout_logs.append(log_service)
         if timeout_logs:
             svc = timeout_logs[0]
             entries.append({
-                "timestamp": logs[0].get("_time", "") if logs else "",
+                "timestamp": self._log_timestamp(logs[0]) if logs else "",
                 "event": f"{svc} timeout errors detected ({len(timeout_logs)} occurrences)",
                 "source": "log_summary", "service": svc,
             })

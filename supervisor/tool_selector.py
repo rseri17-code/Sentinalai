@@ -119,6 +119,9 @@ CLASSIFICATION_KEYWORDS: dict[str, list[str]] = {
         "error spike", "error rate", "exception", "500",
         "5xx", "502", "503", "internal server error",
         "exception rate", "unhandled exception", "panic", "crash",
+        # G-9: deployment-triggered error spikes — classify before falling through to default
+        "after deployment", "after deploy", "post-deploy", "post deploy",
+        "following release", "new version broke", "latest release broke",
     ],
     "latency": [
         "latency", "slow", "response time",
@@ -163,6 +166,46 @@ CLASSIFICATION_KEYWORDS: dict[str, list[str]] = {
 # =========================================================================
 
 VALID_INCIDENT_TYPES: frozenset[str] = frozenset(INCIDENT_PLAYBOOKS.keys())
+
+# =========================================================================
+# G-10: Meta-query detection — distinguish questions from incident summaries
+# =========================================================================
+
+# Phrases that indicate the input is a question/request rather than an incident
+_META_QUERY_PREFIXES: tuple[str, ...] = (
+    "has this happened",
+    "is this a known",
+    "what is the runbook",
+    "what are the steps",
+    "how do i ",
+    "how do we ",
+    "how should i ",
+    "how should we ",
+    "show me the",
+    "show me all",
+    "find all ",
+    "find recent",
+    "find past",
+    "can you help",
+    "explain the",
+    "what caused previous",
+    "have we seen this",
+    "is there a runbook",
+    "what's the fix",
+    "what is the fix",
+)
+
+
+def is_meta_query(summary: str) -> bool:
+    """Return True if *summary* looks like a question or lookup request rather than
+    an active incident description.
+
+    G-10: Prevents the supervisor from launching a full tool-calling investigation
+    on natural-language questions that belong to a lookup/Q&A path instead.
+    """
+    lower = summary.lower().strip()
+    return any(lower.startswith(p) or p in lower for p in _META_QUERY_PREFIXES)
+
 
 # =========================================================================
 # Sentinel: indicates whether the last classify_incident call used LLM

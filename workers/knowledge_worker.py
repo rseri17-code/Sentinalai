@@ -32,6 +32,7 @@ class KnowledgeWorker(BaseWorker):
         Params:
             service: Service name to filter by
             summary: Natural language description of the incident
+            incident_type: Optional incident classification to narrow the search
 
         Returns:
             {"similar_incidents": [...]} — empty list if memory unavailable
@@ -44,13 +45,20 @@ class KnowledgeWorker(BaseWorker):
 
             service = params.get("service", "")
             summary = params.get("summary", "")
+            # G-8: include incident_type in the query so semantic search is type-filtered
+            incident_type = params.get("incident_type", "")
 
             if not service and not summary:
                 return {"similar_incidents": []}
 
+            # Prepend incident_type tag to query so memory retrieval gets a richer signal
+            query = summary or service
+            if incident_type:
+                query = f"[{incident_type}] {query}"
+
             results = search_similar_incidents(
                 service=service,
-                query=summary or service,
+                query=query,
             )
 
             return {"similar_incidents": results}

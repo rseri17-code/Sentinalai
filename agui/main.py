@@ -1,0 +1,283 @@
+"""AG UI BFF (Backend for Frontend) — main FastAPI application.
+
+This is the single entry point for the AG UI backend.
+
+Responsibilities:
+1. Serve REST API for investigation management, receipts, replay, memory, control
+2. Serve WebSocket endpoint for real-time event streaming
+3. Initialize event bus, WebSocket manager, state store
+4. Bridge agent events to WebSocket clients
+5. Enforce authentication (JWT + RBAC)
+6. Propagate trace_id across all requests
+
+Port: 8081 (separate from agentcore_runtime.py on 8080)
+
+Security:
+- CORS configured for UI origin
+- JWT validated on every request
+- Rate limiting on control endpoints (future)
+"""
+from __future__ import annotations
+
+import asyncio
+import logging
+import os
+import time
+
+import uvicorn
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from agui.event_bus import init_bus, get_bus
+from agui.ws_manager import get_ws_manager
+from agui.middleware.auth import get_actor, ActorContext
+from agui.middleware.trace import TraceMiddleware
+from agui.api.incidents import router as incidents_router
+from agui.api.investigations import router as investigations_router
+from agui.api.receipts import router as receipts_router
+from agui.api.replay import router as replay_router
+from agui.api.memory import router as memory_router
+from agui.api.control import router as control_router
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+ALLOWED_ORIGINS = os.getenv(
+    "AGUI_CORS_ORIGINS",
+    "http://localhost:5173,http://localhost:3000,http://localhost:8081",
+).split(",")
+
+BFF_PORT = int(os.getenv("AGUI_BFF_PORT", "8081"))
+BFF_HOST = os.getenv("AGUI_BFF_HOST", "0.0.0.0")
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title="ObserveAI AG UI — BFF",
+        description=(
+            "Backend for Frontend for the ObserveAI Agent Control UI. "
+            "Provides real-time event streaming, execution graph, receipt evidence, "
+            "memory tracing, deterministic replay, and human-in-the-loop controls."
+        ),
+        version="1.0.0",
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+        openapi_url="/api/openapi.json",
+    )
+
+    # Middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=ALLOWED_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+        expose_headers=["X-Trace-Id", "X-XRay-Url"],
+    )
+    app.add_middleware(TraceMiddleware)
+
+    # REST API routes
+    app.include_router(incidents_router)
+    app.include_router(investigations_router)
+    app.include_router(receipts_router)
+    app.include_router(replay_router)
+    app.include_router(memory_router)
+    app.include_router(control_router)
+
+    return app
+
+
+app = create_app()
+
+
+# ── Lifecycle ────────────────────────────────────────────────────────────────
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    """Initialize all async components on startup."""
+    loop = asyncio.get_event_loop()
+
+    # Initialize event bus
+    bus = init_bus(loop)
+    await bus.start()
+    logger.info("Event bus started")
+
+    # Initialize WebSocket manager
+    ws_manager = get_ws_manager()
+    await ws_manager.start()
+    logger.info("WebSocket manager started")
+
+    # Wire event bus persistence backend (DynamoDB if available)
+    from agui.state_store import get_state_store
+    state_store = get_state_store()
+
+    class StateBusBackend:
+        async def publish(self, event) -> None:
+            await state_store.put_event(event)
+
+        async def get_events(self, investigation_id: str, since_seq: int = 0):
+            return await state_store.get_events(investigation_id, since_seq)
+
+    bus.set_backend(StateBusBackend())
+    logger.info("AG UI BFF ready on port %d", BFF_PORT)
+
+
+@app.on_event("shutdown")
+async def shutdown_event() -> None:
+    """Graceful shutdown."""
+    bus = get_bus()
+    await bus.stop()
+    ws_manager = get_ws_manager()
+    await ws_manager.stop()
+    logger.info("AG UI BFF shutdown complete")
+
+
+# ── WebSocket endpoint ────────────────────────────────────────────────────────
+
+@app.websocket("/ws/investigations/{investigation_id}")
+async def ws_investigation(
+    websocket: WebSocket,
+    investigation_id: str,
+    token: str = Query(default=""),
+    last_seq: int = Query(default=0),
+):
+    """
+    WebSocket endpoint for real-time investigation event streaming.
+
+    Query params:
+      token    → JWT token (passed as query param for WS handshake)
+      last_seq → Last received sequence number (for reconnect replay)
+
+    Message types received from server:
+      connection.ack     → Connection accepted
+      {event}            → AGUIEvent
+      heartbeat          → Periodic keepalive
+      pong               → Response to client ping
+
+    Message types sent by client:
+      ping               → Keepalive
+      subscribe          → Switch investigation subscription
+    """
+    # Authenticate WebSocket
+    actor_id = "anonymous"
+    actor_role = "viewer"
+
+    from agui.middleware.auth import AUTH_REQUIRED, _decode_jwt, _get_actor_from_claims
+    if AUTH_REQUIRED and token:
+        try:
+            claims = _decode_jwt(token)
+            actor = _get_actor_from_claims(claims)
+            actor_id = actor.actor_id
+            actor_role = actor.actor_role
+        except Exception as e:
+            logger.warning("WS auth failed: %s", e)
+            await websocket.close(code=4001, reason="Authentication failed")
+            return
+    elif not AUTH_REQUIRED:
+        actor_id = "dev-user"
+        actor_role = "admin"
+
+    ws_manager = get_ws_manager()
+    await ws_manager.handle_connection(
+        websocket=websocket,
+        investigation_id=investigation_id,
+        actor_id=actor_id,
+        actor_role=actor_role,
+        last_seq=last_seq,
+    )
+
+
+# ── Health + Status ───────────────────────────────────────────────────────────
+
+@app.get("/ping")
+async def ping():
+    """Health check endpoint."""
+    return {"status": "ok", "service": "agui-bff", "timestamp": time.time()}
+
+
+@app.get("/api/v1/status")
+async def status(actor: ActorContext = Depends(get_actor)):
+    """System status — active connections, bus health, store health."""
+    ws_manager = get_ws_manager()
+    bus = get_bus()
+    return {
+        "service": "agui-bff",
+        "version": "1.0.0",
+        "timestamp": time.time(),
+        "ws_connections": ws_manager.connection_count,
+        "bus_investigations": len(bus._queues),
+        "bus_history_size": sum(len(v) for v in bus._history.values()),
+        "actor": {
+            "id": actor.actor_id,
+            "role": actor.actor_role,
+        },
+    }
+
+
+@app.get("/api/v1/auth/token")
+async def get_test_token(
+    role: str = Query(default="admin"),
+    actor_id: str = Query(default="test-user"),
+):
+    """
+    Generate a test JWT token (DEV MODE ONLY).
+    Disabled when AGUI_AUTH_REQUIRED=true.
+    """
+    from agui.middleware.auth import AUTH_REQUIRED, make_test_token
+    if AUTH_REQUIRED:
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Test token endpoint disabled in production"},
+        )
+    token = make_test_token(actor_id=actor_id, role=role)
+    return {"token": token, "role": role, "actor_id": actor_id}
+
+
+# ── Synthetic data injection (for testing/demo) ───────────────────────────────
+
+@app.post("/api/v1/dev/inject")
+async def inject_synthetic_investigation(
+    incident_type: str = Query(default="error_spike"),
+    actor: ActorContext = Depends(get_actor),
+):
+    """
+    DEV ONLY: Inject a synthetic investigation for UI testing.
+    Streams events to WebSocket subscribers.
+    """
+    from agui.middleware.auth import AUTH_REQUIRED
+    if AUTH_REQUIRED:
+        return JSONResponse(status_code=403, content={"detail": "Dev endpoint disabled"})
+
+    from agui.synthetic_generator import SyntheticIncidentGenerator
+    gen = SyntheticIncidentGenerator()
+    investigation_id, events = await gen.generate_investigation(incident_type)
+
+    bus = get_bus()
+    # Stream events with realistic delays
+    async def stream():
+        for event in events:
+            await bus.publish(event)
+            await asyncio.sleep(0.3)
+
+    asyncio.create_task(stream())
+
+    return {
+        "investigation_id": investigation_id,
+        "incident_type": incident_type,
+        "event_count": len(events),
+        "ws_url": f"/ws/investigations/{investigation_id}",
+    }
+
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "agui.main:app",
+        host=BFF_HOST,
+        port=BFF_PORT,
+        reload=os.getenv("AGUI_DEV_RELOAD", "false").lower() == "true",
+        log_level="info",
+    )

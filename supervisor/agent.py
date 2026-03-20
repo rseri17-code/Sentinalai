@@ -1053,12 +1053,25 @@ class SentinalAISupervisor:
 
         evidence: dict[str, Any] = {}
 
+        # Capture investigation-local TLS values now (main thread) so pool threads
+        # can seed their own TLS before calling any downstream method that reads them.
+        # threading.local() is per-thread — pool threads start with an empty namespace.
+        _captured_investigation_deadline = getattr(self._tls, 'investigation_deadline', None)
+        _captured_current_incident = getattr(self._tls, 'current_incident', None)
+
         def _run_worker_group(worker_name: str, steps: list[dict]) -> list[tuple[str, dict]]:
             """Execute a group of steps for one worker sequentially.
 
             Budget check and recording are delegated to _call_worker (try_record)
             so concurrent worker groups cannot race on the budget counter.
+
+            Seeds this pool-thread's TLS with the investigation context captured from
+            the main investigation thread so _check_call_preconditions (deadline) and
+            _build_params (time-window anchoring via current_incident) work correctly.
             """
+            # Propagate investigation context to this pool thread's TLS namespace
+            self._tls.investigation_deadline = _captured_investigation_deadline
+            self._tls.current_incident = _captured_current_incident
             results = []
             for step in steps:
                 action = step["action"]
@@ -1073,8 +1086,8 @@ class SentinalAISupervisor:
                     circuits=cb_registry,
                 )
                 results.append((label, result))
-                # Stop this worker group if budget was exhausted by this call
-                if result and result.get("error") == "worker_unavailable" and budget and not budget.can_call():
+                # Stop this worker group if _call_worker reported budget exhaustion
+                if result and result.get("error") == "budget_exhausted":
                     logger.warning("Budget exhausted at step %s for %s", label, incident_id)
                     break
             return results
@@ -1590,10 +1603,10 @@ class SentinalAISupervisor:
         mem_limit = metrics.get("limit", 0)
 
         if pattern == "gradual_increase" or (metric_list and self._is_gradual_increase(metric_list)):
-            limit_gb = mem_limit / 1e9 if mem_limit else "unknown"
             evidence_refs = ["metrics:gradual_increase", "events:oomkill"]
             if mem_limit:
                 evidence_refs.append("metrics:limit_exceeded")
+            limit_str = f"{mem_limit / 1e9:.1f}GB" if mem_limit else "unknown"
             hypotheses.append(Hypothesis(
                 name="memory_leak",
                 root_cause=f"memory leak in {service} causing OOMKill",
@@ -1604,7 +1617,7 @@ class SentinalAISupervisor:
                     f"characteristic of a memory leak. Memory usage grew from "
                     f"{metric_list[0].get('value', 0) / 1e9:.1f}GB to "
                     f"{metric_list[-1].get('value', 0) / 1e9:.1f}GB before exceeding the "
-                    f"{limit_gb}GB limit and triggering an OOMKill. "
+                    f"{limit_str} limit and triggering an OOMKill. "
                     f"The gradual increase over {len(metric_list)} data points rules out a "
                     f"sudden spike, confirming a leak pattern. The OOMKill event was the "
                     f"direct result of memory saturation from this leak."
@@ -2350,9 +2363,9 @@ class SentinalAISupervisor:
             exc = log.get("exception", "")
             if "NullPointerException" in msg or "NullPointerException" in exc:
                 return "NullPointerException"
-            if "OutOfMemoryError" in msg:
+            if "OutOfMemoryError" in msg or "OutOfMemoryError" in exc:
                 return "OutOfMemoryError"
-            if "ConnectionRefused" in msg:
+            if "ConnectionRefused" in msg or "ConnectionRefused" in exc:
                 return "ConnectionRefused"
         return ""
 

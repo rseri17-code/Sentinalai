@@ -132,10 +132,10 @@ class TestSupervisorEfficiency:
 
     def test_parallel_playbook_produces_same_results(self):
         """Parallel and sequential playbooks should produce equivalent results."""
-        # Sequential
+        # Sequential — patch instance attribute (moved from class attr to support runtime config)
         sup_seq = SentinalAISupervisor()
-        with patch.object(type(sup_seq), '_PARALLEL_PLAYBOOK', False):
-            result_seq = sup_seq.investigate("INC12347")
+        sup_seq._parallel_playbook = False
+        result_seq = sup_seq.investigate("INC12347")
 
         # Parallel (default)
         sup_par = SentinalAISupervisor()

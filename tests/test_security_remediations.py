@@ -340,8 +340,8 @@ class TestG6_1_InvestigationDeadline:
         from supervisor.agent import SentinalAISupervisor
 
         supervisor = SentinalAISupervisor()
-        # Set deadline in the past
-        supervisor._investigation_deadline = time.monotonic() - 1
+        # Set deadline in the past (stored in thread-local since P0 concurrency fix)
+        supervisor._tls.investigation_deadline = time.monotonic() - 1
 
         mock_worker = MagicMock()
         result = supervisor._call_worker(

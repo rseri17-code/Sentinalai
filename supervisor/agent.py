@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import threading
 import time
 import concurrent.futures
 from typing import Any
@@ -87,15 +88,19 @@ from workers.itsm_worker import ItsmWorker
 from workers.devops_worker import DevopsWorker
 from workers.confluence_worker import ConfluenceWorker
 
-# Lazy-load calibrator (singleton)
+# Lazy-load calibrator (singleton — lock guards concurrent first-call races)
 _calibrator: ConfidenceCalibrator | None = None
+_calibrator_lock = threading.Lock()
 
 
 def _get_calibrator() -> ConfidenceCalibrator:
     global _calibrator
-    if _calibrator is None:
-        _calibrator = ConfidenceCalibrator.load()
-    return _calibrator
+    if _calibrator is not None:
+        return _calibrator
+    with _calibrator_lock:
+        if _calibrator is None:
+            _calibrator = ConfidenceCalibrator.load()
+        return _calibrator
 
 
 # Institutional knowledge layer (opt-in via env var, graceful degradation)
@@ -155,6 +160,7 @@ def compute_confidence(
     events: list[dict],
     changes: list[dict],
     corroborating_sources: int = 0,
+    incident_type: str = "",
 ) -> int:
     """Compute evidence-weighted confidence.
 
@@ -164,10 +170,19 @@ def compute_confidence(
       +1 per log entry (max +5)
       +2 if golden signals present with anomaly detected
       +1 if metrics have pattern field
-      -5 per missing critical source (signals empty, metrics empty)
+      -5 if signals absent AND the incident type is not one where absence is the symptom
+      -3 if metrics absent AND the incident type is not one where absence is the symptom
     Bounded to [0, 100].
+
+    ``incident_type`` guards the missing-source penalties: for ``silent_failure``
+    and ``missing_data`` incidents the absence of golden signals or metrics is
+    the defining characteristic of the incident, not a gap in investigation quality.
+    Penalising those types would systematically under-score correct investigations.
     """
     score = base
+
+    # Incident types where absence of signals/metrics is the expected finding
+    _ABSENCE_IS_SYMPTOM = frozenset({"silent_failure", "missing_data"})
 
     # Corroboration bonus: count how many sources have data
     source_count = 0
@@ -190,11 +205,12 @@ def compute_confidence(
     # Cross-signal bonus
     score += source_count * 2
 
-    # Missing-source penalty (only for sources expected in a good investigation)
-    if not signals or not signals.get("golden_signals"):
-        score -= 5
-    if not metrics or not metrics.get("metrics"):
-        score -= 3
+    # Missing-source penalty (only for incident types where presence is expected)
+    if incident_type not in _ABSENCE_IS_SYMPTOM:
+        if not signals or not signals.get("golden_signals"):
+            score -= 5
+        if not metrics or not metrics.get("metrics"):
+            score -= 3
 
     # Explicit corroboration from caller
     score += corroborating_sources * 2
@@ -213,6 +229,9 @@ class SentinalAISupervisor:
     INVESTIGATION_DEADLINE_SECONDS = float(
         os.environ.get("INVESTIGATION_DEADLINE_SECONDS", "120")
     )
+
+    # Per-investigation thread-local state (safe for concurrent investigations)
+    _tls = threading.local()
 
     def __init__(
         self,
@@ -235,6 +254,8 @@ class SentinalAISupervisor:
         self._replay_store = ReplayStore(replay_dir) if replay_dir else None
         self._call_timeout = call_timeout
         self._max_retries = max_retries
+        # Read at instance creation so env var changes between test cases are respected
+        self._parallel_playbook = os.environ.get("PARALLEL_PLAYBOOK", "true").lower() in ("true", "1", "yes")
         # G6.2: Shared ThreadPoolExecutor (reused across calls within investigation)
         # Sized to match MAX_CONCURRENT_WORKERS from guardrails
         self._executor = concurrent.futures.ThreadPoolExecutor(
@@ -280,8 +301,8 @@ class SentinalAISupervisor:
             span.set_attribute(GENAI_SYSTEM, "sentinalai")
             span.set_attribute(GENAI_OPERATION_NAME, "investigate")
 
-            # G6.1: Per-investigation wall-clock deadline
-            self._investigation_deadline = time.monotonic() + self.INVESTIGATION_DEADLINE_SECONDS
+            # G6.1: Per-investigation wall-clock deadline (thread-local — safe for concurrent calls)
+            self._tls.investigation_deadline = time.monotonic() + self.INVESTIGATION_DEADLINE_SECONDS
 
             # Start with default budget; will be replaced after severity detection
             receipts = ReceiptCollector(case_id=incident_id)
@@ -301,8 +322,8 @@ class SentinalAISupervisor:
             summary = incident.get("summary", "")
             service = incident.get("affected_service", "unknown")
 
-            # Step 2: Classify — cache incident on self so _build_params can time-anchor queries
-            self._current_incident = incident
+            # Step 2: Classify — cache incident in thread-local so _build_params can time-anchor queries
+            self._tls.current_incident = incident
 
             # G-10: Detect meta-queries (questions / lookup requests) before classification
             if is_meta_query(summary):
@@ -369,9 +390,9 @@ class SentinalAISupervisor:
             # Collect historical context (ran in parallel with playbook)
             try:
                 historical = historical_future.result(timeout=self._call_timeout)
-            except Exception:
+            except Exception as exc:
                 historical = None
-                logger.debug("Historical context retrieval failed (non-critical)")
+                logger.warning("Historical context retrieval failed (non-critical): %s", exc)
             if historical:
                 evidence["historical_context"] = historical
 
@@ -514,10 +535,17 @@ class SentinalAISupervisor:
     def _run_judge_scoring(
         self, incident_id: str, incident_type: str, result: dict,
     ) -> dict:
-        """Run LLM-as-judge eval scoring (optional, non-blocking). Returns judge scores dict."""
+        """Run LLM-as-judge eval scoring (optional, non-blocking). Returns judge scores dict.
+
+        The judge evaluates output quality (structure, format, confidence range) rather
+        than accuracy against ground truth. Ground-truth accuracy evaluation requires
+        an external store of verified RCA outcomes which is not available here.
+        Setting root_cause to "" signals to the judge that no ground-truth comparison
+        should be performed — only structural quality dimensions are scored.
+        """
         try:
             expected = {
-                "root_cause": result.get("root_cause", ""),
+                "root_cause": "",  # No ground truth available — structural eval only
                 "root_cause_keywords": [],
                 "confidence_min": 0,
                 "confidence_max": 100,
@@ -537,8 +565,8 @@ class SentinalAISupervisor:
                     source=judge_result.get("source", "rule_based"),
                 )
             return scores
-        except Exception:
-            logger.debug("Judge scoring skipped (non-critical)")
+        except Exception as exc:
+            logger.warning("Judge scoring failed (non-critical): %s", exc)
             return {}
 
     def _persist_results(
@@ -607,8 +635,8 @@ class SentinalAISupervisor:
                         f"hypotheses={hypothesis_count}"
                     ),
                 )
-            except Exception:
-                logger.debug("Memory store skipped (non-critical)")
+            except Exception as exc:
+                logger.warning("Memory store failed (non-critical): %s", exc)
 
         # Persist to institutional knowledge graph (non-blocking)
         if _KNOWLEDGE_AVAILABLE and _knowledge_graph is not None:
@@ -621,8 +649,8 @@ class SentinalAISupervisor:
                     confidence=confidence,
                     evidence_refs=list(evidence.keys()),
                 )
-            except Exception:
-                logger.debug("Knowledge graph persist skipped (non-critical)")
+            except Exception as exc:
+                logger.warning("Knowledge graph persist failed (non-critical): %s", exc)
 
         # Generate structured RCA report
         try:
@@ -642,8 +670,8 @@ class SentinalAISupervisor:
             )
             result["rca_report"] = rca_report.to_dict()
             result["rca_markdown"] = render_markdown(rca_report)
-        except Exception:
-            logger.debug("RCA report generation skipped (non-critical)")
+        except Exception as exc:
+            logger.warning("RCA report generation failed (non-critical): %s", exc)
 
         # Persist to database (non-blocking, graceful degradation)
         if _db_enabled():
@@ -673,8 +701,8 @@ class SentinalAISupervisor:
                             "winner": winner_hypothesis,
                         },
                     )
-            except Exception:
-                logger.debug("Database persistence skipped (non-critical)")
+            except Exception as exc:
+                logger.warning("Database persistence failed (non-critical): %s", exc)
 
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
@@ -685,7 +713,8 @@ class SentinalAISupervisor:
         circuits: CircuitBreakerRegistry | None,
     ) -> dict | None:
         """Check deadline and circuit breaker before a worker call. Returns error dict or None."""
-        if hasattr(self, '_investigation_deadline') and time.monotonic() > self._investigation_deadline:
+        deadline = getattr(self._tls, 'investigation_deadline', None)
+        if deadline is not None and time.monotonic() > deadline:
             logger.warning("Investigation deadline exceeded, skipping %s.%s", worker_name, action)
             return {"error": "investigation_deadline_exceeded", "worker": worker_name, "action": action}
         if circuits:
@@ -739,14 +768,16 @@ class SentinalAISupervisor:
         attempts = 1 + self._max_retries
 
         for attempt in range(attempts):
+            # Each attempt (initial + retries) consumes one budget unit atomically.
+            # try_record() is used so check+record is never split across threads.
+            if budget and not budget.try_record():
+                logger.warning("Budget exhausted before %s.%s (attempt %d)", worker_name, action, attempt + 1)
+                return {"error": "budget_exhausted", "worker": worker_name, "action": action}
+
             if attempt > 0:
                 backoff_s = 0.01 * (2 ** (attempt - 1))
                 time.sleep(backoff_s)
                 logger.info("Retrying %s.%s (attempt %d/%d)", worker_name, action, attempt + 1, attempts)
-                if budget and not budget.can_call():
-                    break
-                if budget:
-                    budget.record_call()
 
             receipt = receipts.start(worker_name, action, params, policy_ref=policy_ref) if receipts else None
             call_start = time.monotonic()
@@ -795,10 +826,6 @@ class SentinalAISupervisor:
         budget: ExecutionBudget | None = None,
         circuits: CircuitBreakerRegistry | None = None,
     ) -> dict | None:
-        if budget and not budget.can_call():
-            return None
-        if budget:
-            budget.record_call()
         result = self._call_worker(
             self.workers["ops_worker"],
             "get_incident_by_id",
@@ -831,10 +858,6 @@ class SentinalAISupervisor:
         worker = self.workers.get("knowledge_worker")
         if worker is None:
             return None
-        if budget and not budget.can_call():
-            return None
-        if budget:
-            budget.record_call()
         result = self._call_worker(
             worker, "search_similar",
             {"service": service, "summary": summary, "incident_type": incident_type},
@@ -855,14 +878,18 @@ class SentinalAISupervisor:
         receipts: ReceiptCollector | None, budget: ExecutionBudget | None,
         circuits: CircuitBreakerRegistry | None,
     ) -> dict | None:
-        """Check budget, record call, invoke worker. Returns None if budget exhausted."""
-        if budget and not budget.can_call():
-            return None
-        if budget:
-            budget.record_call()
-        return self._call_worker(
+        """Invoke worker, delegating budget check and recording to _call_worker.
+
+        Returns None only when _call_worker itself reports budget exhaustion.
+        _call_worker handles try_record() atomically for all attempts.
+        """
+        result = self._call_worker(
             worker, action, params, receipts, budget, worker_name, circuits=circuits,
         )
+        # _call_worker returns {"error": ...} when budget exhausted — surface as None
+        if result and result.get("error") in ("budget_exhausted",):
+            return None
+        return result
 
     def _fetch_itsm_context(
         self, service: str, summary: str,
@@ -968,22 +995,16 @@ class SentinalAISupervisor:
         context: dict[str, Any] = {}
 
         # Recent deployments — PRs/releases in the incident window
-        if budget and not budget.can_call():
-            return context or None
-        if budget:
-            budget.record_call()
         result = self._call_worker(
             worker, "get_recent_deployments", {"service": service},
             receipts, budget, "devops_worker", circuits=circuits,
         )
         if result and result.get("deployments"):
             context["deployments"] = result["deployments"]
+        if result and result.get("error") == "budget_exhausted":
+            return context or None
 
         # Workflow runs — CI/CD pipeline status
-        if budget and not budget.can_call():
-            return context or None
-        if budget:
-            budget.record_call()
         result = self._call_worker(
             worker, "get_workflow_runs", {"service": service},
             receipts, budget, "devops_worker", circuits=circuits,
@@ -996,9 +1017,6 @@ class SentinalAISupervisor:
     # ------------------------------------------------------------------ #
     # Internal: execute playbook (W1 isolated circuits, W4 timeout, W5 retry)
     # ------------------------------------------------------------------ #
-
-    # Parallel playbook execution control
-    _PARALLEL_PLAYBOOK = os.environ.get("PARALLEL_PLAYBOOK", "true").lower() in ("true", "1", "yes")
 
     def _execute_playbook(
         self, incident_type: str, incident_id: str, service: str,
@@ -1020,7 +1038,7 @@ class SentinalAISupervisor:
         cb_registry = circuits or circuit_registry
         loop_checkpoint = LoopCheckpoint()
 
-        if not self._PARALLEL_PLAYBOOK:
+        if not self._parallel_playbook:
             return self._execute_playbook_sequential(
                 playbook, incident_id, service, receipts, budget, cb_registry,
                 loop_checkpoint=loop_checkpoint,
@@ -1036,29 +1054,29 @@ class SentinalAISupervisor:
         evidence: dict[str, Any] = {}
 
         def _run_worker_group(worker_name: str, steps: list[dict]) -> list[tuple[str, dict]]:
-            """Execute a group of steps for one worker sequentially."""
+            """Execute a group of steps for one worker sequentially.
+
+            Budget check and recording are delegated to _call_worker (try_record)
+            so concurrent worker groups cannot race on the budget counter.
+            """
             results = []
             for step in steps:
                 action = step["action"]
                 label = step.get("label", action)
-
-                if budget and not budget.can_call():
-                    logger.warning("Budget exhausted at step %s for %s", label, incident_id)
-                    break
-
                 params = self._build_params(step, incident_id, service)
                 worker = self.workers.get(worker_name)
                 if worker is None:
                     continue
-
-                if budget:
-                    budget.record_call()
 
                 result = self._call_worker(
                     worker, action, params, receipts, budget, worker_name,
                     circuits=cb_registry,
                 )
                 results.append((label, result))
+                # Stop this worker group if budget was exhausted by this call
+                if result and result.get("error") == "worker_unavailable" and budget and not budget.can_call():
+                    logger.warning("Budget exhausted at step %s for %s", label, incident_id)
+                    break
             return results
 
         # Submit each worker group concurrently (uses separate executor to avoid deadlock)
@@ -1068,7 +1086,8 @@ class SentinalAISupervisor:
             futures[future] = worker_name
 
         # Collect results — bounded by investigation deadline, not just call_timeout
-        remaining_budget = self._investigation_deadline - time.monotonic() if hasattr(self, '_investigation_deadline') else self._call_timeout * len(playbook)
+        deadline = getattr(self._tls, 'investigation_deadline', None)
+        remaining_budget = (deadline - time.monotonic()) if deadline is not None else self._call_timeout * len(playbook)
         group_timeout = max(1.0, min(remaining_budget, self._call_timeout * len(playbook)))
         for future in concurrent.futures.as_completed(futures, timeout=group_timeout):
             try:
@@ -1112,24 +1131,20 @@ class SentinalAISupervisor:
             worker_name = step["worker"]
             action = step["action"]
             label = step.get("label", action)
-
-            if budget and not budget.can_call():
-                logger.warning("Budget exhausted at step %s for %s", label, incident_id)
-                break
-
             params = self._build_params(step, incident_id, service)
             worker = self.workers.get(worker_name)
             if worker is None:
                 continue
-
-            if budget:
-                budget.record_call()
 
             result = self._call_worker(
                 worker, action, params, receipts, budget, worker_name,
                 circuits=circuits,
             )
             evidence[label] = result
+            # _call_worker returns a budget-exhausted signal when try_record() fails
+            if result and result.get("error") in ("budget_exhausted",):
+                logger.warning("Budget exhausted at step %s for %s", label, incident_id)
+                break
 
             # Loop-operator checkpoint: check progress every N calls
             if loop_checkpoint is not None and budget is not None:
@@ -1153,7 +1168,7 @@ class SentinalAISupervisor:
         If the current incident has a created_at field, compute the elapsed hours since
         then (plus a 2-hour buffer) capped at 48h.  Falls back to 24h when unavailable.
         """
-        incident = getattr(self, "_current_incident", None)
+        incident = getattr(self._tls, "current_incident", None)
         if not incident:
             return 24
         created_at = incident.get("created_at", "") or incident.get("start_time", "")
@@ -1179,9 +1194,7 @@ class SentinalAISupervisor:
         """Build parameters for a playbook step."""
         params: dict[str, Any] = {}
 
-        if step["action"] == "get_incident_by_id":
-            params["incident_id"] = incident_id
-        elif step["action"] == "search_logs":
+        if step["action"] == "search_logs":
             hint = step.get("query_hint", "{service}")
             params["query"] = hint.format(service=service)
             params["service"] = service
@@ -1248,9 +1261,9 @@ class SentinalAISupervisor:
         events = self._extract_events(evidence)
         changes = self._extract_changes(evidence)
 
-        # ITSM + DevOps context (available to analyzers via instance attrs)
-        self._itsm_evidence = self._extract_itsm_context(evidence)
-        self._devops_evidence = self._extract_devops_context(evidence)
+        # ITSM + DevOps context (stored in thread-local — safe for concurrent investigations)
+        self._tls.itsm_evidence = self._extract_itsm_context(evidence)
+        self._tls.devops_evidence = self._extract_devops_context(evidence)
 
         # Build timeline from all sources
         timeline = self._build_timeline(logs, signals, metrics, events, changes, incident_type, service)
@@ -1265,6 +1278,7 @@ class SentinalAISupervisor:
             h.base_score = compute_confidence(
                 h.base_score, logs, signals, metrics, events, changes,
                 corroborating_sources=len(h.evidence_refs),
+                incident_type=incident_type,
             )
 
         # LLM hypothesis refinement (optional, graceful degradation)
@@ -1285,7 +1299,7 @@ class SentinalAISupervisor:
             reasoning = winner.reasoning
         else:
             root_cause = f"{service} incident - investigation inconclusive"
-            confidence = compute_confidence(30, logs, signals, metrics, events, changes)
+            confidence = compute_confidence(30, logs, signals, metrics, events, changes, incident_type=incident_type)
             reasoning = f"Generic analysis of {service} incident. Insufficient pattern match."
 
         # LLM reasoning generation (optional, enhances winner reasoning)
@@ -1317,8 +1331,8 @@ class SentinalAISupervisor:
                     # Without proof artifact, confidence must stay < 80
                     if not winner.evidence_refs:
                         confidence = min(confidence, 79)
-            except Exception:
-                logger.debug("Knowledge retrieval skipped (non-critical)")
+            except Exception as exc:
+                logger.warning("Knowledge retrieval failed (non-critical): %s", exc)
 
         # G-5: Fail-closed — qualify root_cause string when confidence is insufficient
         # so callers never act on an unqualified guess
@@ -1400,7 +1414,7 @@ class SentinalAISupervisor:
                 "refine_model_id": result.get("model_id", ""),
             }
         except Exception as exc:
-            logger.debug("LLM hypothesis refinement skipped: %s", exc)
+            logger.warning("LLM hypothesis refinement failed: %s", exc)
             return {}
 
     def _llm_generate_reasoning(
@@ -1443,7 +1457,7 @@ class SentinalAISupervisor:
                 "reasoning_model_id": result.get("model_id", ""),
             }
         except Exception as exc:
-            logger.debug("LLM reasoning generation skipped: %s", exc)
+            logger.warning("LLM reasoning generation failed: %s", exc)
             return {"reasoning": ""}
 
     def _format_evidence_summary(
@@ -1528,7 +1542,7 @@ class SentinalAISupervisor:
                 evidence_refs.append("changes:deployment")
             # G-7: check ITSM topology to confirm downstream is a known dependency
             topology_detail = ""
-            ci = (self._itsm_evidence or {}).get("ci", {})
+            ci = (getattr(self._tls, "itsm_evidence", None) or {}).get("ci", {})
             deps = ci.get("dependencies", [])
             if deps:
                 evidence_refs.append("itsm:topology")
@@ -1627,7 +1641,7 @@ class SentinalAISupervisor:
 
             # Enrich with DevOps context if available (proof-gated)
             devops_detail = ""
-            devops = self._devops_evidence
+            devops = getattr(self._tls, "devops_evidence", None)
             if devops:
                 deploys = devops.get("deployments", [])
                 workflows = devops.get("workflow_runs", [])
@@ -1647,7 +1661,7 @@ class SentinalAISupervisor:
 
             # G-7: Enrich with ITSM topology (service tier + dependency graph)
             itsm_detail = ""
-            itsm = self._itsm_evidence
+            itsm = getattr(self._tls, "itsm_evidence", None)
             if itsm:
                 ci = itsm.get("ci", {})
                 if ci:
@@ -1755,7 +1769,7 @@ class SentinalAISupervisor:
 
             # DevOps enrichment for saturation after change
             devops_detail = ""
-            devops = self._devops_evidence
+            devops = getattr(self._tls, "devops_evidence", None)
             if devops and devops.get("workflow_runs"):
                 evidence_refs.append("devops:workflow_runs")
                 ci_status = devops["workflow_runs"][0].get("conclusion", "unknown")

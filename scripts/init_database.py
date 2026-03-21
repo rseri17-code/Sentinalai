@@ -21,7 +21,7 @@ logger = logging.getLogger("sentinalai.init_db")
 
 SCHEMA_PATH = Path(__file__).resolve().parent.parent / "database" / "schema.sql"
 
-EXPECTED_TABLES = ["investigations", "knowledge_base", "tool_usage"]
+EXPECTED_TABLES = ["investigations", "knowledge_base", "tool_usage", "eval_results"]
 
 
 def init_database(check_only: bool = False) -> bool:

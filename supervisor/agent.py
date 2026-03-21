@@ -840,8 +840,8 @@ class SentinalAISupervisor:
         try:
             incident_obj = Incident.from_dict(raw)
             return incident_obj.to_legacy_dict()
-        except (ValueError, TypeError):
-            logger.debug("Incident normalization failed, using raw data")
+        except (ValueError, TypeError) as exc:
+            logger.warning("Incident normalization failed, using raw data: %s", exc)
             return raw
 
     def _fetch_historical_context(
@@ -1200,7 +1200,8 @@ class SentinalAISupervisor:
             # Look back 2 hours before incident creation plus elapsed investigation time
             window = max(4, min(48, int(elapsed_hours + 2)))
             return window
-        except Exception:
+        except Exception as exc:
+            logger.debug("Time window calculation failed for %r, defaulting to 24h: %s", created_at, exc)
             return 24
 
     def _build_params(self, step: dict, incident_id: str, service: str) -> dict:

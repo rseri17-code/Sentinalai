@@ -51,7 +51,7 @@ class ApmWorker(BaseWorker):
             )
             if signalfx_result:
                 result["signalfx_apm"] = signalfx_result
-        except Exception:
-            logger.debug("SignalFx enrichment skipped (non-critical)")
+        except Exception as exc:
+            logger.warning("SignalFx enrichment skipped (non-critical): %s", exc)
 
         return result

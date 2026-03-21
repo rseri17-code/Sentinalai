@@ -704,6 +704,14 @@ class SentinalAISupervisor:
             except Exception as exc:
                 logger.warning("Database persistence failed (non-critical): %s", exc)
 
+        # Continuous learning step: evaluate against ground truth (if available),
+        # persist EvalResult, and update confidence calibrator.
+        try:
+            from supervisor.learning_loop import run_learning_step
+            run_learning_step(incident_id, result)
+        except Exception as exc:
+            logger.warning("Learning loop step failed (non-critical): %s", exc)
+
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
     # ------------------------------------------------------------------ #

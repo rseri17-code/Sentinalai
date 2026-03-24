@@ -27,22 +27,23 @@ logger = logging.getLogger(__name__)
 # Each param_builder is a callable(incident_info) -> dict.
 
 INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
+    # Note: get_incident_by_id is intentionally absent from all playbooks.
+    # The supervisor fetches the incident in Phase 0 (before playbook execution).
+    # Including it here would waste one budget unit on a redundant call whose
+    # result is discarded because _analyze_evidence uses the Phase 0 incident dict.
     "timeout": [
-        {"worker": "ops_worker", "action": "get_incident_by_id", "label": "fetch_incident"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "timeout {service}", "label": "search_timeout_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "metrics_worker", "action": "query_metrics", "metric_hint": "response_time_ms", "label": "check_latency_metrics"},
         {"worker": "log_worker", "action": "get_change_data", "label": "check_changes"},
     ],
     "oomkill": [
-        {"worker": "ops_worker", "action": "get_incident_by_id", "label": "fetch_incident"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "OOMKilled {service}", "label": "search_oom_logs"},
         {"worker": "metrics_worker", "action": "query_metrics", "metric_hint": "memory_usage_bytes", "label": "check_memory_metrics"},
         {"worker": "metrics_worker", "action": "get_events", "label": "check_events"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "{service} heap OR memory", "label": "search_memory_logs"},
     ],
     "error_spike": [
-        {"worker": "ops_worker", "action": "get_incident_by_id", "label": "fetch_incident"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "error {service}", "label": "search_error_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "log_worker", "action": "get_change_data", "label": "check_changes"},
@@ -50,14 +51,12 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
         {"worker": "metrics_worker", "action": "get_events", "label": "check_events"},
     ],
     "latency": [
-        {"worker": "ops_worker", "action": "get_incident_by_id", "label": "fetch_incident"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "latency OR slow {service}", "label": "search_latency_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "metrics_worker", "action": "query_metrics", "metric_hint": "response_time_ms", "label": "check_latency_metrics"},
         {"worker": "log_worker", "action": "get_change_data", "label": "check_changes"},
     ],
     "saturation": [
-        {"worker": "ops_worker", "action": "get_incident_by_id", "label": "fetch_incident"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "metrics_worker", "action": "query_metrics", "metric_hint": "cpu_usage_percent", "label": "check_cpu_metrics"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "cpu OR thread {service}", "label": "search_cpu_logs"},
@@ -65,7 +64,6 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
         {"worker": "itsm_worker", "action": "get_change_records", "label": "check_itsm_changes"},
     ],
     "network": [
-        {"worker": "ops_worker", "action": "get_incident_by_id", "label": "fetch_incident"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "connection refused OR dns {service}", "label": "search_network_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "dns {service}", "label": "search_dns_logs"},
@@ -73,7 +71,6 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
         {"worker": "itsm_worker", "action": "get_change_records", "label": "check_itsm_changes"},
     ],
     "cascading": [
-        {"worker": "ops_worker", "action": "get_incident_by_id", "label": "fetch_incident"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "error cascade {service}", "label": "search_error_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "metrics_worker", "action": "query_metrics", "label": "check_metrics"},
@@ -81,21 +78,18 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
         {"worker": "itsm_worker", "action": "get_change_records", "label": "check_itsm_changes"},
     ],
     "missing_data": [
-        {"worker": "ops_worker", "action": "get_incident_by_id", "label": "fetch_incident"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "error connection {service}", "label": "search_error_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "metrics_worker", "action": "get_events", "label": "check_events"},
         {"worker": "log_worker", "action": "get_change_data", "label": "check_changes"},
     ],
     "flapping": [
-        {"worker": "ops_worker", "action": "get_incident_by_id", "label": "fetch_incident"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "error {service}", "label": "search_error_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "metrics_worker", "action": "query_metrics", "metric_hint": "db_connection_pool_active", "label": "check_pool_metrics"},
         {"worker": "log_worker", "action": "get_change_data", "label": "check_changes"},
     ],
     "silent_failure": [
-        {"worker": "ops_worker", "action": "get_incident_by_id", "label": "fetch_incident"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "{service}", "label": "search_service_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "pipeline {service}", "label": "search_pipeline_logs"},
@@ -546,11 +540,23 @@ class ToolSelector:
             "strategy": "Load 3-5 tools per incident instead of all 89",
         }
 
-    @staticmethod
-    def _steps_for_phase(phase: str, playbook: list[dict]) -> list[dict]:
+    # Synthetic Phase 0 step — always executed by the supervisor before the playbook.
+    # get_incident_by_id was removed from the playbooks to avoid a redundant budget call,
+    # but it must still appear in the workflow representation for tooling/dashboards.
+    _INITIAL_CONTEXT_STEP: dict = {
+        "worker": "ops_worker",
+        "action": "get_incident_by_id",
+        "label": "fetch_incident",
+        "phase": "initial_context",
+    }
+
+    @classmethod
+    def _steps_for_phase(cls, phase: str, playbook: list[dict]) -> list[dict]:
         """Filter playbook steps belonging to a given investigation phase."""
         if phase == "initial_context":
-            return [s for s in playbook if s["action"] == "get_incident_by_id"]
+            # get_incident_by_id is Phase 0 in the supervisor (not in the playbook dict)
+            # so we inject it explicitly for the workflow representation.
+            return [cls._INITIAL_CONTEXT_STEP]
         if phase == "itsm_context":
             return [
                 s for s in playbook
@@ -602,7 +608,12 @@ class ToolSelector:
         return MCP_TO_WORKER.get(mcp_tool, "")
 
     def _playbook_to_mcp_tools(self, playbook: list[dict]) -> list[str]:
-        """Derive MCP tool names from a hardcoded playbook."""
+        """Derive MCP tool names from a hardcoded playbook.
+
+        Always prepends moogsoft.get_incident_by_id because the supervisor performs
+        Phase 0 (fetch incident) before executing the playbook, even though that step
+        is not stored in the playbook dict (to avoid the redundant budget call).
+        """
         worker_action_to_mcp = {
             ("ops_worker", "get_incident_by_id"): "moogsoft.get_incident_by_id",
             ("log_worker", "search_logs"): "splunk.search_oneshot",
@@ -620,7 +631,8 @@ class ToolSelector:
             ("devops_worker", "get_commit_diff"): "github.get_commit_diff",
             ("devops_worker", "get_workflow_runs"): "github.get_workflow_runs",
         }
-        tools = []
+        # Phase 0 is always performed by the supervisor — include it in the MCP tool list
+        tools = ["moogsoft.get_incident_by_id"]
         for step in playbook:
             key = (step["worker"], step["action"])
             mcp_name = worker_action_to_mcp.get(key, f"{step['worker']}.{step['action']}")

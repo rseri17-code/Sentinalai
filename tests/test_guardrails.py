@@ -114,15 +114,20 @@ class TestValidateQuery:
         ok, reason = validate_query("")
         assert not ok
 
-    def test_pipe_blocked(self):
+    def test_pipe_eval_blocked(self):
+        # "| eval" as a pipe command is blocked (injection risk)
         ok, reason = validate_query("search | eval foo=bar")
         assert not ok
-        assert "blocked pattern" in reason
+        assert "blocked" in reason
 
-    def test_eval_blocked(self):
+    def test_eval_as_word_not_blocked_by_command_check(self):
+        # bare "eval" without a pipe is NOT a blocked SPL command (avoids false-positives
+        # on words like "evaluate" or "interval"); it is still rejected because it
+        # doesn't match any allowlisted diagnostic term
         ok, reason = validate_query("search eval something")
         assert not ok
-        assert "blocked pattern" in reason
+        # Rejected by the allowlist (no diagnostic keyword), not by command block
+        assert "allowed pattern" in reason
 
     def test_delete_blocked(self):
         ok, reason = validate_query("delete all records")

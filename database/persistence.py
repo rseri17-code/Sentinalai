@@ -186,6 +186,115 @@ def persist_knowledge_entry(
         return False
 
 
+def persist_eval_result(
+    incident_id: str,
+    root_cause_match: str,
+    root_cause_score: float,
+    confidence_error: float,
+    evidence_coverage: float,
+    actual_correct: bool,
+    predicted_confidence: int,
+    missing_evidence: list[str] | None = None,
+) -> bool:
+    """Persist a ground-truth evaluation result.
+
+    These rows feed the confidence calibrator and track accuracy over time.
+    The table is created on first insert (CREATE TABLE IF NOT EXISTS).
+
+    Returns True on success.
+    """
+    engine = get_engine()
+    if engine is None:
+        return False
+
+    try:
+        from sqlalchemy import text
+
+        with engine.connect() as conn:
+            conn.execute(
+                text("""
+                    CREATE TABLE IF NOT EXISTS eval_results (
+                        id                  SERIAL PRIMARY KEY,
+                        incident_id         TEXT NOT NULL,
+                        root_cause_match    TEXT NOT NULL,
+                        root_cause_score    REAL NOT NULL,
+                        confidence_error    REAL NOT NULL,
+                        evidence_coverage   REAL NOT NULL,
+                        actual_correct      BOOLEAN NOT NULL,
+                        predicted_confidence INTEGER NOT NULL,
+                        missing_evidence    TEXT,
+                        evaluated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+            )
+            conn.execute(
+                text("""
+                    INSERT INTO eval_results
+                        (incident_id, root_cause_match, root_cause_score,
+                         confidence_error, evidence_coverage, actual_correct,
+                         predicted_confidence, missing_evidence)
+                    VALUES
+                        (:incident_id, :rc_match, :rc_score,
+                         :conf_error, :ev_coverage, :actual_correct,
+                         :pred_conf, :missing)
+                """),
+                {
+                    "incident_id": incident_id,
+                    "rc_match": root_cause_match,
+                    "rc_score": root_cause_score,
+                    "conf_error": confidence_error,
+                    "ev_coverage": evidence_coverage,
+                    "actual_correct": actual_correct,
+                    "pred_conf": predicted_confidence,
+                    "missing": json.dumps(missing_evidence or []),
+                },
+            )
+            conn.commit()
+
+        logger.info(
+            "Eval result persisted: incident=%s match=%s correct=%s",
+            incident_id, root_cause_match, actual_correct,
+        )
+        return True
+
+    except Exception as exc:
+        logger.warning("Failed to persist eval result %s: %s", incident_id, exc)
+        return False
+
+
+def load_eval_results_for_calibration(limit: int = 500) -> list[dict]:
+    """Load recent eval results for calibration update.
+
+    Returns list of {predicted_confidence, actual_correct} dicts,
+    suitable for passing directly to ConfidenceCalibrator.update().
+    """
+    engine = get_engine()
+    if engine is None:
+        return []
+
+    try:
+        from sqlalchemy import text
+
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("""
+                    SELECT predicted_confidence, actual_correct
+                    FROM eval_results
+                    ORDER BY evaluated_at DESC
+                    LIMIT :limit
+                """),
+                {"limit": limit},
+            )
+            return [
+                {"predicted_confidence": row[0], "actual_correct": bool(row[1])}
+                for row in result.fetchall()
+            ]
+
+    except Exception as exc:
+        logger.warning("Failed to load eval results for calibration: %s", exc)
+        return []
+
+
 def load_investigation(incident_id: str) -> dict | None:
     """Load a stored investigation result by incident_id.
 

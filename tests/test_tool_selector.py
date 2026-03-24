@@ -204,10 +204,15 @@ class TestGetPlaybook:
             assert "label" in step, f"Step {i} of {incident_type} missing 'label'"
 
     @pytest.mark.parametrize("incident_type", list(INCIDENT_PLAYBOOKS.keys()))
-    def test_every_playbook_starts_with_fetch_incident(self, incident_type):
-        """All playbooks should start by fetching the incident."""
+    def test_no_playbook_refetches_incident(self, incident_type):
+        """No playbook should contain get_incident_by_id — the supervisor fetches the
+        incident in Phase 0, before playbook execution. Including it in the playbook
+        wastes budget on a redundant call whose result is discarded."""
         playbook = get_playbook(incident_type)
-        assert playbook[0]["action"] == "get_incident_by_id"
+        actions = [step["action"] for step in playbook]
+        assert "get_incident_by_id" not in actions, (
+            f"{incident_type} playbook contains a redundant get_incident_by_id step"
+        )
 
     @pytest.mark.parametrize("incident_type", list(INCIDENT_PLAYBOOKS.keys()))
     def test_playbook_workers_are_valid(self, incident_type):

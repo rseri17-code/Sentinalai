@@ -454,6 +454,23 @@ class TestSupervisorWithMocks:
 
         assert results[0] == results[1] == results[2], "Investigation must be deterministic"
 
+    # ===================================================================== #
+    # Learning loop integration
+    # ===================================================================== #
+
+    def test_investigate_triggers_learning_loop(self):
+        """investigate() must submit to the learning loop after every RCA."""
+        from unittest.mock import patch
+
+        _build_mock_workers(self.supervisor, "INC12345")
+        with patch("supervisor.learning_loop.run_learning_step") as mock_step:
+            result = self.supervisor.investigate("INC12345")
+
+        mock_step.assert_called_once()
+        call_args = mock_step.call_args
+        assert call_args[0][0] == "INC12345"          # incident_id
+        assert "root_cause" in call_args[0][1]         # result dict passed
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

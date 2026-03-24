@@ -44,20 +44,42 @@ PHASE_CALL_LIMITS: dict[str, int] = {
 
 @dataclass
 class ExecutionBudget:
-    """Tracks and enforces call budget for an investigation."""
+    """Tracks and enforces call budget for an investigation.
+
+    Thread-safe: parallel worker groups share a single budget instance and
+    race on can_call()/record_call(). Use try_record() for the atomic
+    check-and-decrement pattern required in concurrent contexts.
+    """
 
     case_id: str = ""
     max_calls: int = MAX_TOOL_CALLS_PER_CASE
     calls_made: int = 0
+    _lock: threading.Lock = field(default_factory=threading.Lock)
 
     def can_call(self) -> bool:
-        return self.calls_made < self.max_calls
+        with self._lock:
+            return self.calls_made < self.max_calls
 
     def record_call(self) -> None:
-        self.calls_made += 1
+        with self._lock:
+            self.calls_made += 1
+
+    def try_record(self) -> bool:
+        """Atomically check budget and record a call if available.
+
+        Returns True if the call was recorded (budget had capacity).
+        Returns False if the budget was already exhausted.
+        Use this instead of separate can_call()/record_call() in concurrent code.
+        """
+        with self._lock:
+            if self.calls_made < self.max_calls:
+                self.calls_made += 1
+                return True
+            return False
 
     def remaining(self) -> int:
-        return max(0, self.max_calls - self.calls_made)
+        with self._lock:
+            return max(0, self.max_calls - self.calls_made)
 
 
 # =========================================================================
@@ -66,16 +88,27 @@ class ExecutionBudget:
 
 @dataclass
 class CircuitState:
-    """Simple circuit breaker for a single worker."""
+    """Simple circuit breaker for a single worker.
+
+    All state mutations and the is_open check are protected by an internal
+    lock so concurrent worker threads cannot race on failure_count or
+    last_failure_time.
+    """
 
     failure_count: int = 0
     last_failure_time: float = 0.0
     threshold: int = 3
     recovery_seconds: float = 60.0
+    _lock: threading.Lock = field(default_factory=threading.Lock)
 
     @property
     def is_open(self) -> bool:
         """True if circuit is open (worker should be skipped)."""
+        with self._lock:
+            return self._is_open_locked()
+
+    def _is_open_locked(self) -> bool:
+        """Caller must hold self._lock."""
         if self.failure_count < self.threshold:
             return False
         elapsed = time.monotonic() - self.last_failure_time
@@ -85,17 +118,19 @@ class CircuitState:
         return True
 
     def record_failure(self, worker_name: str = "") -> None:
-        was_open = self.is_open
-        self.failure_count += 1
-        self.last_failure_time = time.monotonic()
-        if not was_open and self.is_open and worker_name:
-            record_circuit_breaker_trip(worker_name, "closed_to_open")
+        with self._lock:
+            was_open = self._is_open_locked()
+            self.failure_count += 1
+            self.last_failure_time = time.monotonic()
+            if not was_open and self._is_open_locked() and worker_name:
+                record_circuit_breaker_trip(worker_name, "closed_to_open")
 
     def record_success(self, worker_name: str = "") -> None:
-        was_open = self.failure_count >= self.threshold
-        self.failure_count = 0
-        if was_open and worker_name:
-            record_circuit_breaker_trip(worker_name, "half_open_to_closed")
+        with self._lock:
+            was_open = self.failure_count >= self.threshold
+            self.failure_count = 0
+            if was_open and worker_name:
+                record_circuit_breaker_trip(worker_name, "half_open_to_closed")
 
 
 class CircuitBreakerRegistry:
@@ -162,19 +197,32 @@ def validate_query(query: str) -> tuple[bool, str]:
     """Validate a Splunk query against the policy.
 
     Returns (is_valid, reason).
-    Queries are checked against an allowlist and rejected if they
-    contain injection patterns (|, eval, lookup, delete).
+
+    Dangerous write/exfiltration commands are blocked by matching the command
+    token after a pipe (SPL syntax: ``| <command>``).  The pipe character itself
+    is NOT blocked — it is required for all SPL transformation commands and
+    blocking it would prevent any analytical query from running.
+
+    ``eval`` is only blocked when used as a pipe command (``| eval``) to prevent
+    computed-field injection; the substring "eval" alone would incorrectly block
+    legitimate terms like "evaluate", "interval", "medieval".
     """
     if not query or not query.strip():
         return False, "empty query"
 
     query_lower = query.lower().strip()
 
-    # Block shell injection / dangerous patterns
-    dangerous = ["|", "eval", "lookup", "outputlookup", "delete", "collect"]
-    for d in dangerous:
-        if d in query_lower:
-            return False, f"blocked pattern: {d}"
+    # Block dangerous SPL commands that write data or enumerate sensitive tables.
+    # Match as pipe-commands (``| cmd``) or bare command names at string start.
+    # This avoids false-positives from innocent substrings (e.g. "eval" in "evaluate").
+    dangerous_pipe_commands = [
+        "outputlookup", "delete", "collect",
+        "| eval", "|eval",
+        "| lookup", "|lookup",
+    ]
+    for cmd in dangerous_pipe_commands:
+        if cmd in query_lower:
+            return False, f"blocked command: {cmd.strip('| ')}"
 
     # Validate against allowlist: at least one allowed term must appear
     if not any(term in query_lower for term in SPLUNK_QUERY_ALLOWLIST):

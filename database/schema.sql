@@ -40,8 +40,23 @@ CREATE TABLE IF NOT EXISTS tool_usage (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Ground-truth evaluation results (feeds continuous learning + calibration loop)
+CREATE TABLE IF NOT EXISTS eval_results (
+    id SERIAL PRIMARY KEY,
+    incident_id VARCHAR(50) NOT NULL,
+    root_cause_match VARCHAR(20) NOT NULL,
+    root_cause_score FLOAT NOT NULL,
+    confidence_error FLOAT NOT NULL,
+    evidence_coverage FLOAT NOT NULL,
+    actual_correct BOOLEAN NOT NULL,
+    predicted_confidence INTEGER NOT NULL,
+    missing_evidence JSONB NOT NULL DEFAULT '[]',
+    evaluated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_investigations_incident_id ON investigations(incident_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_base_service ON knowledge_base(service);
 CREATE INDEX IF NOT EXISTS idx_knowledge_base_type ON knowledge_base(incident_type);
 CREATE INDEX IF NOT EXISTS idx_tool_usage_investigation ON tool_usage(investigation_id);
+CREATE INDEX IF NOT EXISTS idx_eval_results_incident_id ON eval_results(incident_id);

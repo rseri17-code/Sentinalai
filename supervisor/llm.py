@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
 from typing import Any
 
@@ -43,35 +44,41 @@ LLM_MAX_TOKENS = int(os.environ.get("LLM_MAX_TOKENS", "2048"))
 LLM_ENABLED = os.environ.get("LLM_ENABLED", "true").lower() in ("true", "1", "yes")
 
 # ---------------------------------------------------------------------------
-# Boto3 client (lazy init)
+# Boto3 client (lazy init — lock protects against concurrent first-call races)
 # ---------------------------------------------------------------------------
 
 _client = None
+_client_lock = threading.Lock()
 
 
 def _get_client():
-    """Lazily create the bedrock-runtime boto3 client."""
+    """Lazily create the bedrock-runtime boto3 client (thread-safe)."""
     global _client
     if _client is not None:
         return _client
-    if not _BOTO3_AVAILABLE:
-        logger.debug("boto3 not installed — LLM calls disabled")
-        return None
-    try:
-        _client = boto3.client(
-            "bedrock-runtime",
-            region_name=AWS_REGION,
-            config=BotoConfig(
-                retries={"max_attempts": 2, "mode": "adaptive"},
-                connect_timeout=10,
-                read_timeout=60,
-            ),
-        )
-        logger.info("Bedrock runtime client initialised (model=%s)", MODEL_ID)
-        return _client
-    except Exception as exc:
-        logger.warning("Failed to create bedrock-runtime client: %s", exc)
-        return None
+    with _client_lock:
+        # Re-check inside the lock to handle the race between the outer check
+        # and lock acquisition (double-checked locking pattern).
+        if _client is not None:
+            return _client
+        if not _BOTO3_AVAILABLE:
+            logger.debug("boto3 not installed — LLM calls disabled")
+            return None
+        try:
+            _client = boto3.client(
+                "bedrock-runtime",
+                region_name=AWS_REGION,
+                config=BotoConfig(
+                    retries={"max_attempts": 2, "mode": "adaptive"},
+                    connect_timeout=10,
+                    read_timeout=60,
+                ),
+            )
+            logger.info("Bedrock runtime client initialised (model=%s)", MODEL_ID)
+            return _client
+        except Exception as exc:
+            logger.warning("Failed to create bedrock-runtime client: %s", exc)
+            return None
 
 
 def is_enabled() -> bool:

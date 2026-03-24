@@ -522,7 +522,7 @@ class TestBudgetEdgeCases:
         """When budget is exhausted at fetch_incident, returns None."""
         sup = SentinalAISupervisor()
         budget = MagicMock()
-        budget.can_call.return_value = False
+        budget.try_record.return_value = False  # Atomic check-and-record fails = budget exhausted
         assert sup._fetch_incident("INC123", budget=budget) is None
 
     def test_budget_exhausted_mid_playbook(self):

@@ -77,7 +77,7 @@ from database.persistence import (
     persist_knowledge_entry as _db_persist_knowledge,
     is_enabled as _db_enabled,
 )
-from supervisor.confidence_calibrator import ConfidenceCalibrator
+from supervisor.confidence_calibrator import ConfidenceCalibrator, get_calibrator
 from workers.mcp_client import McpGateway
 from workers.ops_worker import OpsWorker
 from workers.log_worker import LogWorker
@@ -87,21 +87,6 @@ from workers.knowledge_worker import KnowledgeWorker
 from workers.itsm_worker import ItsmWorker
 from workers.devops_worker import DevopsWorker
 from workers.confluence_worker import ConfluenceWorker
-
-# Lazy-load calibrator (singleton — lock guards concurrent first-call races)
-_calibrator: ConfidenceCalibrator | None = None
-_calibrator_lock = threading.Lock()
-
-
-def _get_calibrator() -> ConfidenceCalibrator:
-    global _calibrator
-    if _calibrator is not None:
-        return _calibrator
-    with _calibrator_lock:
-        if _calibrator is None:
-            _calibrator = ConfidenceCalibrator.load()
-        return _calibrator
-
 
 # Institutional knowledge layer (opt-in via env var, graceful degradation)
 _KNOWLEDGE_ENABLED = os.environ.get("KNOWLEDGE_GRAPH_ENABLED", "").lower() in ("1", "true", "yes")
@@ -230,9 +215,6 @@ class SentinalAISupervisor:
         os.environ.get("INVESTIGATION_DEADLINE_SECONDS", "120")
     )
 
-    # Per-investigation thread-local state (safe for concurrent investigations)
-    _tls = threading.local()
-
     def __init__(
         self,
         replay_dir: str | None = None,
@@ -268,6 +250,9 @@ class SentinalAISupervisor:
             max_workers=len(self.workers) + 2,
             thread_name_prefix="sentinalai-parallel",
         )
+        # Per-investigation thread-local state — must be per-instance so concurrent
+        # SentinalAISupervisor instances do not share the same TLS namespace.
+        self._tls = threading.local()
 
     # ------------------------------------------------------------------ #
     # Public API
@@ -412,7 +397,7 @@ class SentinalAISupervisor:
             confidence = result.get("confidence", 0)
             # Apply confidence calibration (feedback loop from ground truth)
             raw_confidence = confidence
-            confidence = _get_calibrator().calibrate(confidence)
+            confidence = get_calibrator().calibrate(confidence)
             if confidence != raw_confidence:
                 result["confidence"] = confidence
                 result["raw_confidence"] = raw_confidence
@@ -706,9 +691,10 @@ class SentinalAISupervisor:
 
         # Continuous learning step: evaluate against ground truth (if available),
         # persist EvalResult, and update confidence calibrator.
+        # Run in background so it never adds latency to the investigation response.
         try:
             from supervisor.learning_loop import run_learning_step
-            run_learning_step(incident_id, result)
+            self._parallel_executor.submit(run_learning_step, incident_id, result)
         except Exception as exc:
             logger.warning("Learning loop step failed (non-critical): %s", exc)
 

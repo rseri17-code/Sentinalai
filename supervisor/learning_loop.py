@@ -20,16 +20,12 @@ Usage (from agent._persist_results):
 from __future__ import annotations
 
 import logging
-import threading
 
 from supervisor.ground_truth_eval import GroundTruthEvaluator
-from supervisor.confidence_calibrator import ConfidenceCalibrator
+from supervisor.confidence_calibrator import ConfidenceCalibrator, get_calibrator, _calibrator_lock
 from database.persistence import persist_eval_result, load_eval_results_for_calibration, is_enabled as _db_enabled
 
 logger = logging.getLogger("sentinalai.learning_loop")
-
-# Serialise calibrator updates across all concurrent investigations.
-_calibrator_lock = threading.Lock()
 
 
 def run_learning_step(incident_id: str, result: dict) -> bool:
@@ -106,7 +102,7 @@ def _update_calibrator(eval_result: object, incident_id: str) -> None:
             }
         ]
         with _calibrator_lock:
-            calibrator = ConfidenceCalibrator.load()
+            calibrator = get_calibrator()
             calibrator.update(calibration_data)
             calibrator.save()
         logger.debug(

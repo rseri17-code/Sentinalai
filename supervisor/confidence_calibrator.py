@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 from dataclasses import dataclass
 
 logger = logging.getLogger("sentinalai.calibration")
@@ -179,3 +180,23 @@ class ConfidenceCalibrator:
         """Reset all calibration bins."""
         self._bins = [CalibrationBin(bin_index=i) for i in range(N_BINS)]
         logger.info("Calibration bins reset")
+
+
+# ---------------------------------------------------------------------------
+# Process-level singleton — shared by agent.py and learning_loop.py so that
+# in-memory state is never stale after a learning step updates the calibrator.
+# ---------------------------------------------------------------------------
+
+_calibrator: ConfidenceCalibrator | None = None
+_calibrator_lock = threading.Lock()
+
+
+def get_calibrator() -> ConfidenceCalibrator:
+    """Return the process-level singleton, loading from disk on first access."""
+    global _calibrator
+    if _calibrator is not None:
+        return _calibrator
+    with _calibrator_lock:
+        if _calibrator is None:
+            _calibrator = ConfidenceCalibrator.load()
+        return _calibrator

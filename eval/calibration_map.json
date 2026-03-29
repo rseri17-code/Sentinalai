@@ -68,9 +68,9 @@
     },
     {
       "bin_index": 8,
-      "total": 3,
-      "correct": 3,
-      "sum_confidence": 240.0,
+      "total": 4,
+      "correct": 4,
+      "sum_confidence": 320.0,
       "accuracy": 1.0,
       "calibrated_confidence": 100
     },

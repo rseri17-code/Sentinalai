@@ -291,7 +291,12 @@ class SentinalAISupervisor:
             span.set_attribute(GENAI_OPERATION_NAME, "investigate")
 
             # G6.1: Per-investigation wall-clock deadline (thread-local — safe for concurrent calls)
+            # Reset all TLS state before each investigation to prevent leakage from prior runs
+            # on the same thread.
             self._tls.investigation_deadline = time.monotonic() + self.INVESTIGATION_DEADLINE_SECONDS
+            self._tls.current_incident = None
+            self._tls.itsm_evidence = None
+            self._tls.devops_evidence = None
 
             # Start with default budget; will be replaced after severity detection
             receipts = ReceiptCollector(case_id=incident_id)

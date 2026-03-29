@@ -1,1526 +1,5 @@
 [
   {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_latency_metrics",
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:56:29.484448+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:56:31.760492+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:56:32.001489+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T13:10:36.479326+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T13:10:46.142421+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_latency_metrics",
-      "search_timeout_logs",
-      "check_changes"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T13:10:46.358118+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T13:10:48.438682+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "search_timeout_logs",
-      "check_changes",
-      "check_golden_signals",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T13:10:48.667042+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T21:07:24.605813+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T21:07:44.258796+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_latency_metrics",
-      "search_timeout_logs",
-      "check_changes"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T21:07:44.994901+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T21:07:49.440778+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T21:07:49.760056+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_error_logs",
-      "check_changes",
-      "check_events",
-      "check_itsm_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:49:20.743158+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:49:20.786481+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:49:20.809147+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes",
-      "check_events",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:49:42.694681+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_events",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:49:42.738040+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_events",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:49:42.764579+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:49:46.755285+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:49:46.804910+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_events",
-      "check_golden_signals",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:49:46.828264+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:49:49.912132+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:49:49.958136+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:49:49.981460+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes",
-      "check_events",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:50:00.695392+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:50:00.741939+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:50:00.765269+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_error_logs",
-      "check_changes",
-      "check_events",
-      "check_itsm_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:50:49.810223+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:50:49.863487+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:50:49.889686+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_events",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:56:09.873962+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes",
-      "check_events",
-      "check_golden_signals",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:56:09.929189+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T05:56:09.959459+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T13:10:26.239315+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T13:10:26.293394+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T13:10:26.320185+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "check_events",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T20:38:48.806968+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes",
-      "check_events",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T20:38:48.864884+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_events",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T20:38:48.896790+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_error_logs",
-      "check_changes",
-      "check_events",
-      "check_itsm_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T21:07:10.619064+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_events",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T21:07:10.722498+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_events",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes",
-      "itsm_context",
-      "devops_context"
-    ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T21:07:10.786101+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:13:27.337159+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:13:27.920353+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_metrics",
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:13:27.936346+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:13:28.194200+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:13:28.421425+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:14:02.331223+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_metrics",
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:14:02.938621+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:14:02.956959+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:14:03.227610+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:14:03.456197+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:10.768508+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:11.071277+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:11.267189+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:15.705018+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_error_logs",
-      "check_changes",
-      "check_metrics",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:15.897831+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_error_logs",
-      "check_changes",
-      "check_metrics"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:16.182738+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes",
-      "check_metrics"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:16.394803+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes",
-      "check_metrics"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:16.608156+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:16.821762+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:17.048337+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:17.269675+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:17.488802+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:17.715408+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:17.932416+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes",
-      "check_golden_signals"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:18.165805+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:18.393684+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:18.630051+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:18.865259+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_metrics",
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:19.218546+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_metrics",
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:19.712202+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:19.736099+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes",
-      "check_golden_signals"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:19.757994+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:20.567673+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_metrics",
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:20.816627+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes",
-      "check_metrics"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:20.943698+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:22.315367+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:23.065330+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:23.092366+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_metrics",
-      "check_golden_signals",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:23.463652+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.722,
-    "timestamp": "2026-03-29T05:50:23.770380+00:00"
-  },
-  {
-    "incident_id": "INC_H5",
-    "incident_type": "flapping",
-    "service": "auth-service",
-    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_pool_metrics",
-      "search_error_logs"
-    ],
-    "confidence": 74,
-    "online_quality_score": 0.726,
-    "timestamp": "2026-03-29T05:13:13.267560+00:00"
-  },
-  {
-    "incident_id": "INC_H5",
-    "incident_type": "flapping",
-    "service": "auth-service",
-    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_error_logs",
-      "check_pool_metrics"
-    ],
-    "confidence": 74,
-    "online_quality_score": 0.726,
-    "timestamp": "2026-03-29T05:13:49.012045+00:00"
-  },
-  {
-    "incident_id": "INC_H5",
-    "incident_type": "flapping",
-    "service": "auth-service",
-    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_pool_metrics",
-      "search_error_logs"
-    ],
-    "confidence": 74,
-    "online_quality_score": 0.726,
-    "timestamp": "2026-03-29T05:50:01.512730+00:00"
-  },
-  {
-    "incident_id": "INC_H5",
-    "incident_type": "flapping",
-    "service": "auth-service",
-    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_pool_metrics",
-      "search_error_logs"
-    ],
-    "confidence": 74,
-    "online_quality_score": 0.726,
-    "timestamp": "2026-03-29T05:50:50.674035+00:00"
-  },
-  {
-    "incident_id": "INC_H5",
-    "incident_type": "flapping",
-    "service": "auth-service",
-    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_pool_metrics",
-      "search_error_logs"
-    ],
-    "confidence": 74,
-    "online_quality_score": 0.726,
-    "timestamp": "2026-03-29T05:56:10.748247+00:00"
-  },
-  {
-    "incident_id": "INC_H5",
-    "incident_type": "flapping",
-    "service": "auth-service",
-    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_error_logs",
-      "check_pool_metrics"
-    ],
-    "confidence": 74,
-    "online_quality_score": 0.726,
-    "timestamp": "2026-03-29T13:10:27.099397+00:00"
-  },
-  {
-    "incident_id": "INC_H5",
-    "incident_type": "flapping",
-    "service": "auth-service",
-    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_error_logs",
-      "check_pool_metrics"
-    ],
-    "confidence": 74,
-    "online_quality_score": 0.726,
-    "timestamp": "2026-03-29T21:07:12.678407+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_events",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.73,
-    "timestamp": "2026-03-29T05:50:49.502382+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "check_events",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.73,
-    "timestamp": "2026-03-29T05:56:09.555122+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "check_events",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.73,
-    "timestamp": "2026-03-29T13:10:25.937808+00:00"
-  },
-  {
     "incident_id": "INC12347",
     "incident_type": "error_spike",
     "service": "payment-service",
@@ -1551,6 +30,22 @@
     "confidence": 95,
     "online_quality_score": 0.73,
     "timestamp": "2026-03-29T21:07:09.695429+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.73,
+    "timestamp": "2026-03-29T21:55:36.014625+00:00"
   },
   {
     "incident_id": "INC12353",
@@ -4285,6 +2780,550 @@
     "timestamp": "2026-03-29T21:07:51.736047+00:00"
   },
   {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:36.040716+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:46.267322+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:46.583625+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:46.804893+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:51.177662+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "search_error_logs",
+      "check_changes",
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:51.396299+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:51.687349+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:51.911421+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:52.135674+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:52.351397+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:52.568327+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:52.778738+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:53.009903+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_events",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:53.339908+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:53.565139+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:53.791922+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_events",
+      "check_itsm_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:54.019665+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:54.248095+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:54.465182+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:54.679116+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:54.986821+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "search_error_logs",
+      "check_changes",
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:55.009038+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:55.032146+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:55.973266+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:56.332844+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:57.153336+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:57.289546+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:57.424597+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:57.555517+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:57.689497+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:58.277157+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:58.300473+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:58.695764+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:55:58.956704+00:00"
+  },
+  {
     "incident_id": "INC12351",
     "incident_type": "cascading",
     "service": "api-gateway",
@@ -6205,6 +5244,486 @@
     "timestamp": "2026-03-29T21:07:51.986013+00:00"
   },
   {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:46.355036+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:46.673310+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:46.899584+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "check_itsm_changes",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:51.268406+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "check_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:51.476621+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes",
+      "check_metrics"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:51.777935+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:52.008821+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:52.224723+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:52.439118+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:52.655815+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:52.868347+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:53.100961+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes",
+      "check_golden_signals"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:53.432578+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:53.658421+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:53.887820+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_metrics"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:54.111190+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:54.333618+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:54.552061+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:54.770229+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:55.244194+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:55.266493+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:55.289815+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_metrics"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:56.053091+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:56.270594+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "check_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:56.384613+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:57.794540+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:58.462526+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes",
+      "check_metrics"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:58.486435+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes",
+      "check_metrics"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:58.805544+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_metrics",
+      "check_itsm_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:55:59.064633+00:00"
+  },
+  {
     "incident_id": "INC12353",
     "incident_type": "flapping",
     "service": "auth-service",
@@ -7883,5 +7402,425 @@
     "confidence": 87,
     "online_quality_score": 0.764,
     "timestamp": "2026-03-29T21:07:52.107388+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:46.401615+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:46.720662+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:46.947691+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:51.315846+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:51.517272+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:51.824816+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:52.054487+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:52.269203+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:52.487114+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:52.700336+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:52.926008+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:53.147582+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:53.478319+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes",
+      "check_golden_signals"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:53.707465+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:53.934116+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:54.157287+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:54.379092+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:54.599786+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:54.815029+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:55.382783+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:55.404399+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics",
+      "check_golden_signals"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:55.425347+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:56.094051+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:56.522507+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:58.559598+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:58.580274+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "search_error_logs",
+      "check_changes",
+      "check_golden_signals",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:58.859488+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:55:59.121184+00:00"
   }
 ]

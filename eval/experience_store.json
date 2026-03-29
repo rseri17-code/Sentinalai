@@ -6,86 +6,6 @@
     "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
     "evidence_keys": [
       "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:05.607803+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes",
-      "check_golden_signals"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:05.855713+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:06.095124+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:06.329151+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:06.563267+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
       "check_itsm_changes",
       "search_network_logs",
       "search_dns_logs",
@@ -2248,6 +2168,42 @@
     "timestamp": "2026-03-29T13:10:26.320185+00:00"
   },
   {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "check_events",
+      "search_error_logs",
+      "check_changes",
+      "itsm_context",
+      "devops_context"
+    ],
+    "confidence": 100,
+    "online_quality_score": 0.72,
+    "timestamp": "2026-03-29T20:38:48.806968+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events",
+      "itsm_context",
+      "devops_context"
+    ],
+    "confidence": 100,
+    "online_quality_score": 0.72,
+    "timestamp": "2026-03-29T20:38:48.864884+00:00"
+  },
+  {
     "incident_id": "INC12351",
     "incident_type": "cascading",
     "service": "api-gateway",
@@ -3018,6 +2974,22 @@
     "confidence": 95,
     "online_quality_score": 0.73,
     "timestamp": "2026-03-29T13:10:25.937808+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.73,
+    "timestamp": "2026-03-29T20:38:48.504489+00:00"
   },
   {
     "incident_id": "INC12353",
@@ -5190,6 +5162,22 @@
     "confidence": 94,
     "online_quality_score": 0.732,
     "timestamp": "2026-03-29T13:10:49.516325+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T20:38:48.531449+00:00"
   },
   {
     "incident_id": "INC12351",
@@ -7890,5 +7878,23 @@
     "confidence": 87,
     "online_quality_score": 0.764,
     "timestamp": "2026-03-29T13:10:49.684231+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "itsm_context",
+      "devops_context"
+    ],
+    "confidence": 100,
+    "online_quality_score": 0.72,
+    "timestamp": "2026-03-29T20:38:48.896790+00:00"
   }
 ]

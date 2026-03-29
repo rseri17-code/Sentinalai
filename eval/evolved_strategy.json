@@ -1,172 +1,172 @@
 {
   "timeout": {
     "get_incident_by_id": {
-      "weight": 0.9895,
-      "calls": 420,
-      "ema_signal": 0.9895,
-      "last_updated": "2026-03-29T13:10:49.465710+00:00"
+      "weight": 0.9883,
+      "calls": 431,
+      "ema_signal": 0.9883,
+      "last_updated": "2026-03-29T20:38:48.841518+00:00"
     },
     "get_ci_details": {
-      "weight": 0.9895,
-      "calls": 420,
-      "ema_signal": 0.9895,
-      "last_updated": "2026-03-29T13:10:49.465720+00:00"
+      "weight": 0.9883,
+      "calls": 431,
+      "ema_signal": 0.9883,
+      "last_updated": "2026-03-29T20:38:48.841531+00:00"
     },
     "get_known_errors": {
-      "weight": 0.9895,
-      "calls": 420,
-      "ema_signal": 0.9895,
-      "last_updated": "2026-03-29T13:10:49.465723+00:00"
+      "weight": 0.9883,
+      "calls": 431,
+      "ema_signal": 0.9883,
+      "last_updated": "2026-03-29T20:38:48.841535+00:00"
     },
     "search_incidents": {
-      "weight": 0.9895,
-      "calls": 420,
-      "ema_signal": 0.9895,
-      "last_updated": "2026-03-29T13:10:49.465726+00:00"
+      "weight": 0.9883,
+      "calls": 431,
+      "ema_signal": 0.9883,
+      "last_updated": "2026-03-29T20:38:48.841539+00:00"
     },
     "search_runbooks": {
-      "weight": 0.9895,
-      "calls": 420,
-      "ema_signal": 0.9895,
-      "last_updated": "2026-03-29T13:10:49.465728+00:00"
+      "weight": 0.9883,
+      "calls": 431,
+      "ema_signal": 0.9883,
+      "last_updated": "2026-03-29T20:38:48.841544+00:00"
     },
     "search_postmortems": {
-      "weight": 0.9895,
-      "calls": 420,
-      "ema_signal": 0.9895,
-      "last_updated": "2026-03-29T13:10:49.465730+00:00"
+      "weight": 0.9883,
+      "calls": 431,
+      "ema_signal": 0.9883,
+      "last_updated": "2026-03-29T20:38:48.841547+00:00"
     },
     "search_similar": {
-      "weight": 0.999,
-      "calls": 410,
-      "ema_signal": 0.999,
-      "last_updated": "2026-03-29T13:10:49.465733+00:00"
+      "weight": 0.9907,
+      "calls": 421,
+      "ema_signal": 0.9907,
+      "last_updated": "2026-03-29T20:38:48.841551+00:00"
     },
     "search_logs": {
-      "weight": 1.0039,
-      "calls": 404,
-      "ema_signal": 1.0039,
-      "last_updated": "2026-03-29T13:10:49.465735+00:00"
+      "weight": 0.9918,
+      "calls": 415,
+      "ema_signal": 0.9918,
+      "last_updated": "2026-03-29T20:38:48.841555+00:00"
     },
     "get_golden_signals": {
-      "weight": 0.9997,
-      "calls": 410,
-      "ema_signal": 0.9997,
-      "last_updated": "2026-03-29T13:10:49.465738+00:00"
+      "weight": 0.9908,
+      "calls": 421,
+      "ema_signal": 0.9908,
+      "last_updated": "2026-03-29T20:38:48.841559+00:00"
     },
     "query_metrics": {
-      "weight": 0.9955,
-      "calls": 388,
-      "ema_signal": 0.9955,
-      "last_updated": "2026-03-29T13:10:49.465740+00:00"
+      "weight": 0.9898,
+      "calls": 399,
+      "ema_signal": 0.9898,
+      "last_updated": "2026-03-29T20:38:48.841563+00:00"
     },
     "get_change_data": {
-      "weight": 1.0069,
-      "calls": 400,
-      "ema_signal": 1.0069,
-      "last_updated": "2026-03-29T13:10:49.465742+00:00"
+      "weight": 0.9925,
+      "calls": 411,
+      "ema_signal": 0.9925,
+      "last_updated": "2026-03-29T20:38:48.841567+00:00"
     },
     "get_recent_deployments": {
-      "weight": 1.007,
-      "calls": 376,
-      "ema_signal": 1.007,
-      "last_updated": "2026-03-29T13:10:49.465745+00:00"
+      "weight": 0.9925,
+      "calls": 387,
+      "ema_signal": 0.9925,
+      "last_updated": "2026-03-29T20:38:48.841571+00:00"
     },
     "get_workflow_runs": {
-      "weight": 1.007,
-      "calls": 376,
-      "ema_signal": 1.007,
-      "last_updated": "2026-03-29T13:10:49.465747+00:00"
+      "weight": 0.9925,
+      "calls": 387,
+      "ema_signal": 0.9925,
+      "last_updated": "2026-03-29T20:38:48.841574+00:00"
     }
   },
   "_meta": {
-    "last_updated": "2026-03-29T13:10:49.714087+00:00",
-    "total_updates": 2172
+    "last_updated": "2026-03-29T20:38:48.900356+00:00",
+    "total_updates": 2188
   },
   "error_spike": {
     "get_incident_by_id": {
-      "weight": 0.9888,
-      "calls": 558,
-      "ema_signal": 0.9888,
-      "last_updated": "2026-03-29T13:10:49.519406+00:00"
+      "weight": 1.01,
+      "calls": 563,
+      "ema_signal": 1.01,
+      "last_updated": "2026-03-29T20:38:48.900315+00:00"
     },
     "get_ci_details": {
-      "weight": 0.9888,
-      "calls": 558,
-      "ema_signal": 0.9888,
-      "last_updated": "2026-03-29T13:10:49.519417+00:00"
+      "weight": 1.01,
+      "calls": 563,
+      "ema_signal": 1.01,
+      "last_updated": "2026-03-29T20:38:48.900326+00:00"
     },
     "get_known_errors": {
-      "weight": 0.9888,
-      "calls": 558,
-      "ema_signal": 0.9888,
-      "last_updated": "2026-03-29T13:10:49.519420+00:00"
+      "weight": 1.01,
+      "calls": 563,
+      "ema_signal": 1.01,
+      "last_updated": "2026-03-29T20:38:48.900329+00:00"
     },
     "search_incidents": {
-      "weight": 0.9888,
-      "calls": 558,
-      "ema_signal": 0.9888,
-      "last_updated": "2026-03-29T13:10:49.519423+00:00"
+      "weight": 1.01,
+      "calls": 563,
+      "ema_signal": 1.01,
+      "last_updated": "2026-03-29T20:38:48.900331+00:00"
     },
     "search_runbooks": {
-      "weight": 0.9888,
-      "calls": 558,
-      "ema_signal": 0.9888,
-      "last_updated": "2026-03-29T13:10:49.519426+00:00"
+      "weight": 1.01,
+      "calls": 563,
+      "ema_signal": 1.01,
+      "last_updated": "2026-03-29T20:38:48.900334+00:00"
     },
     "search_postmortems": {
-      "weight": 0.9888,
-      "calls": 558,
-      "ema_signal": 0.9888,
-      "last_updated": "2026-03-29T13:10:49.519428+00:00"
+      "weight": 1.01,
+      "calls": 563,
+      "ema_signal": 1.01,
+      "last_updated": "2026-03-29T20:38:48.900336+00:00"
     },
     "search_similar": {
-      "weight": 0.9888,
-      "calls": 558,
-      "ema_signal": 0.9888,
-      "last_updated": "2026-03-29T13:10:49.519430+00:00"
+      "weight": 1.01,
+      "calls": 563,
+      "ema_signal": 1.01,
+      "last_updated": "2026-03-29T20:38:48.900338+00:00"
     },
     "search_logs": {
-      "weight": 0.9888,
-      "calls": 558,
-      "ema_signal": 0.9888,
-      "last_updated": "2026-03-29T13:10:49.519433+00:00"
+      "weight": 1.01,
+      "calls": 563,
+      "ema_signal": 1.01,
+      "last_updated": "2026-03-29T20:38:48.900340+00:00"
     },
     "get_golden_signals": {
-      "weight": 0.9888,
-      "calls": 558,
-      "ema_signal": 0.9888,
-      "last_updated": "2026-03-29T13:10:49.519435+00:00"
+      "weight": 1.01,
+      "calls": 563,
+      "ema_signal": 1.01,
+      "last_updated": "2026-03-29T20:38:48.900343+00:00"
     },
     "get_change_records": {
-      "weight": 0.9888,
-      "calls": 558,
-      "ema_signal": 0.9888,
-      "last_updated": "2026-03-29T13:10:49.519437+00:00"
+      "weight": 1.01,
+      "calls": 563,
+      "ema_signal": 1.01,
+      "last_updated": "2026-03-29T20:38:48.900345+00:00"
     },
     "get_events": {
-      "weight": 0.9888,
-      "calls": 558,
-      "ema_signal": 0.9888,
-      "last_updated": "2026-03-29T13:10:49.519439+00:00"
+      "weight": 1.01,
+      "calls": 563,
+      "ema_signal": 1.01,
+      "last_updated": "2026-03-29T20:38:48.900347+00:00"
     },
     "get_change_data": {
-      "weight": 0.9888,
-      "calls": 558,
-      "ema_signal": 0.9888,
-      "last_updated": "2026-03-29T13:10:49.519442+00:00"
+      "weight": 1.01,
+      "calls": 563,
+      "ema_signal": 1.01,
+      "last_updated": "2026-03-29T20:38:48.900350+00:00"
     },
     "get_recent_deployments": {
-      "weight": 1.043,
-      "calls": 194,
-      "ema_signal": 1.043,
-      "last_updated": "2026-03-29T13:10:49.519444+00:00"
+      "weight": 1.0385,
+      "calls": 199,
+      "ema_signal": 1.0385,
+      "last_updated": "2026-03-29T20:38:48.900352+00:00"
     },
     "get_workflow_runs": {
-      "weight": 1.043,
-      "calls": 194,
-      "ema_signal": 1.043,
-      "last_updated": "2026-03-29T13:10:49.519447+00:00"
+      "weight": 1.0385,
+      "calls": 199,
+      "ema_signal": 1.0385,
+      "last_updated": "2026-03-29T20:38:48.900355+00:00"
     }
   },
   "latency": {

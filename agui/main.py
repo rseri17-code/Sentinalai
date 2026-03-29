@@ -27,18 +27,21 @@ import time
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from agui.event_bus import init_bus, get_bus
 from agui.ws_manager import get_ws_manager
 from agui.middleware.auth import get_actor, ActorContext
 from agui.middleware.trace import TraceMiddleware
+from agui.middleware.honeypot import HoneypotMiddleware, generate_invite_token
 from agui.api.incidents import router as incidents_router
 from agui.api.investigations import router as investigations_router
 from agui.api.receipts import router as receipts_router
 from agui.api.replay import router as replay_router
 from agui.api.memory import router as memory_router
 from agui.api.control import router as control_router
+from agui.api.learning import router as learning_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -80,6 +83,9 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(TraceMiddleware)
 
+    # Honeypot gate: must be outermost so it intercepts before any API handler
+    app.add_middleware(HoneypotMiddleware)
+
     # REST API routes
     app.include_router(incidents_router)
     app.include_router(investigations_router)
@@ -87,6 +93,7 @@ def create_app() -> FastAPI:
     app.include_router(replay_router)
     app.include_router(memory_router)
     app.include_router(control_router)
+    app.include_router(learning_router)
 
     return app
 
@@ -271,6 +278,52 @@ async def inject_synthetic_investigation(
         "event_count": len(events),
         "ws_url": f"/ws/investigations/{investigation_id}",
     }
+
+
+@app.get("/demo", response_class=HTMLResponse, include_in_schema=False)
+async def demo_dashboard():
+    """Serve the self-learning demo dashboard (no build step required)."""
+    import pathlib
+    html_path = pathlib.Path(__file__).parent / "demo.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
+
+
+# ── Invite token management ───────────────────────────────────────────────────
+
+@app.post("/api/v1/admin/invite", include_in_schema=False)
+async def create_invite(actor: ActorContext = Depends(get_actor)):
+    """Generate a new invite link (admin only)."""
+    from agui.middleware.auth import ROLE_HIERARCHY
+    if ROLE_HIERARCHY.get(actor.actor_role, 0) < ROLE_HIERARCHY["admin"]:
+        return JSONResponse(status_code=403, content={"detail": "Admin only"})
+    token = generate_invite_token()
+    host = os.getenv("AGUI_PUBLIC_URL", "http://localhost:8081")
+    return {
+        "token": token,
+        "invite_url": f"{host}/?invite={token}",
+        "expires_in_days": 7,
+    }
+
+
+# ── React SPA static file serving ────────────────────────────────────────────
+# Mount AFTER all API routes so /api/* routes take precedence.
+# Serve ui/dist/ at root; catch-all returns index.html for React Router.
+
+import pathlib as _pathlib
+
+_UI_DIST = _pathlib.Path(__file__).parent.parent / "ui" / "dist"
+
+if _UI_DIST.exists():
+    # Serve static assets (JS, CSS, images)
+    app.mount("/assets", StaticFiles(directory=str(_UI_DIST / "assets")), name="spa-assets")
+
+    @app.get("/{full_path:path}", response_class=HTMLResponse, include_in_schema=False)
+    async def serve_spa(full_path: str):
+        """Catch-all: return React SPA index.html for client-side routing."""
+        index = _UI_DIST / "index.html"
+        return HTMLResponse(content=index.read_text(encoding="utf-8"))
+else:
+    logger.warning("React build not found at %s — run 'npm run build' in ui/", _UI_DIST)
 
 
 if __name__ == "__main__":

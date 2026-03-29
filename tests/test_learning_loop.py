@@ -148,7 +148,9 @@ class TestLearningLoopFailureIsolation:
 
 class TestUpdateCalibratorThreadSafety:
     def test_calibrator_lock_acquired_during_update(self):
-        from supervisor.learning_loop import _calibrator_lock
+        # _calibrator_lock is now the shared lock from confidence_calibrator;
+        # learning_loop re-exports it so existing imports still resolve.
+        from supervisor.confidence_calibrator import _calibrator_lock
         from supervisor.ground_truth_eval import EvalResult
 
         eval_result = EvalResult(
@@ -163,8 +165,7 @@ class TestUpdateCalibratorThreadSafety:
             actual_correct=True,
         )
         mock_calibrator = MagicMock()
-        with patch("supervisor.learning_loop.ConfidenceCalibrator") as mock_cls:
-            mock_cls.load.return_value = mock_calibrator
+        with patch("supervisor.learning_loop.get_calibrator", return_value=mock_calibrator):
             from supervisor.learning_loop import _update_calibrator
             _update_calibrator(eval_result, "INC_LOCK")
 

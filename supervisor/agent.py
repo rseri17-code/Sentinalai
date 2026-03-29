@@ -20,7 +20,7 @@ import time
 import concurrent.futures
 from typing import Any
 
-from supervisor.tool_selector import classify_incident, get_playbook, is_meta_query
+from supervisor.tool_selector import classify_incident, get_playbook, get_evolved_playbook, is_meta_query
 from supervisor.receipt import ReceiptCollector
 from supervisor.guardrails import (
     ExecutionBudget,
@@ -77,7 +77,11 @@ from database.persistence import (
     persist_knowledge_entry as _db_persist_knowledge,
     is_enabled as _db_enabled,
 )
-from supervisor.confidence_calibrator import ConfidenceCalibrator
+from supervisor.confidence_calibrator import ConfidenceCalibrator, get_calibrator
+from supervisor.self_critique import critique as _self_critique
+from supervisor.online_evaluator import evaluate as _online_evaluate, annotate_result as _annotate_online
+from supervisor.experience_store import store_experience as _store_experience, retrieve_similar as _retrieve_experiences
+from supervisor.strategy_evolver import record_outcome as _record_strategy_outcome
 from workers.mcp_client import McpGateway
 from workers.ops_worker import OpsWorker
 from workers.log_worker import LogWorker
@@ -87,21 +91,6 @@ from workers.knowledge_worker import KnowledgeWorker
 from workers.itsm_worker import ItsmWorker
 from workers.devops_worker import DevopsWorker
 from workers.confluence_worker import ConfluenceWorker
-
-# Lazy-load calibrator (singleton — lock guards concurrent first-call races)
-_calibrator: ConfidenceCalibrator | None = None
-_calibrator_lock = threading.Lock()
-
-
-def _get_calibrator() -> ConfidenceCalibrator:
-    global _calibrator
-    if _calibrator is not None:
-        return _calibrator
-    with _calibrator_lock:
-        if _calibrator is None:
-            _calibrator = ConfidenceCalibrator.load()
-        return _calibrator
-
 
 # Institutional knowledge layer (opt-in via env var, graceful degradation)
 _KNOWLEDGE_ENABLED = os.environ.get("KNOWLEDGE_GRAPH_ENABLED", "").lower() in ("1", "true", "yes")
@@ -230,9 +219,6 @@ class SentinalAISupervisor:
         os.environ.get("INVESTIGATION_DEADLINE_SECONDS", "120")
     )
 
-    # Per-investigation thread-local state (safe for concurrent investigations)
-    _tls = threading.local()
-
     def __init__(
         self,
         replay_dir: str | None = None,
@@ -268,6 +254,9 @@ class SentinalAISupervisor:
             max_workers=len(self.workers) + 2,
             thread_name_prefix="sentinalai-parallel",
         )
+        # Per-investigation thread-local state — must be per-instance so concurrent
+        # SentinalAISupervisor instances do not share the same TLS namespace.
+        self._tls = threading.local()
 
     # ------------------------------------------------------------------ #
     # Public API
@@ -368,6 +357,12 @@ class SentinalAISupervisor:
                 severity.level, severity.label, severity.source, severity.budget,
             )
 
+            # Step 2d: Retrieve similar past experiences to prime hypothesis generation.
+            # Runs concurrently with the playbook to avoid adding latency.
+            experience_future = self._parallel_executor.submit(
+                _retrieve_experiences, incident_type, service,
+            )
+
             # Step 3: Execute playbook + historical context in parallel
             # Historical context targets knowledge_worker (independent of playbook workers)
             # so we can overlap them to cut wall-clock time.
@@ -396,6 +391,18 @@ class SentinalAISupervisor:
             if historical:
                 evidence["historical_context"] = historical
 
+            # Collect similar past experiences (ran in parallel with playbook)
+            try:
+                past_experiences = experience_future.result(timeout=5)
+            except Exception:
+                past_experiences = []
+            if past_experiences:
+                evidence["_past_experiences"] = past_experiences
+                logger.info(
+                    "Priming with %d similar past experience(s) for %s/%s",
+                    len(past_experiences), incident_type, service,
+                )
+
             logger.info("Playbook complete for %s: %d evidence items", incident_id, len(evidence))
 
             # Step 3b: DevOps enrichment (proof-gated — only if change data found)
@@ -412,13 +419,31 @@ class SentinalAISupervisor:
             confidence = result.get("confidence", 0)
             # Apply confidence calibration (feedback loop from ground truth)
             raw_confidence = confidence
-            confidence = _get_calibrator().calibrate(confidence)
+            confidence = get_calibrator().calibrate(confidence)
             if confidence != raw_confidence:
                 result["confidence"] = confidence
                 result["raw_confidence"] = raw_confidence
             hypothesis_count = result.pop("_hypothesis_count", 0)
             winner_hypothesis = result.pop("_winner_hypothesis", "none")
             llm_metrics = result.pop("_llm_metrics", {})
+
+            # Step 4b: Self-critique — evaluate the RCA quality before returning.
+            # If the critique identifies gaps and budget allows, gather targeted
+            # follow-up evidence and re-analyze (at most once per investigation).
+            result, evidence = self._apply_self_critique(
+                result, evidence, incident_id, incident_type, service,
+                receipts, budget, circuits,
+            )
+            confidence = result.get("confidence", confidence)
+
+            # Step 4c: Online quality evaluation — scores every investigation
+            # without requiring ground truth labels.
+            online_score = _online_evaluate(result, evidence, budget.calls_made, hypothesis_count)
+            _annotate_online(result, online_score)
+            # Store evidence snapshot for experience_store (avoids holding full evidence in result)
+            result["_evidence_snapshot"] = {
+                k: bool(v) for k, v in evidence.items() if not k.startswith("_")
+            }
 
             # Phase: Observe — span attributes + deep-eval metrics
             self._record_observability(
@@ -459,6 +484,112 @@ class SentinalAISupervisor:
             )
 
             return result
+
+    # ------------------------------------------------------------------ #
+    # Internal: self-critique refinement
+    # ------------------------------------------------------------------ #
+
+    def _apply_self_critique(
+        self,
+        result: dict,
+        evidence: dict,
+        incident_id: str,
+        incident_type: str,
+        service: str,
+        receipts: Any,
+        budget: Any,
+        circuits: Any,
+    ) -> tuple[dict, dict]:
+        """Run self-critique on the initial RCA result and optionally refine.
+
+        If critique score is below threshold and budget allows, executes the
+        gap_queries returned by the critique, merges new evidence, and
+        re-runs _analyze_evidence once.  The refined result is kept only if
+        it has equal-or-higher confidence than the original.
+        """
+        try:
+            from supervisor.guardrails import MIN_GAP_BUDGET as _gb
+            budget_remaining = budget.remaining() if hasattr(budget, "remaining") else 0
+        except Exception:
+            budget_remaining = 0
+
+        try:
+            critique = _self_critique(
+                result, evidence, incident_type, service,
+                budget_remaining=budget_remaining,
+            )
+            result["_critique"] = {
+                "score": critique.score,
+                "dimensions": critique.dimensions,
+                "gaps": critique.gaps,
+            }
+            if critique.llm_critique:
+                result["_critique"]["llm_narrative"] = critique.llm_critique
+
+            if not critique.gap_queries:
+                logger.debug(
+                    "Self-critique: score=%.2f — no gap queries (budget=%d)",
+                    critique.score, budget_remaining,
+                )
+                return result, evidence
+
+            logger.info(
+                "Self-critique triggered gap filling: score=%.2f gaps=%d queries=%d",
+                critique.score, len(critique.gaps), len(critique.gap_queries),
+            )
+
+            # Execute gap queries
+            for gap_step in critique.gap_queries:
+                worker_name = gap_step.get("worker", "")
+                action = gap_step.get("action", "")
+                params = gap_step.get("params", {})
+                if not worker_name or not action:
+                    continue
+                worker = self.workers.get(worker_name)
+                if not worker:
+                    logger.debug("Gap query skipped — worker %s not available", worker_name)
+                    continue
+                gap_result = self._call_worker(
+                    worker, action, params,
+                    receipts=receipts, budget=budget,
+                    worker_name=worker_name, circuits=circuits,
+                )
+                if gap_result and "error" not in gap_result:
+                    ev_key = f"gap_{action}"
+                    evidence[ev_key] = gap_result
+                    logger.info("Gap evidence gathered: %s.%s", worker_name, action)
+
+            # Re-analyze with enriched evidence
+            refined = self._analyze_evidence(incident_id, {
+                **self._tls.__dict__.get("current_incident", {}),
+            } if hasattr(self._tls, "current_incident") else {}, incident_type, evidence)
+
+            refined_conf = refined.get("confidence", 0)
+            orig_conf = result.get("confidence", 0)
+            if refined_conf >= orig_conf:
+                # Merge metadata from original
+                refined["_critique"] = result.get("_critique", {})
+                refined["_critique"]["triggered_refinement"] = True
+                # Pop internal keys so caller handles them
+                refined.pop("_hypothesis_count", None)
+                refined.pop("_winner_hypothesis", None)
+                refined.pop("_llm_metrics", None)
+                logger.info(
+                    "Self-critique refinement improved confidence: %d → %d",
+                    orig_conf, refined_conf,
+                )
+                return refined, evidence
+            else:
+                result["_critique"]["triggered_refinement"] = True
+                logger.info(
+                    "Self-critique refinement did not improve (orig=%d refined=%d), keeping original",
+                    orig_conf, refined_conf,
+                )
+                return result, evidence
+
+        except Exception as exc:
+            logger.warning("Self-critique failed (non-critical): %s", exc)
+            return result, evidence
 
     # ------------------------------------------------------------------ #
     # Internal: post-analysis phase helpers (extracted from investigate)
@@ -706,11 +837,31 @@ class SentinalAISupervisor:
 
         # Continuous learning step: evaluate against ground truth (if available),
         # persist EvalResult, and update confidence calibrator.
+        # Run in background so it never adds latency to the investigation response.
         try:
             from supervisor.learning_loop import run_learning_step
-            run_learning_step(incident_id, result)
+            self._parallel_executor.submit(run_learning_step, incident_id, result)
         except Exception as exc:
             logger.warning("Learning loop step failed (non-critical): %s", exc)
+
+        # Self-learning: store experience + evolve strategy in background.
+        # These run after every investigation regardless of ground truth availability.
+        online_score = result.get("online_quality_score", 0.0)
+        receipt_list = receipts.to_list() if receipts else []
+        try:
+            self._parallel_executor.submit(
+                _store_experience,
+                incident_id, incident_type, service, result, online_score,
+            )
+        except Exception as exc:
+            logger.warning("Experience storage failed (non-critical): %s", exc)
+        try:
+            self._parallel_executor.submit(
+                _record_strategy_outcome,
+                incident_type, receipt_list, online_score,
+            )
+        except Exception as exc:
+            logger.warning("Strategy outcome recording failed (non-critical): %s", exc)
 
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
@@ -1042,7 +1193,7 @@ class SentinalAISupervisor:
         A LoopCheckpoint is used throughout to detect stalled investigations
         and trigger early exit if no progress is made across two checkpoints.
         """
-        playbook = get_playbook(incident_type)
+        playbook = get_evolved_playbook(incident_type)  # applies learned step weights
         cb_registry = circuits or circuit_registry
         loop_checkpoint = LoopCheckpoint()
 

@@ -199,7 +199,7 @@ def persist_eval_result(
     """Persist a ground-truth evaluation result.
 
     These rows feed the confidence calibrator and track accuracy over time.
-    The table is created on first insert (CREATE TABLE IF NOT EXISTS).
+    The table must already exist (created by schema.sql).
 
     Returns True on success.
     """
@@ -211,22 +211,6 @@ def persist_eval_result(
         from sqlalchemy import text
 
         with engine.connect() as conn:
-            conn.execute(
-                text("""
-                    CREATE TABLE IF NOT EXISTS eval_results (
-                        id                  SERIAL PRIMARY KEY,
-                        incident_id         TEXT NOT NULL,
-                        root_cause_match    TEXT NOT NULL,
-                        root_cause_score    REAL NOT NULL,
-                        confidence_error    REAL NOT NULL,
-                        evidence_coverage   REAL NOT NULL,
-                        actual_correct      BOOLEAN NOT NULL,
-                        predicted_confidence INTEGER NOT NULL,
-                        missing_evidence    TEXT,
-                        evaluated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                    )
-                """)
-            )
             conn.execute(
                 text("""
                     INSERT INTO eval_results

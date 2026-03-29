@@ -420,12 +420,12 @@ class TestDevopsEnrichmentPaths:
     def test_devops_enrichment_in_error_spike_analyzer(self):
         """DevOps context (deployments + workflows) enriches error_spike hypothesis."""
         sup = _supervisor_with_full_mocks("INC12347")
-        # Pre-set devops evidence
-        sup._devops_evidence = {
+        # Pre-set devops evidence in TLS (where the analyzers read from)
+        sup._tls.devops_evidence = {
             "deployments": [{"pr_number": 42, "author": "dev", "sha": "abc123def456"}],
             "workflow_runs": [{"conclusion": "success", "name": "CI"}],
         }
-        sup._itsm_evidence = {
+        sup._tls.itsm_evidence = {
             "ci": {"tier": "P1"},
         }
         # Directly test the analyzer
@@ -452,10 +452,10 @@ class TestDevopsEnrichmentPaths:
     def test_devops_enrichment_in_saturation_analyzer(self):
         """DevOps workflow_runs enrich saturation hypothesis."""
         sup = _supervisor_with_full_mocks("INC12349")
-        sup._devops_evidence = {
+        sup._tls.devops_evidence = {
             "workflow_runs": [{"conclusion": "failure", "name": "CI"}],
         }
-        sup._itsm_evidence = {}
+        sup._tls.itsm_evidence = {}
         signals = {
             "golden_signals": {"saturation": {"cpu": 95}, "latency": {}, "errors": {}},
         }

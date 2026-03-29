@@ -36,7 +36,7 @@
     @apply btn bg-transparent hover:bg-slate-800 text-slate-300;
   }
   .scroll-panel {
-    @apply overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent;
+    @apply overflow-y-auto;
   }
 }
 

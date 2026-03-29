@@ -337,6 +337,46 @@ def get_playbook(incident_type: str) -> list[dict]:
     return INCIDENT_PLAYBOOKS.get(incident_type, INCIDENT_PLAYBOOKS["error_spike"])
 
 
+def get_evolved_playbook(incident_type: str) -> list[dict]:
+    """Return the playbook with steps re-ordered by evolved strategy weights.
+
+    If the strategy evolver has accumulated enough observations (MIN_CALLS_TO_EVOLVE)
+    for any step, higher-weight steps are moved earlier to maximise the chance
+    of gathering the most signal-rich evidence first.
+
+    Steps without observed weights retain their original relative order.
+    Falls back to get_playbook() gracefully if evolver is unavailable.
+    """
+    base = get_playbook(incident_type)
+    try:
+        from supervisor.strategy_evolver import get_weights
+        weights = get_weights(incident_type)
+        if not weights:
+            return base
+
+        # Stable sort: unknown labels keep original index as tiebreaker
+        def _sort_key(item: tuple[int, dict]) -> float:
+            idx, step = item
+            label = step.get("label", step.get("action", ""))
+            # Higher weight → lower sort key → runs first
+            return -weights.get(label, 1.0) + idx * 0.001
+
+        sorted_steps = [s for _, s in sorted(enumerate(base), key=_sort_key)]
+
+        if sorted_steps != base:
+            reordered_labels = [s.get("label", s.get("action")) for s in sorted_steps]
+            logger.info(
+                "Evolved playbook for %s: %s",
+                incident_type,
+                " → ".join(str(l) for l in reordered_labels),
+            )
+        return sorted_steps
+
+    except Exception as exc:
+        logger.debug("get_evolved_playbook fallback to base (%s)", exc)
+        return base
+
+
 # =========================================================================
 # MCP tool name <-> worker name mapping
 # =========================================================================

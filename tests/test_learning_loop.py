@@ -165,7 +165,7 @@ class TestUpdateCalibratorThreadSafety:
             actual_correct=True,
         )
         mock_calibrator = MagicMock()
-        with patch("supervisor.confidence_calibrator.get_calibrator", return_value=mock_calibrator):
+        with patch("supervisor.learning_loop.get_calibrator", return_value=mock_calibrator):
             from supervisor.learning_loop import _update_calibrator
             _update_calibrator(eval_result, "INC_LOCK")
 

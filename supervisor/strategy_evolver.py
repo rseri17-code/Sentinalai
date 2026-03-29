@@ -88,14 +88,17 @@ def record_outcome(
                 entry = type_weights.setdefault(label, {
                     "weight": 1.0,
                     "calls":  0,
-                    "ema_signal": 1.0,
+                    "ema_signal": None,  # None = uninitialized; seeded from first signal
                 })
                 entry["calls"] += 1
 
                 # Only start diverging from 1.0 once we have MIN_CALLS_TO_EVOLVE
                 if entry["calls"] >= MIN_CALLS_TO_EVOLVE:
-                    old_ema = entry.get("ema_signal", 1.0)
-                    new_ema = EMA_ALPHA * signal + (1 - EMA_ALPHA) * old_ema
+                    old_ema = entry.get("ema_signal")
+                    if old_ema is None:
+                        new_ema = signal  # unbiased seed from first observation
+                    else:
+                        new_ema = EMA_ALPHA * signal + (1 - EMA_ALPHA) * old_ema
                     entry["ema_signal"] = round(new_ema, 4)
                     # Weight is the EMA signal, clamped to [0.3, 2.0]
                     entry["weight"] = round(max(0.3, min(2.0, new_ema)), 4)

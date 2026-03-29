@@ -188,11 +188,13 @@ def _score_coherence(evidence: dict, sources_found: list[str]) -> float:
     for ev_key, ev_val in evidence.items():
         if ev_key.startswith("_"):
             continue
-        if not ev_val:
+        if ev_val is None:
             continue
-        if isinstance(ev_val, dict) and not any(ev_val.values()):
+        if isinstance(ev_val, dict) and not ev_val:
             continue
-        if isinstance(ev_val, list) and len(ev_val) == 0:
+        if isinstance(ev_val, list) and not ev_val:
+            continue
+        if isinstance(ev_val, str) and not ev_val.strip():
             continue
         populated += 1
 

@@ -27,7 +27,7 @@ import time
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 
 from agui.event_bus import init_bus, get_bus
 from agui.ws_manager import get_ws_manager
@@ -39,6 +39,7 @@ from agui.api.receipts import router as receipts_router
 from agui.api.replay import router as replay_router
 from agui.api.memory import router as memory_router
 from agui.api.control import router as control_router
+from agui.api.learning import router as learning_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -87,6 +88,7 @@ def create_app() -> FastAPI:
     app.include_router(replay_router)
     app.include_router(memory_router)
     app.include_router(control_router)
+    app.include_router(learning_router)
 
     return app
 
@@ -271,6 +273,14 @@ async def inject_synthetic_investigation(
         "event_count": len(events),
         "ws_url": f"/ws/investigations/{investigation_id}",
     }
+
+
+@app.get("/demo", response_class=HTMLResponse, include_in_schema=False)
+async def demo_dashboard():
+    """Serve the self-learning demo dashboard (no build step required)."""
+    import pathlib
+    html_path = pathlib.Path(__file__).parent / "demo.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

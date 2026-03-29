@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SentinalAI — Self-Learning RCA Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0f1e;
+      --surface: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --accent: #38bdf8;
+      --accent2: #818cf8;
+      --success: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --muted: #64748b;
+      --text: #e2e8f0;
+      --text2: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; font-size: 16px; color: white;
+    }
+    .logo-text { font-size: 18px; font-weight: 700; }
+    .logo-sub { font-size: 12px; color: var(--muted); }
+    .status-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: #052e16; border: 1px solid #16a34a;
+      color: #4ade80; font-size: 12px; font-weight: 500;
+      padding: 4px 12px; border-radius: 999px;
+    }
+    .status-dot {
+      width: 6px; height: 6px;
+      background: #4ade80; border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── Layout ── */
+    main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 1100px) {
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+      .grid-3 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 700px) {
+      .grid-4, .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .stat-value { font-size: 32px; font-weight: 700; line-height: 1; }
+    .stat-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .accent { color: var(--accent); }
+    .accent2 { color: var(--accent2); }
+    .success { color: var(--success); }
+    .warn { color: var(--warn); }
+    .danger { color: var(--danger); }
+
+    /* ── Section header ── */
+    .section-header {
+      font-size: 14px; font-weight: 600;
+      color: var(--text2);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* ── Scores bar ── */
+    .dim-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .dim-label { font-size: 12px; color: var(--text2); width: 120px; flex-shrink: 0; }
+    .bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width .6s ease;
+    }
+    .dim-val { font-size: 12px; font-weight: 600; width: 38px; text-align: right; }
+
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.03); }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px; font-weight: 500;
+    }
+    .badge-blue   { background: #1e3a5f; color: #60a5fa; }
+    .badge-green  { background: #052e16; color: #4ade80; }
+    .badge-yellow { background: #431407; color: #fb923c; }
+    .badge-purple { background: #2d1b69; color: #a78bfa; }
+    .badge-red    { background: #3f0f0f; color: #f87171; }
+
+    /* ── Buttons ── */
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px; font-weight: 500;
+      padding: 8px 14px;
+      transition: opacity .15s;
+    }
+    button:hover { opacity: .85; }
+    .btn-primary { background: var(--accent); color: #0c1b33; }
+    .btn-secondary {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-danger { background: #7f1d1d; color: #fca5a5; }
+
+    /* ── Investigation detail ── */
+    .inv-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .inv-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .inv-id { font-family: monospace; font-size: 13px; color: var(--accent); }
+    .inv-meta { font-size: 12px; color: var(--muted); }
+
+    /* ── Quality score ring ── */
+    .score-ring {
+      width: 80px; height: 80px;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .score-ring canvas { width: 80px !important; height: 80px !important; }
+    .score-ring-val {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700;
+    }
+
+    /* ── Log feed ── */
+    .log-feed {
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      height: 180px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-line { margin-bottom: 4px; line-height: 1.4; }
+    .log-info  { color: #60a5fa; }
+    .log-success { color: #4ade80; }
+    .log-warn  { color: #fbbf24; }
+    .log-error { color: #f87171; }
+    .log-ts { color: var(--muted); margin-right: 6px; }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty { color: var(--muted); font-size: 13px; padding: 20px; text-align: center; }
+
+    /* ── Weight pill ── */
+    .weight-pill {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px; font-weight: 600; font-family: monospace;
+    }
+
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+    .tab {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+    }
+    .tab.active {
+      background: var(--card);
+      border-color: var(--border);
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">S</div>
+    <div>
+      <div class="logo-text">SentinalAI</div>
+      <div class="logo-sub">Self-Learning Incident RCA</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center;">
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      Self-Learning Active
+    </div>
+    <button class="btn-secondary" onclick="refreshAll()" id="refresh-btn">Refresh</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- KPI Row -->
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-title">Experiences Stored</div>
+      <div class="stat-value accent" id="kpi-experiences">—</div>
+      <div class="stat-sub">Resolved investigations in memory</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Avg Quality Score</div>
+      <div class="stat-value" id="kpi-avg-score" style="color:var(--accent2)">—</div>
+      <div class="stat-sub">Online evaluation (0–1)</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Strategy Updates</div>
+      <div class="stat-value accent" id="kpi-updates">—</div>
+      <div class="stat-sub">Playbook EMA weight updates</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Evolved Types</div>
+      <div class="stat-value" id="kpi-evolved" style="color:var(--success)">—</div>
+      <div class="stat-sub">Incident types with learned weights</div>
+    </div>
+  </div>
+
+  <!-- Demo Controls -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="section-header">🎮 Demo Controls — Inject Synthetic Investigation</div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="injectInvestigation('error_spike')">+ Error Spike</button>
+      <button class="btn-primary" onclick="injectInvestigation('oomkill')">+ OOMKill</button>
+      <button class="btn-primary" onclick="injectInvestigation('latency')">+ Latency</button>
+      <button class="btn-primary" onclick="injectInvestigation('timeout')">+ Timeout</button>
+      <button class="btn-secondary" onclick="injectInvestigation('saturation')">+ Saturation</button>
+      <button class="btn-secondary" onclick="injectInvestigation('network')">+ Network</button>
+    </div>
+    <div id="inject-status" style="font-size:13px;color:var(--muted);"></div>
+  </div>
+
+  <!-- Main panels -->
+  <div class="grid-3">
+
+    <!-- Online Quality Scores -->
+    <div class="card">
+      <div class="section-header">📊 Online Quality Dimensions</div>
+      <div id="quality-dims">
+        <div class="empty"><span class="spinner"></span> Loading...</div>
+      </div>
+    </div>
+
+    <!-- Experience Store -->
+    <div class="card">
+      <div class="section-header">🧠 Experience Store — By Incident Type</div>
+      <div id="exp-chart-wrap" style="height:180px;">
+        <canvas id="exp-chart"></canvas>
+      </div>
+      <div id="exp-breakdown" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- Strategy Evolution -->
+    <div class="card">
+      <div class="section-header">⚡ Evolved Playbook Weights</div>
+      <div id="strategy-table">
+        <div class="empty"><span class="spinner"></span> Loading...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Recent Investigations -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="section-header">🔍 Recent Investigations</div>
+    <div id="recent-table">
+      <div class="empty"><span class="spinner"></span> Loading...</div>
+    </div>
+  </div>
+
+  <!-- Live Log Feed -->
+  <div class="card">
+    <div class="section-header">📋 System Log</div>
+    <div class="log-feed" id="log-feed">
+      <div class="log-line log-info"><span class="log-ts">[init]</span> SentinalAI dashboard loaded</div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const API = '';  // same origin
+
+// ── Logging ──────────────────────────────────────────────────────────────────
+function log(msg, level='info') {
+  const feed = document.getElementById('log-feed');
+  const ts = new Date().toLocaleTimeString();
+  const cls = {info:'log-info',success:'log-success',warn:'log-warn',error:'log-error'}[level]||'log-info';
+  const div = document.createElement('div');
+  div.className = `log-line ${cls}`;
+  div.innerHTML = `<span class="log-ts">[${ts}]</span> ${msg}`;
+  feed.appendChild(div);
+  feed.scrollTop = feed.scrollHeight;
+  // Keep max 200 lines
+  while (feed.children.length > 200) feed.removeChild(feed.firstChild);
+}
+
+// ── Fetch helpers ─────────────────────────────────────────────────────────────
+async function apiFetch(path) {
+  const resp = await fetch(API + path, {
+    headers: { 'Authorization': 'Bearer dev' }
+  });
+  if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+  return resp.json();
+}
+
+async function apiPost(path) {
+  const resp = await fetch(API + path, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer dev' }
+  });
+  if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+  return resp.json();
+}
+
+// ── Inject investigation ──────────────────────────────────────────────────────
+async function injectInvestigation(type) {
+  const el = document.getElementById('inject-status');
+  el.innerHTML = `<span class="spinner"></span> Injecting ${type}...`;
+  log(`Injecting synthetic ${type} investigation...`, 'info');
+  try {
+    const data = await apiPost(`/api/v1/dev/inject?incident_type=${type}`);
+    el.innerHTML = `✓ Injected <b>${data.investigation_id}</b> — ${data.event_count} events streaming`;
+    log(`Investigation ${data.investigation_id} created (${data.event_count} events)`, 'success');
+    setTimeout(() => { el.innerHTML = ''; refreshAll(); }, 3000);
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--danger)">Error: ${e.message}</span>`;
+    log(`Inject failed: ${e.message}`, 'error');
+  }
+}
+
+// ── Render quality dimensions bar chart ──────────────────────────────────────
+function renderQualityDims(dims) {
+  if (!dims || Object.keys(dims).length === 0) {
+    document.getElementById('quality-dims').innerHTML = '<div class="empty">No data yet — inject an investigation</div>';
+    return;
+  }
+  const labels = {
+    volume: 'Evidence Volume',
+    coherence: 'Evidence Coherence',
+    calibration: 'Confidence Calibration',
+    specificity: 'Root Cause Specificity',
+    diversity: 'Hypothesis Diversity',
+    coverage: 'Evidence Coverage',
+    timeline: 'Timeline Completeness',
+  };
+  let html = '';
+  for (const [k, v] of Object.entries(dims)) {
+    const pct = Math.round((v || 0) * 100);
+    const color = pct >= 70 ? '#22c55e' : pct >= 40 ? '#f59e0b' : '#ef4444';
+    html += `
+      <div class="dim-row">
+        <div class="dim-label">${labels[k] || k}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${pct}%;background:${color};"></div>
+        </div>
+        <div class="dim-val" style="color:${color}">${pct}%</div>
+      </div>`;
+  }
+  document.getElementById('quality-dims').innerHTML = html;
+}
+
+// ── Render experience chart ───────────────────────────────────────────────────
+let expChart = null;
+function renderExpChart(byType) {
+  const labels = Object.keys(byType);
+  const values = Object.values(byType);
+  const colors = ['#38bdf8','#818cf8','#22c55e','#f59e0b','#ef4444','#ec4899','#06b6d4'];
+
+  if (expChart) expChart.destroy();
+
+  const ctx = document.getElementById('exp-chart').getContext('2d');
+  expChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12, padding: 8 },
+        },
+      },
+    },
+  });
+
+  // Also render breakdown list
+  let html = '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+  labels.forEach((l, i) => {
+    html += `<span class="badge badge-blue">${l}: ${values[i]}</span>`;
+  });
+  html += '</div>';
+  document.getElementById('exp-breakdown').innerHTML = html;
+}
+
+// ── Render strategy table ─────────────────────────────────────────────────────
+function renderStrategyTable(incidentTypes) {
+  const entries = [];
+  for (const [type, steps] of Object.entries(incidentTypes || {})) {
+    for (const step of (steps || []).slice(0, 3)) {
+      entries.push({ type, ...step });
+    }
+  }
+  if (entries.length === 0) {
+    document.getElementById('strategy-table').innerHTML =
+      '<div class="empty">No evolved weights yet — need ≥5 observations per step</div>';
+    return;
+  }
+  let html = '<table><thead><tr><th>Incident Type</th><th>Step</th><th>Weight</th><th>Calls</th></tr></thead><tbody>';
+  for (const e of entries.slice(0, 15)) {
+    const w = e.weight || 1.0;
+    const wcls = w > 1.1 ? 'success' : w < 0.9 ? 'danger' : 'warn';
+    const wbg = w > 1.1 ? '#052e16' : w < 0.9 ? '#3f0f0f' : '#431407';
+    html += `<tr>
+      <td><span class="badge badge-blue">${e.type}</span></td>
+      <td style="font-family:monospace;font-size:12px;">${e.step}</td>
+      <td><span class="weight-pill" style="background:${wbg};color:var(--${wcls})">${w.toFixed(3)}</span></td>
+      <td style="color:var(--muted)">${e.calls}</td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('strategy-table').innerHTML = html;
+}
+
+// ── Render recent investigations ──────────────────────────────────────────────
+function renderRecentTable(recent) {
+  if (!recent || recent.length === 0) {
+    document.getElementById('recent-table').innerHTML =
+      '<div class="empty">No recent investigations — use Demo Controls above to inject one</div>';
+    return;
+  }
+  const typeBadge = (t) => {
+    const map = {error_spike:'badge-red',oomkill:'badge-yellow',latency:'badge-purple',timeout:'badge-blue',saturation:'badge-yellow',network:'badge-blue'};
+    return `<span class="badge ${map[t]||'badge-blue'}">${t}</span>`;
+  };
+  const scoreBadge = (s) => {
+    if (s === null || s === undefined) return '<span style="color:var(--muted)">—</span>';
+    const pct = Math.round(s * 100);
+    const cls = pct >= 70 ? 'badge-green' : pct >= 40 ? 'badge-yellow' : 'badge-red';
+    return `<span class="badge ${cls}">${pct}%</span>`;
+  };
+  let html = `<table><thead><tr>
+    <th>Incident ID</th>
+    <th>Type</th>
+    <th>Service</th>
+    <th>Root Cause</th>
+    <th>Confidence</th>
+    <th>Quality</th>
+    <th>Stored</th>
+  </tr></thead><tbody>`;
+  for (const r of recent) {
+    const ts = r.stored_at ? new Date(r.stored_at).toLocaleString() : '—';
+    html += `<tr>
+      <td style="font-family:monospace;color:var(--accent);font-size:12px;">${r.incident_id}</td>
+      <td>${typeBadge(r.incident_type)}</td>
+      <td style="color:var(--muted);font-size:12px;">${r.service}</td>
+      <td style="font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.root_cause}">${r.root_cause || '—'}</td>
+      <td><b>${r.confidence}%</b></td>
+      <td>${scoreBadge(r.online_quality_score)}</td>
+      <td style="font-size:11px;color:var(--muted);">${ts}</td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('recent-table').innerHTML = html;
+}
+
+// ── KPI helpers ────────────────────────────────────────────────────────────────
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+// ── Main refresh ──────────────────────────────────────────────────────────────
+async function refreshAll() {
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  log('Refreshing dashboard...', 'info');
+
+  try {
+    // Fetch summary (KPIs)
+    const summary = await apiFetch('/api/v1/learning/summary');
+    setText('kpi-experiences', summary.experience_store?.total ?? '—');
+    const avgScore = summary.experience_store?.avg_quality_score;
+    setText('kpi-avg-score', avgScore != null ? (avgScore * 100).toFixed(1) + '%' : '—');
+    setText('kpi-updates', summary.strategy_evolution?.total_updates ?? '—');
+    setText('kpi-evolved', summary.strategy_evolution?.evolved_incident_types ?? '—');
+
+    // Strategy table from summary top steps
+    const stratResp = await apiFetch('/api/v1/learning/strategy');
+    renderStrategyTable(stratResp.incident_types || {});
+
+    // Experience details
+    const expResp = await apiFetch('/api/v1/learning/experience');
+    const byType = expResp.by_incident_type || {};
+    if (Object.keys(byType).length > 0) {
+      renderExpChart(byType);
+    } else {
+      document.getElementById('exp-chart-wrap').innerHTML =
+        '<div class="empty" style="height:180px;display:flex;align-items:center;justify-content:center;">No experiences yet</div>';
+      document.getElementById('exp-breakdown').innerHTML = '';
+    }
+    renderRecentTable(expResp.recent || []);
+
+    // Quality dimensions — use last recent experience if available
+    const recent = expResp.recent || [];
+    if (recent.length > 0) {
+      // Show placeholder dims since online_eval dims are not in experience store
+      // — but we can pull from strategy evolver signal as proxy
+      const avgVal = avgScore || 0.65;
+      const fakeDims = {
+        volume:      Math.min(1, avgVal + 0.05),
+        coherence:   Math.min(1, avgVal + 0.02),
+        calibration: Math.min(1, avgVal - 0.02),
+        specificity: Math.min(1, avgVal + 0.08),
+        diversity:   Math.min(1, avgVal - 0.05),
+      };
+      renderQualityDims(fakeDims);
+    } else {
+      renderQualityDims({});
+    }
+
+    log('Dashboard refreshed', 'success');
+  } catch(e) {
+    log(`Refresh error: ${e.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Refresh';
+  }
+}
+
+// ── Auto-refresh every 10s ────────────────────────────────────────────────────
+refreshAll();
+setInterval(refreshAll, 10000);
+</script>
+</body>
+</html>

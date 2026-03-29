@@ -1,1621 +1,5 @@
 [
   {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:06.802576+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:07.160919+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:07.398495+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:07.646128+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:07.890528+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:08.132168+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:08.613713+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:08.639197+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:08.661289+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:09.564414+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:09.951090+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:10.833901+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:10.978340+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:11.127361+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:11.280498+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:11.432519+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:12.193399+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:12.218166+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:12.604953+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:51:12.909301+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:19.428488+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:19.756143+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:19.984414+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:24.389053+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:24.608263+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:24.921641+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:25.151144+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:25.383109+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:25.603691+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:25.834887+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:26.073154+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:26.314241+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:26.667651+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:26.916780+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:27.168744+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:27.417276+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:27.677551+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:27.928297+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:28.188138+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:28.662642+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:28.691255+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:28.715688+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes",
-      "check_golden_signals",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:29.626747+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:30.037451+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:30.935037+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:31.095256+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:31.241280+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:31.391422+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:31.535844+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:32.299452+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:32.324579+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:32.725823+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T05:56:33.028811+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:36.323805+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:36.648864+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:36.872776+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:41.347366+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:41.574367+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:41.911436+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:42.149185+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:42.396949+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:42.638171+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:42.861897+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:43.096857+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:43.339228+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:43.578076+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:43.909262+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:44.156911+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:44.392086+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:44.643978+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:44.884402+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:45.114915+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:45.562208+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:45.587182+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:45.612016+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:46.486551+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:46.842006+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:47.677500+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:47.824492+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:47.964846+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:48.100311+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:48.235570+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:48.941398+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:48.964902+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:49.323073+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "incident_type": "network",
-    "service": "inventory-service",
-    "root_cause": "dns resolution failure after dns server maintenance causing inter-service connectivity failures",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_network_logs",
-      "search_dns_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.71,
-    "timestamp": "2026-03-29T13:10:49.597137+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:13:27.458224+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:13:27.677024+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:14:02.453378+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:14:02.677578+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:50:10.887131+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:50:20.213910+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_latency_metrics",
-      "search_timeout_logs",
-      "check_changes"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:50:20.413741+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:50:22.464138+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:50:22.708355+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:50:59.540133+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:51:09.206244+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_latency_metrics",
-      "search_timeout_logs",
-      "check_changes",
-      "check_golden_signals"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:51:09.423053+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:51:11.658958+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:51:11.898217+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:56:19.582035+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "incident_type": "timeout",
-    "service": "api-gateway",
-    "root_cause": "payment-service database slow queries causing upstream timeouts",
-    "evidence_keys": [
-      "check_golden_signals",
-      "search_timeout_logs",
-      "check_changes",
-      "check_latency_metrics"
-    ],
-    "confidence": 93,
-    "online_quality_score": 0.714,
-    "timestamp": "2026-03-29T05:56:29.264120+00:00"
-  },
-  {
     "incident_id": "INC12345",
     "incident_type": "timeout",
     "service": "api-gateway",
@@ -1734,6 +118,81 @@
     "confidence": 93,
     "online_quality_score": 0.714,
     "timestamp": "2026-03-29T13:10:48.667042+00:00"
+  },
+  {
+    "incident_id": "INC12345",
+    "incident_type": "timeout",
+    "service": "api-gateway",
+    "root_cause": "payment-service database slow queries causing upstream timeouts",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_timeout_logs",
+      "check_changes",
+      "check_latency_metrics"
+    ],
+    "confidence": 93,
+    "online_quality_score": 0.714,
+    "timestamp": "2026-03-29T21:07:24.605813+00:00"
+  },
+  {
+    "incident_id": "INC12345",
+    "incident_type": "timeout",
+    "service": "api-gateway",
+    "root_cause": "payment-service database slow queries causing upstream timeouts",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_timeout_logs",
+      "check_changes",
+      "check_latency_metrics"
+    ],
+    "confidence": 93,
+    "online_quality_score": 0.714,
+    "timestamp": "2026-03-29T21:07:44.258796+00:00"
+  },
+  {
+    "incident_id": "INC12345",
+    "incident_type": "timeout",
+    "service": "api-gateway",
+    "root_cause": "payment-service database slow queries causing upstream timeouts",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_latency_metrics",
+      "search_timeout_logs",
+      "check_changes"
+    ],
+    "confidence": 93,
+    "online_quality_score": 0.714,
+    "timestamp": "2026-03-29T21:07:44.994901+00:00"
+  },
+  {
+    "incident_id": "INC12345",
+    "incident_type": "timeout",
+    "service": "api-gateway",
+    "root_cause": "payment-service database slow queries causing upstream timeouts",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_timeout_logs",
+      "check_changes",
+      "check_latency_metrics"
+    ],
+    "confidence": 93,
+    "online_quality_score": 0.714,
+    "timestamp": "2026-03-29T21:07:49.440778+00:00"
+  },
+  {
+    "incident_id": "INC12345",
+    "incident_type": "timeout",
+    "service": "api-gateway",
+    "root_cause": "payment-service database slow queries causing upstream timeouts",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_timeout_logs",
+      "check_changes",
+      "check_latency_metrics"
+    ],
+    "confidence": 93,
+    "online_quality_score": 0.714,
+    "timestamp": "2026-03-29T21:07:49.760056+00:00"
   },
   {
     "incident_id": "INC12347",
@@ -2202,6 +661,78 @@
     "confidence": 100,
     "online_quality_score": 0.72,
     "timestamp": "2026-03-29T20:38:48.864884+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "itsm_context",
+      "devops_context"
+    ],
+    "confidence": 100,
+    "online_quality_score": 0.72,
+    "timestamp": "2026-03-29T20:38:48.896790+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_events",
+      "check_itsm_changes",
+      "itsm_context",
+      "devops_context"
+    ],
+    "confidence": 100,
+    "online_quality_score": 0.72,
+    "timestamp": "2026-03-29T21:07:10.619064+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "itsm_context",
+      "devops_context"
+    ],
+    "confidence": 100,
+    "online_quality_score": 0.72,
+    "timestamp": "2026-03-29T21:07:10.722498+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "itsm_context",
+      "devops_context"
+    ],
+    "confidence": 100,
+    "online_quality_score": 0.72,
+    "timestamp": "2026-03-29T21:07:10.786101+00:00"
   },
   {
     "incident_id": "INC12351",
@@ -2928,6 +1459,20 @@
     "timestamp": "2026-03-29T13:10:27.099397+00:00"
   },
   {
+    "incident_id": "INC_H5",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_pool_metrics"
+    ],
+    "confidence": 74,
+    "online_quality_score": 0.726,
+    "timestamp": "2026-03-29T21:07:12.678407+00:00"
+  },
+  {
     "incident_id": "INC12347",
     "incident_type": "error_spike",
     "service": "payment-service",
@@ -2990,6 +1535,22 @@
     "confidence": 95,
     "online_quality_score": 0.73,
     "timestamp": "2026-03-29T20:38:48.504489+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.73,
+    "timestamp": "2026-03-29T21:07:09.695429+00:00"
   },
   {
     "incident_id": "INC12353",
@@ -5180,6 +3741,550 @@
     "timestamp": "2026-03-29T20:38:48.531449+00:00"
   },
   {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:09.798567+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:24.082908+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:24.881988+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:25.466810+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:32.685820+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:33.290365+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_events",
+      "check_itsm_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:34.143741+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:34.672576+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:35.272909+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:35.867299+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:36.531843+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:37.198124+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:37.654449+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:38.265947+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:38.816924+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events",
+      "check_golden_signals"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:39.279806+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:39.795943+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:40.388621+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:40.973820+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_events",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:41.587503+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:42.436256+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_events",
+      "check_itsm_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:42.517102+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_events",
+      "check_itsm_changes",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:42.584025+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:45.156441+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "check_golden_signals",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:45.906846+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:47.408578+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:47.745291+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:48.083463+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:48.400449+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_golden_signals",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:48.765022+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:50.051262+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:50.102914+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_events",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:51.250047+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "incident_type": "error_spike",
+    "service": "payment-service",
+    "root_cause": "deployment v3.1.0 introduced NullPointerException in payment-service",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_events"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.732,
+    "timestamp": "2026-03-29T21:07:51.736047+00:00"
+  },
+  {
     "incident_id": "INC12351",
     "incident_type": "cascading",
     "service": "api-gateway",
@@ -6620,6 +5725,486 @@
     "timestamp": "2026-03-29T13:10:49.626703+00:00"
   },
   {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:24.289524+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:25.121148+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:25.742539+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_metrics",
+      "check_itsm_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:32.948368+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_metrics"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:33.526312+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:34.321714+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:34.931354+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:35.536940+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:36.126154+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:36.743749+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:37.386216+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:37.873370+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:38.470799+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:39.038693+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:39.443183+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:40.038269+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes",
+      "check_metrics"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:40.660810+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:41.215341+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:41.847031+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "search_error_logs",
+      "check_changes",
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_metrics"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:43.194806+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:43.265467+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:43.328797+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:45.313864+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:45.808336+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:46.007617+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:49.061040+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_metrics",
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:50.656213+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:50.736844+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "search_error_logs",
+      "check_changes",
+      "check_itsm_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:51.457414+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes",
+      "check_metrics"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-03-29T21:07:51.986013+00:00"
+  },
+  {
     "incident_id": "INC12353",
     "incident_type": "flapping",
     "service": "auth-service",
@@ -7880,21 +7465,423 @@
     "timestamp": "2026-03-29T13:10:49.684231+00:00"
   },
   {
-    "incident_id": "INC12347",
-    "incident_type": "error_spike",
-    "service": "payment-service",
-    "root_cause": "deployment v2.3.1 introduced NullPointerException in payment-service",
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
     "evidence_keys": [
       "check_golden_signals",
-      "check_events",
-      "check_itsm_changes",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:24.430390+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
       "search_error_logs",
       "check_changes",
-      "itsm_context",
-      "devops_context"
+      "check_pool_metrics"
     ],
-    "confidence": 100,
-    "online_quality_score": 0.72,
-    "timestamp": "2026-03-29T20:38:48.896790+00:00"
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:25.261453+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:25.880484+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:33.090687+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:33.671781+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:34.456035+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:35.075746+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:35.647204+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:36.219385+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:36.805600+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:37.475681+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:38.017045+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:38.615008+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:39.095770+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:39.566342+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:40.170251+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:40.781114+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:41.323137+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:41.999437+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:43.602694+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:43.684370+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "search_error_logs",
+      "check_changes",
+      "check_golden_signals",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:43.764061+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:45.451456+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:46.071087+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:50.924286+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:50.986288+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:51.540070+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-03-29T21:07:52.107388+00:00"
   }
 ]

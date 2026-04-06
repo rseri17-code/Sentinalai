@@ -64,6 +64,7 @@ class WSManager:
 
     def __init__(self) -> None:
         self._connections: dict[str, WSConnection] = {}
+        self._handlers: dict[str, object] = {}
         self._heartbeat_task: Optional[asyncio.Task] = None
 
     async def start(self) -> None:
@@ -193,8 +194,6 @@ class WSManager:
                 await self._deliver_event(conn, event)
 
         # Store reference for unsubscription
-        if not hasattr(self, "_handlers"):
-            self._handlers: dict[str, object] = {}
         self._handlers[connection_id] = handler
         return handler
 
@@ -238,13 +237,20 @@ class WSManager:
             if msg_type == "ping":
                 await self._send_message(conn, {"type": "pong", "timestamp": time.time()})
             elif msg_type == "subscribe":
-                # Dynamic re-subscription to different investigation
+                # Dynamic re-subscription to different investigation.
+                # Subscribe to new investigation BEFORE unsubscribing from old
+                # to eliminate the race window where events could be missed.
                 new_inv_id = msg.get("investigation_id", "")
                 if new_inv_id and new_inv_id != conn.investigation_id:
                     bus = get_bus()
-                    bus.unsubscribe(conn.investigation_id, self._handlers.get(connection_id))
+                    old_inv_id = conn.investigation_id
+                    old_handler = self._handlers.get(connection_id)
+                    # 1. Subscribe to new first (no gap)
+                    new_handler = self._make_handler(connection_id)
+                    bus.subscribe(new_inv_id, new_handler)
                     conn.investigation_id = new_inv_id
-                    bus.subscribe(new_inv_id, self._make_handler(connection_id))
+                    # 2. Then unsubscribe from old
+                    bus.unsubscribe(old_inv_id, old_handler)
                     await self._send_message(conn, {"type": "subscribed", "investigation_id": new_inv_id})
         except json.JSONDecodeError:
             logger.warning("WS[%s]: invalid JSON message", connection_id)

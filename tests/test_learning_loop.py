@@ -194,6 +194,7 @@ class TestRebuildCalibratorFromDb:
         with (
             patch("supervisor.learning_loop.load_eval_results_for_calibration", return_value=records),
             patch("supervisor.learning_loop.ConfidenceCalibrator") as mock_cls,
+            patch("supervisor.confidence_calibrator._calibrator", None),  # prevent singleton leak
         ):
             mock_cls.return_value = mock_calibrator
             count = rebuild_calibrator_from_db()

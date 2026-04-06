@@ -32,9 +32,25 @@ from starlette.responses import JSONResponse, RedirectResponse, Response
 logger = logging.getLogger(__name__)
 
 # ── Secrets ────────────────────────────────────────────────────────────────────
-_SESSION_SECRET = os.getenv("AGUI_SESSION_SECRET", "sentinalai-session-secret-change-me")
-_INVITE_SECRET  = os.getenv("AGUI_INVITE_SECRET",  "sentinalai-invite-secret-change-me")
+# Fall back to a process-lifetime random secret when env vars are not set so
+# the HMAC is never based on a known hardcoded value.  Sessions will be
+# invalidated on restart (acceptable for dev/demo); production must set the env
+# vars for persistence across restarts.
+_SESSION_SECRET = os.getenv("AGUI_SESSION_SECRET") or secrets.token_hex(32)
+_INVITE_SECRET  = os.getenv("AGUI_INVITE_SECRET")  or secrets.token_hex(32)
 INVITE_TOKENS   = set(os.getenv("AGUI_INVITE_TOKENS", "").split(",")) - {""}
+
+if not os.getenv("AGUI_SESSION_SECRET"):
+    logger.warning(
+        "AGUI_SESSION_SECRET not set — using ephemeral random secret. "
+        "Sessions will be lost on restart. Set the env var in production."
+    )
+if not os.getenv("AGUI_INVITE_SECRET"):
+    logger.warning(
+        "AGUI_INVITE_SECRET not set — using ephemeral random secret. "
+        "Pre-generated invite tokens will be invalid after restart. "
+        "Set the env var in production."
+    )
 
 HONEYPOT_ENABLED = os.getenv("AGUI_HONEYPOT", "true").lower() == "true"
 SESSION_COOKIE   = "sentinalai_session"

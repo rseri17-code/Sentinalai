@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: sentinalai-demo
+    runtime: python
+    buildCommand: |
+      pip install -r agui/requirements-agui.txt &&
+      npm install --prefix ui &&
+      npx --prefix ui vite build
+    startCommand: python -m uvicorn agui.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /ping
+    envVars:
+      - key: AGUI_AUTH_REQUIRED
+        value: "false"
+      - key: AGUI_HONEYPOT
+        value: "true"
+      - key: AGUI_SESSION_SECRET
+        generateValue: true
+      - key: AGUI_INVITE_SECRET
+        generateValue: true
+      - key: ONLINE_EVAL_ENABLED
+        value: "true"
+      - key: STRATEGY_EVOLVER_ENABLED
+        value: "true"
+      - key: SELF_CRITIQUE_ENABLED
+        value: "true"

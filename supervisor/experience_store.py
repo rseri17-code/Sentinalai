@@ -131,10 +131,13 @@ def store_experience(
     try:
         with _store_lock:
             experiences = _load_raw()
-            # Evict if at capacity: remove oldest lowest-quality entries first
+            # Evict if at capacity: remove lowest-quality then oldest first
             if len(experiences) >= MAX_EXPERIENCES:
-                experiences.sort(key=lambda x: (x.get("online_quality_score", 0), x.get("timestamp", "")))
-                experiences = experiences[len(experiences) - MAX_EXPERIENCES + 1:]
+                experiences.sort(
+                    key=lambda x: (x.get("online_quality_score", 0), x.get("timestamp", "")),
+                )
+                # Drop the single worst entry (index 0 = lowest quality, oldest)
+                experiences = experiences[1:]
             experiences.append(entry)
             _save_raw(experiences)
 

@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import random
+import secrets
 import time
 from typing import Callable
 
@@ -31,9 +32,25 @@ from starlette.responses import JSONResponse, RedirectResponse, Response
 logger = logging.getLogger(__name__)
 
 # ── Secrets ────────────────────────────────────────────────────────────────────
-_SESSION_SECRET = os.getenv("AGUI_SESSION_SECRET", "sentinalai-session-secret-change-me")
-_INVITE_SECRET  = os.getenv("AGUI_INVITE_SECRET",  "sentinalai-invite-secret-change-me")
+# Fall back to a process-lifetime random secret when env vars are not set so
+# the HMAC is never based on a known hardcoded value.  Sessions will be
+# invalidated on restart (acceptable for dev/demo); production must set the env
+# vars for persistence across restarts.
+_SESSION_SECRET = os.getenv("AGUI_SESSION_SECRET") or secrets.token_hex(32)
+_INVITE_SECRET  = os.getenv("AGUI_INVITE_SECRET")  or secrets.token_hex(32)
 INVITE_TOKENS   = set(os.getenv("AGUI_INVITE_TOKENS", "").split(",")) - {""}
+
+if not os.getenv("AGUI_SESSION_SECRET"):
+    logger.warning(
+        "AGUI_SESSION_SECRET not set — using ephemeral random secret. "
+        "Sessions will be lost on restart. Set the env var in production."
+    )
+if not os.getenv("AGUI_INVITE_SECRET"):
+    logger.warning(
+        "AGUI_INVITE_SECRET not set — using ephemeral random secret. "
+        "Pre-generated invite tokens will be invalid after restart. "
+        "Set the env var in production."
+    )
 
 HONEYPOT_ENABLED = os.getenv("AGUI_HONEYPOT", "true").lower() == "true"
 SESSION_COOKIE   = "sentinalai_session"
@@ -82,27 +99,33 @@ def validate_invite_token(token: str) -> bool:
     # Static tokens from env
     if token in INVITE_TOKENS:
         return True
-    # HMAC-signed dynamic tokens: 'invite:{ts}:{sig}'
+    # HMAC-signed dynamic tokens: 'invite:{ts}:{nonce}:{sig}'
     try:
         parts = token.split(":")
-        if len(parts) == 3 and parts[0] == "invite":
-            _, ts, sig = parts
-            payload = f"invite:{ts}"
+        if len(parts) == 4 and parts[0] == "invite":
+            _, ts, nonce, sig = parts
+            payload = f"invite:{ts}:{nonce}"
             if not _verify(payload, sig, _INVITE_SECRET):
                 return False
             age = int(time.time()) - int(ts)
             return age < SESSION_TTL
-    except Exception:
+    except (ValueError, IndexError):
         pass
     return False
 
 
 def generate_invite_token() -> str:
-    """Generate a new time-limited HMAC invite token."""
+    """Generate a new time-limited HMAC invite token with a random nonce.
+
+    Format: invite:{ts}:{nonce}:{sig}
+    The nonce prevents two tokens generated in the same second from being
+    identical and eliminates time-based brute-force feasibility.
+    """
     ts = str(int(time.time()))
-    payload = f"invite:{ts}"
+    nonce = secrets.token_hex(8)  # 64 bits of entropy
+    payload = f"invite:{ts}:{nonce}"
     sig = _sign(payload, _INVITE_SECRET)
-    return f"invite:{ts}:{sig}"
+    return f"invite:{ts}:{nonce}:{sig}"
 
 
 # ── Fake data factory ──────────────────────────────────────────────────────────
@@ -120,7 +143,7 @@ _FAKE_RC = [
 
 
 def _fake_investigation(seed: int | None = None) -> dict:
-    rng = random.Random(seed or time.time())
+    rng = random.Random(seed if seed is not None else secrets.randbits(64))
     inc_id = f"INC{rng.randint(10000, 99999)}"
     svc = rng.choice(_FAKE_SERVICES)
     return {

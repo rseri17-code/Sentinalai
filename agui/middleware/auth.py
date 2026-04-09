@@ -37,8 +37,14 @@ logger = logging.getLogger(__name__)
 ROLE_HIERARCHY = {"viewer": 0, "operator": 1, "approver": 2, "admin": 3}
 
 AUTH_REQUIRED = os.getenv("AGUI_AUTH_REQUIRED", "true").lower() == "true"
-JWT_SECRET = os.getenv("AGUI_JWT_SECRET", "dev-secret-change-in-production")
+JWT_SECRET = os.getenv("AGUI_JWT_SECRET", "")
 AGUI_AUDIENCE = os.getenv("AGUI_AUDIENCE", "agui")
+
+if AUTH_REQUIRED and not JWT_SECRET and not os.getenv("AGUI_COGNITO_JWKS_URL"):
+    raise RuntimeError(
+        "AGUI_JWT_SECRET must be set when AGUI_AUTH_REQUIRED=true "
+        "(or configure AGUI_COGNITO_JWKS_URL for Cognito)"
+    )
 COGNITO_JWKS_URL = os.getenv("AGUI_COGNITO_JWKS_URL", "")
 
 

@@ -244,6 +244,17 @@ class ReplayEngine:
                 f"hash_mismatches={validation.hash_mismatches}"
             )
 
+        # Evict finished sessions older than 1 hour to bound memory growth.
+        _ttl = 3600.0
+        _now = time.time()
+        stale = [
+            sid for sid, s in self._sessions.items()
+            if s.status in (ReplayStatus.COMPLETED, ReplayStatus.ABORTED, ReplayStatus.FAILED)
+            and (s.completed_at or 0) < _now - _ttl
+        ]
+        for sid in stale:
+            del self._sessions[sid]
+
         session = ReplaySession(
             session_id=str(uuid.uuid4()),
             investigation_id=snapshot.investigation_id,

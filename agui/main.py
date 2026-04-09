@@ -149,14 +149,20 @@ async def shutdown_event() -> None:
 async def ws_investigation(
     websocket: WebSocket,
     investigation_id: str,
-    token: str = Query(default=""),
     last_seq: int = Query(default=0),
 ):
     """
     WebSocket endpoint for real-time investigation event streaming.
 
+    Authentication (in priority order):
+      1. sentinalai_session cookie (set by honeypot invite-link flow)
+      2. Authorization header: "Bearer <JWT>" (sent as WS subprotocol or
+         via the Sec-WebSocket-Protocol header from the client)
+
+    Do NOT pass tokens as query parameters — they appear in server logs
+    and browser history in plaintext.
+
     Query params:
-      token    → JWT token (passed as query param for WS handshake)
       last_seq → Last received sequence number (for reconnect replay)
 
     Message types received from server:
@@ -169,14 +175,27 @@ async def ws_investigation(
       ping               → Keepalive
       subscribe          → Switch investigation subscription
     """
-    # Authenticate WebSocket
+    # Authenticate WebSocket — prefer cookie, fall back to Authorization header
     actor_id = "anonymous"
     actor_role = "viewer"
 
     from agui.middleware.auth import AUTH_REQUIRED, _decode_jwt, _get_actor_from_claims
-    if AUTH_REQUIRED and token:
+    from agui.middleware.honeypot import validate_session_cookie, SESSION_COOKIE
+
+    # 1. Session cookie (set after invite-link redemption)
+    cookie_val = websocket.cookies.get(SESSION_COOKIE, "")
+    cookie_actor = validate_session_cookie(cookie_val) if cookie_val else None
+
+    # 2. Authorization header (JWT)
+    auth_header = websocket.headers.get("Authorization", "")
+    jwt_token = auth_header.removeprefix("Bearer ").strip() if auth_header else ""
+
+    if cookie_actor:
+        actor_id = cookie_actor
+        actor_role = "operator"
+    elif AUTH_REQUIRED and jwt_token:
         try:
-            claims = _decode_jwt(token)
+            claims = _decode_jwt(jwt_token)
             actor = _get_actor_from_claims(claims)
             actor_id = actor.actor_id
             actor_role = actor.actor_role
@@ -184,6 +203,9 @@ async def ws_investigation(
             logger.warning("WS auth failed: %s", e)
             await websocket.close(code=4001, reason="Authentication failed")
             return
+    elif AUTH_REQUIRED and not cookie_actor:
+        await websocket.close(code=4001, reason="Authentication required")
+        return
     elif not AUTH_REQUIRED:
         actor_id = "dev-user"
         actor_role = "admin"

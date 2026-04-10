@@ -94,6 +94,8 @@ from workers.confluence_worker import ConfluenceWorker
 from workers.code_worker import CodeWorker
 from supervisor.cmdb_traversal import CMDBTraversal, build_change_summary
 from supervisor.fix_engine import get_fix_engine, ProposedFix
+from supervisor.evidence_citation import annotate_citations
+from supervisor.metrics_dashboard import record_investigation_outcome
 
 # Institutional knowledge layer (opt-in via env var, graceful degradation)
 _KNOWLEDGE_ENABLED = os.environ.get("KNOWLEDGE_GRAPH_ENABLED", "").lower() in ("1", "true", "yes")
@@ -526,6 +528,29 @@ class SentinalAISupervisor:
             logger.info(
                 "Investigation complete for %s: confidence=%d, tool_calls=%d",
                 incident_id, confidence, budget.calls_made,
+            )
+
+            # Phase: Cite — ground every claim in source evidence
+            annotate_citations(result, evidence)
+
+            # Phase: Metric — record outcome for dashboard
+            _llm_m = result.get("_llm_metrics", llm_metrics or {})
+            record_investigation_outcome(
+                investigation_id=investigation_id,
+                incident_id=incident_id,
+                incident_type=incident_type,
+                service=service,
+                root_cause=result.get("root_cause", ""),
+                confidence=confidence,
+                severity=severity.level if hasattr(severity, "level") else int(severity),
+                elapsed_ms=elapsed,
+                tool_calls=budget.calls_made,
+                llm_input_tokens=_llm_m.get("input_tokens", 0),
+                llm_output_tokens=_llm_m.get("output_tokens", 0),
+                citation_coverage=result.get("citation_coverage", 0.0),
+                fix_proposed=bool(result.get("proposed_fix")),
+                fix_applied=False,   # updated later by FixEngine
+                fix_verified=False,  # updated later by VerificationLoop
             )
 
             # Phase: Persist — replay, memory, knowledge graph, RCA report, DB

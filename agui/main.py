@@ -42,6 +42,7 @@ from agui.api.replay import router as replay_router
 from agui.api.memory import router as memory_router
 from agui.api.control import router as control_router
 from agui.api.learning import router as learning_router
+from agui.api.metrics import router as metrics_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -94,6 +95,7 @@ def create_app() -> FastAPI:
     app.include_router(memory_router)
     app.include_router(control_router)
     app.include_router(learning_router)
+    app.include_router(metrics_router)
 
     # ── Health endpoints ──────────────────────────────────────────────────
     @app.get("/api/v1/health", tags=["health"])

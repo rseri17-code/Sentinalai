@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir fastapi uvicorn
+
+COPY tests/fixtures/ /app/fixtures/
+COPY scripts/stub_mcp_server.py /app/stub_mcp_server.py
+
+RUN useradd -m -u 1000 stub && chown -R stub:stub /app
+USER stub
+
+EXPOSE 9000
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+    CMD curl -f http://localhost:9000/health || exit 1
+
+CMD ["python", "stub_mcp_server.py"]

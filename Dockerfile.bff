@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt* requirements-agentcore.txt* ./
+RUN pip install --no-cache-dir -r requirements-agentcore.txt 2>/dev/null || pip install --no-cache-dir fastapi uvicorn pydantic PyYAML
+
+COPY supervisor/ supervisor/
+COPY workers/ workers/
+COPY agui/ agui/
+COPY database/ database/
+COPY knowledge/ knowledge/
+COPY remediation_templates.yaml* ./
+
+RUN useradd -m -u 1000 sentinalai && chown -R sentinalai:sentinalai /app
+USER sentinalai
+
+EXPOSE 8081
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+    CMD curl -f http://localhost:8081/api/v1/health || exit 1
+
+CMD ["python", "-m", "uvicorn", "agui.main:app", "--host", "0.0.0.0", "--port", "8081"]

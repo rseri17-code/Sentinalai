@@ -224,6 +224,19 @@ class SentinalAISupervisor:
         os.environ.get("INVESTIGATION_DEADLINE_SECONDS", "120")
     )
 
+    # Worker name → set of tool servers required (empty = always available)
+    _WORKER_SERVERS: dict[str, frozenset[str]] = {
+        "ops_worker":       frozenset({"moogsoft"}),
+        "log_worker":       frozenset({"splunk"}),
+        "metrics_worker":   frozenset({"sysdig"}),
+        "apm_worker":       frozenset({"dynatrace", "signalfx"}),
+        "knowledge_worker": frozenset(),          # always available (no external tool)
+        "itsm_worker":      frozenset({"servicenow"}),
+        "devops_worker":    frozenset({"github"}),
+        "confluence_worker": frozenset({"confluence"}),
+        "code_worker":      frozenset({"github"}),
+    }
+
     def __init__(
         self,
         replay_dir: str | None = None,
@@ -232,17 +245,33 @@ class SentinalAISupervisor:
         gateway: McpGateway | None = None,
     ):
         gw = gateway or McpGateway.get_instance()
-        self.workers: dict[str, Any] = {
-            "ops_worker": OpsWorker(gateway=gw),
-            "log_worker": LogWorker(gateway=gw),
-            "metrics_worker": MetricsWorker(gateway=gw),
-            "apm_worker": ApmWorker(gateway=gw),
-            "knowledge_worker": KnowledgeWorker(),
-            "itsm_worker": ItsmWorker(gateway=gw),
-            "devops_worker": DevopsWorker(gateway=gw),
-            "confluence_worker": ConfluenceWorker(gateway=gw),
-            "code_worker": CodeWorker(gateway=gw),
+
+        # Tool auto-discovery — non-blocking; falls back to all tools on error
+        available_servers = gw.discover_tools()
+
+        # Candidate worker factory
+        _worker_factory: dict[str, Any] = {
+            "ops_worker":       lambda: OpsWorker(gateway=gw),
+            "log_worker":       lambda: LogWorker(gateway=gw),
+            "metrics_worker":   lambda: MetricsWorker(gateway=gw),
+            "apm_worker":       lambda: ApmWorker(gateway=gw),
+            "knowledge_worker": lambda: KnowledgeWorker(),
+            "itsm_worker":      lambda: ItsmWorker(gateway=gw),
+            "devops_worker":    lambda: DevopsWorker(gateway=gw),
+            "confluence_worker": lambda: ConfluenceWorker(gateway=gw),
+            "code_worker":      lambda: CodeWorker(gateway=gw),
         }
+
+        self.workers: dict[str, Any] = {}
+        for name, factory in _worker_factory.items():
+            required = self._WORKER_SERVERS.get(name, frozenset())
+            if not required or required & available_servers:
+                self.workers[name] = factory()
+            else:
+                logger.info(
+                    "Worker %s skipped — required tools not connected: %s",
+                    name, sorted(required),
+                )
         self._replay_store = ReplayStore(replay_dir) if replay_dir else None
         self._call_timeout = call_timeout
         self._max_retries = max_retries

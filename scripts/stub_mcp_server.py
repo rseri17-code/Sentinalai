@@ -446,6 +446,18 @@ async def health():
     return {"status": "ok", "mode": "stub", "tools": list(_TOOL_HANDLERS.keys())}
 
 
+@app.get("/tools")
+async def tools_discovery():
+    """Standard tool discovery endpoint consumed by McpGateway.discover_tools().
+
+    Returns available server names in the canonical format so the supervisor
+    can dynamically decide which workers to instantiate at startup.
+    """
+    return {
+        "available_servers": list(_TOOL_HANDLERS.keys()),
+    }
+
+
 @app.get("/mcp/catalog")
 async def catalog():
     """List all stub tool actions available."""

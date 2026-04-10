@@ -91,6 +91,9 @@ from workers.knowledge_worker import KnowledgeWorker
 from workers.itsm_worker import ItsmWorker
 from workers.devops_worker import DevopsWorker
 from workers.confluence_worker import ConfluenceWorker
+from workers.code_worker import CodeWorker
+from supervisor.cmdb_traversal import CMDBTraversal, build_change_summary
+from supervisor.fix_engine import get_fix_engine, ProposedFix
 
 # Institutional knowledge layer (opt-in via env var, graceful degradation)
 _KNOWLEDGE_ENABLED = os.environ.get("KNOWLEDGE_GRAPH_ENABLED", "").lower() in ("1", "true", "yes")
@@ -236,6 +239,7 @@ class SentinalAISupervisor:
             "itsm_worker": ItsmWorker(gateway=gw),
             "devops_worker": DevopsWorker(gateway=gw),
             "confluence_worker": ConfluenceWorker(gateway=gw),
+            "code_worker": CodeWorker(gateway=gw),
         }
         self._replay_store = ReplayStore(replay_dir) if replay_dir else None
         self._call_timeout = call_timeout
@@ -301,6 +305,9 @@ class SentinalAISupervisor:
             # Start with default budget; will be replaced after severity detection
             receipts = ReceiptCollector(case_id=incident_id)
             budget = ExecutionBudget(case_id=incident_id)
+
+            # Stable investigation ID for fix engine traceability
+            investigation_id = f"inv-{incident_id}"
 
             # W1: Per-investigation circuit breaker registry (isolated)
             circuits = CircuitBreakerRegistry()
@@ -418,6 +425,35 @@ class SentinalAISupervisor:
                 if devops_context:
                     evidence["devops_context"] = devops_context
 
+            # Step 3c: CMDB traversal — walk dependency graph for blast radius
+            # Even when direct service has no change, a dependency might.
+            cmdb_context = self._fetch_cmdb_blast_radius(
+                service, incident_id, receipts, budget, circuits
+            )
+            if cmdb_context:
+                evidence["cmdb_blast_radius"] = cmdb_context
+
+            # Step 3d: Diff analysis — if CMDB found a change on a dependency
+            # and we haven't already fetched devops_context, go get the diff.
+            if cmdb_context and not evidence.get("devops_context"):
+                dep_deployment = self._find_deployment_in_blast_radius(cmdb_context)
+                if dep_deployment:
+                    dep_devops_context = self._fetch_devops_context(
+                        dep_deployment.get("_ci", service),
+                        dep_deployment,
+                        receipts, budget, circuits,
+                    )
+                    if dep_devops_context:
+                        evidence["devops_context"] = dep_devops_context
+
+            # Step 3e: Code diff analysis — AI reads diff vs error context
+            if evidence.get("devops_context") and budget and budget.can_call():
+                diff_analysis = self._fetch_diff_analysis(
+                    service, evidence, receipts, budget, circuits
+                )
+                if diff_analysis:
+                    evidence["diff_analysis"] = diff_analysis
+
             # Step 4: Analyze
             result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
 
@@ -474,6 +510,18 @@ class SentinalAISupervisor:
                 devops_context=evidence.get("devops_context"),
             )
             result["remediation"] = remediation
+
+            # Generate and store proposed fix (if diff analysis found something actionable)
+            if evidence.get("diff_analysis"):
+                proposed_fix = self._generate_proposed_fix(
+                    incident_id, investigation_id, service, evidence, result
+                )
+                if proposed_fix and proposed_fix.fix_type != "none":
+                    result["proposed_fix"] = proposed_fix.to_dict()
+                    logger.info(
+                        "Proposed fix stored: type=%s confidence=%.0f risk=%s",
+                        proposed_fix.fix_type, proposed_fix.confidence, proposed_fix.risk_level,
+                    )
 
             logger.info(
                 "Investigation complete for %s: confidence=%d, tool_calls=%d",
@@ -1098,6 +1146,222 @@ class SentinalAISupervisor:
             context["similar_incidents"] = result["incidents"]
 
         return context or None
+
+    # ------------------------------------------------------------------ #
+    # Internal: CMDB traversal (dependency blast radius — Phase 3c)
+    # ------------------------------------------------------------------ #
+
+    def _fetch_cmdb_blast_radius(
+        self, service: str, incident_id: str,
+        receipts: Any | None = None,
+        budget: Any | None = None,
+        circuits: Any | None = None,
+    ) -> dict | None:
+        """Phase 3c: walk CMDB dependency graph for change blast radius.
+
+        Finds changes on dependencies of *service*, not just the service itself.
+        Returns the CMDBTraversal result dict, or None if nothing found.
+        """
+        worker = self.workers.get("itsm_worker")
+        if worker is None:
+            return None
+        if budget and not budget.can_call():
+            return None
+
+        try:
+            traversal = CMDBTraversal(worker)
+            result = traversal.get_change_blast_radius(service, hours=24)
+            if result.get("changes_found", 0) > 0:
+                logger.info(
+                    "CMDB blast radius for %s: found changes on %d CI(s): %s",
+                    service, result["changes_found"],
+                    list(result.get("blast_radius", {}).keys()),
+                )
+                result["_summary"] = build_change_summary(result)
+                return result
+        except Exception as exc:
+            logger.warning("CMDB traversal failed for %s: %s", service, exc)
+
+        return None
+
+    def _find_deployment_in_blast_radius(self, cmdb_context: dict) -> dict | None:
+        """Extract the most recent change from the CMDB blast radius.
+
+        Used by Step 3d to decide whether to fetch a code diff.
+        """
+        if not cmdb_context:
+            return None
+        blast = cmdb_context.get("blast_radius", {})
+        if not blast:
+            return None
+
+        # Find the change with the most recent timestamp across all CIs
+        best: dict | None = None
+        best_ts = ""
+        for ci_name, changes in blast.items():
+            for ch in changes:
+                ts = ch.get("end_date", ch.get("start_date", ""))
+                if ts > best_ts:
+                    best_ts = ts
+                    best = dict(ch)
+                    best["_ci"] = ci_name
+                    # Map change number to deployment-style dict for _fetch_devops_context
+                    best["sha"] = ch.get("sha", ch.get("commit_sha", ""))
+                    best["description"] = ch.get("short_description", "")
+                    best["merged_at"] = ts
+
+        return best
+
+    # ------------------------------------------------------------------ #
+    # Internal: Code diff analysis (AI-powered — Phase 3e)
+    # ------------------------------------------------------------------ #
+
+    def _fetch_diff_analysis(
+        self, service: str, evidence: dict,
+        receipts: Any | None = None,
+        budget: Any | None = None,
+        circuits: Any | None = None,
+    ) -> dict | None:
+        """Phase 3e: AI analysis of code diff against production error context.
+
+        Reads the commit diff from devops_context, cross-references with
+        Splunk/APM error logs, and returns culprit file + line + fix confidence.
+        """
+        code_worker = self.workers.get("code_worker")
+        if code_worker is None:
+            return None
+        if budget and not budget.can_call():
+            return None
+
+        devops_ctx = evidence.get("devops_context", {})
+        deployments = devops_ctx.get("deployments", [])
+        if not deployments:
+            return None
+
+        # Get the most recent deployment
+        deployment = deployments[0] if isinstance(deployments, list) else {}
+        sha = deployment.get("sha", "")
+        repo = deployment.get("repo", deployment.get("repository", ""))
+
+        if not sha:
+            return None
+
+        # Extract error context from Splunk + APM evidence
+        error_context = self._extract_error_context(evidence)
+
+        # Get the commit diff from devops_worker
+        diff_worker = self.workers.get("devops_worker")
+        diff = ""
+        if diff_worker and repo and sha:
+            try:
+                diff_result = self._call_worker(
+                    diff_worker, "get_commit_diff", {"repo": repo, "sha": sha},
+                    receipts, budget, "devops_worker", circuits=circuits,
+                )
+                if diff_result and diff_result.get("commit"):
+                    files = diff_result["commit"].get("files", [])
+                    diff = "\n".join(f.get("patch", "") for f in files if f.get("patch"))
+            except Exception as exc:
+                logger.warning("Failed to fetch commit diff %s/%s: %s", repo, sha, exc)
+
+        try:
+            analysis = self._call_worker(
+                code_worker, "analyze_diff", {
+                    "repo": repo,
+                    "sha": sha,
+                    "diff": diff,
+                    "error_context": error_context,
+                    "service": service,
+                },
+                receipts, budget, "code_worker", circuits=circuits,
+            )
+            if analysis and analysis.get("confidence", 0) > 0:
+                logger.info(
+                    "Diff analysis: culprit=%s:%s confidence=%d",
+                    analysis.get("culprit_file"), analysis.get("culprit_line"),
+                    analysis.get("confidence", 0),
+                )
+                return analysis
+        except Exception as exc:
+            logger.warning("Code diff analysis failed: %s", exc)
+
+        return None
+
+    def _extract_error_context(self, evidence: dict) -> str:
+        """Build a concise error context string from Splunk/APM evidence."""
+        parts: list[str] = []
+
+        # Splunk logs
+        log_evidence = evidence.get("logs", evidence.get("log_data", {}))
+        if isinstance(log_evidence, dict):
+            logs = log_evidence.get("logs", log_evidence.get("results", []))
+        elif isinstance(log_evidence, list):
+            logs = log_evidence
+        else:
+            logs = []
+
+        for log in logs[:5]:
+            msg = log.get("message", log.get("_raw", ""))
+            if msg:
+                parts.append(f"[{log.get('level', 'INFO')}] {msg[:200]}")
+
+        # APM errors
+        apm_evidence = evidence.get("apm_data", evidence.get("apm", {}))
+        if isinstance(apm_evidence, dict):
+            errors = apm_evidence.get("errors", apm_evidence.get("error_samples", []))
+            for err in errors[:3]:
+                trace = err.get("stack_trace", err.get("exception", ""))
+                if trace:
+                    parts.append(f"STACK: {trace[:300]}")
+
+        return "\n".join(parts) if parts else ""
+
+    # ------------------------------------------------------------------ #
+    # Internal: Fix proposal generation (Phase 3f)
+    # ------------------------------------------------------------------ #
+
+    def _generate_proposed_fix(
+        self, incident_id: str, investigation_id: str, service: str,
+        evidence: dict, result: dict,
+    ) -> "ProposedFix | None":
+        """Generate and persist a ProposedFix from diff analysis results."""
+        code_worker = self.workers.get("code_worker")
+        if code_worker is None:
+            return None
+
+        diff_analysis = evidence.get("diff_analysis", {})
+        if not diff_analysis or diff_analysis.get("confidence", 0) < 40:
+            return None
+
+        devops_ctx = evidence.get("devops_context", {})
+        deployments = devops_ctx.get("deployments", [])
+        deployment = deployments[0] if deployments else {}
+
+        try:
+            fix_result = self._call_worker(
+                code_worker, "generate_fix", {
+                    "analysis": diff_analysis,
+                    "diff": evidence.get("_raw_diff", ""),
+                    "error_context": self._extract_error_context(evidence),
+                    "service": service,
+                    "repo": deployment.get("repo", deployment.get("repository", "")),
+                    "sha": deployment.get("sha", ""),
+                    "incident_id": incident_id,
+                },
+                None, None, "code_worker", circuits=None,
+            )
+
+            if fix_result and fix_result.get("fix_type", "none") != "none":
+                fix_result["repo"] = deployment.get("repo", "")
+                fix_result["sha"] = deployment.get("sha", "")
+                proposed = get_fix_engine().propose_from_result(
+                    investigation_id, incident_id, fix_result
+                )
+                return proposed
+        except Exception as exc:
+            logger.warning("Fix proposal generation failed: %s", exc)
+
+        return None
 
     # ------------------------------------------------------------------ #
     # Internal: Confluence enrichment (runbooks / post-mortems — Phase 1)

@@ -21,6 +21,17 @@ Output format (added to result dict):
     result["cited_root_cause"] = "Connection pool exhaustion [splunk:1]"
     result["citation_coverage"] = 0.85  # fraction of claims that have citations
 
+Anti-hallucination enforcement:
+    When citation_coverage falls below ANTI_HALLUCINATION_FLOOR (0.70) and
+    the result has sufficient evidence sources (≥ 2), the root cause is
+    flagged as UNVERIFIED and a hallucination_risk field is set to True.
+    This is a soft flag — the result is still returned — the G5 gate in
+    evidence_gates.py is responsible for hard blocking.
+
+Configuration:
+  CITATION_ANTI_HALLUCINATION_FLOOR — min coverage before flagging (default: 0.70)
+  CITATION_ANTI_HALLUCINATION_ENABLED — on/off (default: true)
+
 Usage:
     from supervisor.evidence_citation import annotate_citations
     result = annotate_citations(result, evidence)
@@ -28,6 +39,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import os
 import re
 from typing import Any
 
@@ -36,6 +48,13 @@ logger = logging.getLogger("sentinalai.evidence_citation")
 # Minimum keyword overlap to count a citation as matched
 _MIN_OVERLAP = 2
 
+# Anti-hallucination configuration
+_AH_ENABLED = os.environ.get(
+    "CITATION_ANTI_HALLUCINATION_ENABLED", "true"
+).lower() in ("1", "true", "yes")
+_AH_FLOOR = float(os.environ.get("CITATION_ANTI_HALLUCINATION_FLOOR", "0.70"))
+_AH_MIN_SOURCES = 2   # only flag when there is enough evidence to have formed citations
+
 
 def annotate_citations(result: dict[str, Any], evidence: dict[str, Any]) -> dict[str, Any]:
     """Annotate the RCA result with evidence citations.
@@ -43,18 +62,65 @@ def annotate_citations(result: dict[str, Any], evidence: dict[str, Any]) -> dict
     Mutates *result* in-place (adds 'citations', 'cited_root_cause',
     'citation_coverage') and returns it.
 
+    Also enforces anti-hallucination constraints: when citation_coverage is
+    below the floor despite sufficient evidence, sets hallucination_risk=True
+    and appends [UNVERIFIED] to the root cause string.
+
     Never raises — if citation fails the result is returned unmodified.
     """
     try:
         citations = _build_citations(result, evidence)
         result["citations"] = citations
-        result["citation_coverage"] = _coverage(result, citations)
+        coverage = _coverage(result, citations)
+        result["citation_coverage"] = coverage
         result["cited_root_cause"] = _cite_root_cause(
             result.get("root_cause", ""), citations
         )
+
+        # Anti-hallucination enforcement
+        if _AH_ENABLED:
+            _enforce_anti_hallucination(result, evidence, coverage)
+
     except Exception as exc:
         logger.warning("Citation annotation failed (non-critical): %s", exc)
     return result
+
+
+def _enforce_anti_hallucination(
+    result: dict[str, Any],
+    evidence: dict[str, Any],
+    coverage: float,
+) -> None:
+    """Flag low-citation results when evidence is available.
+
+    Sets result["hallucination_risk"] = True and appends [UNVERIFIED] to
+    root_cause when coverage is below floor and we have enough evidence
+    to have generated citations.
+    """
+    # Count non-empty, non-error evidence sources
+    source_count = sum(
+        1 for k, v in evidence.items()
+        if not k.startswith("_") and v
+        and not (isinstance(v, dict) and v.get("error"))
+    )
+
+    if source_count < _AH_MIN_SOURCES:
+        # Insufficient evidence — no hallucination risk, just thin evidence
+        result["hallucination_risk"] = False
+        return
+
+    if coverage < _AH_FLOOR:
+        result["hallucination_risk"] = True
+        root_cause = result.get("root_cause", "")
+        if root_cause and "[UNVERIFIED]" not in root_cause:
+            result["root_cause"] = f"{root_cause} [UNVERIFIED]"
+        logger.warning(
+            "Anti-hallucination: citation_coverage=%.2f < floor=%.2f "
+            "with %d evidence sources — root cause flagged UNVERIFIED",
+            coverage, _AH_FLOOR, source_count,
+        )
+    else:
+        result["hallucination_risk"] = False
 
 
 # ---------------------------------------------------------------------------

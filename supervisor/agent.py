@@ -92,10 +92,15 @@ from workers.itsm_worker import ItsmWorker
 from workers.devops_worker import DevopsWorker
 from workers.confluence_worker import ConfluenceWorker
 from workers.code_worker import CodeWorker
+from workers.git_worker import GitWorker
 from supervisor.cmdb_traversal import CMDBTraversal, build_change_summary
 from supervisor.fix_engine import get_fix_engine, ProposedFix
 from supervisor.evidence_citation import annotate_citations
 from supervisor.metrics_dashboard import record_investigation_outcome
+from supervisor.evidence_gates import check_post_collection, check_post_analysis
+from supervisor.knowledge_graph import ingest_to_graph as _ingest_to_kg, query_similar as _kg_query_similar
+from supervisor.memory_compression import compress_investigation as _compress_investigation
+from supervisor.llm_call_graph import CallGraph, set_current_graph
 
 # Institutional knowledge layer (opt-in via env var, graceful degradation)
 _KNOWLEDGE_ENABLED = os.environ.get("KNOWLEDGE_GRAPH_ENABLED", "").lower() in ("1", "true", "yes")
@@ -235,6 +240,7 @@ class SentinalAISupervisor:
         "devops_worker":    frozenset({"github"}),
         "confluence_worker": frozenset({"confluence"}),
         "code_worker":      frozenset({"github"}),
+        "git_worker":       frozenset({"github"}),
     }
 
     def __init__(
@@ -260,6 +266,7 @@ class SentinalAISupervisor:
             "devops_worker":    lambda: DevopsWorker(gateway=gw),
             "confluence_worker": lambda: ConfluenceWorker(gateway=gw),
             "code_worker":      lambda: CodeWorker(gateway=gw),
+            "git_worker":       lambda: GitWorker(gateway=gw),
         }
 
         self.workers: dict[str, Any] = {}
@@ -313,9 +320,13 @@ class SentinalAISupervisor:
                 stored_incident_type = stored_evidence.pop("_incident_type", "error_spike")
                 if stored_incident and stored_evidence:
                     logger.info("Replaying investigation for %s from stored evidence", incident_id)
-                    return self._analyze_evidence(
+                    replayed = self._analyze_evidence(
                         incident_id, stored_incident, stored_incident_type, stored_evidence
                     )
+                    # Run citation annotation so replay results are consistent
+                    # with the primary run (which also runs annotate_citations)
+                    annotate_citations(replayed, stored_evidence)
+                    return replayed
                 # Fallback: return cached result if evidence not available
                 if stored.get("result"):
                     return stored["result"]
@@ -332,6 +343,10 @@ class SentinalAISupervisor:
             self._tls.current_incident = None
             self._tls.itsm_evidence = None
             self._tls.devops_evidence = None
+
+            # LLM call graph — thread-local DAG for this investigation
+            call_graph = CallGraph(investigation_id=incident_id)
+            set_current_graph(call_graph)
 
             # Start with default budget; will be replaced after severity detection
             receipts = ReceiptCollector(case_id=incident_id)
@@ -400,10 +415,13 @@ class SentinalAISupervisor:
                 severity.level, severity.label, severity.source, severity.budget,
             )
 
-            # Step 2d: Retrieve similar past experiences to prime hypothesis generation.
-            # Runs concurrently with the playbook to avoid adding latency.
+            # Step 2d: Retrieve similar past experiences + knowledge graph context
+            # to prime hypothesis generation. Runs concurrently with the playbook.
             experience_future = self._parallel_executor.submit(
                 _retrieve_experiences, incident_type, service,
+            )
+            kg_future = self._parallel_executor.submit(
+                _kg_query_similar, service, incident_type,
             )
 
             # Step 3: Execute playbook + historical context in parallel
@@ -446,7 +464,32 @@ class SentinalAISupervisor:
                     len(past_experiences), incident_type, service,
                 )
 
+            # Collect knowledge graph similar incidents (ran in parallel)
+            try:
+                kg_similar = kg_future.result(timeout=3)
+            except Exception:
+                kg_similar = []
+            if kg_similar:
+                evidence["_kg_similar_incidents"] = kg_similar
+                logger.info(
+                    "KG priming: %d similar historical incident(s) for %s/%s",
+                    len(kg_similar), incident_type, service,
+                )
+
             logger.info("Playbook complete for %s: %d evidence items", incident_id, len(evidence))
+
+            # Evidence Gate G1 + G4: check collection quality before enrichment
+            _gate_post_collection = check_post_collection(evidence, budget.calls_made)
+            if not _gate_post_collection.passed and _gate_post_collection.verdict.value == "block":
+                logger.warning(
+                    "Evidence gate BLOCK post-collection: %s",
+                    _gate_post_collection.blocking_gate.reason if _gate_post_collection.blocking_gate else "unknown",
+                )
+                return self._empty_result(
+                    incident_id,
+                    f"Evidence gate blocked: {_gate_post_collection.blocking_gate.reason}"
+                    if _gate_post_collection.blocking_gate else "Evidence gate blocked",
+                )
 
             # Step 3b: DevOps enrichment (proof-gated — only if change data found)
             changes = self._extract_changes(evidence)
@@ -487,6 +530,8 @@ class SentinalAISupervisor:
 
             # Step 4: Analyze
             result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
+            # Attach collection-gate result now that result dict exists
+            result["_gate_post_collection"] = _gate_post_collection.to_dict()
 
             confidence = result.get("confidence", 0)
             # Apply confidence calibration (feedback loop from ground truth)
@@ -507,6 +552,26 @@ class SentinalAISupervisor:
                 receipts, budget, circuits,
             )
             confidence = result.get("confidence", confidence)
+
+            # Phase: Cite — ground every claim in source evidence (before gate checks
+            # so G5 has mechanically-matched citations, not just LLM-produced ones)
+            annotate_citations(result, evidence)
+
+            # Evidence Gate G2 + G3 + G5: check analysis quality (anti-hallucination)
+            gate_post_analysis = check_post_analysis(result, evidence, budget.remaining())
+            result["_gate_post_analysis"] = gate_post_analysis.to_dict()
+            if not gate_post_analysis.passed and gate_post_analysis.verdict.value == "block":
+                logger.warning(
+                    "Evidence gate BLOCK post-analysis: %s",
+                    gate_post_analysis.blocking_gate.reason if gate_post_analysis.blocking_gate else "unknown",
+                )
+                reason = (
+                    gate_post_analysis.blocking_gate.reason
+                    if gate_post_analysis.blocking_gate else "Evidence quality gate failed"
+                )
+                result["root_cause"] = f"BLOCKED: {reason}"
+                result["confidence"] = 0
+                result["hallucination_risk"] = True
 
             # Step 4c: Online quality evaluation — scores every investigation
             # without requiring ground truth labels.
@@ -558,9 +623,6 @@ class SentinalAISupervisor:
                 "Investigation complete for %s: confidence=%d, tool_calls=%d",
                 incident_id, confidence, budget.calls_made,
             )
-
-            # Phase: Cite — ground every claim in source evidence
-            annotate_citations(result, evidence)
 
             # Phase: Metric — record outcome for dashboard
             _llm_m = result.get("_llm_metrics", llm_metrics or {})
@@ -941,6 +1003,38 @@ class SentinalAISupervisor:
                     )
             except Exception as exc:
                 logger.warning("Database persistence failed (non-critical): %s", exc)
+
+        # Graph-based RAG: ingest this investigation into the knowledge graph
+        # so future investigations can benefit from BFS-based similarity retrieval.
+        try:
+            self._parallel_executor.submit(
+                _ingest_to_kg,
+                incident_id, incident_type, service,
+                result.get("root_cause", ""), confidence,
+            )
+        except Exception as exc:
+            logger.warning("Knowledge graph ingestion failed (non-critical): %s", exc)
+
+        # Memory compression: create a semantic digest for LTM storage
+        try:
+            online_score_for_compress = result.get("online_quality_score", 0.0)
+            self._parallel_executor.submit(
+                _compress_investigation,
+                incident_id, incident_type, service, result, online_score_for_compress,
+            )
+        except Exception as exc:
+            logger.warning("Memory compression failed (non-critical): %s", exc)
+
+        # Attach LLM call graph summary to result for observability
+        try:
+            from supervisor.llm_call_graph import current_graph
+            cg = current_graph()
+            if cg:
+                result["_llm_call_graph"] = cg.summary()
+        except Exception as exc:
+            logger.debug("LLM call graph summary failed (non-critical): %s", exc)
+        finally:
+            set_current_graph(None)
 
         # Continuous learning step: evaluate against ground truth (if available),
         # persist EvalResult, and update confidence calibrator.

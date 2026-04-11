@@ -1,0 +1,201 @@
+version: "3.9"
+
+# =============================================================================
+# SentinalAI — One-Command Full Stack
+# =============================================================================
+# Usage:
+#   cp .env.example .env        # fill in your real API keys / URLs
+#   docker compose up           # starts all services with stub tools
+#
+# Services:
+#   sentinalai-bff       → AG UI Backend (port 8081)
+#   agentcore-runtime    → AgentCore MCP Gateway (port 8080)
+#   postgres             → Investigations DB (port 5432)
+#   redis                → Session store / cache (port 6379)
+#   jaeger               → Distributed tracing UI (port 16686)
+#   stub-tools           → Stub MCP servers for all 8 integrations (port 9000)
+#
+# With real tools:
+#   Set GATEWAY_MODE=live and fill in all env vars in .env
+# =============================================================================
+
+services:
+
+  # ── SentinalAI BFF ─────────────────────────────────────────────────────────
+  sentinalai-bff:
+    build:
+      context: .
+      dockerfile: Dockerfile.bff
+    image: sentinalai/bff:latest
+    container_name: sentinalai-bff
+    ports:
+      - "8081:8081"
+    environment:
+      - AGUI_BFF_PORT=8081
+      - AGUI_BFF_HOST=0.0.0.0
+      - DATABASE_URL=postgresql://sentinalai:sentinalai@postgres:5432/sentinalai
+      - REDIS_URL=redis://redis:6379/0
+      - AGENTCORE_GATEWAY_URL=http://agentcore-runtime:8080
+      - GATEWAY_MODE=${GATEWAY_MODE:-stub}
+      # LLM (required for AI-powered RCA)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
+      - LLM_MODEL=${LLM_MODEL:-claude-sonnet-4-6}
+      # Auth
+      - AGUI_JWT_SECRET=${AGUI_JWT_SECRET:-dev-secret-change-in-prod}
+      - HONEYPOT_ENABLED=${HONEYPOT_ENABLED:-false}
+      # Observability
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - OTEL_SERVICE_NAME=sentinalai-bff
+      # Tool integration URLs (stub by default, set real values in .env)
+      - SERVICENOW_MCP_URL=${SERVICENOW_MCP_URL:-http://stub-tools:9000/mcp/servicenow}
+      - GITHUB_MCP_URL=${GITHUB_MCP_URL:-http://stub-tools:9000/mcp/github}
+      - SPLUNK_MCP_URL=${SPLUNK_MCP_URL:-http://stub-tools:9000/mcp/splunk}
+      - SYSDIG_MCP_URL=${SYSDIG_MCP_URL:-http://stub-tools:9000/mcp/sysdig}
+      - DYNATRACE_MCP_URL=${DYNATRACE_MCP_URL:-http://stub-tools:9000/mcp/dynatrace}
+      - MOOGSOFT_MCP_URL=${MOOGSOFT_MCP_URL:-http://stub-tools:9000/mcp/moogsoft}
+      - CONFLUENCE_MCP_URL=${CONFLUENCE_MCP_URL:-http://stub-tools:9000/mcp/confluence}
+      - KUBERNETES_MCP_URL=${KUBERNETES_MCP_URL:-http://stub-tools:9000/mcp/kubernetes}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      agentcore-runtime:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - sentinalai
+
+  # ── AgentCore MCP Gateway ───────────────────────────────────────────────────
+  agentcore-runtime:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sentinalai/agentcore:latest
+    container_name: agentcore-runtime
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - GATEWAY_MODE=${GATEWAY_MODE:-stub}
+      # Stub tool targets (used when GATEWAY_MODE=stub)
+      - STUB_TOOLS_URL=http://stub-tools:9000
+      # Real tool credentials (set in .env for live mode)
+      - SERVICENOW_URL=${SERVICENOW_URL:-}
+      - SERVICENOW_USER=${SERVICENOW_USER:-}
+      - SERVICENOW_PASS=${SERVICENOW_PASS:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GITHUB_ORG=${GITHUB_ORG:-}
+      - SPLUNK_URL=${SPLUNK_URL:-}
+      - SPLUNK_TOKEN=${SPLUNK_TOKEN:-}
+      - SYSDIG_URL=${SYSDIG_URL:-}
+      - SYSDIG_TOKEN=${SYSDIG_TOKEN:-}
+      - DYNATRACE_URL=${DYNATRACE_URL:-}
+      - DYNATRACE_API_TOKEN=${DYNATRACE_API_TOKEN:-}
+      - MOOGSOFT_URL=${MOOGSOFT_URL:-}
+      - MOOGSOFT_API_KEY=${MOOGSOFT_API_KEY:-}
+      - CONFLUENCE_URL=${CONFLUENCE_URL:-}
+      - CONFLUENCE_API_TOKEN=${CONFLUENCE_API_TOKEN:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - sentinalai
+
+  # ── Stub MCP Tool Servers ───────────────────────────────────────────────────
+  # Serves realistic fixture responses for all 8 integrations.
+  # Swap out individual stubs for real integrations by setting env vars above.
+  stub-tools:
+    build:
+      context: .
+      dockerfile: Dockerfile.stubs
+    image: sentinalai/stub-tools:latest
+    container_name: stub-tools
+    ports:
+      - "9000:9000"
+    environment:
+      - PORT=9000
+      - FIXTURES_DIR=/app/tests/fixtures
+    volumes:
+      - ./tests/fixtures:/app/tests/fixtures:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - sentinalai
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: sentinalai-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: sentinalai
+      POSTGRES_PASSWORD: sentinalai
+      POSTGRES_DB: sentinalai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_database.py:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinalai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - sentinalai
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: sentinalai-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - sentinalai
+
+  # ── Jaeger (distributed tracing) ───────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    container_name: sentinalai-jaeger
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    restart: unless-stopped
+    networks:
+      - sentinalai
+
+# ── Volumes ─────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  redis_data:
+
+# ── Networks ────────────────────────────────────────────────────────────────
+networks:
+  sentinalai:
+    driver: bridge

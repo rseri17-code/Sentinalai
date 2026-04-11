@@ -893,6 +893,101 @@ class McpGateway:
             return None
 
     # ------------------------------------------------------------------ #
+    # Tool discovery
+    # ------------------------------------------------------------------ #
+
+    # All known server names (used as fallback when gateway is unavailable)
+    _ALL_KNOWN_SERVERS: frozenset[str] = frozenset(
+        {"moogsoft", "splunk", "sysdig", "signalfx", "dynatrace",
+         "servicenow", "github", "confluence", "kubernetes"}
+    )
+
+    # Cache TTL for discovery results (5 minutes)
+    _DISCOVERY_TTL_SECONDS = int(os.environ.get("TOOL_DISCOVERY_TTL_SECONDS", "300"))
+
+    def discover_tools(self, *, force_refresh: bool = False) -> frozenset[str]:
+        """Query the gateway (or stub) for currently connected tool servers.
+
+        Returns a frozenset of server names that are reachable, e.g.
+        ``frozenset({"splunk", "servicenow", "github"})``.
+
+        Caches results for ``_DISCOVERY_TTL_SECONDS`` (default 5 min).
+        Falls back to all known servers on any network/parse error so the
+        agent always starts, even if the gateway is temporarily unavailable.
+
+        Override the discovery URL via:
+            TOOL_DISCOVERY_URL  — explicit URL (e.g. http://stub-tools:9000/tools)
+        """
+        now = time.monotonic()
+        if not force_refresh and self._tools_cache is not None:
+            cached_at, cached_servers = self._tools_cache
+            if now - cached_at < self._DISCOVERY_TTL_SECONDS:
+                return cached_servers
+
+        servers = self._fetch_available_servers()
+        self._tools_cache = (now, servers)
+        logger.info("Tool discovery complete: %s", sorted(servers))
+        return servers
+
+    def _fetch_available_servers(self) -> frozenset[str]:
+        """Attempt HTTP discovery; return all known servers on any failure."""
+        if not _REQUESTS_AVAILABLE:
+            logger.debug("requests not available — assuming all tools connected")
+            return self._ALL_KNOWN_SERVERS
+
+        # Determine discovery URL
+        explicit_url = os.environ.get("TOOL_DISCOVERY_URL", "")
+        stub_url = os.environ.get("STUB_TOOLS_URL", "")
+
+        if explicit_url:
+            discovery_url = explicit_url
+        elif AGENTCORE_GATEWAY_URL:
+            discovery_url = AGENTCORE_GATEWAY_URL.rstrip("/") + "/tools"
+        elif stub_url:
+            discovery_url = stub_url.rstrip("/") + "/tools"
+        else:
+            logger.debug("No discovery URL configured — assuming all tools connected")
+            return self._ALL_KNOWN_SERVERS
+
+        try:
+            resp = _requests_lib.get(discovery_url, timeout=5)
+            resp.raise_for_status()
+            data = resp.json()
+            return self._parse_discovery_response(data)
+        except Exception as exc:
+            logger.warning("Tool discovery failed (%s) — assuming all tools connected", exc)
+            return self._ALL_KNOWN_SERVERS
+
+    @staticmethod
+    def _parse_discovery_response(data: dict) -> frozenset[str]:
+        """Parse discovery endpoint response into a set of server names.
+
+        Handles three response formats:
+          1. {"available_servers": ["splunk", "github", ...]}       — standard
+          2. {"stub_tools": {"splunk": [...], "github": [...], ...}} — stub catalog
+          3. {"tools": [{"server": "splunk", ...}, ...]}             — gateway list
+        """
+        if "available_servers" in data:
+            return frozenset(str(s).lower() for s in data["available_servers"])
+        if "stub_tools" in data:
+            return frozenset(str(k).lower() for k in data["stub_tools"].keys())
+        if "tools" in data and isinstance(data["tools"], list):
+            servers: set[str] = set()
+            for item in data["tools"]:
+                if isinstance(item, dict) and "server" in item:
+                    servers.add(str(item["server"]).lower())
+                elif isinstance(item, str):
+                    # "SplunkTarget___search_oneshot" → "splunk"
+                    name = item.lower()
+                    for known in McpGateway._ALL_KNOWN_SERVERS:
+                        if name.startswith(known):
+                            servers.add(known)
+                            break
+            return frozenset(servers) if servers else McpGateway._ALL_KNOWN_SERVERS
+        # Unknown format — assume all available
+        return McpGateway._ALL_KNOWN_SERVERS
+
+    # ------------------------------------------------------------------ #
     # Resolution helpers
     # ------------------------------------------------------------------ #
 

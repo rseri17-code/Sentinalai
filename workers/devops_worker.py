@@ -36,6 +36,9 @@ class DevopsWorker(BaseWorker):
         self.register("get_pr_details", self._get_pr_details)
         self.register("get_commit_diff", self._get_commit_diff)
         self.register("get_workflow_runs", self._get_workflow_runs)
+        self.register("create_fix_pr", self._create_fix_pr)
+        self.register("rollback_deployment", self._rollback_deployment)
+        self.register("scale_service", self._scale_service)
 
     def _get_recent_deployments(self, params: dict) -> dict:
         """List recent deployments (merged PRs, releases) for a service repo.
@@ -135,5 +138,95 @@ class DevopsWorker(BaseWorker):
                 "repo": repo,
                 "sha": params.get("sha", ""),
                 "time_window_hours": params.get("time_window_hours", 24),
+            },
+        )
+
+    def _create_fix_pr(self, params: dict) -> dict:
+        """Create a GitHub pull request with a generated code fix.
+
+        Params:
+            repo:      org/repo string
+            title:     PR title (e.g. "fix: remove null check causing NPE")
+            body:      PR description (markdown, includes RCA context)
+            patch:     Unified diff of the fix
+            base_sha:  The commit SHA the fix is based on
+            actor_id:  Who triggered the fix (for audit)
+            branch:    Optional branch name (auto-generated if omitted)
+
+        Returns:
+            {"pr": {"number", "html_url", "branch", "sha"}}
+        """
+        repo = params.get("repo", "")
+        title = params.get("title", "")
+        if not repo or not title:
+            return {"error": "repo and title required"}
+        return self._gateway.invoke(
+            "github.create_fix_pr",
+            "create_fix_pr",
+            {
+                "repo": repo,
+                "title": title,
+                "body": params.get("body", ""),
+                "patch": params.get("patch", ""),
+                "base_sha": params.get("base_sha", ""),
+                "actor_id": params.get("actor_id", "sentinalai"),
+                "branch": params.get("branch", ""),
+            },
+        )
+
+    def _rollback_deployment(self, params: dict) -> dict:
+        """Rollback a Kubernetes deployment to the previous revision.
+
+        Params:
+            service:   Service name (maps to k8s deployment name)
+            repo:      Optional org/repo (for GitHub Actions rollback)
+            sha:       The SHA being rolled back FROM (for audit trail)
+            command:   Optional explicit kubectl command (overrides auto-generate)
+            actor_id:  Who triggered the rollback (for audit)
+            namespace: Kubernetes namespace (default: production)
+
+        Returns:
+            {"rollback": {"status", "previous_revision", "deployment", "message"}}
+        """
+        service = params.get("service", "")
+        if not service:
+            return {"error": "service required"}
+        return self._gateway.invoke(
+            "kubernetes.rollback_deployment",
+            "rollback_deployment",
+            {
+                "service": service,
+                "repo": params.get("repo", ""),
+                "sha": params.get("sha", ""),
+                "command": params.get("command", f"kubectl rollout undo deployment/{service}"),
+                "actor_id": params.get("actor_id", "sentinalai"),
+                "namespace": params.get("namespace", "production"),
+            },
+        )
+
+    def _scale_service(self, params: dict) -> dict:
+        """Scale a Kubernetes deployment to a target replica count.
+
+        Params:
+            service:   Service name (k8s deployment name)
+            replicas:  Target replica count
+            actor_id:  Who triggered the scale action
+            namespace: Kubernetes namespace (default: production)
+
+        Returns:
+            {"scale": {"status", "replicas", "deployment"}}
+        """
+        service = params.get("service", "")
+        replicas = params.get("replicas", 2)
+        if not service:
+            return {"error": "service required"}
+        return self._gateway.invoke(
+            "kubernetes.scale_service",
+            "scale_service",
+            {
+                "service": service,
+                "replicas": replicas,
+                "actor_id": params.get("actor_id", "sentinalai"),
+                "namespace": params.get("namespace", "production"),
             },
         )

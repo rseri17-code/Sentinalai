@@ -91,6 +91,20 @@ from workers.knowledge_worker import KnowledgeWorker
 from workers.itsm_worker import ItsmWorker
 from workers.devops_worker import DevopsWorker
 from workers.confluence_worker import ConfluenceWorker
+from workers.code_worker import CodeWorker
+from workers.git_worker import GitWorker
+from supervisor.cmdb_traversal import CMDBTraversal, build_change_summary
+from supervisor.fix_engine import get_fix_engine, ProposedFix
+from supervisor.evidence_citation import annotate_citations
+from supervisor.metrics_dashboard import record_investigation_outcome
+from supervisor.evidence_gates import check_post_collection, check_post_analysis
+from supervisor.knowledge_graph import ingest_to_graph as _ingest_to_kg, query_similar as _kg_query_similar
+from supervisor.memory_compression import compress_investigation as _compress_investigation
+from supervisor.llm_call_graph import CallGraph, set_current_graph
+from supervisor.progress_stream import get_stream, EventType
+from supervisor.incident_git_linker import link_incident_to_commit
+from supervisor.trace_correlation import correlate_traces
+from workers.visual_evidence_worker import collect_visual_evidence
 
 # Institutional knowledge layer (opt-in via env var, graceful degradation)
 _KNOWLEDGE_ENABLED = os.environ.get("KNOWLEDGE_GRAPH_ENABLED", "").lower() in ("1", "true", "yes")
@@ -219,6 +233,20 @@ class SentinalAISupervisor:
         os.environ.get("INVESTIGATION_DEADLINE_SECONDS", "120")
     )
 
+    # Worker name → set of tool servers required (empty = always available)
+    _WORKER_SERVERS: dict[str, frozenset[str]] = {
+        "ops_worker":       frozenset({"moogsoft"}),
+        "log_worker":       frozenset({"splunk"}),
+        "metrics_worker":   frozenset({"sysdig"}),
+        "apm_worker":       frozenset({"dynatrace", "signalfx"}),
+        "knowledge_worker": frozenset(),          # always available (no external tool)
+        "itsm_worker":      frozenset({"servicenow"}),
+        "devops_worker":    frozenset({"github"}),
+        "confluence_worker": frozenset({"confluence"}),
+        "code_worker":      frozenset({"github"}),
+        "git_worker":       frozenset({"github"}),
+    }
+
     def __init__(
         self,
         replay_dir: str | None = None,
@@ -227,16 +255,35 @@ class SentinalAISupervisor:
         gateway: McpGateway | None = None,
     ):
         gw = gateway or McpGateway.get_instance()
-        self.workers: dict[str, Any] = {
-            "ops_worker": OpsWorker(gateway=gw),
-            "log_worker": LogWorker(gateway=gw),
-            "metrics_worker": MetricsWorker(gateway=gw),
-            "apm_worker": ApmWorker(gateway=gw),
-            "knowledge_worker": KnowledgeWorker(),
-            "itsm_worker": ItsmWorker(gateway=gw),
-            "devops_worker": DevopsWorker(gateway=gw),
-            "confluence_worker": ConfluenceWorker(gateway=gw),
+        self._gateway = gw  # stored for visual evidence + trace correlation
+
+        # Tool auto-discovery — non-blocking; falls back to all tools on error
+        available_servers = gw.discover_tools()
+
+        # Candidate worker factory
+        _worker_factory: dict[str, Any] = {
+            "ops_worker":       lambda: OpsWorker(gateway=gw),
+            "log_worker":       lambda: LogWorker(gateway=gw),
+            "metrics_worker":   lambda: MetricsWorker(gateway=gw),
+            "apm_worker":       lambda: ApmWorker(gateway=gw),
+            "knowledge_worker": lambda: KnowledgeWorker(),
+            "itsm_worker":      lambda: ItsmWorker(gateway=gw),
+            "devops_worker":    lambda: DevopsWorker(gateway=gw),
+            "confluence_worker": lambda: ConfluenceWorker(gateway=gw),
+            "code_worker":      lambda: CodeWorker(gateway=gw),
+            "git_worker":       lambda: GitWorker(gateway=gw),
         }
+
+        self.workers: dict[str, Any] = {}
+        for name, factory in _worker_factory.items():
+            required = self._WORKER_SERVERS.get(name, frozenset())
+            if not required or required & available_servers:
+                self.workers[name] = factory()
+            else:
+                logger.info(
+                    "Worker %s skipped — required tools not connected: %s",
+                    name, sorted(required),
+                )
         self._replay_store = ReplayStore(replay_dir) if replay_dir else None
         self._call_timeout = call_timeout
         self._max_retries = max_retries
@@ -278,9 +325,13 @@ class SentinalAISupervisor:
                 stored_incident_type = stored_evidence.pop("_incident_type", "error_spike")
                 if stored_incident and stored_evidence:
                     logger.info("Replaying investigation for %s from stored evidence", incident_id)
-                    return self._analyze_evidence(
+                    replayed = self._analyze_evidence(
                         incident_id, stored_incident, stored_incident_type, stored_evidence
                     )
+                    # Run citation annotation so replay results are consistent
+                    # with the primary run (which also runs annotate_citations)
+                    annotate_citations(replayed, stored_evidence)
+                    return replayed
                 # Fallback: return cached result if evidence not available
                 if stored.get("result"):
                     return stored["result"]
@@ -298,14 +349,26 @@ class SentinalAISupervisor:
             self._tls.itsm_evidence = None
             self._tls.devops_evidence = None
 
+            # LLM call graph — thread-local DAG for this investigation
+            call_graph = CallGraph(investigation_id=incident_id)
+            set_current_graph(call_graph)
+
             # Start with default budget; will be replaced after severity detection
             receipts = ReceiptCollector(case_id=incident_id)
             budget = ExecutionBudget(case_id=incident_id)
+
+            # Stable investigation ID for fix engine traceability
+            investigation_id = f"inv-{incident_id}"
 
             # W1: Per-investigation circuit breaker registry (isolated)
             circuits = CircuitBreakerRegistry()
 
             logger.info("Starting investigation for %s", incident_id)
+            _stream = get_stream()
+            _stream.emit(
+                incident_id, EventType.INVESTIGATION_STARTED,
+                {"incident_id": incident_id}, phase="start",
+            )
 
             # Step 1: Fetch incident
             incident = self._fetch_incident(incident_id, receipts, budget, circuits)
@@ -339,6 +402,10 @@ class SentinalAISupervisor:
             span.set_attribute(EVAL_INCIDENT_TYPE, incident_type)
             span.set_attribute(EVAL_SERVICE, service)
             logger.info("Classified %s as %s (service=%s)", incident_id, incident_type, service)
+            _stream.emit_phase(
+                incident_id, "classify",
+                incident_type=incident_type, service=service,
+            )
 
             # Step 2b: ITSM context enrichment (Phase 1 — CI, known errors, similar incidents)
             itsm_context = self._fetch_itsm_context(service, summary, receipts, budget, circuits)
@@ -362,10 +429,13 @@ class SentinalAISupervisor:
                 severity.level, severity.label, severity.source, severity.budget,
             )
 
-            # Step 2d: Retrieve similar past experiences to prime hypothesis generation.
-            # Runs concurrently with the playbook to avoid adding latency.
+            # Step 2d: Retrieve similar past experiences + knowledge graph context
+            # to prime hypothesis generation. Runs concurrently with the playbook.
             experience_future = self._parallel_executor.submit(
                 _retrieve_experiences, incident_type, service,
+            )
+            kg_future = self._parallel_executor.submit(
+                _kg_query_similar, service, incident_type,
             )
 
             # Step 3: Execute playbook + historical context in parallel
@@ -375,8 +445,24 @@ class SentinalAISupervisor:
                 self._fetch_historical_context, service, summary, incident_type, receipts, budget, circuits,
             )
 
+            _stream.emit_phase(incident_id, "collect", incident_type=incident_type)
             evidence = self._execute_playbook(
                 incident_type, incident_id, service, receipts, budget, circuits,
+            )
+            _stream.emit_phase_done(
+                incident_id, "collect",
+                evidence_keys=list(evidence.keys()),
+                evidence_count=len(evidence),
+            )
+
+            # Concurrently: trace correlation + visual evidence (non-blocking)
+            incident_time = incident.get("created_at", incident.get("timestamp", ""))
+            _trace_future = self._parallel_executor.submit(
+                correlate_traces, incident, evidence, self._gateway if hasattr(self, "_gateway") else None,
+            )
+            _visual_future = self._parallel_executor.submit(
+                collect_visual_evidence, service, incident_time, incident_type,
+                self._gateway if hasattr(self, "_gateway") else None,
             )
 
             # Merge ITSM context into evidence for downstream analysis
@@ -408,7 +494,32 @@ class SentinalAISupervisor:
                     len(past_experiences), incident_type, service,
                 )
 
+            # Collect knowledge graph similar incidents (ran in parallel)
+            try:
+                kg_similar = kg_future.result(timeout=3)
+            except Exception:
+                kg_similar = []
+            if kg_similar:
+                evidence["_kg_similar_incidents"] = kg_similar
+                logger.info(
+                    "KG priming: %d similar historical incident(s) for %s/%s",
+                    len(kg_similar), incident_type, service,
+                )
+
             logger.info("Playbook complete for %s: %d evidence items", incident_id, len(evidence))
+
+            # Evidence Gate G1 + G4: check collection quality before enrichment
+            _gate_post_collection = check_post_collection(evidence, budget.calls_made)
+            if not _gate_post_collection.passed and _gate_post_collection.verdict.value == "block":
+                logger.warning(
+                    "Evidence gate BLOCK post-collection: %s",
+                    _gate_post_collection.blocking_gate.reason if _gate_post_collection.blocking_gate else "unknown",
+                )
+                return self._empty_result(
+                    incident_id,
+                    f"Evidence gate blocked: {_gate_post_collection.blocking_gate.reason}"
+                    if _gate_post_collection.blocking_gate else "Evidence gate blocked",
+                )
 
             # Step 3b: DevOps enrichment (proof-gated — only if change data found)
             changes = self._extract_changes(evidence)
@@ -418,8 +529,66 @@ class SentinalAISupervisor:
                 if devops_context:
                     evidence["devops_context"] = devops_context
 
+            # Step 3c: CMDB traversal — walk dependency graph for blast radius
+            # Even when direct service has no change, a dependency might.
+            cmdb_context = self._fetch_cmdb_blast_radius(
+                service, incident_id, receipts, budget, circuits
+            )
+            if cmdb_context:
+                evidence["cmdb_blast_radius"] = cmdb_context
+
+            # Step 3d: Diff analysis — if CMDB found a change on a dependency
+            # and we haven't already fetched devops_context, go get the diff.
+            if cmdb_context and not evidence.get("devops_context"):
+                dep_deployment = self._find_deployment_in_blast_radius(cmdb_context)
+                if dep_deployment:
+                    dep_devops_context = self._fetch_devops_context(
+                        dep_deployment.get("_ci", service),
+                        dep_deployment,
+                        receipts, budget, circuits,
+                    )
+                    if dep_devops_context:
+                        evidence["devops_context"] = dep_devops_context
+
+            # Step 3e: Code diff analysis — AI reads diff vs error context
+            if evidence.get("devops_context") and budget and budget.can_call():
+                diff_analysis = self._fetch_diff_analysis(
+                    service, evidence, receipts, budget, circuits
+                )
+                if diff_analysis:
+                    evidence["diff_analysis"] = diff_analysis
+
+            # Collect trace correlation (ran concurrently with playbook)
+            try:
+                trace_corr = _trace_future.result(timeout=5)
+                if trace_corr:
+                    evidence["trace_correlation"] = trace_corr
+                    _stream.emit(
+                        incident_id, EventType.TRACE_CORRELATED,
+                        {
+                            "trace_id": trace_corr.get("trace_id", "")[:16],
+                            "root_span_service": trace_corr.get("root_span_service", ""),
+                            "chain_depth": trace_corr.get("chain_depth", 0),
+                            "confidence": trace_corr.get("correlation_confidence", 0),
+                        },
+                        phase="collect",
+                    )
+            except Exception as exc:
+                logger.debug("Trace correlation skipped: %s", exc)
+
+            # Collect visual evidence (ran concurrently with playbook)
+            try:
+                visual_ev = _visual_future.result(timeout=10)
+                if visual_ev:
+                    evidence["visual_evidence"] = visual_ev
+            except Exception as exc:
+                logger.debug("Visual evidence skipped: %s", exc)
+
             # Step 4: Analyze
+            _stream.emit_phase(incident_id, "analyze", incident_type=incident_type)
             result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
+            # Attach collection-gate result now that result dict exists
+            result["_gate_post_collection"] = _gate_post_collection.to_dict()
 
             confidence = result.get("confidence", 0)
             # Apply confidence calibration (feedback loop from ground truth)
@@ -428,6 +597,9 @@ class SentinalAISupervisor:
             if confidence != raw_confidence:
                 result["confidence"] = confidence
                 result["raw_confidence"] = raw_confidence
+            _stream.emit_confidence(
+                incident_id, confidence, source="calibrator", previous=raw_confidence,
+            )
             hypothesis_count = result.pop("_hypothesis_count", 0)
             winner_hypothesis = result.pop("_winner_hypothesis", "none")
             llm_metrics = result.pop("_llm_metrics", {})
@@ -440,6 +612,26 @@ class SentinalAISupervisor:
                 receipts, budget, circuits,
             )
             confidence = result.get("confidence", confidence)
+
+            # Phase: Cite — ground every claim in source evidence (before gate checks
+            # so G5 has mechanically-matched citations, not just LLM-produced ones)
+            annotate_citations(result, evidence)
+
+            # Evidence Gate G2 + G3 + G5: check analysis quality (anti-hallucination)
+            gate_post_analysis = check_post_analysis(result, evidence, budget.remaining())
+            result["_gate_post_analysis"] = gate_post_analysis.to_dict()
+            if not gate_post_analysis.passed and gate_post_analysis.verdict.value == "block":
+                logger.warning(
+                    "Evidence gate BLOCK post-analysis: %s",
+                    gate_post_analysis.blocking_gate.reason if gate_post_analysis.blocking_gate else "unknown",
+                )
+                reason = (
+                    gate_post_analysis.blocking_gate.reason
+                    if gate_post_analysis.blocking_gate else "Evidence quality gate failed"
+                )
+                result["root_cause"] = f"BLOCKED: {reason}"
+                result["confidence"] = 0
+                result["hallucination_risk"] = True
 
             # Step 4c: Online quality evaluation — scores every investigation
             # without requiring ground truth labels.
@@ -475,9 +667,99 @@ class SentinalAISupervisor:
             )
             result["remediation"] = remediation
 
+            # Generate and store proposed fix (if diff analysis found something actionable)
+            if evidence.get("diff_analysis"):
+                _stream.emit(incident_id, EventType.FIX_PROPOSED, {}, phase="fix")
+                proposed_fix = self._generate_proposed_fix(
+                    incident_id, investigation_id, service, evidence, result
+                )
+                if proposed_fix and proposed_fix.fix_type != "none":
+                    result["proposed_fix"] = proposed_fix.to_dict()
+                    logger.info(
+                        "Proposed fix stored: type=%s confidence=%.0f risk=%s",
+                        proposed_fix.fix_type, proposed_fix.confidence, proposed_fix.risk_level,
+                    )
+                    # Bidirectional git-incident link: record the breaking commit
+                    _breaking_sha = (
+                        proposed_fix.sha
+                        if hasattr(proposed_fix, "sha") and proposed_fix.sha
+                        else result.get("proposed_fix", {}).get("sha", "")
+                    )
+                    _breaking_repo = (
+                        proposed_fix.repo
+                        if hasattr(proposed_fix, "repo") and proposed_fix.repo
+                        else result.get("proposed_fix", {}).get("repo", "")
+                    )
+                    if _breaking_sha and _breaking_repo:
+                        try:
+                            link_incident_to_commit(
+                                incident_id=incident_id,
+                                commit_sha=_breaking_sha,
+                                repo=_breaking_repo,
+                                relationship="caused_by",
+                                confidence=proposed_fix.confidence / 100.0
+                                if hasattr(proposed_fix, "confidence") else 0.8,
+                                commit_message=result.get("proposed_fix", {}).get("description", ""),
+                            )
+                            logger.info(
+                                "Git-incident link recorded: %s caused_by %s",
+                                incident_id, _breaking_sha[:8],
+                            )
+                        except Exception as _link_exc:
+                            logger.debug("Git-incident link failed (non-critical): %s", _link_exc)
+
+                    # Wire verification loop: poll metrics post-fix in background
+                    try:
+                        import asyncio as _asyncio
+                        from supervisor.verification_loop import VerificationLoop
+                        _vloop = VerificationLoop(
+                            metrics_worker=self.workers.get("metrics_worker"),
+                            log_worker=self.workers.get("log_worker"),
+                        )
+                        _vloop_investigation_id = investigation_id
+                        _vloop_service = service
+                        _vloop_incident_id = incident_id
+                        _vloop_itsm = self.workers.get("itsm_worker")
+                        _baseline = evidence.get("get_golden_signals", {}).get("metrics", {})
+
+                        def _run_verification():
+                            _asyncio.run(_vloop.watch(
+                                investigation_id=_vloop_investigation_id,
+                                service=_vloop_service,
+                                incident_id=_vloop_incident_id,
+                                itsm_worker=_vloop_itsm,
+                                baseline=_baseline,
+                            ))
+
+                        _stream.emit(incident_id, EventType.FIX_VERIFYING, {}, phase="fix")
+                        self._parallel_executor.submit(_run_verification)
+                        logger.info("Verification loop started for %s/%s", incident_id, service)
+                    except Exception as _vl_exc:
+                        logger.debug("Verification loop start failed (non-critical): %s", _vl_exc)
+
             logger.info(
                 "Investigation complete for %s: confidence=%d, tool_calls=%d",
                 incident_id, confidence, budget.calls_made,
+            )
+
+            # Phase: Metric — record outcome for dashboard
+            _llm_m = result.get("_llm_metrics", llm_metrics or {})
+            record_investigation_outcome(
+                investigation_id=investigation_id,
+                incident_id=incident_id,
+                incident_type=incident_type,
+                service=service,
+                root_cause=result.get("root_cause", ""),
+                confidence=confidence,
+                severity=severity.level if hasattr(severity, "level") else int(severity),
+                elapsed_ms=elapsed,
+                tool_calls=budget.calls_made,
+                llm_input_tokens=_llm_m.get("input_tokens", 0),
+                llm_output_tokens=_llm_m.get("output_tokens", 0),
+                citation_coverage=result.get("citation_coverage", 0.0),
+                fix_proposed=bool(result.get("proposed_fix")),
+                fix_applied=False,   # updated later by FixEngine
+                fix_verified=False,  # updated later by VerificationLoop
             )
 
             # Phase: Persist — replay, memory, knowledge graph, RCA report, DB
@@ -486,6 +768,15 @@ class SentinalAISupervisor:
                 receipts, budget, confidence, hypothesis_count,
                 winner_hypothesis, severity, summary, llm_metrics,
                 judge_scores, elapsed, incident=incident,
+            )
+
+            _stream.emit_complete(
+                investigation_id=incident_id,
+                root_cause=result.get("root_cause", ""),
+                confidence=confidence,
+                citation_coverage=result.get("citation_coverage", 0.0),
+                fix_proposed=bool(result.get("proposed_fix")),
+                elapsed_ms=elapsed,
             )
 
             return result
@@ -840,6 +1131,38 @@ class SentinalAISupervisor:
             except Exception as exc:
                 logger.warning("Database persistence failed (non-critical): %s", exc)
 
+        # Graph-based RAG: ingest this investigation into the knowledge graph
+        # so future investigations can benefit from BFS-based similarity retrieval.
+        try:
+            self._parallel_executor.submit(
+                _ingest_to_kg,
+                incident_id, incident_type, service,
+                result.get("root_cause", ""), confidence,
+            )
+        except Exception as exc:
+            logger.warning("Knowledge graph ingestion failed (non-critical): %s", exc)
+
+        # Memory compression: create a semantic digest for LTM storage
+        try:
+            online_score_for_compress = result.get("online_quality_score", 0.0)
+            self._parallel_executor.submit(
+                _compress_investigation,
+                incident_id, incident_type, service, result, online_score_for_compress,
+            )
+        except Exception as exc:
+            logger.warning("Memory compression failed (non-critical): %s", exc)
+
+        # Attach LLM call graph summary to result for observability
+        try:
+            from supervisor.llm_call_graph import current_graph
+            cg = current_graph()
+            if cg:
+                result["_llm_call_graph"] = cg.summary()
+        except Exception as exc:
+            logger.debug("LLM call graph summary failed (non-critical): %s", exc)
+        finally:
+            set_current_graph(None)
+
         # Continuous learning step: evaluate against ground truth (if available),
         # persist EvalResult, and update confidence calibrator.
         # Run in background so it never adds latency to the investigation response.
@@ -1098,6 +1421,222 @@ class SentinalAISupervisor:
             context["similar_incidents"] = result["incidents"]
 
         return context or None
+
+    # ------------------------------------------------------------------ #
+    # Internal: CMDB traversal (dependency blast radius — Phase 3c)
+    # ------------------------------------------------------------------ #
+
+    def _fetch_cmdb_blast_radius(
+        self, service: str, incident_id: str,
+        receipts: Any | None = None,
+        budget: Any | None = None,
+        circuits: Any | None = None,
+    ) -> dict | None:
+        """Phase 3c: walk CMDB dependency graph for change blast radius.
+
+        Finds changes on dependencies of *service*, not just the service itself.
+        Returns the CMDBTraversal result dict, or None if nothing found.
+        """
+        worker = self.workers.get("itsm_worker")
+        if worker is None:
+            return None
+        if budget and not budget.can_call():
+            return None
+
+        try:
+            traversal = CMDBTraversal(worker)
+            result = traversal.get_change_blast_radius(service, hours=24)
+            if result.get("changes_found", 0) > 0:
+                logger.info(
+                    "CMDB blast radius for %s: found changes on %d CI(s): %s",
+                    service, result["changes_found"],
+                    list(result.get("blast_radius", {}).keys()),
+                )
+                result["_summary"] = build_change_summary(result)
+                return result
+        except Exception as exc:
+            logger.warning("CMDB traversal failed for %s: %s", service, exc)
+
+        return None
+
+    def _find_deployment_in_blast_radius(self, cmdb_context: dict) -> dict | None:
+        """Extract the most recent change from the CMDB blast radius.
+
+        Used by Step 3d to decide whether to fetch a code diff.
+        """
+        if not cmdb_context:
+            return None
+        blast = cmdb_context.get("blast_radius", {})
+        if not blast:
+            return None
+
+        # Find the change with the most recent timestamp across all CIs
+        best: dict | None = None
+        best_ts = ""
+        for ci_name, changes in blast.items():
+            for ch in changes:
+                ts = ch.get("end_date", ch.get("start_date", ""))
+                if ts > best_ts:
+                    best_ts = ts
+                    best = dict(ch)
+                    best["_ci"] = ci_name
+                    # Map change number to deployment-style dict for _fetch_devops_context
+                    best["sha"] = ch.get("sha", ch.get("commit_sha", ""))
+                    best["description"] = ch.get("short_description", "")
+                    best["merged_at"] = ts
+
+        return best
+
+    # ------------------------------------------------------------------ #
+    # Internal: Code diff analysis (AI-powered — Phase 3e)
+    # ------------------------------------------------------------------ #
+
+    def _fetch_diff_analysis(
+        self, service: str, evidence: dict,
+        receipts: Any | None = None,
+        budget: Any | None = None,
+        circuits: Any | None = None,
+    ) -> dict | None:
+        """Phase 3e: AI analysis of code diff against production error context.
+
+        Reads the commit diff from devops_context, cross-references with
+        Splunk/APM error logs, and returns culprit file + line + fix confidence.
+        """
+        code_worker = self.workers.get("code_worker")
+        if code_worker is None:
+            return None
+        if budget and not budget.can_call():
+            return None
+
+        devops_ctx = evidence.get("devops_context", {})
+        deployments = devops_ctx.get("deployments", [])
+        if not deployments:
+            return None
+
+        # Get the most recent deployment
+        deployment = deployments[0] if isinstance(deployments, list) else {}
+        sha = deployment.get("sha", "")
+        repo = deployment.get("repo", deployment.get("repository", ""))
+
+        if not sha:
+            return None
+
+        # Extract error context from Splunk + APM evidence
+        error_context = self._extract_error_context(evidence)
+
+        # Get the commit diff from devops_worker
+        diff_worker = self.workers.get("devops_worker")
+        diff = ""
+        if diff_worker and repo and sha:
+            try:
+                diff_result = self._call_worker(
+                    diff_worker, "get_commit_diff", {"repo": repo, "sha": sha},
+                    receipts, budget, "devops_worker", circuits=circuits,
+                )
+                if diff_result and diff_result.get("commit"):
+                    files = diff_result["commit"].get("files", [])
+                    diff = "\n".join(f.get("patch", "") for f in files if f.get("patch"))
+            except Exception as exc:
+                logger.warning("Failed to fetch commit diff %s/%s: %s", repo, sha, exc)
+
+        try:
+            analysis = self._call_worker(
+                code_worker, "analyze_diff", {
+                    "repo": repo,
+                    "sha": sha,
+                    "diff": diff,
+                    "error_context": error_context,
+                    "service": service,
+                },
+                receipts, budget, "code_worker", circuits=circuits,
+            )
+            if analysis and analysis.get("confidence", 0) > 0:
+                logger.info(
+                    "Diff analysis: culprit=%s:%s confidence=%d",
+                    analysis.get("culprit_file"), analysis.get("culprit_line"),
+                    analysis.get("confidence", 0),
+                )
+                return analysis
+        except Exception as exc:
+            logger.warning("Code diff analysis failed: %s", exc)
+
+        return None
+
+    def _extract_error_context(self, evidence: dict) -> str:
+        """Build a concise error context string from Splunk/APM evidence."""
+        parts: list[str] = []
+
+        # Splunk logs
+        log_evidence = evidence.get("logs", evidence.get("log_data", {}))
+        if isinstance(log_evidence, dict):
+            logs = log_evidence.get("logs", log_evidence.get("results", []))
+        elif isinstance(log_evidence, list):
+            logs = log_evidence
+        else:
+            logs = []
+
+        for log in logs[:5]:
+            msg = log.get("message", log.get("_raw", ""))
+            if msg:
+                parts.append(f"[{log.get('level', 'INFO')}] {msg[:200]}")
+
+        # APM errors
+        apm_evidence = evidence.get("apm_data", evidence.get("apm", {}))
+        if isinstance(apm_evidence, dict):
+            errors = apm_evidence.get("errors", apm_evidence.get("error_samples", []))
+            for err in errors[:3]:
+                trace = err.get("stack_trace", err.get("exception", ""))
+                if trace:
+                    parts.append(f"STACK: {trace[:300]}")
+
+        return "\n".join(parts) if parts else ""
+
+    # ------------------------------------------------------------------ #
+    # Internal: Fix proposal generation (Phase 3f)
+    # ------------------------------------------------------------------ #
+
+    def _generate_proposed_fix(
+        self, incident_id: str, investigation_id: str, service: str,
+        evidence: dict, result: dict,
+    ) -> "ProposedFix | None":
+        """Generate and persist a ProposedFix from diff analysis results."""
+        code_worker = self.workers.get("code_worker")
+        if code_worker is None:
+            return None
+
+        diff_analysis = evidence.get("diff_analysis", {})
+        if not diff_analysis or diff_analysis.get("confidence", 0) < 40:
+            return None
+
+        devops_ctx = evidence.get("devops_context", {})
+        deployments = devops_ctx.get("deployments", [])
+        deployment = deployments[0] if deployments else {}
+
+        try:
+            fix_result = self._call_worker(
+                code_worker, "generate_fix", {
+                    "analysis": diff_analysis,
+                    "diff": evidence.get("_raw_diff", ""),
+                    "error_context": self._extract_error_context(evidence),
+                    "service": service,
+                    "repo": deployment.get("repo", deployment.get("repository", "")),
+                    "sha": deployment.get("sha", ""),
+                    "incident_id": incident_id,
+                },
+                None, None, "code_worker", circuits=None,
+            )
+
+            if fix_result and fix_result.get("fix_type", "none") != "none":
+                fix_result["repo"] = deployment.get("repo", "")
+                fix_result["sha"] = deployment.get("sha", "")
+                proposed = get_fix_engine().propose_from_result(
+                    investigation_id, incident_id, fix_result
+                )
+                return proposed
+        except Exception as exc:
+            logger.warning("Fix proposal generation failed: %s", exc)
+
+        return None
 
     # ------------------------------------------------------------------ #
     # Internal: Confluence enrichment (runbooks / post-mortems — Phase 1)

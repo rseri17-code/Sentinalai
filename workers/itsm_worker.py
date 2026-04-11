@@ -37,6 +37,7 @@ class ItsmWorker(BaseWorker):
         self.register("search_incidents", self._search_incidents)
         self.register("get_change_records", self._get_change_records)
         self.register("get_known_errors", self._get_known_errors)
+        self.register("update_incident", self._update_incident)
 
     def _get_ci_details(self, params: dict) -> dict:
         """Retrieve Configuration Item details from ServiceNow CMDB.
@@ -130,5 +131,44 @@ class ItsmWorker(BaseWorker):
             {
                 "service": service,
                 "summary": params.get("summary", ""),
+            },
+        )
+
+    def _update_incident(self, params: dict) -> dict:
+        """Update a ServiceNow incident (state, resolution, assignment).
+
+        Used for:
+        - Auto-close after successful fix verification (state=resolved)
+        - Update work notes during investigation
+        - Escalate severity when CI analysis reveals blast radius
+
+        Params:
+            incident_id:       ServiceNow incident number (e.g. INC0012345)
+            state:             Target state: open | in_progress | resolved | closed
+            resolution_code:   Optional: Solved (Permanently) | Solved (Workaround) etc.
+            resolution_notes:  Notes explaining how it was resolved
+            work_notes:        Internal work notes (not visible to reporter)
+            assigned_to:       Optional re-assignment
+            priority:          Optional priority change (1=Critical .. 5=Planning)
+            close_code:        Optional close code for closed state
+
+        Returns:
+            {"updated": {"number", "state", "sys_updated_on", "resolved_at"}}
+        """
+        incident_id = params.get("incident_id", "")
+        if not incident_id:
+            return {"error": "incident_id required"}
+        return self._gateway.invoke(
+            "servicenow.update_incident",
+            "update_incident",
+            {
+                "incident_id": incident_id,
+                "state": params.get("state", ""),
+                "resolution_code": params.get("resolution_code", ""),
+                "resolution_notes": params.get("resolution_notes", ""),
+                "work_notes": params.get("work_notes", ""),
+                "assigned_to": params.get("assigned_to", ""),
+                "priority": params.get("priority", ""),
+                "close_code": params.get("close_code", ""),
             },
         )

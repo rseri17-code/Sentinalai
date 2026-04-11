@@ -1,0 +1,203 @@
+{
+  "by_incident": {
+    "INC-100": [
+      {
+        "incident_id": "INC-100",
+        "commit_sha": "cafebabe12345678",
+        "repo": "org/svc",
+        "relationship": "caused_by",
+        "confidence": 0.85,
+        "author": "bob",
+        "commit_message": "fix: pool",
+        "pr_number": null,
+        "linked_at": 1775909138.4377518,
+        "linked_by": "agent"
+      }
+    ],
+    "INC-200": [
+      {
+        "incident_id": "INC-200",
+        "commit_sha": "1234abcd5678efgh",
+        "repo": "org/svc2",
+        "relationship": "fixed_by",
+        "confidence": 1.0,
+        "author": "",
+        "commit_message": "",
+        "pr_number": null,
+        "linked_at": 1775909138.4391856,
+        "linked_by": "agent"
+      }
+    ],
+    "INC-300": [
+      {
+        "incident_id": "INC-300",
+        "commit_sha": "sha-cause",
+        "repo": "org/svc3",
+        "relationship": "caused_by",
+        "confidence": 1.0,
+        "author": "",
+        "commit_message": "",
+        "pr_number": null,
+        "linked_at": 1775909138.441429,
+        "linked_by": "agent"
+      },
+      {
+        "incident_id": "INC-300",
+        "commit_sha": "sha-fix",
+        "repo": "org/svc3",
+        "relationship": "fixed_by",
+        "confidence": 1.0,
+        "author": "",
+        "commit_message": "",
+        "pr_number": null,
+        "linked_at": 1775909138.4418166,
+        "linked_by": "agent"
+      }
+    ],
+    "INC-555": [
+      {
+        "incident_id": "INC-555",
+        "commit_sha": "deadbeef12345678",
+        "repo": "org/payment-service",
+        "relationship": "caused_by",
+        "confidence": 0.9,
+        "author": "alice",
+        "commit_message": "fix: reduce pool size",
+        "pr_number": null,
+        "linked_at": 1775909273.1193628,
+        "linked_by": "agent"
+      }
+    ],
+    "INC-556": [
+      {
+        "incident_id": "INC-556",
+        "commit_sha": "cafebabe12345678",
+        "repo": "org/svc",
+        "relationship": "caused_by",
+        "confidence": 1.0,
+        "author": "",
+        "commit_message": "",
+        "pr_number": null,
+        "linked_at": 1775909273.121345,
+        "linked_by": "agent"
+      }
+    ],
+    "INC-557": [
+      {
+        "incident_id": "INC-557",
+        "commit_sha": "aabb1122",
+        "repo": "org/svc",
+        "relationship": "caused_by",
+        "confidence": 1.0,
+        "author": "",
+        "commit_message": "",
+        "pr_number": null,
+        "linked_at": 1775909273.123363,
+        "linked_by": "agent"
+      }
+    ]
+  },
+  "by_commit": {
+    "cafebabe12345678": [
+      {
+        "incident_id": "INC-100",
+        "commit_sha": "cafebabe12345678",
+        "repo": "org/svc",
+        "relationship": "caused_by",
+        "confidence": 0.85,
+        "author": "bob",
+        "commit_message": "fix: pool",
+        "pr_number": null,
+        "linked_at": 1775909138.4377518,
+        "linked_by": "agent"
+      },
+      {
+        "incident_id": "INC-556",
+        "commit_sha": "cafebabe12345678",
+        "repo": "org/svc",
+        "relationship": "caused_by",
+        "confidence": 1.0,
+        "author": "",
+        "commit_message": "",
+        "pr_number": null,
+        "linked_at": 1775909273.121345,
+        "linked_by": "agent"
+      }
+    ],
+    "1234abcd5678efgh": [
+      {
+        "incident_id": "INC-200",
+        "commit_sha": "1234abcd5678efgh",
+        "repo": "org/svc2",
+        "relationship": "fixed_by",
+        "confidence": 1.0,
+        "author": "",
+        "commit_message": "",
+        "pr_number": null,
+        "linked_at": 1775909138.4391856,
+        "linked_by": "agent"
+      }
+    ],
+    "sha-cause": [
+      {
+        "incident_id": "INC-300",
+        "commit_sha": "sha-cause",
+        "repo": "org/svc3",
+        "relationship": "caused_by",
+        "confidence": 1.0,
+        "author": "",
+        "commit_message": "",
+        "pr_number": null,
+        "linked_at": 1775909138.441429,
+        "linked_by": "agent"
+      }
+    ],
+    "sha-fix": [
+      {
+        "incident_id": "INC-300",
+        "commit_sha": "sha-fix",
+        "repo": "org/svc3",
+        "relationship": "fixed_by",
+        "confidence": 1.0,
+        "author": "",
+        "commit_message": "",
+        "pr_number": null,
+        "linked_at": 1775909138.4418166,
+        "linked_by": "agent"
+      }
+    ],
+    "deadbeef12345678": [
+      {
+        "incident_id": "INC-555",
+        "commit_sha": "deadbeef12345678",
+        "repo": "org/payment-service",
+        "relationship": "caused_by",
+        "confidence": 0.9,
+        "author": "alice",
+        "commit_message": "fix: reduce pool size",
+        "pr_number": null,
+        "linked_at": 1775909273.1193628,
+        "linked_by": "agent"
+      }
+    ],
+    "aabb1122": [
+      {
+        "incident_id": "INC-557",
+        "commit_sha": "aabb1122",
+        "repo": "org/svc",
+        "relationship": "caused_by",
+        "confidence": 1.0,
+        "author": "",
+        "commit_message": "",
+        "pr_number": null,
+        "linked_at": 1775909273.123363,
+        "linked_by": "agent"
+      }
+    ]
+  },
+  "stats": {
+    "incidents_linked": 6,
+    "commits_linked": 6,
+    "total_links": 7
+  }
+}

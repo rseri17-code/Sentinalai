@@ -101,6 +101,10 @@ from supervisor.evidence_gates import check_post_collection, check_post_analysis
 from supervisor.knowledge_graph import ingest_to_graph as _ingest_to_kg, query_similar as _kg_query_similar
 from supervisor.memory_compression import compress_investigation as _compress_investigation
 from supervisor.llm_call_graph import CallGraph, set_current_graph
+from supervisor.progress_stream import get_stream, EventType
+from supervisor.incident_git_linker import link_incident_to_commit
+from supervisor.trace_correlation import correlate_traces
+from workers.visual_evidence_worker import collect_visual_evidence
 
 # Institutional knowledge layer (opt-in via env var, graceful degradation)
 _KNOWLEDGE_ENABLED = os.environ.get("KNOWLEDGE_GRAPH_ENABLED", "").lower() in ("1", "true", "yes")
@@ -251,6 +255,7 @@ class SentinalAISupervisor:
         gateway: McpGateway | None = None,
     ):
         gw = gateway or McpGateway.get_instance()
+        self._gateway = gw  # stored for visual evidence + trace correlation
 
         # Tool auto-discovery — non-blocking; falls back to all tools on error
         available_servers = gw.discover_tools()
@@ -359,6 +364,11 @@ class SentinalAISupervisor:
             circuits = CircuitBreakerRegistry()
 
             logger.info("Starting investigation for %s", incident_id)
+            _stream = get_stream()
+            _stream.emit(
+                incident_id, EventType.INVESTIGATION_STARTED,
+                {"incident_id": incident_id}, phase="start",
+            )
 
             # Step 1: Fetch incident
             incident = self._fetch_incident(incident_id, receipts, budget, circuits)
@@ -392,6 +402,10 @@ class SentinalAISupervisor:
             span.set_attribute(EVAL_INCIDENT_TYPE, incident_type)
             span.set_attribute(EVAL_SERVICE, service)
             logger.info("Classified %s as %s (service=%s)", incident_id, incident_type, service)
+            _stream.emit_phase(
+                incident_id, "classify",
+                incident_type=incident_type, service=service,
+            )
 
             # Step 2b: ITSM context enrichment (Phase 1 — CI, known errors, similar incidents)
             itsm_context = self._fetch_itsm_context(service, summary, receipts, budget, circuits)
@@ -431,8 +445,24 @@ class SentinalAISupervisor:
                 self._fetch_historical_context, service, summary, incident_type, receipts, budget, circuits,
             )
 
+            _stream.emit_phase(incident_id, "collect", incident_type=incident_type)
             evidence = self._execute_playbook(
                 incident_type, incident_id, service, receipts, budget, circuits,
+            )
+            _stream.emit_phase_done(
+                incident_id, "collect",
+                evidence_keys=list(evidence.keys()),
+                evidence_count=len(evidence),
+            )
+
+            # Concurrently: trace correlation + visual evidence (non-blocking)
+            incident_time = incident.get("created_at", incident.get("timestamp", ""))
+            _trace_future = self._parallel_executor.submit(
+                correlate_traces, incident, evidence, self._gateway if hasattr(self, "_gateway") else None,
+            )
+            _visual_future = self._parallel_executor.submit(
+                collect_visual_evidence, service, incident_time, incident_type,
+                self._gateway if hasattr(self, "_gateway") else None,
             )
 
             # Merge ITSM context into evidence for downstream analysis
@@ -528,7 +558,34 @@ class SentinalAISupervisor:
                 if diff_analysis:
                     evidence["diff_analysis"] = diff_analysis
 
+            # Collect trace correlation (ran concurrently with playbook)
+            try:
+                trace_corr = _trace_future.result(timeout=5)
+                if trace_corr:
+                    evidence["trace_correlation"] = trace_corr
+                    _stream.emit(
+                        incident_id, EventType.TRACE_CORRELATED,
+                        {
+                            "trace_id": trace_corr.get("trace_id", "")[:16],
+                            "root_span_service": trace_corr.get("root_span_service", ""),
+                            "chain_depth": trace_corr.get("chain_depth", 0),
+                            "confidence": trace_corr.get("correlation_confidence", 0),
+                        },
+                        phase="collect",
+                    )
+            except Exception as exc:
+                logger.debug("Trace correlation skipped: %s", exc)
+
+            # Collect visual evidence (ran concurrently with playbook)
+            try:
+                visual_ev = _visual_future.result(timeout=10)
+                if visual_ev:
+                    evidence["visual_evidence"] = visual_ev
+            except Exception as exc:
+                logger.debug("Visual evidence skipped: %s", exc)
+
             # Step 4: Analyze
+            _stream.emit_phase(incident_id, "analyze", incident_type=incident_type)
             result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
             # Attach collection-gate result now that result dict exists
             result["_gate_post_collection"] = _gate_post_collection.to_dict()
@@ -540,6 +597,9 @@ class SentinalAISupervisor:
             if confidence != raw_confidence:
                 result["confidence"] = confidence
                 result["raw_confidence"] = raw_confidence
+            _stream.emit_confidence(
+                incident_id, confidence, source="calibrator", previous=raw_confidence,
+            )
             hypothesis_count = result.pop("_hypothesis_count", 0)
             winner_hypothesis = result.pop("_winner_hypothesis", "none")
             llm_metrics = result.pop("_llm_metrics", {})
@@ -609,6 +669,7 @@ class SentinalAISupervisor:
 
             # Generate and store proposed fix (if diff analysis found something actionable)
             if evidence.get("diff_analysis"):
+                _stream.emit(incident_id, EventType.FIX_PROPOSED, {}, phase="fix")
                 proposed_fix = self._generate_proposed_fix(
                     incident_id, investigation_id, service, evidence, result
                 )
@@ -618,6 +679,63 @@ class SentinalAISupervisor:
                         "Proposed fix stored: type=%s confidence=%.0f risk=%s",
                         proposed_fix.fix_type, proposed_fix.confidence, proposed_fix.risk_level,
                     )
+                    # Bidirectional git-incident link: record the breaking commit
+                    _breaking_sha = (
+                        proposed_fix.sha
+                        if hasattr(proposed_fix, "sha") and proposed_fix.sha
+                        else result.get("proposed_fix", {}).get("sha", "")
+                    )
+                    _breaking_repo = (
+                        proposed_fix.repo
+                        if hasattr(proposed_fix, "repo") and proposed_fix.repo
+                        else result.get("proposed_fix", {}).get("repo", "")
+                    )
+                    if _breaking_sha and _breaking_repo:
+                        try:
+                            link_incident_to_commit(
+                                incident_id=incident_id,
+                                commit_sha=_breaking_sha,
+                                repo=_breaking_repo,
+                                relationship="caused_by",
+                                confidence=proposed_fix.confidence / 100.0
+                                if hasattr(proposed_fix, "confidence") else 0.8,
+                                commit_message=result.get("proposed_fix", {}).get("description", ""),
+                            )
+                            logger.info(
+                                "Git-incident link recorded: %s caused_by %s",
+                                incident_id, _breaking_sha[:8],
+                            )
+                        except Exception as _link_exc:
+                            logger.debug("Git-incident link failed (non-critical): %s", _link_exc)
+
+                    # Wire verification loop: poll metrics post-fix in background
+                    try:
+                        import asyncio as _asyncio
+                        from supervisor.verification_loop import VerificationLoop
+                        _vloop = VerificationLoop(
+                            metrics_worker=self.workers.get("metrics_worker"),
+                            log_worker=self.workers.get("log_worker"),
+                        )
+                        _vloop_investigation_id = investigation_id
+                        _vloop_service = service
+                        _vloop_incident_id = incident_id
+                        _vloop_itsm = self.workers.get("itsm_worker")
+                        _baseline = evidence.get("get_golden_signals", {}).get("metrics", {})
+
+                        def _run_verification():
+                            _asyncio.run(_vloop.watch(
+                                investigation_id=_vloop_investigation_id,
+                                service=_vloop_service,
+                                incident_id=_vloop_incident_id,
+                                itsm_worker=_vloop_itsm,
+                                baseline=_baseline,
+                            ))
+
+                        _stream.emit(incident_id, EventType.FIX_VERIFYING, {}, phase="fix")
+                        self._parallel_executor.submit(_run_verification)
+                        logger.info("Verification loop started for %s/%s", incident_id, service)
+                    except Exception as _vl_exc:
+                        logger.debug("Verification loop start failed (non-critical): %s", _vl_exc)
 
             logger.info(
                 "Investigation complete for %s: confidence=%d, tool_calls=%d",
@@ -650,6 +768,15 @@ class SentinalAISupervisor:
                 receipts, budget, confidence, hypothesis_count,
                 winner_hypothesis, severity, summary, llm_metrics,
                 judge_scores, elapsed, incident=incident,
+            )
+
+            _stream.emit_complete(
+                investigation_id=incident_id,
+                root_cause=result.get("root_cause", ""),
+                confidence=confidence,
+                citation_coverage=result.get("citation_coverage", 0.0),
+                fix_proposed=bool(result.get("proposed_fix")),
+                elapsed_ms=elapsed,
             )
 
             return result

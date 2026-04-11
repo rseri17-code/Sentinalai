@@ -231,6 +231,80 @@ def _github(action: str, params: dict) -> dict:
             }
         }
 
+    if action in ("git_log", "git_log_for_service"):
+        return {
+            "commits": [
+                {
+                    "sha": "abc123def456789012345678901234567890abcd",
+                    "message": "fix: resize connection pool — reduce MAX_CONNECTIONS",
+                    "author": "john.doe",
+                    "date": "2024-01-15T13:48:00Z",
+                    "files_changed": ["src/config/database.py", "tests/test_db.py"],
+                    "insertions": 3,
+                    "deletions": 2,
+                },
+                {
+                    "sha": "789abc123def456789012345678901234567890a",
+                    "message": "chore: bump dependencies",
+                    "author": "dependabot",
+                    "date": "2024-01-14T09:00:00Z",
+                    "files_changed": ["requirements.txt"],
+                    "insertions": 5,
+                    "deletions": 5,
+                },
+            ]
+        }
+
+    if action in ("git_blame", "git_blame_line"):
+        return {
+            "blame": [
+                {
+                    "line": params.get("line_start", 42),
+                    "sha": "abc123def456789012345678901234567890abcd",
+                    "author": "john.doe",
+                    "date": "2024-01-15T13:48:00Z",
+                    "message": "fix: resize connection pool",
+                }
+            ]
+        }
+
+    if action in ("git_show", "git_show_commit"):
+        sha = params.get("sha", "abc123")
+        return {
+            "sha": sha,
+            "message": "fix: resize connection pool — reduce MAX_CONNECTIONS",
+            "author": "john.doe",
+            "date": "2024-01-15T13:48:00Z",
+            "patch": (
+                "@@ -42,7 +42,6 @@ class DatabaseConfig:\n"
+                "-    MAX_CONNECTIONS = 10\n"
+                "+    MAX_CONNECTIONS = 5  # reduced for cost savings\n"
+            ),
+            "files_changed": ["src/config/database.py"],
+            "insertions": 1,
+            "deletions": 1,
+            "parent_sha": "789abc123def456789012345678901234567890a",
+        }
+
+    if action in ("git_diff", "git_diff_range"):
+        return {
+            "diff": (
+                "@@ -42,7 +42,6 @@ class DatabaseConfig:\n"
+                "-    MAX_CONNECTIONS = 10\n"
+                "+    MAX_CONNECTIONS = 5  # reduced for cost savings\n"
+            ),
+            "files_changed": ["src/config/database.py"],
+            "insertions": 1,
+            "deletions": 1,
+        }
+
+    if action == "get_pr_for_commit":
+        return {
+            "pr_number": 847,
+            "pr_title": f"fix: resize connection pool for {service}",
+            "merged_at": "2024-01-15T13:50:00Z",
+        }
+
     return {}
 
 
@@ -314,6 +388,40 @@ def _sysdig(action: str, params: dict) -> dict:
             ]
         }
 
+    if action == "get_metric_chart":
+        metric = params.get("metric", "net.http.request.time")
+        return {
+            "chart": {
+                "title": f"{service} {metric} — last 2h",
+                "source": "sysdig",
+                "metric": metric,
+                "url": (
+                    f"https://app.sysdig.com/charts/{service}/"
+                    f"{metric.replace('.', '-')}?from=1705315200&to=1705322400"
+                ),
+                "image_b64": None,
+                "time_range": {
+                    "from": params.get("from_iso", ""),
+                    "to": params.get("to_iso", ""),
+                },
+                "annotation": "spike at 14:02 UTC correlates with deploy v2.1.0",
+            }
+        }
+
+    if action == "get_dashboard_snapshot":
+        return {
+            "dashboard": {
+                "url": f"https://app.sysdig.com/dashboards/{service}",
+                "image_b64": None,
+                "source": "sysdig",
+                "charts": [
+                    {"metric": "net.http.request.time", "title": "Request Latency"},
+                    {"metric": "net.http.error.count", "title": "Error Rate"},
+                    {"metric": "container.memory.used.percent", "title": "Memory Usage"},
+                ],
+            }
+        }
+
     return {}
 
 
@@ -339,10 +447,74 @@ def _dynatrace(action: str, params: dict) -> dict:
             "errors": [
                 {
                     "message": "java.sql.SQLException: Timeout waiting for connection from pool",
-                    "stack_trace": f"at com.example.{service}.db.ConnectionPool.acquire(Pool.java:42)\nat com.example.{service}.PaymentService.process(PaymentService.java:87)",
+                    "stack_trace": (
+                        f"at com.example.{service}.db.ConnectionPool.acquire(Pool.java:42)\n"
+                        f"at com.example.{service}.PaymentService.process(PaymentService.java:87)"
+                    ),
                     "timestamp": "2024-01-15T14:02:11Z",
                     "count": 247,
+                    "trace_id": "abc123def456789012345678901234ab",
                 }
+            ]
+        }
+
+    if action in ("get_topology", "get_topology_map"):
+        return {
+            "topology": {
+                "nodes": [
+                    {"service": service, "type": "service", "error_rate": 0.087},
+                    {"service": f"{service}-db", "type": "database", "error_rate": 0.0},
+                    {"service": "auth-service", "type": "service", "error_rate": 0.12},
+                ],
+                "edges": [
+                    {"from": "client", "to": service, "calls_per_min": 847, "error_rate": 0.087},
+                    {"from": service, "to": f"{service}-db", "calls_per_min": 320, "error_rate": 0.032},
+                    {"from": service, "to": "auth-service", "calls_per_min": 847, "error_rate": 0.12},
+                ],
+                "image_url": f"https://dynatrace.example.com/topology/{service}",
+            }
+        }
+
+    if action == "get_trace":
+        trace_id = params.get("trace_id", "abc123def456789012345678901234ab")
+        return {
+            "spans": [
+                {
+                    "span_id": "span001",
+                    "parent_span_id": None,
+                    "service_name": "client",
+                    "operation_name": "checkout",
+                    "duration_ms": 5200,
+                    "start_time": "2024-01-15T14:02:08.000Z",
+                    "error": "",
+                },
+                {
+                    "span_id": "span002",
+                    "parent_span_id": "span001",
+                    "service_name": service,
+                    "operation_name": "process_payment",
+                    "duration_ms": 5180,
+                    "start_time": "2024-01-15T14:02:08.020Z",
+                    "error": "",
+                },
+                {
+                    "span_id": "span003",
+                    "parent_span_id": "span002",
+                    "service_name": "auth-service",
+                    "operation_name": "session_lookup",
+                    "duration_ms": 4820,
+                    "start_time": "2024-01-15T14:02:08.040Z",
+                    "error": "connection_timeout",
+                },
+                {
+                    "span_id": "span004",
+                    "parent_span_id": "span003",
+                    "service_name": "session-db",
+                    "operation_name": "redis_get",
+                    "duration_ms": 4810,
+                    "start_time": "2024-01-15T14:02:08.060Z",
+                    "error": "",
+                },
             ]
         }
 
@@ -466,10 +638,12 @@ async def catalog():
             "servicenow": ["get_ci_details", "search_incidents", "get_change_records",
                            "get_known_errors", "update_incident"],
             "github":     ["get_recent_deployments", "get_pr_details", "get_commit_diff",
-                           "get_workflow_runs", "create_fix_pr"],
+                           "get_workflow_runs", "create_fix_pr",
+                           "git_log", "git_blame", "git_show", "git_diff", "get_pr_for_commit"],
             "splunk":     ["search_logs", "search_oneshot", "get_change_data"],
-            "sysdig":     ["get_service_metrics", "get_golden_signals", "get_kubernetes_events"],
-            "dynatrace":  ["get_problems", "get_error_samples"],
+            "sysdig":     ["get_service_metrics", "get_golden_signals", "get_kubernetes_events",
+                           "get_metric_chart", "get_dashboard_snapshot"],
+            "dynatrace":  ["get_problems", "get_error_samples", "get_topology", "get_trace"],
             "moogsoft":   ["get_incident", "search_incidents"],
             "confluence": ["search_runbooks", "search_postmortems"],
             "kubernetes": ["rollback_deployment", "scale_service"],

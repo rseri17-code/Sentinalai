@@ -52,11 +52,13 @@ class GitWorker(BaseWorker):
     def __init__(self, gateway: McpGateway | None = None):
         super().__init__()
         self._gateway = gateway or McpGateway.get_instance()
-        self.register("git_log_for_service",      self._git_log_for_service)
-        self.register("git_blame_line",            self._git_blame_line)
-        self.register("git_find_breaking_change",  self._git_find_breaking_change)
-        self.register("git_diff_range",            self._git_diff_range)
-        self.register("git_show_commit",           self._git_show_commit)
+        self.register("git_log_for_service",          self._git_log_for_service)
+        self.register("git_blame_line",               self._git_blame_line)
+        self.register("git_find_breaking_change",     self._git_find_breaking_change)
+        self.register("git_diff_range",               self._git_diff_range)
+        self.register("git_show_commit",              self._git_show_commit)
+        self.register("annotate_commit_with_incident", self._annotate_commit_with_incident)
+        self.register("search_commits_by_incident",   self._search_commits_by_incident)
 
     # ------------------------------------------------------------------ #
     # Actions
@@ -266,6 +268,66 @@ class GitWorker(BaseWorker):
             "git_show_commit",
             {"repo": repo, "sha": sha},
         )
+
+    def _annotate_commit_with_incident(self, params: dict) -> dict:
+        """Link a commit to an incident in the bidirectional index.
+
+        Params:
+            incident_id:     Alert/incident ID (required)
+            commit_sha:      Full or short commit SHA (required, also accepts "sha")
+            repo:            org/repo string (required)
+            relationship:    "caused_by" | "fixed_by" | "related" (default: "caused_by")
+            confidence:      0.0–1.0 (default: 1.0)
+            author:          Commit author (optional)
+            commit_message:  First 120 chars of commit message (optional)
+            pr_number:       PR number if commit was a PR merge (optional)
+
+        Returns:
+            {"linked": true, "link": {...}}
+        """
+        from supervisor.incident_git_linker import link_incident_to_commit
+
+        incident_id = params.get("incident_id", "")
+        commit_sha = params.get("commit_sha", "") or params.get("sha", "")
+        repo = params.get("repo", "")
+        if not incident_id or not commit_sha or not repo:
+            return {"error": "incident_id, commit_sha, and repo required"}
+
+        link = link_incident_to_commit(
+            incident_id=incident_id,
+            commit_sha=commit_sha,
+            repo=repo,
+            relationship=params.get("relationship", "caused_by"),
+            confidence=float(params.get("confidence", 1.0)),
+            author=params.get("author", ""),
+            commit_message=params.get("commit_message", ""),
+            pr_number=params.get("pr_number"),
+        )
+
+        if link is None:
+            return {"linked": False, "reason": "linker_disabled"}
+
+        return {"linked": True, "link": link.to_dict()}
+
+    def _search_commits_by_incident(self, params: dict) -> dict:
+        """Return all commits linked to an incident from the bidirectional index.
+
+        Params:
+            incident_id:  Incident ID to look up (required)
+            relationship: Filter by "caused_by" | "fixed_by" | "related" (optional)
+
+        Returns:
+            {"commits": [...], "total": int}
+        """
+        from supervisor.incident_git_linker import get_commits_for_incident
+
+        incident_id = params.get("incident_id", "")
+        if not incident_id:
+            return {"error": "incident_id required"}
+
+        relationship = params.get("relationship") or None
+        commits = get_commits_for_incident(incident_id, relationship)
+        return {"commits": commits, "total": len(commits)}
 
     # ------------------------------------------------------------------ #
     # Helpers

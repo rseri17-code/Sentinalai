@@ -161,7 +161,8 @@ def _extract_trace_id(incident: dict, evidence: dict) -> str | None:
             if val:
                 return str(val).strip()
         # APM error samples often embed trace IDs
-        for err in apm.get("errors", apm.get("error_samples", []))[:5]:
+        _err_samples: list = apm.get("errors") or apm.get("error_samples") or []
+        for err in _err_samples[:5]:
             if isinstance(err, dict):
                 for field in _TRACE_ID_FIELDS:
                     val = err.get(field, "")

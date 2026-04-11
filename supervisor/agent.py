@@ -20,7 +20,7 @@ import time
 import concurrent.futures
 from typing import Any
 
-from supervisor.tool_selector import classify_incident, get_playbook, get_evolved_playbook, is_meta_query
+from supervisor.tool_selector import classify_incident, get_evolved_playbook, is_meta_query
 from supervisor.receipt import ReceiptCollector
 from supervisor.guardrails import (
     ExecutionBudget,
@@ -77,7 +77,7 @@ from database.persistence import (
     persist_knowledge_entry as _db_persist_knowledge,
     is_enabled as _db_enabled,
 )
-from supervisor.confidence_calibrator import ConfidenceCalibrator, get_calibrator
+from supervisor.confidence_calibrator import get_calibrator
 from supervisor.self_critique import critique as _self_critique
 from supervisor.online_evaluator import evaluate as _online_evaluate, annotate_result as _annotate_online
 from supervisor.experience_store import store_experience as _store_experience, retrieve_similar as _retrieve_experiences
@@ -804,7 +804,6 @@ class SentinalAISupervisor:
         it has equal-or-higher confidence than the original.
         """
         try:
-            from supervisor.guardrails import MIN_GAP_BUDGET as _gb
             budget_remaining = budget.remaining() if hasattr(budget, "remaining") else 0
         except Exception:
             budget_remaining = 0

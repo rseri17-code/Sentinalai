@@ -594,7 +594,7 @@ class McpGateway:
         rate_limiter: RateLimiterRegistry | None = None,
     ) -> None:
         self._mcp_client = None
-        self._tools_cache: dict[str, Any] | None = None
+        self._tools_cache: tuple[float, frozenset[str]] | None = None
         # Legacy boto3 client for backward compat during migration
         self._boto3_client = None
         # OAuth2 provider (lazy-init from env if not injected)

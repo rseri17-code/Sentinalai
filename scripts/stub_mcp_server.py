@@ -96,7 +96,6 @@ def _servicenow(action: str, params: dict) -> dict:
         return {"incidents": matches or items[:3]}
 
     if action == "get_change_records":
-        hours = params.get("time_window_hours", 24)
         return {
             "change_records": [
                 {
@@ -186,12 +185,12 @@ def _github(action: str, params: dict) -> dict:
         return {
             "commit": {
                 "sha": sha,
-                "message": f"Resize connection pool",
+                "message": "Resize connection pool",
                 "author": "john.doe",
                 "date": "2024-01-15T13:48:00Z",
                 "files": [
                     {
-                        "filename": f"src/config/database.py",
+                        "filename": "src/config/database.py",
                         "patch": (
                             "@@ -42,7 +42,6 @@ class DatabaseConfig:\n"
                             "-    MAX_CONNECTIONS = 10\n"
@@ -323,7 +322,7 @@ def _splunk(action: str, params: dict) -> dict:
                     "_raw": f"2024-01-15T14:02:11 ERROR pool.exhausted service={service} connections=1024/1024 waiting=47",
                     "level": "ERROR",
                     "service": service,
-                    "message": f"Connection pool exhausted: connections=1024/1024, waiting=47",
+                    "message": "Connection pool exhausted: connections=1024/1024, waiting=47",
                 },
                 {
                     "_time": "2024-01-15T14:02:12.456Z",
@@ -476,7 +475,6 @@ def _dynatrace(action: str, params: dict) -> dict:
         }
 
     if action == "get_trace":
-        trace_id = params.get("trace_id", "abc123def456789012345678901234ab")
         return {
             "spans": [
                 {
@@ -556,7 +554,7 @@ def _confluence(action: str, params: dict) -> dict:
             "postmortems": [
                 {
                     "title": f"Post-Mortem: {service} Connection Pool Exhaustion (2023-11-15)",
-                    "url": f"https://confluence.example.com/postmortems/2023-11-15",
+                    "url": "https://confluence.example.com/postmortems/2023-11-15",
                     "root_cause": "MAX_CONNECTIONS reduced in PR #721 without load testing",
                     "resolution": "Reverted MAX_CONNECTIONS to 50. Added load test to CI pipeline.",
                     "date": "2023-11-15",

@@ -47,7 +47,6 @@ import logging
 import os
 import threading
 from datetime import datetime, timezone
-from typing import Optional
 
 logger = logging.getLogger("sentinalai.experience_store")
 

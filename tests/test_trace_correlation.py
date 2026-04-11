@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-import pytest
 from unittest.mock import MagicMock
 
 os.environ.setdefault("TRACE_CORRELATION_ENABLED", "true")
@@ -15,7 +14,6 @@ from supervisor.trace_correlation import (
     _find_error_span,
     _root_service,
     _correlation_confidence,
-    _fetch_trace,
 )
 
 
@@ -341,3 +339,33 @@ class TestCorrelateTraces:
         result = correlate_traces(incident, evidence, gateway=None)
         assert result is not None
         assert result["trace_id"] == TRACE_ID_32
+
+
+# ---------------------------------------------------------------------------
+# Coverage gap-fill tests
+# ---------------------------------------------------------------------------
+
+class TestRootServiceEmptyChain:
+    """Cover lines 244-245: _build_call_chain sort exception guard + _root_service edge case."""
+
+    def test_root_service_empty_returns_empty_string(self):
+        assert _root_service([]) == ""
+
+    def test_correlate_traces_empty_chain_uses_empty_root(self):
+        """Ensure correlate_traces populates root_span_service="" for empty chain."""
+        incident = {"trace_id": TRACE_ID_32}
+        evidence = {"apm_data": {"spans": []}}
+        result = correlate_traces(incident, evidence, gateway=None)
+        assert result is not None
+        assert result["root_span_service"] == ""
+
+    def test_build_call_chain_sort_exception_caught(self):
+        """Cover lines 244-245: sort fails when start_times are incomparable types."""
+        # Mix a string start_time with an integer start_time → TypeError in sort
+        spans = [
+            {"service_name": "svc-a", "start_time": "2024-01-01T00:00:00Z"},
+            {"service_name": "svc-b", "start_time": 99999},  # int, not comparable with str
+        ]
+        # Should not raise even though sort fails; chain is returned unsorted
+        chain = _build_call_chain(spans)
+        assert len(chain) == 2

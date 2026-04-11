@@ -6,246 +6,6 @@
     "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
     "evidence_keys": [
       "check_golden_signals",
-      "check_itsm_changes",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:27:17.683429+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:27:17.915727+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_itsm_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:27:18.254309+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_metrics",
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:31:34.457924+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:31:34.792390+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:31:35.095520+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:31:39.619511+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_itsm_changes",
-      "check_metrics",
-      "search_error_logs",
-      "check_changes",
-      "check_golden_signals"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:31:39.833855+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_metrics",
-      "check_itsm_changes",
-      "check_golden_signals",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:31:40.160026+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:31:40.383829+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:31:40.703092+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:31:40.944339+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:32:06.441834+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
-      "check_metrics",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:32:06.803479+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_metrics",
-      "check_golden_signals",
-      "check_itsm_changes",
-      "search_error_logs",
-      "check_changes"
-    ],
-    "confidence": 95,
-    "online_quality_score": 0.748,
-    "timestamp": "2026-04-10T19:32:07.113803+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "incident_type": "cascading",
-    "service": "api-gateway",
-    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway",
-    "evidence_keys": [
-      "check_golden_signals",
       "check_metrics",
       "check_itsm_changes",
       "search_error_logs",
@@ -894,6 +654,118 @@
     "confidence": 95,
     "online_quality_score": 0.748,
     "timestamp": "2026-04-10T22:46:44.678930+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway [UNVERIFIED]",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-04-11T04:14:15.841125+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway [UNVERIFIED]",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_itsm_changes",
+      "check_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-04-11T04:14:16.224340+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway [UNVERIFIED]",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-04-11T04:14:16.493334+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway [UNVERIFIED]",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-04-11T04:14:21.239721+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway [UNVERIFIED]",
+    "evidence_keys": [
+      "search_error_logs",
+      "check_changes",
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-04-11T04:14:21.499624+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway [UNVERIFIED]",
+    "evidence_keys": [
+      "check_metrics",
+      "check_golden_signals",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-04-11T04:14:21.879598+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "incident_type": "cascading",
+    "service": "api-gateway",
+    "root_cause": "database connection pool exhaustion in payment-db caused by slow queries after index drop, cascading to payment-service, checkout-service, api-gateway [UNVERIFIED]",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_metrics",
+      "check_itsm_changes",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 95,
+    "online_quality_score": 0.748,
+    "timestamp": "2026-04-11T04:14:22.149813+00:00"
   },
   {
     "incident_id": "INC12353",
@@ -7554,5 +7426,125 @@
     "confidence": 87,
     "online_quality_score": 0.764,
     "timestamp": "2026-04-10T22:46:44.743049+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion [UNVERIFIED]",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-04-11T04:14:15.897825+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion [UNVERIFIED]",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-04-11T04:14:16.280646+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion [UNVERIFIED]",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-04-11T04:14:16.549665+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion [UNVERIFIED]",
+    "evidence_keys": [
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-04-11T04:14:21.296583+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion [UNVERIFIED]",
+    "evidence_keys": [
+      "search_error_logs",
+      "check_changes",
+      "check_golden_signals",
+      "check_pool_metrics"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-04-11T04:14:21.554542+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion [UNVERIFIED]",
+    "evidence_keys": [
+      "check_pool_metrics",
+      "check_golden_signals",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-04-11T04:14:21.938687+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "incident_type": "flapping",
+    "service": "auth-service",
+    "root_cause": "connection pool leak in auth-service causing intermittent exhaustion [UNVERIFIED]",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_pool_metrics",
+      "search_error_logs",
+      "check_changes"
+    ],
+    "confidence": 87,
+    "online_quality_score": 0.764,
+    "timestamp": "2026-04-11T04:14:22.205816+00:00"
+  },
+  {
+    "incident_id": "INC12348",
+    "incident_type": "latency",
+    "service": "search-service",
+    "root_cause": "elasticsearch rebalancing causing slow queries in search-service [UNVERIFIED]",
+    "evidence_keys": [
+      "check_golden_signals",
+      "check_latency_metrics",
+      "search_latency_logs",
+      "check_changes"
+    ],
+    "confidence": 94,
+    "online_quality_score": 0.664,
+    "timestamp": "2026-04-11T04:14:22.336272+00:00"
   }
 ]

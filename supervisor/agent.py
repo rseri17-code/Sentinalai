@@ -80,8 +80,24 @@ from database.persistence import (
 from supervisor.confidence_calibrator import get_calibrator
 from supervisor.self_critique import critique as _self_critique
 from supervisor.online_evaluator import evaluate as _online_evaluate, annotate_result as _annotate_online
-from supervisor.experience_store import store_experience as _store_experience, retrieve_similar as _retrieve_experiences
-from supervisor.strategy_evolver import record_outcome as _record_strategy_outcome
+from supervisor.experience_store import (
+    store_experience as _store_experience,
+    store_failed_experience as _store_failed_experience,
+    retrieve_similar as _retrieve_experiences,
+    get_tool_recommendations as _get_tool_recommendations,
+)
+from supervisor.strategy_evolver import (
+    record_outcome as _record_strategy_outcome,
+    should_skip_step as _should_skip_step,
+    record_gap_pattern as _record_gap_pattern,
+)
+from supervisor.gap_aggregator import record_gaps_from_critique as _record_gaps_from_critique
+from supervisor.adaptive_thresholds import (
+    record_critique_outcome as _record_critique_outcome,
+    record_quality_observation as _record_quality_observation,
+    record_step_skip_outcome as _record_step_skip_outcome,
+    record_confidence_outcome as _record_confidence_outcome,
+)
 from workers.mcp_client import McpGateway
 from workers.ops_worker import OpsWorker
 from workers.log_worker import LogWorker
@@ -489,10 +505,38 @@ class SentinalAISupervisor:
                 past_experiences = []
             if past_experiences:
                 evidence["_past_experiences"] = past_experiences
-                logger.info(
-                    "Priming with %d similar past experience(s) for %s/%s",
-                    len(past_experiences), incident_type, service,
-                )
+                # Extract confirmed root causes from similar past successes to prime
+                # hypothesis generation — this is the core experience replay loop.
+                suggested_causes = [
+                    exp.get("root_cause", "") for exp in past_experiences
+                    if exp.get("root_cause") and not exp.get("root_cause", "").startswith("INSUFFICIENT")
+                ]
+                if suggested_causes:
+                    evidence["_suggested_root_causes"] = suggested_causes
+                    logger.info(
+                        "Priming with %d similar past experience(s) for %s/%s; "
+                        "suggested causes: %s",
+                        len(past_experiences), incident_type, service,
+                        suggested_causes[:2],
+                    )
+                else:
+                    logger.info(
+                        "Priming with %d similar past experience(s) for %s/%s",
+                        len(past_experiences), incident_type, service,
+                    )
+
+            # Inject tool recommendations from historical performance
+            try:
+                tool_recs = _get_tool_recommendations(incident_type, service)
+                if tool_recs:
+                    evidence["_tool_recommendations"] = tool_recs
+                    logger.debug(
+                        "Tool recommendations for %s/%s: %s",
+                        incident_type, service,
+                        list(tool_recs.keys())[:5],
+                    )
+            except Exception as exc:
+                logger.debug("Tool recommendations failed (non-critical): %s", exc)
 
             # Collect knowledge graph similar incidents (ran in parallel)
             try:
@@ -501,6 +545,16 @@ class SentinalAISupervisor:
                 kg_similar = []
             if kg_similar:
                 evidence["_kg_similar_incidents"] = kg_similar
+                # Also extract root causes from KG for hypothesis priming
+                kg_causes = [
+                    inc.get("root_cause", "") for inc in kg_similar
+                    if inc.get("root_cause")
+                ]
+                if kg_causes:
+                    existing = evidence.get("_suggested_root_causes", [])
+                    # Merge, dedup, keep top 5
+                    merged = list(dict.fromkeys(existing + kg_causes))[:5]
+                    evidence["_suggested_root_causes"] = merged
                 logger.info(
                     "KG priming: %d similar historical incident(s) for %s/%s",
                     len(kg_similar), incident_type, service,
@@ -821,11 +875,28 @@ class SentinalAISupervisor:
             if critique.llm_critique:
                 result["_critique"]["llm_narrative"] = critique.llm_critique
 
-            if not critique.gap_queries:
+            # Record gap patterns for aggregation regardless of whether gap queries run
+            try:
+                self._parallel_executor.submit(
+                    _record_gaps_from_critique, incident_type, service, critique,
+                )
+            except Exception:
+                pass
+
+            refinement_triggered = bool(critique.gap_queries)
+
+            if not refinement_triggered:
                 logger.debug(
                     "Self-critique: score=%.2f — no gap queries (budget=%d)",
                     critique.score, budget_remaining,
                 )
+                # Record that refinement was NOT triggered (score above threshold)
+                try:
+                    self._parallel_executor.submit(
+                        _record_critique_outcome, critique.score, False, False,
+                    )
+                except Exception:
+                    pass
                 return result, evidence
 
             logger.info(
@@ -861,7 +932,9 @@ class SentinalAISupervisor:
 
             refined_conf = refined.get("confidence", 0)
             orig_conf = result.get("confidence", 0)
-            if refined_conf >= orig_conf:
+            refinement_helped = refined_conf >= orig_conf
+
+            if refinement_helped:
                 # Merge metadata from original
                 refined["_critique"] = result.get("_critique", {})
                 refined["_critique"]["triggered_refinement"] = True
@@ -873,6 +946,12 @@ class SentinalAISupervisor:
                     "Self-critique refinement improved confidence: %d → %d",
                     orig_conf, refined_conf,
                 )
+                try:
+                    self._parallel_executor.submit(
+                        _record_critique_outcome, critique.score, True, True,
+                    )
+                except Exception:
+                    pass
                 return refined, evidence
             else:
                 result["_critique"]["triggered_refinement"] = True
@@ -880,6 +959,12 @@ class SentinalAISupervisor:
                     "Self-critique refinement did not improve (orig=%d refined=%d), keeping original",
                     orig_conf, refined_conf,
                 )
+                try:
+                    self._parallel_executor.submit(
+                        _record_critique_outcome, critique.score, True, False,
+                    )
+                except Exception:
+                    pass
                 return result, evidence
 
         except Exception as exc:
@@ -1175,6 +1260,8 @@ class SentinalAISupervisor:
         # These run after every investigation regardless of ground truth availability.
         online_score = result.get("online_quality_score", 0.0)
         receipt_list = receipts.to_list() if receipts else []
+
+        # Positive experience storage (high-quality investigations)
         try:
             self._parallel_executor.submit(
                 _store_experience,
@@ -1182,13 +1269,65 @@ class SentinalAISupervisor:
             )
         except Exception as exc:
             logger.warning("Experience storage failed (non-critical): %s", exc)
+
+        # Negative learning: store failed investigations to learn what NOT to do
+        if online_score < 0.60:
+            root_cause = result.get("root_cause", "")
+            failure_reason = (
+                "low_confidence" if root_cause.startswith("INSUFFICIENT")
+                else "low_online_quality"
+            )
+            try:
+                self._parallel_executor.submit(
+                    _store_failed_experience,
+                    incident_id, incident_type, service, result, online_score, failure_reason,
+                )
+            except Exception as exc:
+                logger.warning("Failed experience storage failed (non-critical): %s", exc)
+
+        # Evolve strategy weights with per-service context
         try:
             self._parallel_executor.submit(
                 _record_strategy_outcome,
-                incident_type, receipt_list, online_score,
+                incident_type, receipt_list, online_score, service,
             )
         except Exception as exc:
             logger.warning("Strategy outcome recording failed (non-critical): %s", exc)
+
+        # Propagate gap patterns to strategy evolver (penalise consistently-missing steps)
+        critique_data = result.get("_critique", {})
+        critique_gaps = critique_data.get("gaps", [])
+        if critique_gaps:
+            try:
+                from supervisor.gap_aggregator import _parse_gap_categories
+                gap_cats = _parse_gap_categories(critique_gaps)
+                if gap_cats:
+                    self._parallel_executor.submit(
+                        _record_gap_pattern, incident_type, service, gap_cats,
+                    )
+            except Exception as exc:
+                logger.debug("Gap pattern strategy update failed (non-critical): %s", exc)
+
+        # Adaptive threshold: record quality observation for STORE_QUALITY_THRESHOLD
+        experience_stored = online_score >= 0.60
+        try:
+            self._parallel_executor.submit(
+                _record_quality_observation, online_score, experience_stored,
+            )
+        except Exception as exc:
+            logger.debug("Adaptive threshold quality obs failed (non-critical): %s", exc)
+
+        # Adaptive threshold: record confidence outcome for MIN_CONFIDENCE_TO_ACT
+        confidence = result.get("confidence", 0)
+        root_cause = result.get("root_cause", "")
+        # A result is "correct" if it has a non-empty, non-INSUFFICIENT root cause
+        was_correct = bool(root_cause) and not root_cause.startswith(("INSUFFICIENT", "LOW CONFIDENCE"))
+        try:
+            self._parallel_executor.submit(
+                _record_confidence_outcome, float(confidence), was_correct,
+            )
+        except Exception as exc:
+            logger.debug("Adaptive confidence outcome failed (non-critical): %s", exc)
 
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
@@ -1739,6 +1878,26 @@ class SentinalAISupervisor:
         playbook = get_evolved_playbook(incident_type)  # applies learned step weights
         cb_registry = circuits or circuit_registry
         loop_checkpoint = LoopCheckpoint()
+
+        # Filter out steps whose evolved weight has dropped below the skip threshold.
+        # Records adaptive threshold feedback for each skipped step.
+        filtered_playbook = []
+        for step in playbook:
+            step_label = step.get("label", step.get("action", ""))
+            if _should_skip_step(incident_type, step_label, service):
+                logger.info(
+                    "Skipping low-weight step: %s (type=%s service=%s)",
+                    step_label, incident_type, service,
+                )
+                try:
+                    self._parallel_executor.submit(
+                        _record_step_skip_outcome, True, 0.0, 0.0,
+                    )
+                except Exception:
+                    pass
+            else:
+                filtered_playbook.append(step)
+        playbook = filtered_playbook
 
         if not self._parallel_playbook:
             return self._execute_playbook_sequential(

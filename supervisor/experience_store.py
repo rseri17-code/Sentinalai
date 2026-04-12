@@ -195,6 +195,179 @@ def retrieve_similar(
         return []
 
 
+def store_failed_experience(
+    incident_id: str,
+    incident_type: str,
+    service: str,
+    result: dict,
+    online_quality_score: float,
+    failure_reason: str = "",
+) -> bool:
+    """Persist a low-quality or failed investigation for negative learning.
+
+    Unlike store_experience(), this stores investigations that did NOT meet
+    the quality bar.  These are kept in a separate "failed" list and used by
+    get_tool_recommendations() to learn which evidence paths consistently fail.
+
+    Args:
+        incident_id:          Unique incident identifier
+        incident_type:        Classified incident type
+        service:              Affected service
+        result:               RCA result dict
+        online_quality_score: Score from online_evaluator (< STORE_QUALITY_THRESHOLD)
+        failure_reason:       Why this investigation failed (optional narrative)
+
+    Returns:
+        True if stored, False on error.
+    """
+    if not EXPERIENCE_STORE_ENABLED:
+        return False
+    # Only store genuinely low-quality results for negative learning
+    if online_quality_score >= STORE_QUALITY_THRESHOLD:
+        return False
+
+    evidence_keys: list[str] = []
+    for ev_key, ev_val in result.get("_evidence_snapshot", {}).items():
+        if not ev_key.startswith("_") and ev_val:
+            evidence_keys.append(ev_key)
+    if not evidence_keys:
+        oe = result.get("_online_eval", {})
+        evidence_keys = oe.get("sources_found", [])
+
+    entry = {
+        "incident_id":          incident_id,
+        "incident_type":        incident_type,
+        "service":              service,
+        "root_cause":           result.get("root_cause", ""),
+        "evidence_keys":        evidence_keys,
+        "confidence":           result.get("confidence", 0),
+        "online_quality_score": round(online_quality_score, 4),
+        "failure_reason":       failure_reason,
+        "timestamp":            datetime.now(timezone.utc).isoformat(),
+        "_failed":              True,
+    }
+
+    try:
+        with _store_lock:
+            all_data = _load_all_raw()
+            failed = all_data.get("failed", [])
+            # Cap failed store at 200 entries — evict oldest
+            if len(failed) >= 200:
+                failed = failed[1:]
+            failed.append(entry)
+            all_data["failed"] = failed
+            _save_all_raw(all_data)
+
+        logger.info(
+            "Failed experience stored: %s type=%s service=%s quality=%.2f reason=%s",
+            incident_id, incident_type, service, online_quality_score, failure_reason or "N/A",
+        )
+        return True
+
+    except Exception as exc:
+        logger.warning("Failed to store failed experience for %s: %s", incident_id, exc)
+        return False
+
+
+def get_suggested_root_causes(
+    incident_type: str,
+    service: str,
+    top_k: int = 3,
+) -> list[str]:
+    """Return root cause strings from the most similar past successful investigations.
+
+    Extracts root_cause from the top-K most similar stored experiences (quality
+    >= STORE_QUALITY_THRESHOLD) to prime the LLM hypothesis generator.
+
+    Returns a list of up to top_k root cause strings, deduplicated and sorted
+    by similarity score descending.  Empty list on error or no matches.
+    """
+    if not EXPERIENCE_STORE_ENABLED:
+        return []
+
+    try:
+        similar = retrieve_similar(incident_type, service, top_k=top_k)
+        seen: set[str] = set()
+        causes: list[str] = []
+        for exp in similar:
+            rc = (exp.get("root_cause") or "").strip()
+            if rc and not rc.startswith("INSUFFICIENT") and rc not in seen:
+                seen.add(rc)
+                causes.append(rc)
+        return causes
+    except Exception as exc:
+        logger.warning("get_suggested_root_causes failed (non-critical): %s", exc)
+        return []
+
+
+def get_tool_recommendations(
+    incident_type: str,
+    service: str,
+    top_k: int = 5,
+) -> dict[str, float]:
+    """Return evidence keys that historically helped for this incident_type/service.
+
+    Combines positive signals (evidence keys present in high-quality experiences)
+    and negative signals (evidence keys absent in failed experiences) to produce
+    a ranked dict of {evidence_key: score} where score > 1.0 = recommended,
+    score < 1.0 = avoid.
+
+    Returns an empty dict on error or insufficient history.
+    """
+    if not EXPERIENCE_STORE_ENABLED:
+        return {}
+
+    try:
+        with _store_lock:
+            all_data = _load_all_raw()
+
+        experiences: list[dict] = all_data.get("experiences", [])
+        failed: list[dict] = all_data.get("failed", [])
+
+        # Score positive evidence keys from successful investigations
+        positive: dict[str, float] = {}
+        pos_count = 0
+        for exp in experiences:
+            sim = _similarity(exp, incident_type, service)
+            if sim <= 0:
+                continue
+            pos_count += 1
+            for key in exp.get("evidence_keys", []):
+                positive[key] = positive.get(key, 0.0) + sim
+
+        # Score negative evidence keys — keys missing when investigation failed
+        # (low-quality means these keys weren't present or didn't help)
+        negative: dict[str, float] = {}
+        neg_count = 0
+        for exp in failed:
+            sim = _similarity(exp, incident_type, service)
+            if sim <= 0:
+                continue
+            neg_count += 1
+            for key in exp.get("evidence_keys", []):
+                # Present in a failed investigation → slight negative signal
+                negative[key] = negative.get(key, 0.0) + sim * 0.3
+
+        if pos_count == 0:
+            return {}
+
+        # Normalise and combine
+        all_keys = set(positive) | set(negative)
+        recommendations: dict[str, float] = {}
+        for key in all_keys:
+            pos_score = positive.get(key, 0.0) / pos_count
+            neg_score = negative.get(key, 0.0) / max(neg_count, 1)
+            recommendations[key] = round(pos_score - neg_score, 3)
+
+        # Return top-K by score
+        sorted_recs = sorted(recommendations.items(), key=lambda x: -x[1])
+        return dict(sorted_recs[:top_k])
+
+    except Exception as exc:
+        logger.warning("get_tool_recommendations failed (non-critical): %s", exc)
+        return {}
+
+
 def get_stats() -> dict:
     """Return summary statistics about the experience store."""
     try:
@@ -248,24 +421,50 @@ def _similarity(exp: dict, incident_type: str, service: str) -> float:
 # ---------------------------------------------------------------------------
 
 def _load_raw() -> list[dict]:
-    """Load experience list from disk. Returns [] if file absent or corrupt."""
+    """Load successful experience list from disk. Returns [] if file absent or corrupt."""
+    return _load_all_raw().get("experiences", [])
+
+
+def _save_raw(experiences: list[dict]) -> None:
+    """Persist experience list (successful) to disk atomically."""
+    all_data = _load_all_raw()
+    all_data["experiences"] = experiences
+    _save_all_raw(all_data)
+
+
+def _load_all_raw() -> dict:
+    """Load the full store (experiences + failed) from disk.
+
+    The on-disk format is either:
+      - Legacy: a JSON array (list of experience dicts) — auto-migrated
+      - Current: {"experiences": [...], "failed": [...]}
+
+    Returns {"experiences": [], "failed": []} on missing/corrupt file.
+    """
     path = EXPERIENCE_STORE_PATH
     try:
         with open(path, "r") as f:
             data = json.load(f)
-        return data if isinstance(data, list) else []
+        if isinstance(data, list):
+            # Migrate legacy list format
+            return {"experiences": data, "failed": []}
+        if isinstance(data, dict):
+            data.setdefault("experiences", [])
+            data.setdefault("failed", [])
+            return data
+        return {"experiences": [], "failed": []}
     except FileNotFoundError:
-        return []
+        return {"experiences": [], "failed": []}
     except (json.JSONDecodeError, ValueError) as exc:
         logger.warning("Experience store corrupt, resetting: %s", exc)
-        return []
+        return {"experiences": [], "failed": []}
 
 
-def _save_raw(experiences: list[dict]) -> None:
-    """Persist experience list to disk atomically."""
+def _save_all_raw(all_data: dict) -> None:
+    """Persist the full store to disk atomically."""
     path = EXPERIENCE_STORE_PATH
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".tmp"
     with open(tmp, "w") as f:
-        json.dump(experiences, f, indent=2)
+        json.dump(all_data, f, indent=2)
     os.replace(tmp, path)

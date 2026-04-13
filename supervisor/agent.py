@@ -612,6 +612,23 @@ class SentinalAISupervisor:
                 if diff_analysis:
                     evidence["diff_analysis"] = diff_analysis
 
+                    # Step 3f: Git blame pinpoint — if diff analysis identified a
+                    # culprit file + line, run git blame to get exact authorship.
+                    culprit_file = diff_analysis.get("culprit_file", "")
+                    culprit_line = diff_analysis.get("culprit_line")
+                    devops_ctx = evidence.get("devops_context", {})
+                    blame_repo = (
+                        devops_ctx.get("deployments", [{}])[0].get("repo", "")
+                        if devops_ctx.get("deployments") else ""
+                    )
+                    if culprit_file and culprit_line and blame_repo:
+                        blame_result = self._fetch_git_blame(
+                            blame_repo, culprit_file, int(culprit_line),
+                            receipts, budget, circuits,
+                        )
+                        if blame_result:
+                            evidence["git_blame"] = blame_result
+
             # Collect trace correlation (ran concurrently with playbook)
             try:
                 trace_corr = _trace_future.result(timeout=5)
@@ -695,6 +712,34 @@ class SentinalAISupervisor:
             result["_evidence_snapshot"] = {
                 k: bool(v) for k, v in evidence.items() if not k.startswith("_")
             }
+
+            # Expose git blame pinpoint in result (available to external consumers + RCA report)
+            if evidence.get("git_blame"):
+                blame = evidence["git_blame"]
+                result["git_blame_pinpoint"] = {
+                    "file":   blame.get("culprit_file", ""),
+                    "line":   blame.get("culprit_line"),
+                    "sha":    blame.get("sha", "")[:12],
+                    "author": blame.get("author", ""),
+                    "date":   blame.get("date", ""),
+                    "commit_message": blame.get("message", "")[:120],
+                    "repo":   blame.get("repo", ""),
+                }
+
+            # Expose top ITSM causal change in result for bridge call / runbook
+            if evidence.get("_itsm_change_correlations"):
+                top = evidence["_itsm_change_correlations"][0]
+                if top.get("correlation_score", 0) >= 0.45:
+                    result["causal_change"] = {
+                        "id":           top.get("id", top.get("number", "")),
+                        "title":        top.get("title", top.get("summary", "")),
+                        "change_type":  top.get("change_type", ""),
+                        "risk_level":   top.get("risk_level", ""),
+                        "minutes_before_incident": top.get("minutes_before_incident"),
+                        "correlation_score": top.get("correlation_score"),
+                        "correlation_reason": top.get("correlation_reason", ""),
+                        "commit_sha":   (top.get("matched_commit") or {}).get("sha", ""),
+                    }
 
             # Phase: Observe — span attributes + deep-eval metrics
             self._record_observability(
@@ -1700,6 +1745,56 @@ class SentinalAISupervisor:
 
         return None
 
+    def _fetch_git_blame(
+        self,
+        repo: str,
+        path: str,
+        line: int,
+        receipts: Any | None,
+        budget: Any | None,
+        circuits: Any | None,
+        context_lines: int = 5,
+    ) -> dict | None:
+        """Run git blame on a specific file+line to pinpoint the breaking author.
+
+        Called after diff_analysis identifies a culprit_file + culprit_line.
+        Returns blame dict with: sha, author, date, message, lines, or None.
+
+        This is the final step in the git causation chain:
+          deployment → breaking_commit → diff_analysis → git_blame
+        giving full pinpoint precision from incident to the exact lines and author.
+        """
+        git_worker = self.workers.get("git_worker")
+        if git_worker is None or not budget or not budget.can_call():
+            return None
+
+        try:
+            blame = self._call_worker(
+                git_worker, "git_blame_line", {
+                    "repo": repo,
+                    "path": path,
+                    "line_start": max(1, line - context_lines),
+                    "line_end": line + context_lines,
+                },
+                receipts, budget, "git_worker", circuits=circuits,
+            )
+            if blame and "error" not in blame:
+                logger.info(
+                    "Git blame pinpoint: %s:%d → sha=%s author=%s",
+                    path, line,
+                    str(blame.get("sha", ""))[:8],
+                    blame.get("author", "?"),
+                )
+                return {
+                    **blame,
+                    "culprit_file": path,
+                    "culprit_line": line,
+                    "repo": repo,
+                }
+        except Exception as exc:
+            logger.debug("Git blame fetch failed (non-critical): %s", exc)
+        return None
+
     def _extract_error_context(self, evidence: dict) -> str:
         """Build a concise error context string from Splunk/APM evidence."""
         parts: list[str] = []
@@ -2140,12 +2235,61 @@ class SentinalAISupervisor:
         self._tls.itsm_evidence = self._extract_itsm_context(evidence)
         self._tls.devops_evidence = self._extract_devops_context(evidence)
 
+        # ITSM change window correlation: find which change caused the incident.
+        # Runs on every investigation that has ITSM context; non-blocking.
+        incident_time = incident.get("start_time", incident.get("created_at", ""))
+        itsm_changes = []
+        if self._tls.itsm_evidence:
+            itsm_changes = (
+                self._tls.itsm_evidence.get("recent_changes", [])
+                or self._tls.itsm_evidence.get("change_records", [])
+            )
+        if itsm_changes and incident_time:
+            try:
+                from supervisor.itsm_change_correlator import correlate_change_window
+                git_commits = (
+                    evidence.get("git_context", {}).get("commits", [])
+                    if evidence.get("git_context") else []
+                )
+                correlated = correlate_change_window(
+                    incident_time, itsm_changes, service, git_commits=git_commits,
+                )
+                if correlated:
+                    evidence["_itsm_change_correlations"] = correlated
+                    # Inject the top causal change into changes so analyzers see it
+                    top_change = correlated[0]
+                    if top_change.get("correlation_score", 0) >= 0.50:
+                        changes.insert(0, {
+                            "change_type": top_change.get("change_type", "itsm_change"),
+                            "description": (
+                                f"[ITSM] {top_change.get('title', top_change.get('id', '?'))}"
+                                f" — {top_change.get('correlation_reason', '')}"
+                            ),
+                            "time": top_change.get("start_time", ""),
+                            "source": "itsm_correlator",
+                            "correlation_score": top_change["correlation_score"],
+                        })
+                        logger.info(
+                            "ITSM change window: most likely causal change '%s' "
+                            "(score=%.2f, %d min before incident)",
+                            top_change.get("id", "?"),
+                            top_change["correlation_score"],
+                            top_change.get("minutes_before_incident", 0),
+                        )
+            except Exception as exc:
+                logger.debug("ITSM change window correlation failed (non-critical): %s", exc)
+
         # Build timeline from all sources
         timeline = self._build_timeline(logs, signals, metrics, events, changes, incident_type, service)
 
-        # W2: Multi-hypothesis scoring
+        # Extract historical context from experience replay
+        suggested_root_causes: list[str] = evidence.get("_suggested_root_causes", [])
+        tool_recommendations: dict[str, float] = evidence.get("_tool_recommendations", {})
+
+        # W2: Multi-hypothesis scoring — include historical priming
         hypotheses = self._generate_hypotheses(
             incident_type, service, summary, logs, signals, metrics, events, changes, timeline,
+            suggested_root_causes=suggested_root_causes,
         )
 
         # W3: Evidence-weighted confidence for each hypothesis
@@ -2162,6 +2306,8 @@ class SentinalAISupervisor:
             llm_metrics = self._llm_refine_hypotheses(
                 incident_type, service, summary, hypotheses,
                 logs, signals, metrics, events, changes,
+                suggested_root_causes=suggested_root_causes,
+                tool_recommendations=tool_recommendations,
             )
 
         # W2: Select winner — highest score, deterministic tiebreak by name
@@ -2253,10 +2399,16 @@ class SentinalAISupervisor:
         metrics: dict,
         events: list[dict],
         changes: list[dict],
+        suggested_root_causes: list[str] | None = None,
+        tool_recommendations: dict[str, float] | None = None,
     ) -> dict:
         """Use LLM to refine and re-rank hypotheses. Returns GenAI metrics."""
         try:
-            evidence_summary = self._format_evidence_summary(logs, signals, metrics, events, changes)
+            evidence_summary = self._format_evidence_summary(
+                logs, signals, metrics, events, changes,
+                suggested_root_causes=suggested_root_causes,
+                tool_recommendations=tool_recommendations,
+            )
             hyp_dicts = [
                 {"name": h.name, "root_cause": h.root_cause, "score": h.base_score, "reasoning": h.reasoning}
                 for h in hypotheses
@@ -2342,8 +2494,14 @@ class SentinalAISupervisor:
         metrics: dict,
         events: list[dict],
         changes: list[dict],
+        suggested_root_causes: list[str] | None = None,
+        tool_recommendations: dict[str, float] | None = None,
     ) -> str:
-        """Format evidence into a concise summary for LLM prompts."""
+        """Format evidence into a concise summary for LLM prompts.
+
+        Includes historical context (suggested root causes from similar past incidents
+        and tool recommendations) so the LLM can weight them appropriately.
+        """
         parts = []
         if logs:
             parts.append(f"Logs: {len(logs)} entries")
@@ -2363,6 +2521,17 @@ class SentinalAISupervisor:
             parts.append(f"Changes: {len(changes)} entries")
             for ch in changes[:2]:
                 parts.append(f"  - {ch.get('change_type', '?')}: {ch.get('description', '')[:100]}")
+
+        # Historical context from experience replay — gives LLM prior probabilities
+        if suggested_root_causes:
+            parts.append(
+                "Historical context (similar past incidents): root causes were — "
+                + "; ".join(f'"{c}"' for c in suggested_root_causes[:3])
+            )
+        if tool_recommendations:
+            top_keys = [k for k, v in sorted(tool_recommendations.items(), key=lambda x: -x[1])[:3]]
+            parts.append(f"Evidence sources that historically help: {', '.join(top_keys)}")
+
         return "\n".join(parts) if parts else "No evidence collected"
 
     # ------------------------------------------------------------------ #
@@ -2380,10 +2549,14 @@ class SentinalAISupervisor:
         events: list[dict],
         changes: list[dict],
         timeline: list[dict],
+        suggested_root_causes: list[str] | None = None,
     ) -> list[Hypothesis]:
         """Generate scored hypotheses from type-specific analyzers.
 
         Each analyzer returns one or more Hypothesis objects.
+        Historical root causes from experience replay are injected as
+        additional hypotheses (score 55) so they compete fairly with
+        deterministic hypotheses but yield to strong evidence-based ones.
         """
         analyzers = {
             "timeout": self._analyze_timeout,
@@ -2399,7 +2572,28 @@ class SentinalAISupervisor:
         }
 
         analyzer = analyzers.get(incident_type, self._analyze_generic)
-        return analyzer(service, summary, logs, signals, metrics, events, changes, timeline)
+        hypotheses = analyzer(service, summary, logs, signals, metrics, events, changes, timeline)
+
+        # Inject historical priming: past confirmed root causes from similar incidents
+        # compete as additional hypotheses (base score 55 — plausible but not dominant).
+        if suggested_root_causes:
+            existing_causes = {h.root_cause.lower() for h in hypotheses}
+            for cause in suggested_root_causes[:3]:  # top 3 to avoid noise
+                if cause.lower() not in existing_causes:
+                    hypotheses.append(Hypothesis(
+                        name="historical_pattern",
+                        root_cause=cause,
+                        base_score=55,
+                        evidence_refs=["_past_experiences"],
+                        reasoning=(
+                            f"Historical pattern: similar {incident_type} incidents "
+                            f"in {service} were previously diagnosed as '{cause}'. "
+                            "Confidence elevated if current evidence matches."
+                        ),
+                    ))
+                    logger.debug("Primed hypothesis from experience: %s", cause[:80])
+
+        return hypotheses
 
     # -- Timeout -------------------------------------------------------- #
 

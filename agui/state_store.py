@@ -27,8 +27,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-import time
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Optional, Protocol, runtime_checkable
 
 from agui.schemas.events import AGUIEvent
 from agui.schemas.incidents import IncidentState, ControlAction

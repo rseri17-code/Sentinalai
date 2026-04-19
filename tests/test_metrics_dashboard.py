@@ -1,7 +1,6 @@
 """Tests for the investigation metrics dashboard."""
 from __future__ import annotations
 
-import time
 import pytest
 
 from supervisor.metrics_dashboard import (

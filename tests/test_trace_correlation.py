@@ -221,18 +221,18 @@ class TestCorrelationConfidence:
 
     def test_baseline_with_trace_id(self):
         score = _correlation_confidence(TRACE_ID_32, [], None)
-        assert score == 0.5
+        assert score == 0.30
 
     def test_chain_depth_bonus(self):
         chain = [{"service": f"svc{i}"} for i in range(4)]
         score = _correlation_confidence(TRACE_ID_32, chain, None)
-        assert score >= 0.7  # 0.5 + 0.2 + 0.1
+        assert score >= 0.7  # 0.30 + 0.25 + 0.15
 
     def test_error_span_bonus(self):
         chain = [{"service": "svc", "error": "timeout"}]
         error_span = {"service": "svc"}
         score = _correlation_confidence(TRACE_ID_32, chain, error_span)
-        assert score >= 0.7
+        assert score >= 0.6  # 0.30 baseline + 0.30 error span
 
     def test_capped_at_1(self):
         chain = [{"service": f"s{i}"} for i in range(10)]

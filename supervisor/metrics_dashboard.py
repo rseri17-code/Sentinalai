@@ -285,11 +285,11 @@ class MetricsDashboard:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _safe_mean(values: list[float]) -> float:
+def _safe_mean(values: list[float] | list[int]) -> float:
     return round(statistics.mean(values), 2) if values else 0.0
 
 
-def _safe_percentile(values: list[float], pct: float) -> float:
+def _safe_percentile(values: list[float] | list[int], pct: float) -> float:
     if not values:
         return 0.0
     sorted_vals = sorted(values)

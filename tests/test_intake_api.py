@@ -12,10 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import json
-import time
-import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI

@@ -1,7 +1,6 @@
 """Tests for the evidence citation engine."""
 from __future__ import annotations
 
-import pytest
 from supervisor.evidence_citation import (
     annotate_citations,
     _extract_claims,

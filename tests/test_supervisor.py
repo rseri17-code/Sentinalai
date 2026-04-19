@@ -464,7 +464,7 @@ class TestSupervisorWithMocks:
 
         _build_mock_workers(self.supervisor, "INC12345")
         with patch("supervisor.learning_loop.run_learning_step") as mock_step:
-            result = self.supervisor.investigate("INC12345")
+            self.supervisor.investigate("INC12345")
             # The learning loop is submitted to _parallel_executor; drain it before asserting.
             self.supervisor._parallel_executor.shutdown(wait=True)
 

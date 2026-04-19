@@ -54,7 +54,7 @@ class TestReplaySnapshot:
         events = make_valid_event_list()
         reversed_events = list(reversed(events))
         h1 = ReplaySnapshot.compute_chain_hash(events)
-        h2 = ReplaySnapshot.compute_chain_hash(reversed_events)
+        ReplaySnapshot.compute_chain_hash(reversed_events)
         # Note: since chain hash sorts by sequence_num, this depends on implementation
         # The sorted version should be same
         h3 = ReplaySnapshot.compute_chain_hash(sorted(events, key=lambda e: e.sequence_num))

@@ -1,6 +1,5 @@
 """Tests for AG UI bridge — supervisor to event bus integration."""
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from supervisor.agui_bridge import AGUIBridge
 
 

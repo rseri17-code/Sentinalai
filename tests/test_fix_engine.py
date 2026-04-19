@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 import asyncio
-import time
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock
 
 from supervisor.fix_engine import (
     FixEngine,

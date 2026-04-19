@@ -6,11 +6,9 @@ from supervisor.memory_compression import (
     compress_investigation,
     compress_turns,
     InvestigationDigest,
-    _compress_reasoning,
     _extractive_fallback,
     _extract_evidence_keys,
     _summarise_timeline,
-    COMPRESS_AFTER_TURNS,
 )
 
 

@@ -17,7 +17,6 @@ from __future__ import annotations
 import time
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 from workers.mcp_client import McpGateway
 
@@ -187,7 +186,7 @@ class TestDiscoverToolsCache:
         with patch("workers.mcp_client._requests_lib") as mock_req:
             mock_req.get.return_value = mock_resp
             with patch.dict("os.environ", {"TOOL_DISCOVERY_URL": "http://gw/tools"}):
-                result = gw.discover_tools()
+                gw.discover_tools()
 
         # Should have re-fetched (stale cache)
         mock_req.get.assert_called_once()

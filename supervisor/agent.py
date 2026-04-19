@@ -850,7 +850,7 @@ class SentinalAISupervisor:
                 service=service,
                 root_cause=result.get("root_cause", ""),
                 confidence=confidence,
-                severity=severity.level if hasattr(severity, "level") else int(severity),
+                severity=severity.level,
                 elapsed_ms=elapsed,
                 tool_calls=budget.calls_made,
                 llm_input_tokens=_llm_m.get("input_tokens", 0),
@@ -1802,7 +1802,7 @@ class SentinalAISupervisor:
         # Splunk logs
         log_evidence = evidence.get("logs", evidence.get("log_data", {}))
         if isinstance(log_evidence, dict):
-            logs = log_evidence.get("logs", log_evidence.get("results", []))
+            logs: list = log_evidence.get("logs") or log_evidence.get("results") or []
         elif isinstance(log_evidence, list):
             logs = log_evidence
         else:
@@ -1816,7 +1816,7 @@ class SentinalAISupervisor:
         # APM errors
         apm_evidence = evidence.get("apm_data", evidence.get("apm", {}))
         if isinstance(apm_evidence, dict):
-            errors = apm_evidence.get("errors", apm_evidence.get("error_samples", []))
+            errors: list = apm_evidence.get("errors") or apm_evidence.get("error_samples") or []
             for err in errors[:3]:
                 trace = err.get("stack_trace", err.get("exception", ""))
                 if trace:

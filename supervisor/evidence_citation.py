@@ -215,7 +215,7 @@ def _build_evidence_corpus(evidence: dict) -> list[dict]:
     # APM errors
     apm = evidence.get("apm_data", evidence.get("apm", {}))
     if isinstance(apm, dict):
-        for err in apm.get("errors", apm.get("error_samples", []))[:10]:
+        for err in (apm.get("errors") or apm.get("error_samples") or [])[:10]:
             corpus.append({
                 "source": "dynatrace",
                 "text": err.get("message") or err.get("exception") or str(err),

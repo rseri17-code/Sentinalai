@@ -1,7 +1,6 @@
 """Tests for anti-hallucination enforcement in supervisor.evidence_citation."""
 from __future__ import annotations
 
-import pytest
 
 from supervisor.evidence_citation import annotate_citations, _enforce_anti_hallucination
 

@@ -338,7 +338,7 @@ def _build_gap_queries(
 def _llm_critique(result: dict, evidence: dict, incident_type: str, service: str) -> str:
     """Use LLM to produce a narrative critique of the RCA quality."""
     try:
-        from supervisor.llm import converse, _llm_enabled
+        from supervisor.llm import converse, is_enabled as _llm_enabled
         if not _llm_enabled():
             return ""
 

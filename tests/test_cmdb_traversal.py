@@ -1,8 +1,7 @@
 """Tests for CMDB traversal engine."""
 from __future__ import annotations
 
-import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
 
 from supervisor.cmdb_traversal import (
     CMDBTraversal,

@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch, call
-import pytest
+from unittest.mock import MagicMock, patch
 
 from supervisor.learning_loop import run_learning_step, rebuild_calibrator_from_db
 
@@ -150,7 +149,6 @@ class TestUpdateCalibratorThreadSafety:
     def test_calibrator_lock_acquired_during_update(self):
         # _calibrator_lock is now the shared lock from confidence_calibrator;
         # learning_loop re-exports it so existing imports still resolve.
-        from supervisor.confidence_calibrator import _calibrator_lock
         from supervisor.ground_truth_eval import EvalResult
 
         eval_result = EvalResult(

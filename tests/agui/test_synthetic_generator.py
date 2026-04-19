@@ -2,7 +2,7 @@
 import pytest
 from agui.synthetic_generator import SyntheticIncidentGenerator, INCIDENT_SCENARIOS
 from agui.schemas.events import AGUIEvent, EventType
-from agui.replay_engine import ReplayEngine, ReplaySnapshot
+from agui.replay_engine import ReplayEngine
 
 
 class TestSyntheticGenerator:

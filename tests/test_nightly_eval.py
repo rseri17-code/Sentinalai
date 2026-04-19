@@ -1,9 +1,8 @@
 """Tests for scripts.nightly_eval."""
 from __future__ import annotations
 
-import json
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from scripts.nightly_eval import (
     run_nightly_eval,
@@ -245,7 +244,7 @@ class TestRunNightlyEval:
         # (it may propagate exceptions here since _run_batch_eval is not try/excepted
         #  in the calling code — test that the call chain handles it)
         try:
-            report = run_nightly_eval(lookback_days=7, dry_run=True)
+            run_nightly_eval(lookback_days=7, dry_run=True)
         except Exception:
             pytest.fail("nightly_eval raised unexpectedly on eval error")
 

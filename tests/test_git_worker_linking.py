@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 os.environ.setdefault("INCIDENT_GIT_LINKER_ENABLED", "true")
 

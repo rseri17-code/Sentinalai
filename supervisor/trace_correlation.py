@@ -161,7 +161,8 @@ def _extract_trace_id(incident: dict, evidence: dict) -> str | None:
             if val:
                 return str(val).strip()
         # APM error samples often embed trace IDs
-        for err in apm.get("errors", apm.get("error_samples", []))[:5]:
+        _err_samples: list = apm.get("errors") or apm.get("error_samples") or []
+        for err in _err_samples[:5]:
             if isinstance(err, dict):
                 for field in _TRACE_ID_FIELDS:
                     val = err.get(field, "")
@@ -264,19 +265,23 @@ def _correlation_confidence(
     chain: list[dict],
     error_span: dict | None,
 ) -> float:
-    """Score confidence in the correlation result."""
+    """Score confidence in the correlation result.
+
+    Starts at 0.30 (trace ID found but no chain data yet).
+    Rises with chain depth and error span presence up to 1.0.
+    """
     if not trace_id:
         return 0.0
-    score = 0.5
+    score = 0.30
 
-    # Populated chain
+    # Populated chain — meaningful cross-service context
     if len(chain) >= 2:
-        score += 0.2
+        score += 0.25
     if len(chain) >= 4:
-        score += 0.1
+        score += 0.15
 
-    # Found an error span
+    # Error span pinpoints the failing service
     if error_span:
-        score += 0.2
+        score += 0.30
 
     return round(min(score, 1.0), 2)

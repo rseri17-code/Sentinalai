@@ -1,5 +1,4 @@
 """Tests for AG UI graph builder — DAG reconstruction from events."""
-import pytest
 from agui.schemas.events import AGUIEvent, EventType
 from agui.schemas.graph import NodeType, NodeStatus
 from agui.graph_builder import GraphBuilder, rebuild_from_events

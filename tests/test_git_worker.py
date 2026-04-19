@@ -294,3 +294,58 @@ class TestBisectConfidence:
         score_match = _bisect_confidence(commit_match, [commit_match], paths=["services/payment/"])
         score_no_match = _bisect_confidence(commit_no_match, [commit_no_match], paths=["services/payment/"])
         assert score_match > score_no_match
+
+
+# ---------------------------------------------------------------------------
+# Coverage gap-fill tests
+# ---------------------------------------------------------------------------
+
+class TestFindBreakingChangeGoodSha:
+    """Cover line 182: good_sha branch in git_find_breaking_change."""
+
+    def test_good_sha_added_to_log_params(self, worker, mock_gateway):
+        worker.execute("git_find_breaking_change", {
+            "repo": "org/svc",
+            "good_sha": "baselinesha123",
+        })
+        # Find the git_log call
+        log_call = mock_gateway.invoke.call_args_list[0]
+        call_params = log_call[0][2]
+        assert call_params.get("since_sha") == "baselinesha123"
+
+
+class TestFindBreakingChangeNullBreaking:
+    """Cover line 211: enriched = None when breaking_commit is None."""
+
+    def test_null_breaking_commit_from_pick(self, worker, mock_gateway):
+        mock_gateway.invoke.return_value = {"commits": [{"sha": "x", "files_changed": []}]}
+        with patch("workers.git_worker._pick_breaking_commit", return_value=None):
+            result = worker.execute("git_find_breaking_change", {"repo": "org/svc"})
+        assert result["breaking_commit"] is None
+
+
+class TestEnrichCommit:
+    """Cover lines 339 and 349-351 in _enrich_commit."""
+
+    def test_enrich_commit_no_sha_returns_original(self, worker):
+        commit = {"message": "fix: no sha here", "author": "alice"}
+        result = worker._enrich_commit("org/svc", commit)
+        assert result is commit  # returned as-is when sha is empty
+
+    def test_enrich_commit_gateway_exception_returns_original(self, worker, mock_gateway):
+        mock_gateway.invoke.side_effect = RuntimeError("GitHub API error")
+        commit = {"sha": "abc123def456", "message": "fix: pool", "author": "alice"}
+        result = worker._enrich_commit("org/svc", commit)
+        # Exception is caught and logged; original commit is returned
+        assert result is commit
+
+
+class TestBisectConfidenceMediumWindow:
+    """Cover line 402: elif n <= 10: score += 0.10."""
+
+    def test_medium_window_partial_bonus(self):
+        # 4-10 commits: +0.10 bonus
+        commits = [{"sha": f"s{i}", "files_changed": []} for i in range(5)]
+        score = _bisect_confidence(commits[0], commits, paths=[])
+        # baseline 0.5 + 0.10 (5 commits in window) = 0.60
+        assert score == 0.60

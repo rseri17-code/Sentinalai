@@ -1,11 +1,10 @@
 """Tests for AG UI data contract schemas."""
-import pytest
 import json
 import time
 from agui.schemas.events import AGUIEvent, EventType
 from agui.schemas.receipts import UIReceipt
 from agui.schemas.graph import GraphNode, GraphEdge, ExecutionGraph, NodeType, NodeStatus
-from agui.schemas.incidents import IncidentState, ControlAction, ControlActionType
+from agui.schemas.incidents import IncidentState
 
 
 class TestAGUIEventSchema:

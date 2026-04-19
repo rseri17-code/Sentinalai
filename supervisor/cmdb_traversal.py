@@ -157,7 +157,6 @@ class CMDBTraversal:
 
         Used by the agent to select the most likely causal change.
         """
-        best_ci = None
         best_change = None
         best_ts = ""
 
@@ -168,7 +167,6 @@ class CMDBTraversal:
                     best_ts = ts
                     best_change = dict(change)
                     best_change["_ci"] = ci_name
-                    best_ci = ci_name
 
         return best_change
 

@@ -24,10 +24,8 @@ ReactFlow positioning:
 """
 from __future__ import annotations
 
-import hashlib
 import logging
 import time
-import uuid
 from typing import Optional
 
 from agui.schemas.events import AGUIEvent, EventType
@@ -88,7 +86,6 @@ class GraphBuilder:
         self.graph.last_updated_at = event.timestamp
 
         etype = event.event_type
-        payload = event.payload
 
         if etype == EventType.INVESTIGATION_STARTED:
             self._on_investigation_started(event)
@@ -248,7 +245,7 @@ class GraphBuilder:
         node = self._make_node(
             node_id=f"llm_{event.sequence_num}",
             node_type=NodeType.LLM_INFERENCE,
-            label=f"LLM\nRefinement",
+            label="LLM\nRefinement",
             event=event,
             status=NodeStatus.RUNNING,
             llm_model=event.payload.get("model", ""),
@@ -311,7 +308,7 @@ class GraphBuilder:
         node = self._make_node(
             node_id=f"mem_{event.sequence_num}",
             node_type=NodeType.MEMORY_QUERY,
-            label=f"Memory\nSearch",
+            label="Memory\nSearch",
             event=event,
             status=NodeStatus.RUNNING,
             metadata={"query": event.payload.get("query", "")},

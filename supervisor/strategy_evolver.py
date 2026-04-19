@@ -16,6 +16,17 @@ tool_selector.get_evolved_playbook() to reorder playbook steps before
 execution.  Higher-weight steps run earlier → faster time-to-evidence on
 common incident patterns.
 
+Per-service weights are tracked alongside per-type weights using the key
+format "incident_type.step_label.service".  When a service-specific weight
+exists and has enough observations (>= MIN_CALLS_TO_EVOLVE), it takes
+precedence over the generic type-level weight for step filtering decisions.
+
+Step skipping: steps whose evolved weight falls below SKIP_WEIGHT_THRESHOLD
+(from adaptive_thresholds) are skipped entirely via should_skip_step().
+
+Gap pattern penalization: record_gap_pattern() applies a negative signal to
+steps that consistently fail to fill a gap, lowering their weight over time.
+
 Persisted to: eval/evolved_strategy.json  (atomic write)
 Thread-safe: all mutations under _strategy_lock
 
@@ -56,10 +67,72 @@ _strategy_lock = threading.Lock()
 # Public API
 # ---------------------------------------------------------------------------
 
+def should_skip_step(
+    incident_type: str,
+    step_label: str,
+    service: str = "",
+) -> bool:
+    """Return True if a playbook step should be skipped due to low evolved weight.
+
+    Checks per-service weight first (if service provided and has enough calls),
+    then falls back to per-type weight.  Uses SKIP_WEIGHT_THRESHOLD from
+    adaptive_thresholds (default 0.35, self-adjusting).
+
+    Returns False (never skip) when evolver is disabled or data is insufficient.
+    """
+    if not STRATEGY_EVOLVER_ENABLED:
+        return False
+
+    try:
+        from supervisor.adaptive_thresholds import get as _get_threshold
+        skip_threshold = _get_threshold("skip_weight_threshold")
+    except Exception:
+        skip_threshold = 0.35  # hard fallback
+
+    try:
+        with _strategy_lock:
+            strategy = _load_raw()
+
+        # Check service-specific weight first
+        if service:
+            svc_key = f"{incident_type}.{step_label}.{service}"
+            svc_entry = strategy.get("_service_weights", {}).get(svc_key)
+            if (
+                isinstance(svc_entry, dict)
+                and svc_entry.get("calls", 0) >= MIN_CALLS_TO_EVOLVE
+            ):
+                if svc_entry.get("weight", 1.0) < skip_threshold:
+                    logger.debug(
+                        "Skipping step %s for service=%s (svc_weight=%.3f < threshold=%.3f)",
+                        step_label, service, svc_entry["weight"], skip_threshold,
+                    )
+                    return True
+
+        # Fall back to per-type weight
+        type_entry = strategy.get(incident_type, {}).get(step_label)
+        if (
+            isinstance(type_entry, dict)
+            and type_entry.get("calls", 0) >= MIN_CALLS_TO_EVOLVE
+            and type_entry.get("weight", 1.0) < skip_threshold
+        ):
+            logger.debug(
+                "Skipping step %s (type_weight=%.3f < threshold=%.3f)",
+                step_label, type_entry["weight"], skip_threshold,
+            )
+            return True
+
+        return False
+
+    except Exception as exc:
+        logger.debug("should_skip_step check failed (non-critical): %s", exc)
+        return False
+
+
 def record_outcome(
     incident_type: str,
     receipts: list[dict],
     online_quality_score: float,
+    service: str = "",
 ) -> None:
     """Update step weights after a completed investigation.
 
@@ -105,6 +178,26 @@ def record_outcome(
 
                 entry["last_updated"] = datetime.now(timezone.utc).isoformat()
 
+            # Per-service weights (keyed "incident_type.step_label.service")
+            if service:
+                svc_weights = strategy.setdefault("_service_weights", {})
+                for label in step_labels:
+                    svc_key = f"{incident_type}.{label}.{service}"
+                    svc_entry = svc_weights.setdefault(svc_key, {
+                        "weight": 1.0,
+                        "calls": 0,
+                        "ema_signal": None,
+                    })
+                    svc_entry["calls"] += 1
+                    if svc_entry["calls"] >= MIN_CALLS_TO_EVOLVE:
+                        old_ema = svc_entry.get("ema_signal")
+                        new_ema = signal if old_ema is None else (
+                            EMA_ALPHA * signal + (1 - EMA_ALPHA) * old_ema
+                        )
+                        svc_entry["ema_signal"] = round(new_ema, 4)
+                        svc_entry["weight"] = round(max(0.3, min(2.0, new_ema)), 4)
+                    svc_entry["last_updated"] = datetime.now(timezone.utc).isoformat()
+
             strategy["_meta"] = {
                 "last_updated": datetime.now(timezone.utc).isoformat(),
                 "total_updates": strategy.get("_meta", {}).get("total_updates", 0) + 1,
@@ -112,8 +205,8 @@ def record_outcome(
             _save_raw(strategy)
 
         logger.info(
-            "Strategy updated: type=%s steps=%d signal=%.3f",
-            incident_type, len(step_labels), signal,
+            "Strategy updated: type=%s steps=%d signal=%.3f service=%s",
+            incident_type, len(step_labels), signal, service or "(none)",
         )
 
     except Exception as exc:
@@ -152,6 +245,109 @@ def get_weights(incident_type: str) -> dict[str, float]:
     except Exception as exc:
         logger.warning("get_weights failed (non-critical): %s", exc)
         return {}
+
+
+def record_gap_pattern(
+    incident_type: str,
+    service: str,
+    gap_categories: list[str],
+) -> None:
+    """Apply a negative weight signal to steps associated with persistent gaps.
+
+    When a gap category has been identified as persistently missing for a given
+    (incident_type, service), this demotes the steps responsible for that category
+    so the strategy learns to de-prioritise dead-end evidence paths.
+
+    The negative signal (0.30) is applied once per gap category per investigation.
+    This is a weak signal — it takes ~10 repeated gaps before a step is meaningfully
+    demoted (EMA alpha=0.12, starting weight=1.0, target weight≈0.3).
+    """
+    if not STRATEGY_EVOLVER_ENABLED or not gap_categories:
+        return
+
+    # Map gap categories to the step labels that are supposed to collect them
+    _GAP_STEP_MAP: dict[str, list[str]] = {
+        "golden_signals":   ["get_golden_signals", "get_metric_chart"],
+        "apm_data":         ["get_service_metrics", "get_apm_data"],
+        "logs":             ["get_recent_errors", "search_logs"],
+        "metrics":          ["get_golden_signals", "get_service_metrics"],
+        "change_records":   ["get_recent_changes", "get_deployments"],
+        "itsm_context":     ["get_incident_history", "get_change_record"],
+        "confluence_context": ["search_knowledge_base", "search_confluence"],
+        "devops_context":   ["get_deployments", "get_recent_changes"],
+        "git_context":      ["git_log_for_service", "git_find_breaking_change"],
+        "cmdb_blast_radius": ["get_service_dependencies", "get_blast_radius"],
+        "trace_correlation": ["get_traces", "get_trace_context"],
+        "visual_evidence":  ["get_metric_chart", "get_dashboard_snapshot"],
+    }
+
+    gap_signal = 0.30  # negative: consistently missing → demote
+
+    try:
+        with _strategy_lock:
+            strategy = _load_raw()
+            type_weights = strategy.setdefault(incident_type, {})
+            svc_weights = strategy.setdefault("_service_weights", {})
+
+            for cat in gap_categories:
+                for step_label in _GAP_STEP_MAP.get(cat, []):
+                    # Update type-level weight
+                    entry = type_weights.setdefault(step_label, {
+                        "weight": 1.0, "calls": 0, "ema_signal": None,
+                    })
+                    entry["calls"] += 1
+                    old_ema = entry.get("ema_signal")
+                    new_ema = gap_signal if old_ema is None else (
+                        EMA_ALPHA * gap_signal + (1 - EMA_ALPHA) * old_ema
+                    )
+                    entry["ema_signal"] = round(new_ema, 4)
+                    entry["weight"] = round(max(0.3, min(2.0, new_ema)), 4)
+                    entry["last_updated"] = datetime.now(timezone.utc).isoformat()
+
+                    # Update service-level weight
+                    if service:
+                        svc_key = f"{incident_type}.{step_label}.{service}"
+                        svc_entry = svc_weights.setdefault(svc_key, {
+                            "weight": 1.0, "calls": 0, "ema_signal": None,
+                        })
+                        svc_entry["calls"] += 1
+                        old_sema = svc_entry.get("ema_signal")
+                        new_sema = gap_signal if old_sema is None else (
+                            EMA_ALPHA * gap_signal + (1 - EMA_ALPHA) * old_sema
+                        )
+                        svc_entry["ema_signal"] = round(new_sema, 4)
+                        svc_entry["weight"] = round(max(0.3, min(2.0, new_sema)), 4)
+                        svc_entry["last_updated"] = datetime.now(timezone.utc).isoformat()
+
+            strategy["_meta"] = {
+                "last_updated": datetime.now(timezone.utc).isoformat(),
+                "total_updates": strategy.get("_meta", {}).get("total_updates", 0) + 1,
+            }
+            _save_raw(strategy)
+
+        logger.debug(
+            "Gap pattern signals applied: type=%s service=%s gaps=%s",
+            incident_type, service, gap_categories,
+        )
+
+    except Exception as exc:
+        logger.warning("record_gap_pattern failed (non-critical): %s", exc)
+
+
+def get_service_weight(incident_type: str, step_label: str, service: str) -> float:
+    """Return the service-specific evolved weight for a step, or 1.0 if unknown."""
+    if not STRATEGY_EVOLVER_ENABLED or not service:
+        return 1.0
+    try:
+        with _strategy_lock:
+            strategy = _load_raw()
+        svc_key = f"{incident_type}.{step_label}.{service}"
+        svc_entry = strategy.get("_service_weights", {}).get(svc_key)
+        if isinstance(svc_entry, dict) and svc_entry.get("calls", 0) >= MIN_CALLS_TO_EVOLVE:
+            return float(svc_entry.get("weight", 1.0))
+        return 1.0
+    except Exception:
+        return 1.0
 
 
 def get_report() -> dict:

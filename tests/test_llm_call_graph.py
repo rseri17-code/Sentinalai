@@ -1,7 +1,6 @@
 """Tests for supervisor.llm_call_graph."""
 from __future__ import annotations
 
-import time
 import pytest
 
 from supervisor.llm_call_graph import (
@@ -99,9 +98,9 @@ class TestCallGraph:
     def test_duplicate_calls_detected(self):
         graph = CallGraph(investigation_id="INV001")
         prompt = "Analyse this incident: OOMKilled in payment-service"
-        with graph.span("rca", prompt_prefix=prompt) as id1:
+        with graph.span("rca", prompt_prefix=prompt):
             pass
-        with graph.span("rca", prompt_prefix=prompt) as id2:
+        with graph.span("rca", prompt_prefix=prompt):
             pass
         dupes = graph.duplicate_calls()
         assert len(dupes) >= 1

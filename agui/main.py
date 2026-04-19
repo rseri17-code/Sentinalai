@@ -22,10 +22,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import pathlib as _pathlib
 import time
 
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Query
+from fastapi import FastAPI, WebSocket, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -437,8 +438,6 @@ async def create_invite(actor: ActorContext = Depends(get_actor)):
 # ── React SPA static file serving ────────────────────────────────────────────
 # Mount AFTER all API routes so /api/* routes take precedence.
 # Serve ui/dist/ at root; catch-all returns index.html for React Router.
-
-import pathlib as _pathlib
 
 _UI_DIST = _pathlib.Path(__file__).parent.parent / "ui" / "dist"
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import pytest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 os.environ.setdefault("VISUAL_EVIDENCE_ENABLED", "true")
 os.environ.setdefault("VISUAL_EVIDENCE_FETCH_IMAGES", "false")
@@ -171,7 +171,7 @@ class TestGetDashboardSnapshot:
 
     def test_invokes_gateway(self, worker, mock_gateway):
         mock_gateway.invoke.return_value = DASHBOARD_RESPONSE
-        result = worker.execute("get_dashboard_snapshot", {
+        worker.execute("get_dashboard_snapshot", {
             "service": "payment-service",
             "at_iso": "2024-01-15T14:02:00Z",
         })
@@ -197,7 +197,7 @@ class TestGetTopologyMap:
 
     def test_invokes_gateway(self, worker, mock_gateway):
         mock_gateway.invoke.return_value = TOPOLOGY_RESPONSE
-        result = worker.execute("get_topology_map", {
+        worker.execute("get_topology_map", {
             "service": "payment-service",
             "at_iso": "2024-01-15T14:00:00Z",
         })
@@ -236,7 +236,7 @@ class TestAnnotateAnomalyWindow:
 
     def test_invokes_gateway(self, worker, mock_gateway):
         mock_gateway.invoke.return_value = ANNOTATED_RESPONSE
-        result = worker.execute("annotate_anomaly_window", {
+        worker.execute("annotate_anomaly_window", {
             "chart_url": "https://app.sysdig.com/charts/...",
             "anomaly_start": "2024-01-15T14:00:00Z",
             "anomaly_end": "2024-01-15T14:30:00Z",
@@ -359,7 +359,78 @@ class TestCollectVisualEvidence:
         for itype in types:
             gw = MagicMock()
             gw.invoke.return_value = CHART_RESPONSE
-            result = collect_visual_evidence("svc", "2024-01-15T14:00:00Z", itype, gateway=gw)
+            collect_visual_evidence("svc", "2024-01-15T14:00:00Z", itype, gateway=gw)
             # Should not raise, and should attempt chart fetches
             assert gw.invoke.call_count >= 1
             gw.invoke.reset_mock()
+
+
+# ---------------------------------------------------------------------------
+# Coverage gap-fill tests
+# ---------------------------------------------------------------------------
+
+class TestCollectVisualEvidenceExceptionPaths:
+    """Cover lines 262-263 and 275-276: exception handlers in collect_visual_evidence.
+
+    BaseWorker.execute() catches Exception and returns an error dict, so the only way
+    to trigger the outer exception handlers is to patch VisualEvidenceWorker.execute
+    to raise directly (bypassing the base class catch).
+    """
+
+    def test_chart_execute_raises_exception_caught(self, monkeypatch):
+        """Cover lines 262-263: chart fetch raises → caught, charts stay empty."""
+        from unittest.mock import patch, MagicMock
+        gw = MagicMock()
+
+        call_count = [0]
+
+        def mock_execute(action, params=None):
+            call_count[0] += 1
+            if action == "get_metric_chart":
+                raise RuntimeError("chart gateway exploded")
+            # topology returns empty (no topology either)
+            return {}
+
+        with patch(
+            "workers.visual_evidence_worker.VisualEvidenceWorker.execute",
+            side_effect=mock_execute,
+        ):
+            result = collect_visual_evidence("svc", "2024-01-15T14:00:00Z", "timeout", gateway=gw)
+
+        # No charts, no topology → empty result
+        assert result == {}
+
+    def test_topology_execute_raises_exception_caught(self, monkeypatch):
+        """Cover lines 275-276: topology fetch raises → caught, topology stays empty."""
+        from unittest.mock import patch, MagicMock
+        gw = MagicMock()
+
+        def mock_execute(action, params=None):
+            if action == "get_topology_map":
+                raise RuntimeError("topology gateway exploded")
+            # charts succeed but return error dict (so charts list stays empty too)
+            return {"error": "no chart"}
+
+        with patch(
+            "workers.visual_evidence_worker.VisualEvidenceWorker.execute",
+            side_effect=mock_execute,
+        ):
+            result = collect_visual_evidence("svc", "2024-01-15T14:00:00Z", "timeout", gateway=gw)
+
+        assert result == {}
+
+    def test_both_execute_raise_returns_empty(self):
+        """Cover both 262-263 and 275-276 in a single call."""
+        from unittest.mock import patch, MagicMock
+        gw = MagicMock()
+
+        def mock_execute(action, params=None):
+            raise RuntimeError("everything is broken")
+
+        with patch(
+            "workers.visual_evidence_worker.VisualEvidenceWorker.execute",
+            side_effect=mock_execute,
+        ):
+            result = collect_visual_evidence("svc", "2024-01-15T14:00:00Z", "timeout", gateway=gw)
+
+        assert result == {}

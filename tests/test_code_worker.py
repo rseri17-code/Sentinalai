@@ -1,8 +1,7 @@
 """Tests for CodeWorker — AI diff analysis and fix generation."""
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
-import pytest
+from unittest.mock import patch
 
 from workers.code_worker import CodeWorker
 

@@ -10,11 +10,8 @@ Covers:
 
 from __future__ import annotations
 
-import json
-import os
-import tempfile
 import threading
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -71,7 +68,7 @@ class TestSelfCritique:
         assert cr.dimensions["specificity"] >= 0.4
 
     def test_gap_queries_generated_below_threshold(self):
-        from supervisor.self_critique import critique, CRITIQUE_THRESHOLD
+        from supervisor.self_critique import critique
         result = {
             "root_cause": "unknown",
             "confidence": 20,
@@ -233,7 +230,7 @@ class TestExperienceStore:
         assert hits == []
 
     def test_inconclusive_root_cause_not_stored(self):
-        from supervisor.experience_store import store_experience, retrieve_similar
+        from supervisor.experience_store import store_experience
         result = {**self._good_result(), "root_cause": "INSUFFICIENT EVIDENCE — no data"}
         r = store_experience("INC003", "timeout", "svc", result, 0.80)
         assert r is False

@@ -4,7 +4,6 @@ from __future__ import annotations
 import sys
 import os
 
-import pytest
 
 # The stub server lives under scripts/ — add to path for import
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
@@ -19,7 +18,6 @@ from stub_mcp_server import (
     _splunk,
     _sysdig,
     _dynatrace,
-    _moogsoft,
     _confluence,
     _kubernetes,
 )

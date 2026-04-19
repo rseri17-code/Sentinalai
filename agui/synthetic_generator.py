@@ -378,11 +378,11 @@ class SyntheticIncidentGenerator:
     def _worker_summary(self, worker: str, scenario: dict) -> str:
         summaries = {
             "LogWorker": f"Found 1,247 ERROR logs in last 30min on {scenario['service']}",
-            "MetricsWorker": f"CPU 94%, Memory 87%, Connections 1,200/1,200 (100% saturated)",
-            "ApmWorker": f"P99 latency 3,847ms, Error rate 42.3%, Throughput -67%",
-            "ItsmWorker": f"2 related change records found, 1 open known error",
-            "DevopsWorker": f"Deploy v2.4.1 at 14:23 UTC, 847 changed files",
-            "KnowledgeWorker": f"3 similar incidents found, top similarity 0.89",
+            "MetricsWorker": "CPU 94%, Memory 87%, Connections 1,200/1,200 (100% saturated)",
+            "ApmWorker": "P99 latency 3,847ms, Error rate 42.3%, Throughput -67%",
+            "ItsmWorker": "2 related change records found, 1 open known error",
+            "DevopsWorker": "Deploy v2.4.1 at 14:23 UTC, 847 changed files",
+            "KnowledgeWorker": "3 similar incidents found, top similarity 0.89",
             "ConfluenceWorker": "Runbook: 'Database Connection Pool Troubleshooting' found",
         }
         return summaries.get(worker, f"{worker} returned data")

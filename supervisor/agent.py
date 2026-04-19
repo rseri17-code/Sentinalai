@@ -20,7 +20,7 @@ import time
 import concurrent.futures
 from typing import Any
 
-from supervisor.tool_selector import classify_incident, get_playbook, get_evolved_playbook, is_meta_query
+from supervisor.tool_selector import classify_incident, get_evolved_playbook, is_meta_query
 from supervisor.receipt import ReceiptCollector
 from supervisor.guardrails import (
     ExecutionBudget,
@@ -77,11 +77,27 @@ from database.persistence import (
     persist_knowledge_entry as _db_persist_knowledge,
     is_enabled as _db_enabled,
 )
-from supervisor.confidence_calibrator import ConfidenceCalibrator, get_calibrator
+from supervisor.confidence_calibrator import get_calibrator
 from supervisor.self_critique import critique as _self_critique
 from supervisor.online_evaluator import evaluate as _online_evaluate, annotate_result as _annotate_online
-from supervisor.experience_store import store_experience as _store_experience, retrieve_similar as _retrieve_experiences
-from supervisor.strategy_evolver import record_outcome as _record_strategy_outcome
+from supervisor.experience_store import (
+    store_experience as _store_experience,
+    store_failed_experience as _store_failed_experience,
+    retrieve_similar as _retrieve_experiences,
+    get_tool_recommendations as _get_tool_recommendations,
+)
+from supervisor.strategy_evolver import (
+    record_outcome as _record_strategy_outcome,
+    should_skip_step as _should_skip_step,
+    record_gap_pattern as _record_gap_pattern,
+)
+from supervisor.gap_aggregator import record_gaps_from_critique as _record_gaps_from_critique
+from supervisor.adaptive_thresholds import (
+    record_critique_outcome as _record_critique_outcome,
+    record_quality_observation as _record_quality_observation,
+    record_step_skip_outcome as _record_step_skip_outcome,
+    record_confidence_outcome as _record_confidence_outcome,
+)
 from workers.mcp_client import McpGateway
 from workers.ops_worker import OpsWorker
 from workers.log_worker import LogWorker
@@ -489,10 +505,38 @@ class SentinalAISupervisor:
                 past_experiences = []
             if past_experiences:
                 evidence["_past_experiences"] = past_experiences
-                logger.info(
-                    "Priming with %d similar past experience(s) for %s/%s",
-                    len(past_experiences), incident_type, service,
-                )
+                # Extract confirmed root causes from similar past successes to prime
+                # hypothesis generation — this is the core experience replay loop.
+                suggested_causes = [
+                    exp.get("root_cause", "") for exp in past_experiences
+                    if exp.get("root_cause") and not exp.get("root_cause", "").startswith("INSUFFICIENT")
+                ]
+                if suggested_causes:
+                    evidence["_suggested_root_causes"] = suggested_causes
+                    logger.info(
+                        "Priming with %d similar past experience(s) for %s/%s; "
+                        "suggested causes: %s",
+                        len(past_experiences), incident_type, service,
+                        suggested_causes[:2],
+                    )
+                else:
+                    logger.info(
+                        "Priming with %d similar past experience(s) for %s/%s",
+                        len(past_experiences), incident_type, service,
+                    )
+
+            # Inject tool recommendations from historical performance
+            try:
+                tool_recs = _get_tool_recommendations(incident_type, service)
+                if tool_recs:
+                    evidence["_tool_recommendations"] = tool_recs
+                    logger.debug(
+                        "Tool recommendations for %s/%s: %s",
+                        incident_type, service,
+                        list(tool_recs.keys())[:5],
+                    )
+            except Exception as exc:
+                logger.debug("Tool recommendations failed (non-critical): %s", exc)
 
             # Collect knowledge graph similar incidents (ran in parallel)
             try:
@@ -501,6 +545,16 @@ class SentinalAISupervisor:
                 kg_similar = []
             if kg_similar:
                 evidence["_kg_similar_incidents"] = kg_similar
+                # Also extract root causes from KG for hypothesis priming
+                kg_causes = [
+                    inc.get("root_cause", "") for inc in kg_similar
+                    if inc.get("root_cause")
+                ]
+                if kg_causes:
+                    existing = evidence.get("_suggested_root_causes", [])
+                    # Merge, dedup, keep top 5
+                    merged = list(dict.fromkeys(existing + kg_causes))[:5]
+                    evidence["_suggested_root_causes"] = merged
                 logger.info(
                     "KG priming: %d similar historical incident(s) for %s/%s",
                     len(kg_similar), incident_type, service,
@@ -557,6 +611,23 @@ class SentinalAISupervisor:
                 )
                 if diff_analysis:
                     evidence["diff_analysis"] = diff_analysis
+
+                    # Step 3f: Git blame pinpoint — if diff analysis identified a
+                    # culprit file + line, run git blame to get exact authorship.
+                    culprit_file = diff_analysis.get("culprit_file", "")
+                    culprit_line = diff_analysis.get("culprit_line")
+                    devops_ctx = evidence.get("devops_context", {})
+                    blame_repo = (
+                        devops_ctx.get("deployments", [{}])[0].get("repo", "")
+                        if devops_ctx.get("deployments") else ""
+                    )
+                    if culprit_file and culprit_line and blame_repo:
+                        blame_result = self._fetch_git_blame(
+                            blame_repo, culprit_file, int(culprit_line),
+                            receipts, budget, circuits,
+                        )
+                        if blame_result:
+                            evidence["git_blame"] = blame_result
 
             # Collect trace correlation (ran concurrently with playbook)
             try:
@@ -641,6 +712,34 @@ class SentinalAISupervisor:
             result["_evidence_snapshot"] = {
                 k: bool(v) for k, v in evidence.items() if not k.startswith("_")
             }
+
+            # Expose git blame pinpoint in result (available to external consumers + RCA report)
+            if evidence.get("git_blame"):
+                blame = evidence["git_blame"]
+                result["git_blame_pinpoint"] = {
+                    "file":   blame.get("culprit_file", ""),
+                    "line":   blame.get("culprit_line"),
+                    "sha":    blame.get("sha", "")[:12],
+                    "author": blame.get("author", ""),
+                    "date":   blame.get("date", ""),
+                    "commit_message": blame.get("message", "")[:120],
+                    "repo":   blame.get("repo", ""),
+                }
+
+            # Expose top ITSM causal change in result for bridge call / runbook
+            if evidence.get("_itsm_change_correlations"):
+                top = evidence["_itsm_change_correlations"][0]
+                if top.get("correlation_score", 0) >= 0.45:
+                    result["causal_change"] = {
+                        "id":           top.get("id", top.get("number", "")),
+                        "title":        top.get("title", top.get("summary", "")),
+                        "change_type":  top.get("change_type", ""),
+                        "risk_level":   top.get("risk_level", ""),
+                        "minutes_before_incident": top.get("minutes_before_incident"),
+                        "correlation_score": top.get("correlation_score"),
+                        "correlation_reason": top.get("correlation_reason", ""),
+                        "commit_sha":   (top.get("matched_commit") or {}).get("sha", ""),
+                    }
 
             # Phase: Observe — span attributes + deep-eval metrics
             self._record_observability(
@@ -751,7 +850,7 @@ class SentinalAISupervisor:
                 service=service,
                 root_cause=result.get("root_cause", ""),
                 confidence=confidence,
-                severity=severity.level if hasattr(severity, "level") else int(severity),
+                severity=severity.level,
                 elapsed_ms=elapsed,
                 tool_calls=budget.calls_made,
                 llm_input_tokens=_llm_m.get("input_tokens", 0),
@@ -804,7 +903,6 @@ class SentinalAISupervisor:
         it has equal-or-higher confidence than the original.
         """
         try:
-            from supervisor.guardrails import MIN_GAP_BUDGET as _gb
             budget_remaining = budget.remaining() if hasattr(budget, "remaining") else 0
         except Exception:
             budget_remaining = 0
@@ -822,11 +920,28 @@ class SentinalAISupervisor:
             if critique.llm_critique:
                 result["_critique"]["llm_narrative"] = critique.llm_critique
 
-            if not critique.gap_queries:
+            # Record gap patterns for aggregation regardless of whether gap queries run
+            try:
+                self._parallel_executor.submit(
+                    _record_gaps_from_critique, incident_type, service, critique,
+                )
+            except Exception:
+                pass
+
+            refinement_triggered = bool(critique.gap_queries)
+
+            if not refinement_triggered:
                 logger.debug(
                     "Self-critique: score=%.2f — no gap queries (budget=%d)",
                     critique.score, budget_remaining,
                 )
+                # Record that refinement was NOT triggered (score above threshold)
+                try:
+                    self._parallel_executor.submit(
+                        _record_critique_outcome, critique.score, False, False,
+                    )
+                except Exception:
+                    pass
                 return result, evidence
 
             logger.info(
@@ -862,7 +977,9 @@ class SentinalAISupervisor:
 
             refined_conf = refined.get("confidence", 0)
             orig_conf = result.get("confidence", 0)
-            if refined_conf >= orig_conf:
+            refinement_helped = refined_conf >= orig_conf
+
+            if refinement_helped:
                 # Merge metadata from original
                 refined["_critique"] = result.get("_critique", {})
                 refined["_critique"]["triggered_refinement"] = True
@@ -874,6 +991,12 @@ class SentinalAISupervisor:
                     "Self-critique refinement improved confidence: %d → %d",
                     orig_conf, refined_conf,
                 )
+                try:
+                    self._parallel_executor.submit(
+                        _record_critique_outcome, critique.score, True, True,
+                    )
+                except Exception:
+                    pass
                 return refined, evidence
             else:
                 result["_critique"]["triggered_refinement"] = True
@@ -881,6 +1004,12 @@ class SentinalAISupervisor:
                     "Self-critique refinement did not improve (orig=%d refined=%d), keeping original",
                     orig_conf, refined_conf,
                 )
+                try:
+                    self._parallel_executor.submit(
+                        _record_critique_outcome, critique.score, True, False,
+                    )
+                except Exception:
+                    pass
                 return result, evidence
 
         except Exception as exc:
@@ -1176,6 +1305,8 @@ class SentinalAISupervisor:
         # These run after every investigation regardless of ground truth availability.
         online_score = result.get("online_quality_score", 0.0)
         receipt_list = receipts.to_list() if receipts else []
+
+        # Positive experience storage (high-quality investigations)
         try:
             self._parallel_executor.submit(
                 _store_experience,
@@ -1183,13 +1314,65 @@ class SentinalAISupervisor:
             )
         except Exception as exc:
             logger.warning("Experience storage failed (non-critical): %s", exc)
+
+        # Negative learning: store failed investigations to learn what NOT to do
+        if online_score < 0.60:
+            root_cause = result.get("root_cause", "")
+            failure_reason = (
+                "low_confidence" if root_cause.startswith("INSUFFICIENT")
+                else "low_online_quality"
+            )
+            try:
+                self._parallel_executor.submit(
+                    _store_failed_experience,
+                    incident_id, incident_type, service, result, online_score, failure_reason,
+                )
+            except Exception as exc:
+                logger.warning("Failed experience storage failed (non-critical): %s", exc)
+
+        # Evolve strategy weights with per-service context
         try:
             self._parallel_executor.submit(
                 _record_strategy_outcome,
-                incident_type, receipt_list, online_score,
+                incident_type, receipt_list, online_score, service,
             )
         except Exception as exc:
             logger.warning("Strategy outcome recording failed (non-critical): %s", exc)
+
+        # Propagate gap patterns to strategy evolver (penalise consistently-missing steps)
+        critique_data = result.get("_critique", {})
+        critique_gaps = critique_data.get("gaps", [])
+        if critique_gaps:
+            try:
+                from supervisor.gap_aggregator import _parse_gap_categories
+                gap_cats = _parse_gap_categories(critique_gaps)
+                if gap_cats:
+                    self._parallel_executor.submit(
+                        _record_gap_pattern, incident_type, service, gap_cats,
+                    )
+            except Exception as exc:
+                logger.debug("Gap pattern strategy update failed (non-critical): %s", exc)
+
+        # Adaptive threshold: record quality observation for STORE_QUALITY_THRESHOLD
+        experience_stored = online_score >= 0.60
+        try:
+            self._parallel_executor.submit(
+                _record_quality_observation, online_score, experience_stored,
+            )
+        except Exception as exc:
+            logger.debug("Adaptive threshold quality obs failed (non-critical): %s", exc)
+
+        # Adaptive threshold: record confidence outcome for MIN_CONFIDENCE_TO_ACT
+        confidence = result.get("confidence", 0)
+        root_cause = result.get("root_cause", "")
+        # A result is "correct" if it has a non-empty, non-INSUFFICIENT root cause
+        was_correct = bool(root_cause) and not root_cause.startswith(("INSUFFICIENT", "LOW CONFIDENCE"))
+        try:
+            self._parallel_executor.submit(
+                _record_confidence_outcome, float(confidence), was_correct,
+            )
+        except Exception as exc:
+            logger.debug("Adaptive confidence outcome failed (non-critical): %s", exc)
 
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
@@ -1562,6 +1745,56 @@ class SentinalAISupervisor:
 
         return None
 
+    def _fetch_git_blame(
+        self,
+        repo: str,
+        path: str,
+        line: int,
+        receipts: Any | None,
+        budget: Any | None,
+        circuits: Any | None,
+        context_lines: int = 5,
+    ) -> dict | None:
+        """Run git blame on a specific file+line to pinpoint the breaking author.
+
+        Called after diff_analysis identifies a culprit_file + culprit_line.
+        Returns blame dict with: sha, author, date, message, lines, or None.
+
+        This is the final step in the git causation chain:
+          deployment → breaking_commit → diff_analysis → git_blame
+        giving full pinpoint precision from incident to the exact lines and author.
+        """
+        git_worker = self.workers.get("git_worker")
+        if git_worker is None or not budget or not budget.can_call():
+            return None
+
+        try:
+            blame = self._call_worker(
+                git_worker, "git_blame_line", {
+                    "repo": repo,
+                    "path": path,
+                    "line_start": max(1, line - context_lines),
+                    "line_end": line + context_lines,
+                },
+                receipts, budget, "git_worker", circuits=circuits,
+            )
+            if blame and "error" not in blame:
+                logger.info(
+                    "Git blame pinpoint: %s:%d → sha=%s author=%s",
+                    path, line,
+                    str(blame.get("sha", ""))[:8],
+                    blame.get("author", "?"),
+                )
+                return {
+                    **blame,
+                    "culprit_file": path,
+                    "culprit_line": line,
+                    "repo": repo,
+                }
+        except Exception as exc:
+            logger.debug("Git blame fetch failed (non-critical): %s", exc)
+        return None
+
     def _extract_error_context(self, evidence: dict) -> str:
         """Build a concise error context string from Splunk/APM evidence."""
         parts: list[str] = []
@@ -1569,7 +1802,7 @@ class SentinalAISupervisor:
         # Splunk logs
         log_evidence = evidence.get("logs", evidence.get("log_data", {}))
         if isinstance(log_evidence, dict):
-            logs = log_evidence.get("logs", log_evidence.get("results", []))
+            logs: list = log_evidence.get("logs") or log_evidence.get("results") or []
         elif isinstance(log_evidence, list):
             logs = log_evidence
         else:
@@ -1583,7 +1816,7 @@ class SentinalAISupervisor:
         # APM errors
         apm_evidence = evidence.get("apm_data", evidence.get("apm", {}))
         if isinstance(apm_evidence, dict):
-            errors = apm_evidence.get("errors", apm_evidence.get("error_samples", []))
+            errors: list = apm_evidence.get("errors") or apm_evidence.get("error_samples") or []
             for err in errors[:3]:
                 trace = err.get("stack_trace", err.get("exception", ""))
                 if trace:
@@ -1740,6 +1973,26 @@ class SentinalAISupervisor:
         playbook = get_evolved_playbook(incident_type)  # applies learned step weights
         cb_registry = circuits or circuit_registry
         loop_checkpoint = LoopCheckpoint()
+
+        # Filter out steps whose evolved weight has dropped below the skip threshold.
+        # Records adaptive threshold feedback for each skipped step.
+        filtered_playbook = []
+        for step in playbook:
+            step_label = step.get("label", step.get("action", ""))
+            if _should_skip_step(incident_type, step_label, service):
+                logger.info(
+                    "Skipping low-weight step: %s (type=%s service=%s)",
+                    step_label, incident_type, service,
+                )
+                try:
+                    self._parallel_executor.submit(
+                        _record_step_skip_outcome, True, 0.0, 0.0,
+                    )
+                except Exception:
+                    pass
+            else:
+                filtered_playbook.append(step)
+        playbook = filtered_playbook
 
         if not self._parallel_playbook:
             return self._execute_playbook_sequential(
@@ -1982,12 +2235,61 @@ class SentinalAISupervisor:
         self._tls.itsm_evidence = self._extract_itsm_context(evidence)
         self._tls.devops_evidence = self._extract_devops_context(evidence)
 
+        # ITSM change window correlation: find which change caused the incident.
+        # Runs on every investigation that has ITSM context; non-blocking.
+        incident_time = incident.get("start_time", incident.get("created_at", ""))
+        itsm_changes = []
+        if self._tls.itsm_evidence:
+            itsm_changes = (
+                self._tls.itsm_evidence.get("recent_changes", [])
+                or self._tls.itsm_evidence.get("change_records", [])
+            )
+        if itsm_changes and incident_time:
+            try:
+                from supervisor.itsm_change_correlator import correlate_change_window
+                git_commits = (
+                    evidence.get("git_context", {}).get("commits", [])
+                    if evidence.get("git_context") else []
+                )
+                correlated = correlate_change_window(
+                    incident_time, itsm_changes, service, git_commits=git_commits,
+                )
+                if correlated:
+                    evidence["_itsm_change_correlations"] = correlated
+                    # Inject the top causal change into changes so analyzers see it
+                    top_change = correlated[0]
+                    if top_change.get("correlation_score", 0) >= 0.50:
+                        changes.insert(0, {
+                            "change_type": top_change.get("change_type", "itsm_change"),
+                            "description": (
+                                f"[ITSM] {top_change.get('title', top_change.get('id', '?'))}"
+                                f" — {top_change.get('correlation_reason', '')}"
+                            ),
+                            "time": top_change.get("start_time", ""),
+                            "source": "itsm_correlator",
+                            "correlation_score": top_change["correlation_score"],
+                        })
+                        logger.info(
+                            "ITSM change window: most likely causal change '%s' "
+                            "(score=%.2f, %d min before incident)",
+                            top_change.get("id", "?"),
+                            top_change["correlation_score"],
+                            top_change.get("minutes_before_incident", 0),
+                        )
+            except Exception as exc:
+                logger.debug("ITSM change window correlation failed (non-critical): %s", exc)
+
         # Build timeline from all sources
         timeline = self._build_timeline(logs, signals, metrics, events, changes, incident_type, service)
 
-        # W2: Multi-hypothesis scoring
+        # Extract historical context from experience replay
+        suggested_root_causes: list[str] = evidence.get("_suggested_root_causes", [])
+        tool_recommendations: dict[str, float] = evidence.get("_tool_recommendations", {})
+
+        # W2: Multi-hypothesis scoring — include historical priming
         hypotheses = self._generate_hypotheses(
             incident_type, service, summary, logs, signals, metrics, events, changes, timeline,
+            suggested_root_causes=suggested_root_causes,
         )
 
         # W3: Evidence-weighted confidence for each hypothesis
@@ -2004,6 +2306,8 @@ class SentinalAISupervisor:
             llm_metrics = self._llm_refine_hypotheses(
                 incident_type, service, summary, hypotheses,
                 logs, signals, metrics, events, changes,
+                suggested_root_causes=suggested_root_causes,
+                tool_recommendations=tool_recommendations,
             )
 
         # W2: Select winner — highest score, deterministic tiebreak by name
@@ -2095,10 +2399,16 @@ class SentinalAISupervisor:
         metrics: dict,
         events: list[dict],
         changes: list[dict],
+        suggested_root_causes: list[str] | None = None,
+        tool_recommendations: dict[str, float] | None = None,
     ) -> dict:
         """Use LLM to refine and re-rank hypotheses. Returns GenAI metrics."""
         try:
-            evidence_summary = self._format_evidence_summary(logs, signals, metrics, events, changes)
+            evidence_summary = self._format_evidence_summary(
+                logs, signals, metrics, events, changes,
+                suggested_root_causes=suggested_root_causes,
+                tool_recommendations=tool_recommendations,
+            )
             hyp_dicts = [
                 {"name": h.name, "root_cause": h.root_cause, "score": h.base_score, "reasoning": h.reasoning}
                 for h in hypotheses
@@ -2184,8 +2494,14 @@ class SentinalAISupervisor:
         metrics: dict,
         events: list[dict],
         changes: list[dict],
+        suggested_root_causes: list[str] | None = None,
+        tool_recommendations: dict[str, float] | None = None,
     ) -> str:
-        """Format evidence into a concise summary for LLM prompts."""
+        """Format evidence into a concise summary for LLM prompts.
+
+        Includes historical context (suggested root causes from similar past incidents
+        and tool recommendations) so the LLM can weight them appropriately.
+        """
         parts = []
         if logs:
             parts.append(f"Logs: {len(logs)} entries")
@@ -2205,6 +2521,17 @@ class SentinalAISupervisor:
             parts.append(f"Changes: {len(changes)} entries")
             for ch in changes[:2]:
                 parts.append(f"  - {ch.get('change_type', '?')}: {ch.get('description', '')[:100]}")
+
+        # Historical context from experience replay — gives LLM prior probabilities
+        if suggested_root_causes:
+            parts.append(
+                "Historical context (similar past incidents): root causes were — "
+                + "; ".join(f'"{c}"' for c in suggested_root_causes[:3])
+            )
+        if tool_recommendations:
+            top_keys = [k for k, v in sorted(tool_recommendations.items(), key=lambda x: -x[1])[:3]]
+            parts.append(f"Evidence sources that historically help: {', '.join(top_keys)}")
+
         return "\n".join(parts) if parts else "No evidence collected"
 
     # ------------------------------------------------------------------ #
@@ -2222,10 +2549,14 @@ class SentinalAISupervisor:
         events: list[dict],
         changes: list[dict],
         timeline: list[dict],
+        suggested_root_causes: list[str] | None = None,
     ) -> list[Hypothesis]:
         """Generate scored hypotheses from type-specific analyzers.
 
         Each analyzer returns one or more Hypothesis objects.
+        Historical root causes from experience replay are injected as
+        additional hypotheses (score 55) so they compete fairly with
+        deterministic hypotheses but yield to strong evidence-based ones.
         """
         analyzers = {
             "timeout": self._analyze_timeout,
@@ -2241,7 +2572,28 @@ class SentinalAISupervisor:
         }
 
         analyzer = analyzers.get(incident_type, self._analyze_generic)
-        return analyzer(service, summary, logs, signals, metrics, events, changes, timeline)
+        hypotheses = analyzer(service, summary, logs, signals, metrics, events, changes, timeline)
+
+        # Inject historical priming: past confirmed root causes from similar incidents
+        # compete as additional hypotheses (base score 55 — plausible but not dominant).
+        if suggested_root_causes:
+            existing_causes = {h.root_cause.lower() for h in hypotheses}
+            for cause in suggested_root_causes[:3]:  # top 3 to avoid noise
+                if cause.lower() not in existing_causes:
+                    hypotheses.append(Hypothesis(
+                        name="historical_pattern",
+                        root_cause=cause,
+                        base_score=55,
+                        evidence_refs=["_past_experiences"],
+                        reasoning=(
+                            f"Historical pattern: similar {incident_type} incidents "
+                            f"in {service} were previously diagnosed as '{cause}'. "
+                            "Confidence elevated if current evidence matches."
+                        ),
+                    ))
+                    logger.debug("Primed hypothesis from experience: %s", cause[:80])
+
+        return hypotheses
 
     # -- Timeout -------------------------------------------------------- #
 

@@ -6,9 +6,25 @@ is incomplete, absent, or doesn't match the primary detection pattern.
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
 
 from supervisor.agent import SentinalAISupervisor
+
+
+@pytest.fixture(autouse=True)
+def _no_hypothesis_priming():
+    """Disable experience-replay / KG / tool-recommendation priming.
+
+    These tests verify raw analyzer branch behaviour given exactly the
+    mocked evidence they set up.  Priming hypotheses from persisted past
+    investigations (experience_store.json, knowledge_graph.json, etc.)
+    would inject additional candidate root causes that change the winner,
+    defeating the branch under test.
+    """
+    with patch("supervisor.agent._retrieve_experiences", return_value=[]), \
+         patch("supervisor.agent._get_tool_recommendations", return_value={}), \
+         patch("supervisor.agent._kg_query_similar", return_value=[]):
+        yield
 
 
 def _make_supervisor_with_data(incident_data, log_data=None, signals_data=None,

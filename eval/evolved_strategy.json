@@ -92,8 +92,8 @@
     }
   },
   "_meta": {
-    "last_updated": "2026-04-11T23:29:39.166488+00:00",
-    "total_updates": 957
+    "last_updated": "2026-04-19T05:12:16.531751+00:00",
+    "total_updates": 961
   },
   "missing_data": {
     "get_incident_by_id": {
@@ -785,70 +785,70 @@
   },
   "network": {
     "get_incident_by_id": {
-      "weight": 1.1066,
-      "calls": 57,
-      "ema_signal": 1.1066,
-      "last_updated": "2026-04-11T23:29:39.166432+00:00"
+      "weight": 1.1286,
+      "calls": 59,
+      "ema_signal": 1.1286,
+      "last_updated": "2026-04-19T05:12:16.488744+00:00"
     },
     "get_ci_details": {
-      "weight": 1.1066,
-      "calls": 57,
-      "ema_signal": 1.1066,
-      "last_updated": "2026-04-11T23:29:39.166444+00:00"
+      "weight": 1.1286,
+      "calls": 59,
+      "ema_signal": 1.1286,
+      "last_updated": "2026-04-19T05:12:16.488755+00:00"
     },
     "get_known_errors": {
-      "weight": 1.1066,
-      "calls": 57,
-      "ema_signal": 1.1066,
-      "last_updated": "2026-04-11T23:29:39.166448+00:00"
+      "weight": 1.1286,
+      "calls": 59,
+      "ema_signal": 1.1286,
+      "last_updated": "2026-04-19T05:12:16.488758+00:00"
     },
     "search_incidents": {
-      "weight": 1.1066,
-      "calls": 57,
-      "ema_signal": 1.1066,
-      "last_updated": "2026-04-11T23:29:39.166452+00:00"
+      "weight": 1.1286,
+      "calls": 59,
+      "ema_signal": 1.1286,
+      "last_updated": "2026-04-19T05:12:16.488761+00:00"
     },
     "search_runbooks": {
-      "weight": 1.1066,
-      "calls": 57,
-      "ema_signal": 1.1066,
-      "last_updated": "2026-04-11T23:29:39.166455+00:00"
+      "weight": 1.1286,
+      "calls": 59,
+      "ema_signal": 1.1286,
+      "last_updated": "2026-04-19T05:12:16.488764+00:00"
     },
     "search_postmortems": {
-      "weight": 1.1066,
-      "calls": 57,
-      "ema_signal": 1.1066,
-      "last_updated": "2026-04-11T23:29:39.166458+00:00"
+      "weight": 1.1286,
+      "calls": 59,
+      "ema_signal": 1.1286,
+      "last_updated": "2026-04-19T05:12:16.488767+00:00"
     },
     "search_similar": {
-      "weight": 1.1066,
-      "calls": 57,
-      "ema_signal": 1.1066,
-      "last_updated": "2026-04-11T23:29:39.166461+00:00"
+      "weight": 1.1286,
+      "calls": 59,
+      "ema_signal": 1.1286,
+      "last_updated": "2026-04-19T05:12:16.488769+00:00"
     },
     "search_logs": {
-      "weight": 1.1066,
-      "calls": 57,
-      "ema_signal": 1.1066,
-      "last_updated": "2026-04-11T23:29:39.166464+00:00"
+      "weight": 0.9531,
+      "calls": 61,
+      "ema_signal": 0.9531,
+      "last_updated": "2026-04-19T05:12:16.531727+00:00"
     },
     "get_golden_signals": {
-      "weight": 1.1066,
-      "calls": 57,
-      "ema_signal": 1.1066,
-      "last_updated": "2026-04-11T23:29:39.166467+00:00"
+      "weight": 0.9531,
+      "calls": 61,
+      "ema_signal": 0.9531,
+      "last_updated": "2026-04-19T05:12:16.531732+00:00"
     },
     "get_change_records": {
-      "weight": 1.1066,
-      "calls": 57,
-      "ema_signal": 1.1066,
-      "last_updated": "2026-04-11T23:29:39.166470+00:00"
+      "weight": 1.1286,
+      "calls": 59,
+      "ema_signal": 1.1286,
+      "last_updated": "2026-04-19T05:12:16.488787+00:00"
     },
     "get_change_data": {
-      "weight": 1.1066,
-      "calls": 57,
-      "ema_signal": 1.1066,
-      "last_updated": "2026-04-11T23:29:39.166473+00:00"
+      "weight": 1.1286,
+      "calls": 59,
+      "ema_signal": 1.1286,
+      "last_updated": "2026-04-19T05:12:16.488789+00:00"
     },
     "get_recent_deployments": {
       "weight": 1.1083,
@@ -863,16 +863,132 @@
       "last_updated": "2026-04-11T23:29:39.166479+00:00"
     },
     "get_k8s_events": {
-      "weight": 1.109,
-      "calls": 31,
-      "ema_signal": 1.109,
-      "last_updated": "2026-04-11T23:29:39.166483+00:00"
+      "weight": 1.1305,
+      "calls": 33,
+      "ema_signal": 1.1305,
+      "last_updated": "2026-04-19T05:12:16.488792+00:00"
     },
     "get_error_logs": {
-      "weight": 1.109,
-      "calls": 31,
-      "ema_signal": 1.109,
-      "last_updated": "2026-04-11T23:29:39.166486+00:00"
+      "weight": 1.1305,
+      "calls": 33,
+      "ema_signal": 1.1305,
+      "last_updated": "2026-04-19T05:12:16.488795+00:00"
+    },
+    "get_service_metrics": {
+      "weight": 0.3,
+      "calls": 4,
+      "ema_signal": 0.3,
+      "last_updated": "2026-04-19T05:12:16.531745+00:00"
+    },
+    "get_apm_data": {
+      "weight": 0.3,
+      "calls": 2,
+      "ema_signal": 0.3,
+      "last_updated": "2026-04-19T05:12:16.531714+00:00"
+    },
+    "get_recent_errors": {
+      "weight": 0.3,
+      "calls": 2,
+      "ema_signal": 0.3,
+      "last_updated": "2026-04-19T05:12:16.531721+00:00"
+    }
+  },
+  "_service_weights": {
+    "network.get_incident_by_id.inventory-service": {
+      "weight": 1.0,
+      "calls": 2,
+      "ema_signal": null,
+      "last_updated": "2026-04-19T05:12:16.488798+00:00"
+    },
+    "network.get_ci_details.inventory-service": {
+      "weight": 1.0,
+      "calls": 2,
+      "ema_signal": null,
+      "last_updated": "2026-04-19T05:12:16.488801+00:00"
+    },
+    "network.get_known_errors.inventory-service": {
+      "weight": 1.0,
+      "calls": 2,
+      "ema_signal": null,
+      "last_updated": "2026-04-19T05:12:16.488803+00:00"
+    },
+    "network.search_incidents.inventory-service": {
+      "weight": 1.0,
+      "calls": 2,
+      "ema_signal": null,
+      "last_updated": "2026-04-19T05:12:16.488804+00:00"
+    },
+    "network.search_runbooks.inventory-service": {
+      "weight": 1.0,
+      "calls": 2,
+      "ema_signal": null,
+      "last_updated": "2026-04-19T05:12:16.488806+00:00"
+    },
+    "network.search_postmortems.inventory-service": {
+      "weight": 1.0,
+      "calls": 2,
+      "ema_signal": null,
+      "last_updated": "2026-04-19T05:12:16.488807+00:00"
+    },
+    "network.search_similar.inventory-service": {
+      "weight": 1.0,
+      "calls": 2,
+      "ema_signal": null,
+      "last_updated": "2026-04-19T05:12:16.488809+00:00"
+    },
+    "network.search_logs.inventory-service": {
+      "weight": 0.3,
+      "calls": 4,
+      "ema_signal": 0.3,
+      "last_updated": "2026-04-19T05:12:16.531730+00:00"
+    },
+    "network.get_golden_signals.inventory-service": {
+      "weight": 0.3,
+      "calls": 4,
+      "ema_signal": 0.3,
+      "last_updated": "2026-04-19T05:12:16.531735+00:00"
+    },
+    "network.get_change_records.inventory-service": {
+      "weight": 1.0,
+      "calls": 2,
+      "ema_signal": null,
+      "last_updated": "2026-04-19T05:12:16.488813+00:00"
+    },
+    "network.get_change_data.inventory-service": {
+      "weight": 1.0,
+      "calls": 2,
+      "ema_signal": null,
+      "last_updated": "2026-04-19T05:12:16.488815+00:00"
+    },
+    "network.get_k8s_events.inventory-service": {
+      "weight": 1.0,
+      "calls": 2,
+      "ema_signal": null,
+      "last_updated": "2026-04-19T05:12:16.488816+00:00"
+    },
+    "network.get_error_logs.inventory-service": {
+      "weight": 1.0,
+      "calls": 2,
+      "ema_signal": null,
+      "last_updated": "2026-04-19T05:12:16.488818+00:00"
+    },
+    "network.get_service_metrics.inventory-service": {
+      "weight": 0.3,
+      "calls": 4,
+      "ema_signal": 0.3,
+      "last_updated": "2026-04-19T05:12:16.531749+00:00"
+    },
+    "network.get_apm_data.inventory-service": {
+      "weight": 0.3,
+      "calls": 2,
+      "ema_signal": 0.3,
+      "last_updated": "2026-04-19T05:12:16.531718+00:00"
+    },
+    "network.get_recent_errors.inventory-service": {
+      "weight": 0.3,
+      "calls": 2,
+      "ema_signal": 0.3,
+      "last_updated": "2026-04-19T05:12:16.531724+00:00"
     }
   }
 }

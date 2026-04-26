@@ -411,32 +411,42 @@ class TestSupervisorWithMocks:
 
     def test_all_incidents_pass(self):
         """Meta-test: every test incident must produce a valid RCA."""
+        import supervisor.agent as _sa
+        from unittest.mock import patch
         incidents = list(ALL_MOCKS.keys())
         failures = []
 
-        for incident_id in incidents:
-            expected = EXPECTED_RCA[incident_id]
-            _build_mock_workers(self.supervisor, incident_id)
+        # Prevent KG and experience-store contamination across incidents.
+        # New stub incidents (INC12355+) have sparse mock data; without this
+        # isolation the KG primes hypotheses from prior incidents in the loop,
+        # producing the wrong root cause for later incidents.
+        with patch.object(_sa, "_retrieve_experiences", return_value=[]), \
+             patch.object(_sa, "_kg_query_similar", return_value=[]), \
+             patch.object(_sa, "_store_experience", return_value=None), \
+             patch.object(_sa, "_store_failed_experience", return_value=None):
+            for incident_id in incidents:
+                expected = EXPECTED_RCA[incident_id]
+                _build_mock_workers(self.supervisor, incident_id)
 
-            try:
-                result = self.supervisor.investigate(incident_id)
-                passed = (
-                    "root_cause" in result
-                    and "confidence" in result
-                    and result["confidence"] >= expected["confidence_min"]
-                    and all(
-                        kw.lower() in result["root_cause"].lower()
-                        for kw in expected["root_cause_keywords"]
+                try:
+                    result = self.supervisor.investigate(incident_id)
+                    passed = (
+                        "root_cause" in result
+                        and "confidence" in result
+                        and result["confidence"] >= expected["confidence_min"]
+                        and all(
+                            kw.lower() in result["root_cause"].lower()
+                            for kw in expected["root_cause_keywords"]
+                        )
                     )
-                )
-                if not passed:
-                    failures.append(
-                        f"{incident_id}: keywords or confidence mismatch "
-                        f"(confidence={result.get('confidence')}, "
-                        f"root_cause={result.get('root_cause', '')!r})"
-                    )
-            except Exception as exc:
-                failures.append(f"{incident_id}: {exc}")
+                    if not passed:
+                        failures.append(
+                            f"{incident_id}: keywords or confidence mismatch "
+                            f"(confidence={result.get('confidence')}, "
+                            f"root_cause={result.get('root_cause', '')!r})"
+                        )
+                except Exception as exc:
+                    failures.append(f"{incident_id}: {exc}")
 
         assert not failures, "Failed incidents:\n" + "\n".join(failures)
 

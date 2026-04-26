@@ -45,6 +45,11 @@ from agui.api.control import router as control_router
 from agui.api.learning import router as learning_router
 from agui.api.metrics import router as metrics_router
 from agui.api.intake import router as intake_router
+from agui.api.slack import router as slack_router
+from agui.api.intelligence import router as intelligence_router
+from agui.api.handoff import router as handoff_router
+from agui.api.postmortem import router as postmortem_router
+from agui.api.blast_radius_api import router as blast_radius_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -99,6 +104,11 @@ def create_app() -> FastAPI:
     app.include_router(learning_router)
     app.include_router(metrics_router)
     app.include_router(intake_router)
+    app.include_router(slack_router)
+    app.include_router(intelligence_router)
+    app.include_router(handoff_router)
+    app.include_router(postmortem_router)
+    app.include_router(blast_radius_router)
 
     # ── Health endpoints ──────────────────────────────────────────────────
     @app.get("/api/v1/health", tags=["health"])
@@ -238,6 +248,21 @@ async def startup_event() -> None:
             return await state_store.get_events(investigation_id, since_seq)
 
     bus.set_backend(StateBusBackend())
+
+    # Start sentinel loop if enabled
+    try:
+        from supervisor.sentinel_loop import start_sentinel_loop
+        import os
+        sentinel_services_raw = os.getenv("SENTINEL_SERVICES", "")
+        sentinel_services = [s.strip() for s in sentinel_services_raw.split(",") if s.strip()]
+        if sentinel_services:
+            start_sentinel_loop(services=sentinel_services)
+            logger.info("Sentinel loop started for %d service(s)", len(sentinel_services))
+        else:
+            logger.info("Sentinel loop disabled (set SENTINEL_SERVICES to enable)")
+    except Exception as exc:
+        logger.warning("Sentinel loop failed to start: %s", exc)
+
     logger.info("AG UI BFF ready on port %d", BFF_PORT)
 
 

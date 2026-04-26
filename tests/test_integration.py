@@ -147,7 +147,21 @@ class TestOutputQuality:
     """Validate the quality of RCA outputs across all incidents."""
 
     def setup_method(self):
+        import supervisor.agent as _sa
+        from unittest.mock import patch
+        self._patches = [
+            patch.object(_sa, "_retrieve_experiences", return_value=[]),
+            patch.object(_sa, "_kg_query_similar", return_value=[]),
+            patch.object(_sa, "_store_experience", return_value=None),
+            patch.object(_sa, "_store_failed_experience", return_value=None),
+        ]
+        for p in self._patches:
+            p.start()
         self.supervisor = SentinalAISupervisor()
+
+    def teardown_method(self):
+        for p in self._patches:
+            p.stop()
 
     @pytest.mark.parametrize("incident_id", list(ALL_MOCKS.keys()))
     def test_root_cause_keywords(self, incident_id):

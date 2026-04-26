@@ -79,6 +79,198 @@
       "affected_service": "recommendation-service",
       "expected_root_cause_service": "data-pipeline",
       "severity": "Medium"
+    },
+    {
+      "incident_id": "INC12355",
+      "type": "error_spike",
+      "summary": "K8s CrashLoopBackOff: cart-service pods restarting",
+      "affected_service": "cart-service",
+      "expected_root_cause_service": "cart-service",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12356",
+      "type": "cascading",
+      "summary": "K8s node eviction storm: production cluster",
+      "affected_service": "checkout-service",
+      "expected_root_cause_service": "kube-scheduler",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12357",
+      "type": "network",
+      "summary": "TLS certificate expired: api.payments.internal",
+      "affected_service": "payment-service",
+      "expected_root_cause_service": "payment-service",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12358",
+      "type": "saturation",
+      "summary": "Disk I/O saturation: order-db IOPS exhausted",
+      "affected_service": "order-service",
+      "expected_root_cause_service": "order-db",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12359",
+      "type": "network",
+      "summary": "NTP clock skew: distributed lock TTL broken",
+      "affected_service": "inventory-service",
+      "expected_root_cause_service": "inventory-service",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12360",
+      "type": "cascading",
+      "summary": "AWS S3 partial degradation: media uploads failing",
+      "affected_service": "media-service",
+      "expected_root_cause_service": "aws-s3",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12361",
+      "type": "timeout",
+      "summary": "File descriptor leak: api-gateway FD exhaustion",
+      "affected_service": "api-gateway",
+      "expected_root_cause_service": "api-gateway",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12362",
+      "type": "latency",
+      "summary": "PostgreSQL replication lag: read replicas 45min behind",
+      "affected_service": "reporting-service",
+      "expected_root_cause_service": "postgres-primary",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12363",
+      "type": "latency",
+      "summary": "Postgres autovacuum blocked: table bloat causing full scans",
+      "affected_service": "analytics-service",
+      "expected_root_cause_service": "postgres",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12364",
+      "type": "cascading",
+      "summary": "Redis eviction storm: maxmemory allkeys-lru evicting sessions",
+      "affected_service": "session-service",
+      "expected_root_cause_service": "redis",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12365",
+      "type": "saturation",
+      "summary": "JVM thread deadlock: payment-processor zero throughput",
+      "affected_service": "payment-processor",
+      "expected_root_cause_service": "payment-processor",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12366",
+      "type": "silent_failure",
+      "summary": "Goroutine leak: notification-service memory growing",
+      "affected_service": "notification-service",
+      "expected_root_cause_service": "notification-service",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12367",
+      "type": "error_spike",
+      "summary": "Feature flag regression: dark-launch-v2 rolled to 100%",
+      "affected_service": "checkout-service",
+      "expected_root_cause_service": "checkout-service",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12368",
+      "type": "error_spike",
+      "summary": "Transitive dependency: guava version conflict NoSuchMethodError",
+      "affected_service": "data-service",
+      "expected_root_cause_service": "data-service",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12369",
+      "type": "error_spike",
+      "summary": "Avro schema mismatch: producer v7 consumer still on v6",
+      "affected_service": "event-consumer",
+      "expected_root_cause_service": "schema-registry",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12370",
+      "type": "network",
+      "summary": "BGP route flap: packet loss bursts every 4 minutes",
+      "affected_service": "edge-router",
+      "expected_root_cause_service": "bgp-peer",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12371",
+      "type": "saturation",
+      "summary": "DDoS traffic flood: checkout endpoint 847K rps",
+      "affected_service": "checkout-service",
+      "expected_root_cause_service": "checkout-service",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12372",
+      "type": "network",
+      "summary": "Istio mTLS cert rotation: 3 services missed CA update",
+      "affected_service": "service-mesh",
+      "expected_root_cause_service": "istio",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12373",
+      "type": "error_spike",
+      "summary": "Rate limiter misconfiguration: internal services throttled at 100rps",
+      "affected_service": "api-gateway",
+      "expected_root_cause_service": "api-gateway",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12374",
+      "type": "cascading",
+      "summary": "Thundering herd: nightly cache flush saturated product-db",
+      "affected_service": "product-service",
+      "expected_root_cause_service": "product-db",
+      "severity": "Critical"
+    },
+    {
+      "incident_id": "INC12375",
+      "type": "error_spike",
+      "summary": "Blue/green stuck at 50%: recommendation-service v2.4.1 broken",
+      "affected_service": "recommendation-service",
+      "expected_root_cause_service": "recommendation-service",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12376",
+      "type": "silent_failure",
+      "summary": "Kafka consumer lag: fraud-detection stalled on poison pill",
+      "affected_service": "fraud-detection",
+      "expected_root_cause_service": "kafka",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12377",
+      "type": "saturation",
+      "summary": "Noisy neighbor: analytics job starving billing-service on shared RDS",
+      "affected_service": "billing-service",
+      "expected_root_cause_service": "rds-shared",
+      "severity": "High"
+    },
+    {
+      "incident_id": "INC12378",
+      "type": "timeout",
+      "summary": "Third-party API degradation: Stripe elevated latency eu-west-1",
+      "affected_service": "payment-service",
+      "expected_root_cause_service": "stripe-api",
+      "severity": "High"
     }
   ]
 }

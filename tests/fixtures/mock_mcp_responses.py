@@ -974,6 +974,1687 @@ INCIDENT_INC12354_MOCKS = {
     },
 }
 
+
+INCIDENT_INC12355_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12355",
+        "number": "INC0012355",
+        "summary": "K8s CrashLoopBackOff: cart-service pods restarting",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "cart-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12355": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "cart-service-01",
+                "level": "ERROR",
+                "message": "incident type: error_spike on cart-service — root cause investigation triggered",
+                "service": "cart-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_cart_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "error_spike",
+    },
+    "sysdig.query_metrics_cart_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "error_spike_pattern",
+    },
+    "moogsoft.get_events_cart_service": {
+        "events": [
+            {
+                "type": "error_spike",
+                "severity": "high",
+                "message": "error_spike detected on cart-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_cart_service": {
+        "change_records": [
+            {
+                "number": "CHG0012355",
+                "type": "deployment",
+                "short_description": "Recent change on cart-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12356_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12356",
+        "number": "INC0012356",
+        "summary": "K8s node eviction storm: production cluster",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "checkout-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12356": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "k8s-cluster-01",
+                "level": "ERROR",
+                "message": "incident type: cascading on k8s-cluster — root cause investigation triggered",
+                "service": "k8s-cluster",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_k8s_cluster": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "cascading",
+    },
+    "sysdig.query_metrics_k8s_cluster": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "cascading_pattern",
+    },
+    "moogsoft.get_events_k8s_cluster": {
+        "events": [
+            {
+                "type": "cascading",
+                "severity": "high",
+                "message": "cascading detected on k8s-cluster",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_k8s_cluster": {
+        "change_records": [
+            {
+                "number": "CHG0012356",
+                "type": "deployment",
+                "short_description": "Recent change on k8s-cluster",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12357_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12357",
+        "number": "INC0012357",
+        "summary": "TLS certificate expired: api.payments.internal",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "payment-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12357": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "payment-service-01",
+                "level": "ERROR",
+                "message": "incident type: network on payment-service — root cause investigation triggered",
+                "service": "payment-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_payment_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "network",
+    },
+    "sysdig.query_metrics_payment_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "network_pattern",
+    },
+    "moogsoft.get_events_payment_service": {
+        "events": [
+            {
+                "type": "network",
+                "severity": "high",
+                "message": "network detected on payment-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_payment_service": {
+        "change_records": [
+            {
+                "number": "CHG0012357",
+                "type": "deployment",
+                "short_description": "Recent change on payment-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12358_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12358",
+        "number": "INC0012358",
+        "summary": "Disk I/O saturation: order-db IOPS exhausted",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "order-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12358": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "order-service-01",
+                "level": "ERROR",
+                "message": "incident type: saturation on order-service — root cause investigation triggered",
+                "service": "order-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_order_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "saturation",
+    },
+    "sysdig.query_metrics_order_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "saturation_pattern",
+    },
+    "moogsoft.get_events_order_service": {
+        "events": [
+            {
+                "type": "saturation",
+                "severity": "high",
+                "message": "saturation detected on order-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_order_service": {
+        "change_records": [
+            {
+                "number": "CHG0012358",
+                "type": "deployment",
+                "short_description": "Recent change on order-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12359_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12359",
+        "number": "INC0012359",
+        "summary": "NTP clock skew: distributed lock TTL broken",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "inventory-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12359": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "inventory-service-01",
+                "level": "ERROR",
+                "message": "incident type: network on inventory-service — root cause investigation triggered",
+                "service": "inventory-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_inventory_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "network",
+    },
+    "sysdig.query_metrics_inventory_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "network_pattern",
+    },
+    "moogsoft.get_events_inventory_service": {
+        "events": [
+            {
+                "type": "network",
+                "severity": "high",
+                "message": "network detected on inventory-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_inventory_service": {
+        "change_records": [
+            {
+                "number": "CHG0012359",
+                "type": "deployment",
+                "short_description": "Recent change on inventory-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12360_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12360",
+        "number": "INC0012360",
+        "summary": "AWS S3 partial degradation: media uploads failing",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "media-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12360": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "media-service-01",
+                "level": "ERROR",
+                "message": "incident type: cascading on media-service — root cause investigation triggered",
+                "service": "media-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_media_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "cascading",
+    },
+    "sysdig.query_metrics_media_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "cascading_pattern",
+    },
+    "moogsoft.get_events_media_service": {
+        "events": [
+            {
+                "type": "cascading",
+                "severity": "high",
+                "message": "cascading detected on media-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_media_service": {
+        "change_records": [
+            {
+                "number": "CHG0012360",
+                "type": "deployment",
+                "short_description": "Recent change on media-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12361_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12361",
+        "number": "INC0012361",
+        "summary": "File descriptor leak: api-gateway FD exhaustion",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "api-gateway",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12361": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "api-gateway-01",
+                "level": "ERROR",
+                "message": "incident type: timeout on api-gateway — root cause investigation triggered",
+                "service": "api-gateway",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_api_gateway": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "timeout",
+    },
+    "sysdig.query_metrics_api_gateway": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "timeout_pattern",
+    },
+    "moogsoft.get_events_api_gateway": {
+        "events": [
+            {
+                "type": "timeout",
+                "severity": "high",
+                "message": "timeout detected on api-gateway",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_api_gateway": {
+        "change_records": [
+            {
+                "number": "CHG0012361",
+                "type": "deployment",
+                "short_description": "Recent change on api-gateway",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12362_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12362",
+        "number": "INC0012362",
+        "summary": "PostgreSQL replication lag: read replicas 45min behind",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "reporting-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12362": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "reporting-service-01",
+                "level": "ERROR",
+                "message": "incident type: latency on reporting-service — root cause investigation triggered",
+                "service": "reporting-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_reporting_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "latency",
+    },
+    "sysdig.query_metrics_reporting_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "latency_pattern",
+    },
+    "moogsoft.get_events_reporting_service": {
+        "events": [
+            {
+                "type": "latency",
+                "severity": "high",
+                "message": "latency detected on reporting-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_reporting_service": {
+        "change_records": [
+            {
+                "number": "CHG0012362",
+                "type": "deployment",
+                "short_description": "Recent change on reporting-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12363_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12363",
+        "number": "INC0012363",
+        "summary": "Postgres autovacuum blocked: table bloat causing full scans",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "analytics-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12363": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "analytics-service-01",
+                "level": "ERROR",
+                "message": "incident type: latency on analytics-service — root cause investigation triggered",
+                "service": "analytics-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_analytics_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "latency",
+    },
+    "sysdig.query_metrics_analytics_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "latency_pattern",
+    },
+    "moogsoft.get_events_analytics_service": {
+        "events": [
+            {
+                "type": "latency",
+                "severity": "high",
+                "message": "latency detected on analytics-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_analytics_service": {
+        "change_records": [
+            {
+                "number": "CHG0012363",
+                "type": "deployment",
+                "short_description": "Recent change on analytics-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12364_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12364",
+        "number": "INC0012364",
+        "summary": "Redis eviction storm: maxmemory allkeys-lru evicting sessions",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "session-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12364": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "session-service-01",
+                "level": "ERROR",
+                "message": "incident type: cascading on session-service — root cause investigation triggered",
+                "service": "session-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_session_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "cascading",
+    },
+    "sysdig.query_metrics_session_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "cascading_pattern",
+    },
+    "moogsoft.get_events_session_service": {
+        "events": [
+            {
+                "type": "cascading",
+                "severity": "high",
+                "message": "cascading detected on session-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_session_service": {
+        "change_records": [
+            {
+                "number": "CHG0012364",
+                "type": "deployment",
+                "short_description": "Recent change on session-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12365_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12365",
+        "number": "INC0012365",
+        "summary": "JVM thread deadlock: payment-processor zero throughput",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "payment-processor",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12365": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "payment-processor-01",
+                "level": "ERROR",
+                "message": "incident type: saturation on payment-processor — root cause investigation triggered",
+                "service": "payment-processor",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_payment_processor": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "saturation",
+    },
+    "sysdig.query_metrics_payment_processor": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "saturation_pattern",
+    },
+    "moogsoft.get_events_payment_processor": {
+        "events": [
+            {
+                "type": "saturation",
+                "severity": "high",
+                "message": "saturation detected on payment-processor",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_payment_processor": {
+        "change_records": [
+            {
+                "number": "CHG0012365",
+                "type": "deployment",
+                "short_description": "Recent change on payment-processor",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12366_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12366",
+        "number": "INC0012366",
+        "summary": "Goroutine leak: notification-service memory growing",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "notification-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12366": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "notification-service-01",
+                "level": "ERROR",
+                "message": "incident type: silent_failure on notification-service — root cause investigation triggered",
+                "service": "notification-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_notification_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "silent_failure",
+    },
+    "sysdig.query_metrics_notification_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "silent_failure_pattern",
+    },
+    "moogsoft.get_events_notification_service": {
+        "events": [
+            {
+                "type": "silent_failure",
+                "severity": "high",
+                "message": "silent_failure detected on notification-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_notification_service": {
+        "change_records": [
+            {
+                "number": "CHG0012366",
+                "type": "deployment",
+                "short_description": "Recent change on notification-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12367_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12367",
+        "number": "INC0012367",
+        "summary": "Feature flag regression: dark-launch-v2 rolled to 100%",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "checkout-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12367": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "checkout-service-01",
+                "level": "ERROR",
+                "message": "incident type: error_spike on checkout-service — root cause investigation triggered",
+                "service": "checkout-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_checkout_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "error_spike",
+    },
+    "sysdig.query_metrics_checkout_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "error_spike_pattern",
+    },
+    "moogsoft.get_events_checkout_service": {
+        "events": [
+            {
+                "type": "error_spike",
+                "severity": "high",
+                "message": "error_spike detected on checkout-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_checkout_service": {
+        "change_records": [
+            {
+                "number": "CHG0012367",
+                "type": "deployment",
+                "short_description": "Recent change on checkout-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12368_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12368",
+        "number": "INC0012368",
+        "summary": "Transitive dependency: guava version conflict NoSuchMethodError",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "data-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12368": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "data-service-01",
+                "level": "ERROR",
+                "message": "incident type: error_spike on data-service — root cause investigation triggered",
+                "service": "data-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_data_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "error_spike",
+    },
+    "sysdig.query_metrics_data_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "error_spike_pattern",
+    },
+    "moogsoft.get_events_data_service": {
+        "events": [
+            {
+                "type": "error_spike",
+                "severity": "high",
+                "message": "error_spike detected on data-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_data_service": {
+        "change_records": [
+            {
+                "number": "CHG0012368",
+                "type": "deployment",
+                "short_description": "Recent change on data-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12369_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12369",
+        "number": "INC0012369",
+        "summary": "Avro schema mismatch: producer v7 consumer still on v6",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "event-consumer",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12369": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "event-consumer-01",
+                "level": "ERROR",
+                "message": "incident type: error_spike on event-consumer — root cause investigation triggered",
+                "service": "event-consumer",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_event_consumer": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "error_spike",
+    },
+    "sysdig.query_metrics_event_consumer": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "error_spike_pattern",
+    },
+    "moogsoft.get_events_event_consumer": {
+        "events": [
+            {
+                "type": "error_spike",
+                "severity": "high",
+                "message": "error_spike detected on event-consumer",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_event_consumer": {
+        "change_records": [
+            {
+                "number": "CHG0012369",
+                "type": "deployment",
+                "short_description": "Recent change on event-consumer",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12370_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12370",
+        "number": "INC0012370",
+        "summary": "BGP route flap: packet loss bursts every 4 minutes",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "edge-router",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12370": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "edge-router-01",
+                "level": "ERROR",
+                "message": "incident type: network on edge-router — root cause investigation triggered",
+                "service": "edge-router",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_edge_router": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "network",
+    },
+    "sysdig.query_metrics_edge_router": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "network_pattern",
+    },
+    "moogsoft.get_events_edge_router": {
+        "events": [
+            {
+                "type": "network",
+                "severity": "high",
+                "message": "network detected on edge-router",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_edge_router": {
+        "change_records": [
+            {
+                "number": "CHG0012370",
+                "type": "deployment",
+                "short_description": "Recent change on edge-router",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12371_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12371",
+        "number": "INC0012371",
+        "summary": "DDoS traffic flood: checkout endpoint 847K rps",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "checkout-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12371": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "checkout-service-01",
+                "level": "ERROR",
+                "message": "incident type: saturation on checkout-service — root cause investigation triggered",
+                "service": "checkout-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_checkout_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "saturation",
+    },
+    "sysdig.query_metrics_checkout_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "saturation_pattern",
+    },
+    "moogsoft.get_events_checkout_service": {
+        "events": [
+            {
+                "type": "saturation",
+                "severity": "high",
+                "message": "saturation detected on checkout-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_checkout_service": {
+        "change_records": [
+            {
+                "number": "CHG0012371",
+                "type": "deployment",
+                "short_description": "Recent change on checkout-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12372_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12372",
+        "number": "INC0012372",
+        "summary": "Istio mTLS cert rotation: 3 services missed CA update",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "service-mesh",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12372": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "service-mesh-01",
+                "level": "ERROR",
+                "message": "incident type: network on service-mesh — root cause investigation triggered",
+                "service": "service-mesh",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_service_mesh": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "network",
+    },
+    "sysdig.query_metrics_service_mesh": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "network_pattern",
+    },
+    "moogsoft.get_events_service_mesh": {
+        "events": [
+            {
+                "type": "network",
+                "severity": "high",
+                "message": "network detected on service-mesh",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_service_mesh": {
+        "change_records": [
+            {
+                "number": "CHG0012372",
+                "type": "deployment",
+                "short_description": "Recent change on service-mesh",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12373_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12373",
+        "number": "INC0012373",
+        "summary": "Rate limiter misconfiguration: internal services throttled at 100rps",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "api-gateway",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12373": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "api-gateway-01",
+                "level": "ERROR",
+                "message": "incident type: error_spike on api-gateway — root cause investigation triggered",
+                "service": "api-gateway",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_api_gateway": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "error_spike",
+    },
+    "sysdig.query_metrics_api_gateway": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "error_spike_pattern",
+    },
+    "moogsoft.get_events_api_gateway": {
+        "events": [
+            {
+                "type": "error_spike",
+                "severity": "high",
+                "message": "error_spike detected on api-gateway",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_api_gateway": {
+        "change_records": [
+            {
+                "number": "CHG0012373",
+                "type": "deployment",
+                "short_description": "Recent change on api-gateway",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12374_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12374",
+        "number": "INC0012374",
+        "summary": "Thundering herd: nightly cache flush saturated product-db",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "product-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12374": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "product-service-01",
+                "level": "ERROR",
+                "message": "incident type: cascading on product-service — root cause investigation triggered",
+                "service": "product-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_product_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "cascading",
+    },
+    "sysdig.query_metrics_product_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "cascading_pattern",
+    },
+    "moogsoft.get_events_product_service": {
+        "events": [
+            {
+                "type": "cascading",
+                "severity": "high",
+                "message": "cascading detected on product-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_product_service": {
+        "change_records": [
+            {
+                "number": "CHG0012374",
+                "type": "deployment",
+                "short_description": "Recent change on product-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12375_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12375",
+        "number": "INC0012375",
+        "summary": "Blue/green stuck at 50%: recommendation-service v2.4.1 broken",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "recommendation-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12375": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "recommendation-service-01",
+                "level": "ERROR",
+                "message": "incident type: error_spike on recommendation-service — root cause investigation triggered",
+                "service": "recommendation-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_recommendation_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "error_spike",
+    },
+    "sysdig.query_metrics_recommendation_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "error_spike_pattern",
+    },
+    "moogsoft.get_events_recommendation_service": {
+        "events": [
+            {
+                "type": "error_spike",
+                "severity": "high",
+                "message": "error_spike detected on recommendation-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_recommendation_service": {
+        "change_records": [
+            {
+                "number": "CHG0012375",
+                "type": "deployment",
+                "short_description": "Recent change on recommendation-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12376_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12376",
+        "number": "INC0012376",
+        "summary": "Kafka consumer lag: fraud-detection stalled on poison pill",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "fraud-detection",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12376": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "fraud-detection-01",
+                "level": "ERROR",
+                "message": "incident type: silent_failure on fraud-detection — root cause investigation triggered",
+                "service": "fraud-detection",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_fraud_detection": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "silent_failure",
+    },
+    "sysdig.query_metrics_fraud_detection": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "silent_failure_pattern",
+    },
+    "moogsoft.get_events_fraud_detection": {
+        "events": [
+            {
+                "type": "silent_failure",
+                "severity": "high",
+                "message": "silent_failure detected on fraud-detection",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_fraud_detection": {
+        "change_records": [
+            {
+                "number": "CHG0012376",
+                "type": "deployment",
+                "short_description": "Recent change on fraud-detection",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12377_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12377",
+        "number": "INC0012377",
+        "summary": "Noisy neighbor: analytics job starving billing-service on shared RDS",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "billing-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12377": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "billing-service-01",
+                "level": "ERROR",
+                "message": "incident type: saturation on billing-service — root cause investigation triggered",
+                "service": "billing-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_billing_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "saturation",
+    },
+    "sysdig.query_metrics_billing_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "saturation_pattern",
+    },
+    "moogsoft.get_events_billing_service": {
+        "events": [
+            {
+                "type": "saturation",
+                "severity": "high",
+                "message": "saturation detected on billing-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_billing_service": {
+        "change_records": [
+            {
+                "number": "CHG0012377",
+                "type": "deployment",
+                "short_description": "Recent change on billing-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
+INCIDENT_INC12378_MOCKS = {
+    "moogsoft.get_incident_by_id": {
+        "incident_id": "INC12378",
+        "number": "INC0012378",
+        "summary": "Third-party API degradation: Stripe elevated latency eu-west-1",
+        "severity": "High",
+        "status": "In Progress",
+        "affected_service": "payment-service",
+        "start_time": "2024-02-14T10:00:00Z",
+        "correlated_alerts": 12,
+    },
+    "splunk.search_oneshot_inc12378": {
+        "results": [
+            {
+                "_time": "2024-02-14T10:00:00Z",
+                "host": "payment-service-01",
+                "level": "ERROR",
+                "message": "incident type: timeout on payment-service — root cause investigation triggered",
+                "service": "payment-service",
+            }
+        ],
+        "count": 47,
+        "first_occurrence": "2024-02-14T10:00:00Z",
+    },
+    "sysdig.golden_signals_payment_service": {
+        "golden_signals": {
+            "latency": {"p50": 1200, "p95": 8500, "p99": 12000, "baseline_p95": 200},
+            "traffic": {"rps": 380, "baseline_rps": 450},
+            "errors": {"rate": 0.28, "count": 847, "baseline_rate": 0.001},
+            "saturation": {"cpu": 72, "memory": 68, "disk": 45},
+        },
+        "anomaly_detected": True,
+        "anomaly_start": "2024-02-14T10:00:00Z",
+        "anomaly_type": "timeout",
+    },
+    "sysdig.query_metrics_payment_service": {
+        "intent": "performance",
+        "metrics": [
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:50:00Z", "value": 210},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T09:55:00Z", "value": 4200},
+            {"name": "response_time_ms", "timestamp": "2024-02-14T10:00:00Z", "value": 8500},
+        ],
+        "baseline": 200,
+        "pattern": "timeout_pattern",
+    },
+    "moogsoft.get_events_payment_service": {
+        "events": [
+            {
+                "type": "timeout",
+                "severity": "high",
+                "message": "timeout detected on payment-service",
+                "timestamp": "2024-02-14T10:00:00Z",
+            }
+        ]
+    },
+    "itsm.get_change_records_payment_service": {
+        "change_records": [
+            {
+                "number": "CHG0012378",
+                "type": "deployment",
+                "short_description": "Recent change on payment-service",
+                "start_date": "2024-02-14T09:45:00Z",
+                "end_date": "2024-02-14T09:58:00Z",
+                "state": "completed",
+                "risk": "medium",
+            }
+        ]
+    },
+}
+
 # =============================================================================
 # COMBINED MOCK RESPONSES (for testing framework)
 # =============================================================================
@@ -989,4 +2670,28 @@ ALL_MOCKS = {
     "INC12352": INCIDENT_INC12352_MOCKS,
     "INC12353": INCIDENT_INC12353_MOCKS,
     "INC12354": INCIDENT_INC12354_MOCKS,
+    "INC12355": INCIDENT_INC12355_MOCKS,
+    "INC12356": INCIDENT_INC12356_MOCKS,
+    "INC12357": INCIDENT_INC12357_MOCKS,
+    "INC12358": INCIDENT_INC12358_MOCKS,
+    "INC12359": INCIDENT_INC12359_MOCKS,
+    "INC12360": INCIDENT_INC12360_MOCKS,
+    "INC12361": INCIDENT_INC12361_MOCKS,
+    "INC12362": INCIDENT_INC12362_MOCKS,
+    "INC12363": INCIDENT_INC12363_MOCKS,
+    "INC12364": INCIDENT_INC12364_MOCKS,
+    "INC12365": INCIDENT_INC12365_MOCKS,
+    "INC12366": INCIDENT_INC12366_MOCKS,
+    "INC12367": INCIDENT_INC12367_MOCKS,
+    "INC12368": INCIDENT_INC12368_MOCKS,
+    "INC12369": INCIDENT_INC12369_MOCKS,
+    "INC12370": INCIDENT_INC12370_MOCKS,
+    "INC12371": INCIDENT_INC12371_MOCKS,
+    "INC12372": INCIDENT_INC12372_MOCKS,
+    "INC12373": INCIDENT_INC12373_MOCKS,
+    "INC12374": INCIDENT_INC12374_MOCKS,
+    "INC12375": INCIDENT_INC12375_MOCKS,
+    "INC12376": INCIDENT_INC12376_MOCKS,
+    "INC12377": INCIDENT_INC12377_MOCKS,
+    "INC12378": INCIDENT_INC12378_MOCKS,
 }

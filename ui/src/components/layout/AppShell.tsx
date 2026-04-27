@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Routes, Route, useParams, useNavigate } from 'react-router-dom'
+import { Routes, Route, useParams, useNavigate, Navigate } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { IncidentCommandCenter } from '@/components/IncidentCommandCenter'
@@ -9,6 +9,10 @@ import { MemoryTracePanel } from '@/components/MemoryTracePanel'
 import { ReplayMode } from '@/components/ReplayMode'
 import { ControlPanel } from '@/components/ControlPanel'
 import { RiskConfidenceLayer } from '@/components/RiskConfidenceLayer'
+import BlastRadiusPanel from '@/components/BlastRadiusPanel'
+import PostmortemStudio from '@/components/PostmortemStudio'
+import IntelligenceFeed from '@/components/IntelligenceFeed'
+import ShiftHandoffPanel from '@/components/ShiftHandoffPanel'
 import { useInvestigationStore } from '@/store/investigationStore'
 
 function InvestigationView() {
@@ -38,6 +42,8 @@ function InvestigationView() {
           {activePanel === 'memory' && <MemoryTracePanel />}
           {activePanel === 'replay' && <ReplayMode />}
           {activePanel === 'control' && <ControlPanel />}
+          {activePanel === 'blast-radius' && <BlastRadiusPanel investigationId={investigationId} />}
+          {activePanel === 'postmortem' && <PostmortemStudio investigationId={investigationId} incidentId={investigationId} />}
         </div>
       </div>
     </div>
@@ -46,12 +52,11 @@ function InvestigationView() {
 
 function InvestigationsList() {
   const navigate = useNavigate()
-  const { devApi } = require('@/api/client') // eslint-disable-line @typescript-eslint/no-var-requires
 
   const handleInject = async (type: string) => {
     try {
-      const { default: devApiImport } = await import('@/api/client')
-      const res = await (devApiImport as unknown as { devApi: { injectSynthetic: (t: string) => Promise<{ investigation_id: string }> } }).devApi.injectSynthetic(type)
+      const { devApi } = await import('@/api/client')
+      const res = await devApi.injectSynthetic(type)
       navigate(`/investigations/${res.investigation_id}`)
     } catch (err) {
       console.error(err)
@@ -178,10 +183,12 @@ export function AppShell() {
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden">
         <TopBar />
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 overflow-auto">
           <Routes>
             <Route path="/investigations" element={<InvestigationsList />} />
             <Route path="/investigations/:investigationId" element={<InvestigationView />} />
+            <Route path="/intelligence" element={<IntelligenceFeed />} />
+            <Route path="/handoff" element={<ShiftHandoffPanel />} />
             <Route path="*" element={<Navigate to="/investigations" replace />} />
           </Routes>
         </main>

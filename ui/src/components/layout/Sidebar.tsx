@@ -1,7 +1,8 @@
 import React from 'react'
-import { NavLink, useParams } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import {
-  Activity, GitBranch, FileText, Brain, RotateCcw, Shield, AlertTriangle
+  Activity, GitBranch, FileText, Brain, RotateCcw, Shield, AlertTriangle,
+  Radio, Users, BookOpen, Zap
 } from 'lucide-react'
 import { useInvestigationStore, useAuthStore } from '@/store/investigationStore'
 import type { ActivePanel } from '@/types'
@@ -12,13 +13,14 @@ const PANELS: { id: ActivePanel; label: string; icon: React.ReactNode; minRole: 
   { id: 'graph', label: 'Execution Graph', icon: <GitBranch size={16} />, minRole: 'viewer' },
   { id: 'evidence', label: 'Evidence', icon: <FileText size={16} />, minRole: 'viewer' },
   { id: 'memory', label: 'Memory Trace', icon: <Brain size={16} />, minRole: 'viewer' },
+  { id: 'blast-radius', label: 'Blast Radius', icon: <Zap size={16} />, minRole: 'operator' },
   { id: 'replay', label: 'Replay', icon: <RotateCcw size={16} />, minRole: 'operator' },
   { id: 'control', label: 'Control', icon: <Shield size={16} />, minRole: 'operator' },
+  { id: 'postmortem', label: 'Postmortem', icon: <BookOpen size={16} />, minRole: 'operator' },
 ]
 
 export function Sidebar() {
-  const { investigationId } = useParams<{ investigationId?: string }>()
-  const { activePanel, setActivePanel, wsStatus, pendingApproval } = useInvestigationStore()
+  const { investigationId, activePanel, setActivePanel, wsStatus, pendingApproval } = useInvestigationStore()
   const { hasRole } = useAuthStore()
 
   const wsColor = {
@@ -50,6 +52,7 @@ export function Sidebar() {
         </div>
         <NavLink
           to="/investigations"
+          end
           className={({ isActive }) =>
             clsx(
               'flex items-center gap-2 px-3 py-2 mx-1 rounded text-sm transition-colors',
@@ -61,6 +64,34 @@ export function Sidebar() {
         >
           <Activity size={15} />
           All Investigations
+        </NavLink>
+        <NavLink
+          to="/intelligence"
+          className={({ isActive }) =>
+            clsx(
+              'flex items-center gap-2 px-3 py-2 mx-1 rounded text-sm transition-colors',
+              isActive
+                ? 'bg-blue-900/40 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            )
+          }
+        >
+          <Radio size={15} />
+          Intelligence Feed
+        </NavLink>
+        <NavLink
+          to="/handoff"
+          className={({ isActive }) =>
+            clsx(
+              'flex items-center gap-2 px-3 py-2 mx-1 rounded text-sm transition-colors',
+              isActive
+                ? 'bg-blue-900/40 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            )
+          }
+        >
+          <Users size={15} />
+          Shift Handoff
         </NavLink>
 
         {/* Investigation panels — only shown when viewing an investigation */}

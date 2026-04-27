@@ -151,7 +151,7 @@ export const useInvestigationStore = create<InvestigationStore>((set, get) => ({
 
   disconnectWS: () => {
     get().ws?.disconnect()
-    set({ ws: null, wsStatus: 'disconnected' })
+    set({ ws: null, wsStatus: 'disconnected', investigationId: null })
   },
 
   setActivePanel: (panel) => set({ activePanel: panel }),

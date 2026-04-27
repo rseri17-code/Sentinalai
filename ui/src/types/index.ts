@@ -299,7 +299,7 @@ export interface ReplaySession {
 // ── UI State Types ────────────────────────────────────────────────────────────
 
 export type WSStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
-export type ActivePanel = 'timeline' | 'graph' | 'evidence' | 'memory' | 'replay' | 'control'
+export type ActivePanel = 'timeline' | 'graph' | 'evidence' | 'memory' | 'replay' | 'control' | 'blast-radius' | 'postmortem'
 export type UserRole = 'viewer' | 'operator' | 'approver' | 'admin'
 
 export interface AppUser {

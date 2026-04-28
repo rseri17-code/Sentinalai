@@ -44,11 +44,11 @@
     },
     {
       "bin_index": 5,
-      "total": 0,
-      "correct": 0,
-      "sum_confidence": 0.0,
-      "accuracy": 0.0,
-      "calibrated_confidence": 55
+      "total": 33,
+      "correct": 24,
+      "sum_confidence": 1650.0,
+      "accuracy": 0.7273,
+      "calibrated_confidence": 73
     },
     {
       "bin_index": 6,

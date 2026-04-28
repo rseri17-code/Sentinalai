@@ -205,6 +205,15 @@ class VerificationLoop:
                         "Verification SUCCESS: inv=%s service=%s polls=%d duration=%.0fs",
                         investigation_id, service, total_polls, duration,
                     )
+                    try:
+                        from supervisor.learning_loop import record_verification_outcome
+                        record_verification_outcome(
+                            investigation_id=investigation_id,
+                            rca_was_correct=True,
+                            verification_duration_sec=duration,
+                        )
+                    except Exception:
+                        pass
                     return result
             else:
                 stable_count = 0
@@ -240,6 +249,15 @@ class VerificationLoop:
             "Verification FAILED: inv=%s service=%s reason=%s",
             investigation_id, service, failure_reason,
         )
+        try:
+            from supervisor.learning_loop import record_verification_outcome
+            record_verification_outcome(
+                investigation_id=investigation_id,
+                rca_was_correct=False,
+                verification_duration_sec=duration,
+            )
+        except Exception:
+            pass
         return result
 
     def _check_stability(

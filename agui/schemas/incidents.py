@@ -102,6 +102,7 @@ class IncidentState(BaseModel):
     investigation_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     incident_id: str
     schema_version: str = Field(default=CURRENT_INCIDENT_SCHEMA_VERSION)
+    org_id: str = Field(default="default")  # Multi-tenancy scope key
 
     # Tracing
     trace_id: str = Field(default="")

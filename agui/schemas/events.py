@@ -78,6 +78,9 @@ class EventType(str, Enum):
     REPLAY_STEP = "replay.step"
     REPLAY_COMPLETED = "replay.completed"
 
+    # Postmortem collaboration
+    POSTMORTEM_COMMENT_ADDED = "postmortem.comment_added"
+
     # System
     HEARTBEAT = "system.heartbeat"
 

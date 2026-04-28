@@ -325,11 +325,23 @@ class KnowledgeGraph:
         return g
 
     def save(self, path: str = KG_PATH) -> None:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        tmp = path + ".tmp"
-        with open(tmp, "w") as f:
-            json.dump(self.to_dict(), f)
-        os.replace(tmp, path)
+        data = self.to_dict()
+        # Primary: JSON file (always written — works in local dev without DB)
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            tmp = path + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(data, f)
+            os.replace(tmp, path)
+        except Exception as exc:
+            logger.warning("KG file save failed: %s", exc)
+        # Secondary: Postgres (written when DB available)
+        try:
+            from database.persistence import persist_kg_snapshot, is_enabled as _db_enabled
+            if _db_enabled():
+                persist_kg_snapshot(data.get("nodes", []), data.get("edges", []))
+        except Exception as exc:
+            logger.debug("KG Postgres sync skipped: %s", exc)
 
     # ------------------------------------------------------------------ #
     # Internal
@@ -362,20 +374,42 @@ class KnowledgeGraph:
 # ---------------------------------------------------------------------------
 
 def get_graph() -> KnowledgeGraph:
-    """Return the singleton knowledge graph, loading from disk if needed."""
+    """Return the singleton knowledge graph, loading from disk or Postgres if needed."""
     global _graph
     with _lock:
         if _graph is not None:
             return _graph
         g = KnowledgeGraph()
-        if os.path.exists(KG_PATH):
+
+        # Priority 1: Postgres (larger, durable, survives restarts)
+        loaded_from_db = False
+        try:
+            from database.persistence import load_kg_snapshot, is_enabled as _db_enabled
+            if _db_enabled():
+                data = load_kg_snapshot()
+                if data:
+                    g = KnowledgeGraph.from_dict(data)
+                    logger.info(
+                        "Loaded knowledge graph from Postgres: %d nodes, %d edges",
+                        g.node_count(), g.edge_count(),
+                    )
+                    loaded_from_db = True
+        except Exception as exc:
+            logger.debug("KG Postgres load skipped: %s", exc)
+
+        # Priority 2: JSON file (local dev fallback)
+        if not loaded_from_db and os.path.exists(KG_PATH):
             try:
                 with open(KG_PATH) as f:
                     data = json.load(f)
                 g = KnowledgeGraph.from_dict(data)
-                logger.info("Loaded knowledge graph: %d nodes, %d edges", g.node_count(), g.edge_count())
+                logger.info(
+                    "Loaded knowledge graph from file: %d nodes, %d edges",
+                    g.node_count(), g.edge_count(),
+                )
             except Exception as exc:
                 logger.warning("Could not load knowledge graph: %s — starting fresh", exc)
+
         _graph = g
         return _graph
 

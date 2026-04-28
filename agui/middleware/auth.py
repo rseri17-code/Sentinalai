@@ -29,7 +29,7 @@ import time
 from dataclasses import dataclass
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Security, status
+from fastapi import Depends, Header, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 logger = logging.getLogger(__name__)
@@ -54,6 +54,7 @@ class ActorContext:
     actor_role: str
     email: Optional[str] = None
     token: Optional[str] = None
+    org_id: str = "default"  # Extracted from X-Org-ID header or JWT claim
 
 
 security = HTTPBearer(auto_error=False)
@@ -107,25 +108,28 @@ def _decode_jwt_cognito(token: str) -> dict:
         )
 
 
-def _get_actor_from_claims(claims: dict) -> ActorContext:
+def _get_actor_from_claims(claims: dict, org_id: str = "default") -> ActorContext:
     actor_id = claims.get("sub", claims.get("username", "anonymous"))
     role = claims.get("custom:agui_role", claims.get("role", "viewer"))
     if role not in ROLE_HIERARCHY:
         role = "viewer"
+    # org_id from JWT claim takes priority over header value
+    resolved_org = claims.get("custom:org_id", claims.get("org_id", org_id)) or "default"
     return ActorContext(
         actor_id=actor_id,
         actor_role=role,
         email=claims.get("email"),
+        org_id=resolved_org,
     )
 
 
 async def get_actor(
     credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
+    x_org_id: Optional[str] = Header(default=None, alias="X-Org-ID"),
 ) -> ActorContext:
     """FastAPI dependency: extract and validate actor from JWT."""
     if not AUTH_REQUIRED:
-        # Dev mode: anonymous admin access
-        return ActorContext(actor_id="dev-user", actor_role="admin")
+        return ActorContext(actor_id="dev-user", actor_role="admin", org_id=x_org_id or "default")
 
     if not credentials:
         raise HTTPException(
@@ -134,7 +138,7 @@ async def get_actor(
         )
 
     claims = _decode_jwt(credentials.credentials)
-    actor = _get_actor_from_claims(claims)
+    actor = _get_actor_from_claims(claims, org_id=x_org_id or "default")
     actor.token = credentials.credentials
     return actor
 

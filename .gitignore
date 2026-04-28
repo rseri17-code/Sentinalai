@@ -56,3 +56,8 @@ amazon-bedrock-agentcore-samples/
 .claude/session-state.json
 node_modules/
 ui/dist/
+
+# Playwright test artifacts (generated reports/screenshots)
+ui/tests/e2e/report/
+ui/tests/e2e/results/
+ui/tests/e2e/screenshots/

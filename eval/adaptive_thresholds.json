@@ -1,0 +1,30 @@
+{
+  "critique_threshold": {
+    "name": "critique_threshold",
+    "value": 0.8,
+    "default": 0.62,
+    "observations": 1036,
+    "ema_signal": 0.5436,
+    "last_updated": "2026-04-26T19:56:42.392828+00:00"
+  },
+  "_meta": {
+    "last_updated": "2026-04-26T19:56:42.419187+00:00",
+    "entries": 3
+  },
+  "store_quality_threshold": {
+    "name": "store_quality_threshold",
+    "value": 0.4,
+    "default": 0.6,
+    "observations": 1036,
+    "ema_signal": 0.49751,
+    "last_updated": "2026-04-26T19:56:42.419156+00:00"
+  },
+  "min_confidence_to_act": {
+    "name": "min_confidence_to_act",
+    "value": 60.0,
+    "default": 30.0,
+    "observations": 141,
+    "ema_signal": 0.65,
+    "last_updated": "2026-04-26T19:56:41.429494+00:00"
+  }
+}

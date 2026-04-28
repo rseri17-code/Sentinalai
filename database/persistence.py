@@ -19,6 +19,14 @@ from database.connection import get_engine
 
 logger = logging.getLogger("sentinalai.persistence")
 
+# Module-level sqlalchemy import so callers can patch `database.persistence.text`
+# in tests without needing sqlalchemy installed.
+try:
+    from sqlalchemy import text
+except ImportError:
+    def text(sql: str) -> str:  # type: ignore[misc]
+        return sql
+
 
 def is_enabled() -> bool:
     """Check whether database persistence is available."""
@@ -46,8 +54,6 @@ def persist_investigation(
         return None
 
     try:
-        from sqlalchemy import text
-
         with engine.connect() as conn:
             result = conn.execute(
                 text("""
@@ -105,8 +111,6 @@ def persist_tool_usage(
         return 0
 
     try:
-        from sqlalchemy import text
-
         count = 0
         with engine.connect() as conn:
             for receipt in receipts:
@@ -158,8 +162,6 @@ def persist_knowledge_entry(
         return False
 
     try:
-        from sqlalchemy import text
-
         with engine.connect() as conn:
             conn.execute(
                 text("""
@@ -208,8 +210,6 @@ def persist_eval_result(
         return False
 
     try:
-        from sqlalchemy import text
-
         with engine.connect() as conn:
             conn.execute(
                 text("""
@@ -257,8 +257,6 @@ def load_eval_results_for_calibration(limit: int = 500) -> list[dict]:
         return []
 
     try:
-        from sqlalchemy import text
-
         with engine.connect() as conn:
             result = conn.execute(
                 text("""
@@ -289,8 +287,6 @@ def load_investigation(incident_id: str) -> dict | None:
         return None
 
     try:
-        from sqlalchemy import text
-
         with engine.connect() as conn:
             result = conn.execute(
                 text("""
@@ -321,3 +317,138 @@ def load_investigation(incident_id: str) -> dict | None:
     except Exception as exc:
         logger.warning("Failed to load investigation %s: %s", incident_id, exc)
         return None
+
+
+# ---------------------------------------------------------------------------
+# Knowledge graph persistence
+# ---------------------------------------------------------------------------
+
+def persist_kg_snapshot(nodes: list[dict], edges: list[dict]) -> bool:
+    """Upsert all nodes and edges to kg_nodes/kg_edges tables.
+
+    Called by KnowledgeGraph.save() when the DB is available.  The JSON file
+    remains the primary store for local dev; Postgres is the durable replica.
+    """
+    engine = get_engine()
+    if engine is None:
+        return False
+
+    try:
+        with engine.connect() as conn:
+            for node in nodes:
+                conn.execute(
+                    text("""
+                        INSERT INTO kg_nodes (node_id, node_type, label, props, created_at)
+                        VALUES (:node_id, :node_type, :label, :props::jsonb, to_timestamp(:created_at))
+                        ON CONFLICT (node_id) DO UPDATE
+                            SET label = EXCLUDED.label,
+                                props = EXCLUDED.props
+                    """),
+                    {
+                        "node_id": node["node_id"],
+                        "node_type": node["node_type"],
+                        "label": node["label"],
+                        "props": json.dumps(node.get("props", {})),
+                        "created_at": node.get("created_at", 0),
+                    },
+                )
+            for edge in edges:
+                conn.execute(
+                    text("""
+                        INSERT INTO kg_edges (edge_id, src_id, dst_id, rel_type, weight, props, created_at)
+                        VALUES (:edge_id, :src_id, :dst_id, :rel_type, :weight, :props::jsonb, to_timestamp(:created_at))
+                        ON CONFLICT (edge_id) DO UPDATE
+                            SET weight = EXCLUDED.weight,
+                                props = EXCLUDED.props
+                    """),
+                    {
+                        "edge_id": edge["edge_id"],
+                        "src_id": edge["src_id"],
+                        "dst_id": edge["dst_id"],
+                        "rel_type": edge["rel_type"],
+                        "weight": edge.get("weight", 1.0),
+                        "props": json.dumps(edge.get("props", {})),
+                        "created_at": edge.get("created_at", 0),
+                    },
+                )
+            conn.commit()
+        return True
+
+    except Exception as exc:
+        logger.warning("Failed to persist KG snapshot to DB: %s", exc)
+        return False
+
+
+def load_kg_snapshot() -> dict | None:
+    """Load nodes and edges from Postgres.
+
+    Returns {"nodes": [...], "edges": [...]} or None if DB unavailable/empty.
+    """
+    engine = get_engine()
+    if engine is None:
+        return None
+
+    try:
+        with engine.connect() as conn:
+            nodes_result = conn.execute(
+                text("""
+                    SELECT node_id, node_type, label, props,
+                           EXTRACT(EPOCH FROM created_at)
+                    FROM kg_nodes
+                    WHERE ttl_expires_at IS NULL OR ttl_expires_at > NOW()
+                    ORDER BY created_at
+                """)
+            )
+            nodes = [
+                {
+                    "node_id": r[0], "node_type": r[1], "label": r[2],
+                    "props": r[3] if isinstance(r[3], dict) else json.loads(r[3] or "{}"),
+                    "created_at": float(r[4] or 0),
+                }
+                for r in nodes_result.fetchall()
+            ]
+            if not nodes:
+                return None
+
+            node_ids = {n["node_id"] for n in nodes}
+            edges_result = conn.execute(
+                text("""
+                    SELECT edge_id, src_id, dst_id, rel_type, weight, props,
+                           EXTRACT(EPOCH FROM created_at)
+                    FROM kg_edges
+                    WHERE src_id = ANY(:ids) AND dst_id = ANY(:ids)
+                    ORDER BY created_at
+                """),
+                {"ids": list(node_ids)},
+            )
+            edges = [
+                {
+                    "edge_id": r[0], "src_id": r[1], "dst_id": r[2],
+                    "rel_type": r[3], "weight": float(r[4] or 1.0),
+                    "props": r[5] if isinstance(r[5], dict) else json.loads(r[5] or "{}"),
+                    "created_at": float(r[6] or 0),
+                }
+                for r in edges_result.fetchall()
+            ]
+        return {"nodes": nodes, "edges": edges}
+
+    except Exception as exc:
+        logger.warning("Failed to load KG snapshot from DB: %s", exc)
+        return None
+
+
+def evict_expired_kg_nodes() -> int:
+    """Delete KG nodes whose TTL has expired. Returns count deleted."""
+    engine = get_engine()
+    if engine is None:
+        return 0
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("DELETE FROM kg_nodes WHERE ttl_expires_at IS NOT NULL AND ttl_expires_at <= NOW()")
+            )
+            conn.commit()
+            return result.rowcount
+    except Exception as exc:
+        logger.warning("Failed to evict expired KG nodes: %s", exc)
+        return 0

@@ -54,9 +54,35 @@ CREATE TABLE IF NOT EXISTS eval_results (
     evaluated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Knowledge graph nodes (durable, Postgres-backed with TTL eviction)
+CREATE TABLE IF NOT EXISTS kg_nodes (
+    node_id VARCHAR(200) PRIMARY KEY,
+    node_type VARCHAR(50) NOT NULL,
+    label TEXT NOT NULL,
+    props JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    ttl_expires_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Knowledge graph edges
+CREATE TABLE IF NOT EXISTS kg_edges (
+    edge_id VARCHAR(200) PRIMARY KEY,
+    src_id VARCHAR(200) NOT NULL,
+    dst_id VARCHAR(200) NOT NULL,
+    rel_type VARCHAR(50) NOT NULL,
+    weight FLOAT NOT NULL DEFAULT 1.0,
+    props JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_investigations_incident_id ON investigations(incident_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_base_service ON knowledge_base(service);
 CREATE INDEX IF NOT EXISTS idx_knowledge_base_type ON knowledge_base(incident_type);
 CREATE INDEX IF NOT EXISTS idx_tool_usage_investigation ON tool_usage(investigation_id);
 CREATE INDEX IF NOT EXISTS idx_eval_results_incident_id ON eval_results(incident_id);
+CREATE INDEX IF NOT EXISTS idx_kg_nodes_type ON kg_nodes(node_type);
+CREATE INDEX IF NOT EXISTS idx_kg_nodes_ttl ON kg_nodes(ttl_expires_at) WHERE ttl_expires_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_kg_edges_src ON kg_edges(src_id);
+CREATE INDEX IF NOT EXISTS idx_kg_edges_dst ON kg_edges(dst_id);
+CREATE INDEX IF NOT EXISTS idx_kg_edges_rel ON kg_edges(rel_type);

@@ -1,0 +1,828 @@
+{
+  "error_spike:payment-service": {
+    "_total": {
+      "total_seen": 83,
+      "last_seen": "2026-04-19T05:01:20.947792+00:00"
+    },
+    "apm_data": {
+      "count": 80,
+      "total_seen": 82,
+      "frequency": 0.9756,
+      "last_seen": "2026-04-19T05:01:20.893054+00:00"
+    },
+    "logs": {
+      "count": 80,
+      "total_seen": 82,
+      "frequency": 0.9756,
+      "last_seen": "2026-04-19T05:01:20.893054+00:00"
+    },
+    "metrics": {
+      "count": 83,
+      "total_seen": 83,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:20.947792+00:00"
+    }
+  },
+  "_meta": {
+    "last_updated": "2026-04-26T19:56:42.391864+00:00",
+    "total_records": 34
+  },
+  "timeout:api-gateway": {
+    "_total": {
+      "total_seen": 163,
+      "last_seen": "2026-04-19T05:01:21.950084+00:00"
+    },
+    "apm_data": {
+      "count": 163,
+      "total_seen": 163,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.950084+00:00"
+    },
+    "logs": {
+      "count": 163,
+      "total_seen": 163,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.950084+00:00"
+    },
+    "metrics": {
+      "count": 163,
+      "total_seen": 163,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.950084+00:00"
+    }
+  },
+  "error_spike:unknown": {
+    "_total": {
+      "total_seen": 132,
+      "last_seen": "2026-04-19T05:00:35.307885+00:00"
+    },
+    "apm_data": {
+      "count": 132,
+      "total_seen": 132,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:00:35.307885+00:00"
+    },
+    "logs": {
+      "count": 132,
+      "total_seen": 132,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:00:35.307885+00:00"
+    },
+    "metrics": {
+      "count": 132,
+      "total_seen": 132,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:00:35.307885+00:00"
+    }
+  },
+  "latency:search-service": {
+    "_total": {
+      "total_seen": 74,
+      "last_seen": "2026-04-19T05:07:25.676268+00:00"
+    },
+    "apm_data": {
+      "count": 74,
+      "total_seen": 74,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:07:25.676268+00:00"
+    },
+    "logs": {
+      "count": 74,
+      "total_seen": 74,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:07:25.676268+00:00"
+    },
+    "metrics": {
+      "count": 74,
+      "total_seen": 74,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:07:25.676268+00:00"
+    }
+  },
+  "saturation:order-service": {
+    "_total": {
+      "total_seen": 76,
+      "last_seen": "2026-04-26T19:56:41.280056+00:00"
+    },
+    "apm_data": {
+      "count": 76,
+      "total_seen": 76,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.280056+00:00"
+    },
+    "logs": {
+      "count": 76,
+      "total_seen": 76,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.280056+00:00"
+    },
+    "metrics": {
+      "count": 76,
+      "total_seen": 76,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.280056+00:00"
+    }
+  },
+  "network:inventory-service": {
+    "_total": {
+      "total_seen": 83,
+      "last_seen": "2026-04-19T05:12:16.467291+00:00"
+    },
+    "apm_data": {
+      "count": 83,
+      "total_seen": 83,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:12:16.467291+00:00"
+    },
+    "logs": {
+      "count": 83,
+      "total_seen": 83,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:12:16.467291+00:00"
+    },
+    "metrics": {
+      "count": 83,
+      "total_seen": 83,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:12:16.467291+00:00"
+    }
+  },
+  "cascading:api-gateway": {
+    "_total": {
+      "total_seen": 67,
+      "last_seen": "2026-04-19T05:01:22.058404+00:00"
+    },
+    "apm_data": {
+      "count": 6,
+      "total_seen": 67,
+      "frequency": 0.0896,
+      "last_seen": "2026-04-19T05:01:22.058404+00:00"
+    },
+    "logs": {
+      "count": 6,
+      "total_seen": 67,
+      "frequency": 0.0896,
+      "last_seen": "2026-04-19T05:01:22.058404+00:00"
+    },
+    "metrics": {
+      "count": 67,
+      "total_seen": 67,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:22.058404+00:00"
+    }
+  },
+  "missing_data:notification-service": {
+    "_total": {
+      "total_seen": 68,
+      "last_seen": "2026-04-19T05:01:21.895324+00:00"
+    },
+    "apm_data": {
+      "count": 68,
+      "total_seen": 68,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.895324+00:00"
+    },
+    "logs": {
+      "count": 68,
+      "total_seen": 68,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.895324+00:00"
+    },
+    "metrics": {
+      "count": 68,
+      "total_seen": 68,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.895324+00:00"
+    }
+  },
+  "flapping:auth-service": {
+    "_total": {
+      "total_seen": 63,
+      "last_seen": "2026-04-19T05:01:21.840546+00:00"
+    },
+    "apm_data": {
+      "count": 3,
+      "total_seen": 62,
+      "frequency": 0.0484,
+      "last_seen": "2026-04-19T05:01:21.386242+00:00"
+    },
+    "logs": {
+      "count": 3,
+      "total_seen": 62,
+      "frequency": 0.0484,
+      "last_seen": "2026-04-19T05:01:21.386242+00:00"
+    },
+    "metrics": {
+      "count": 63,
+      "total_seen": 63,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.840546+00:00"
+    }
+  },
+  "silent_failure:recommendation-service": {
+    "_total": {
+      "total_seen": 63,
+      "last_seen": "2026-04-19T05:01:21.491433+00:00"
+    },
+    "apm_data": {
+      "count": 63,
+      "total_seen": 63,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.491433+00:00"
+    },
+    "logs": {
+      "count": 63,
+      "total_seen": 63,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.491433+00:00"
+    },
+    "metrics": {
+      "count": 63,
+      "total_seen": 63,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.491433+00:00"
+    }
+  },
+  "oomkill:user-service": {
+    "_total": {
+      "total_seen": 78,
+      "last_seen": "2026-04-19T05:01:21.784838+00:00"
+    },
+    "apm_data": {
+      "count": 78,
+      "total_seen": 78,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.784838+00:00"
+    },
+    "golden_signals": {
+      "count": 78,
+      "total_seen": 78,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.784838+00:00"
+    },
+    "logs": {
+      "count": 78,
+      "total_seen": 78,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.784838+00:00"
+    },
+    "metrics": {
+      "count": 78,
+      "total_seen": 78,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:21.784838+00:00"
+    }
+  },
+  "timeout:svc": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-19T05:01:22.111084+00:00"
+    },
+    "apm_data": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:22.111084+00:00"
+    },
+    "logs": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:22.111084+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:01:22.111084+00:00"
+    }
+  },
+  "error_spike:api-gateway": {
+    "_total": {
+      "total_seen": 5,
+      "last_seen": "2026-04-26T19:56:42.110189+00:00"
+    },
+    "metrics": {
+      "count": 5,
+      "total_seen": 5,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:42.110189+00:00"
+    },
+    "apm_data": {
+      "count": 1,
+      "total_seen": 5,
+      "frequency": 0.2,
+      "last_seen": "2026-04-26T19:56:42.110189+00:00"
+    },
+    "logs": {
+      "count": 1,
+      "total_seen": 5,
+      "frequency": 0.2,
+      "last_seen": "2026-04-26T19:56:42.110189+00:00"
+    }
+  },
+  "timeout:unknown": {
+    "_total": {
+      "total_seen": 2,
+      "last_seen": "2026-04-19T05:00:32.995621+00:00"
+    },
+    "apm_data": {
+      "count": 2,
+      "total_seen": 2,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:00:32.995621+00:00"
+    },
+    "logs": {
+      "count": 2,
+      "total_seen": 2,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:00:32.995621+00:00"
+    },
+    "metrics": {
+      "count": 2,
+      "total_seen": 2,
+      "frequency": 1.0,
+      "last_seen": "2026-04-19T05:00:32.995621+00:00"
+    }
+  },
+  "error_spike:cart-service": {
+    "_total": {
+      "total_seen": 8,
+      "last_seen": "2026-04-26T19:56:41.111393+00:00"
+    },
+    "metrics": {
+      "count": 8,
+      "total_seen": 8,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.111393+00:00"
+    },
+    "apm_data": {
+      "count": 2,
+      "total_seen": 8,
+      "frequency": 0.25,
+      "last_seen": "2026-04-26T19:56:41.111393+00:00"
+    },
+    "logs": {
+      "count": 2,
+      "total_seen": 8,
+      "frequency": 0.25,
+      "last_seen": "2026-04-26T19:56:41.111393+00:00"
+    }
+  },
+  "error_spike:checkout-service": {
+    "_total": {
+      "total_seen": 11,
+      "last_seen": "2026-04-26T19:56:41.994182+00:00"
+    },
+    "metrics": {
+      "count": 11,
+      "total_seen": 11,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.994182+00:00"
+    },
+    "apm_data": {
+      "count": 4,
+      "total_seen": 11,
+      "frequency": 0.3636,
+      "last_seen": "2026-04-26T19:56:41.994182+00:00"
+    },
+    "logs": {
+      "count": 4,
+      "total_seen": 11,
+      "frequency": 0.3636,
+      "last_seen": "2026-04-26T19:56:41.994182+00:00"
+    }
+  },
+  "network:payment-service": {
+    "_total": {
+      "total_seen": 5,
+      "last_seen": "2026-04-26T19:56:41.227575+00:00"
+    },
+    "apm_data": {
+      "count": 5,
+      "total_seen": 5,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.227575+00:00"
+    },
+    "logs": {
+      "count": 5,
+      "total_seen": 5,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.227575+00:00"
+    },
+    "metrics": {
+      "count": 5,
+      "total_seen": 5,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.227575+00:00"
+    }
+  },
+  "error_spike:inventory-service": {
+    "_total": {
+      "total_seen": 5,
+      "last_seen": "2026-04-26T19:56:41.330124+00:00"
+    },
+    "metrics": {
+      "count": 5,
+      "total_seen": 5,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.330124+00:00"
+    },
+    "apm_data": {
+      "count": 2,
+      "total_seen": 5,
+      "frequency": 0.4,
+      "last_seen": "2026-04-26T19:56:41.330124+00:00"
+    },
+    "logs": {
+      "count": 2,
+      "total_seen": 5,
+      "frequency": 0.4,
+      "last_seen": "2026-04-26T19:56:41.330124+00:00"
+    }
+  },
+  "missing_data:media-service": {
+    "_total": {
+      "total_seen": 5,
+      "last_seen": "2026-04-26T19:56:41.397548+00:00"
+    },
+    "apm_data": {
+      "count": 5,
+      "total_seen": 5,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.397548+00:00"
+    },
+    "logs": {
+      "count": 5,
+      "total_seen": 5,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.397548+00:00"
+    },
+    "metrics": {
+      "count": 5,
+      "total_seen": 5,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.397548+00:00"
+    }
+  },
+  "saturation:api-gateway": {
+    "_total": {
+      "total_seen": 4,
+      "last_seen": "2026-04-26T19:56:41.447159+00:00"
+    },
+    "apm_data": {
+      "count": 4,
+      "total_seen": 4,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.447159+00:00"
+    },
+    "logs": {
+      "count": 4,
+      "total_seen": 4,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.447159+00:00"
+    },
+    "metrics": {
+      "count": 4,
+      "total_seen": 4,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.447159+00:00"
+    }
+  },
+  "error_spike:reporting-service": {
+    "_total": {
+      "total_seen": 4,
+      "last_seen": "2026-04-26T19:56:41.500353+00:00"
+    },
+    "metrics": {
+      "count": 4,
+      "total_seen": 4,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.500353+00:00"
+    },
+    "apm_data": {
+      "count": 2,
+      "total_seen": 4,
+      "frequency": 0.5,
+      "last_seen": "2026-04-26T19:56:41.500353+00:00"
+    },
+    "logs": {
+      "count": 2,
+      "total_seen": 4,
+      "frequency": 0.5,
+      "last_seen": "2026-04-26T19:56:41.500353+00:00"
+    }
+  },
+  "error_spike:analytics-service": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-26T19:56:41.551473+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.551473+00:00"
+    },
+    "apm_data": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:41.551473+00:00"
+    },
+    "logs": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:41.551473+00:00"
+    }
+  },
+  "error_spike:session-service": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-26T19:56:41.605392+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.605392+00:00"
+    },
+    "apm_data": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:41.605392+00:00"
+    },
+    "logs": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:41.605392+00:00"
+    }
+  },
+  "silent_failure:payment-processor": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-26T19:56:41.658505+00:00"
+    },
+    "apm_data": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.658505+00:00"
+    },
+    "logs": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.658505+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.658505+00:00"
+    }
+  },
+  "error_spike:notification-service": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-26T19:56:41.711779+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.711779+00:00"
+    },
+    "apm_data": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:41.711779+00:00"
+    },
+    "logs": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:41.711779+00:00"
+    }
+  },
+  "error_spike:data-service": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-26T19:56:41.823515+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.823515+00:00"
+    },
+    "apm_data": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:41.823515+00:00"
+    },
+    "logs": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:41.823515+00:00"
+    }
+  },
+  "error_spike:event-consumer": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-26T19:56:41.882369+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.882369+00:00"
+    },
+    "apm_data": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:41.882369+00:00"
+    },
+    "logs": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:41.882369+00:00"
+    }
+  },
+  "error_spike:edge-router": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-26T19:56:41.935791+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:41.935791+00:00"
+    },
+    "apm_data": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:41.935791+00:00"
+    },
+    "logs": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:41.935791+00:00"
+    }
+  },
+  "network:service-mesh": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-26T19:56:42.054000+00:00"
+    },
+    "apm_data": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:42.054000+00:00"
+    },
+    "logs": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:42.054000+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:42.054000+00:00"
+    }
+  },
+  "error_spike:product-service": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-26T19:56:42.164617+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:42.164617+00:00"
+    },
+    "apm_data": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:42.164617+00:00"
+    },
+    "logs": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:42.164617+00:00"
+    }
+  },
+  "error_spike:recommendation-service": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-26T19:56:42.225161+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:42.225161+00:00"
+    },
+    "apm_data": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:42.225161+00:00"
+    },
+    "logs": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:42.225161+00:00"
+    }
+  },
+  "error_spike:fraud-detection": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-26T19:56:42.283962+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:42.283962+00:00"
+    },
+    "apm_data": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:42.283962+00:00"
+    },
+    "logs": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:42.283962+00:00"
+    }
+  },
+  "error_spike:billing-service": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-26T19:56:42.339560+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:42.339560+00:00"
+    },
+    "apm_data": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:42.339560+00:00"
+    },
+    "logs": {
+      "count": 1,
+      "total_seen": 3,
+      "frequency": 0.3333,
+      "last_seen": "2026-04-26T19:56:42.339560+00:00"
+    }
+  },
+  "latency:payment-service": {
+    "_total": {
+      "total_seen": 3,
+      "last_seen": "2026-04-26T19:56:42.390475+00:00"
+    },
+    "apm_data": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:42.390475+00:00"
+    },
+    "logs": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:42.390475+00:00"
+    },
+    "metrics": {
+      "count": 3,
+      "total_seen": 3,
+      "frequency": 1.0,
+      "last_seen": "2026-04-26T19:56:42.390475+00:00"
+    }
+  }
+}

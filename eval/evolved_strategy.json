@@ -1,994 +1,776 @@
 {
   "cascading": {
     "get_incident_by_id": {
-      "weight": 1.064,
-      "calls": 51,
-      "ema_signal": 1.064,
-      "last_updated": "2026-04-11T23:29:38.516033+00:00"
+      "weight": 1.0677,
+      "calls": 111,
+      "ema_signal": 1.0677,
+      "last_updated": "2026-04-28T16:29:26.597848+00:00"
     },
     "get_ci_details": {
-      "weight": 1.064,
-      "calls": 51,
-      "ema_signal": 1.064,
-      "last_updated": "2026-04-11T23:29:38.516045+00:00"
+      "weight": 1.0677,
+      "calls": 111,
+      "ema_signal": 1.0677,
+      "last_updated": "2026-04-28T16:29:26.597859+00:00"
     },
     "get_known_errors": {
-      "weight": 1.064,
-      "calls": 51,
-      "ema_signal": 1.064,
-      "last_updated": "2026-04-11T23:29:38.516050+00:00"
+      "weight": 1.0677,
+      "calls": 111,
+      "ema_signal": 1.0677,
+      "last_updated": "2026-04-28T16:29:26.597863+00:00"
     },
     "search_incidents": {
-      "weight": 1.064,
-      "calls": 51,
-      "ema_signal": 1.064,
-      "last_updated": "2026-04-11T23:29:38.516053+00:00"
+      "weight": 1.0677,
+      "calls": 111,
+      "ema_signal": 1.0677,
+      "last_updated": "2026-04-28T16:29:26.597867+00:00"
     },
     "search_runbooks": {
-      "weight": 1.064,
-      "calls": 51,
-      "ema_signal": 1.064,
-      "last_updated": "2026-04-11T23:29:38.516056+00:00"
+      "weight": 1.0677,
+      "calls": 111,
+      "ema_signal": 1.0677,
+      "last_updated": "2026-04-28T16:29:26.597870+00:00"
     },
     "search_postmortems": {
-      "weight": 1.064,
-      "calls": 51,
-      "ema_signal": 1.064,
-      "last_updated": "2026-04-11T23:29:38.516059+00:00"
+      "weight": 1.0677,
+      "calls": 111,
+      "ema_signal": 1.0677,
+      "last_updated": "2026-04-28T16:29:26.597873+00:00"
     },
     "search_similar": {
-      "weight": 1.064,
-      "calls": 51,
-      "ema_signal": 1.064,
-      "last_updated": "2026-04-11T23:29:38.516062+00:00"
+      "weight": 1.0677,
+      "calls": 111,
+      "ema_signal": 1.0677,
+      "last_updated": "2026-04-28T16:29:26.597876+00:00"
     },
     "search_logs": {
-      "weight": 1.064,
-      "calls": 51,
-      "ema_signal": 1.064,
-      "last_updated": "2026-04-11T23:29:38.516065+00:00"
+      "weight": 1.0677,
+      "calls": 111,
+      "ema_signal": 1.0677,
+      "last_updated": "2026-04-28T16:29:26.597880+00:00"
     },
     "get_golden_signals": {
-      "weight": 1.064,
-      "calls": 51,
-      "ema_signal": 1.064,
-      "last_updated": "2026-04-11T23:29:38.516068+00:00"
+      "weight": 1.0677,
+      "calls": 111,
+      "ema_signal": 1.0677,
+      "last_updated": "2026-04-28T16:29:26.597883+00:00"
     },
     "get_change_data": {
-      "weight": 1.064,
-      "calls": 51,
-      "ema_signal": 1.064,
-      "last_updated": "2026-04-11T23:29:38.516077+00:00"
+      "weight": 1.0677,
+      "calls": 111,
+      "ema_signal": 1.0677,
+      "last_updated": "2026-04-28T16:29:26.597892+00:00"
     },
     "query_metrics": {
-      "weight": 1.064,
-      "calls": 51,
-      "ema_signal": 1.064,
-      "last_updated": "2026-04-11T23:29:38.516071+00:00"
+      "weight": 1.0677,
+      "calls": 111,
+      "ema_signal": 1.0677,
+      "last_updated": "2026-04-28T16:29:26.597886+00:00"
     },
     "get_change_records": {
-      "weight": 1.064,
-      "calls": 51,
-      "ema_signal": 1.064,
-      "last_updated": "2026-04-11T23:29:38.516074+00:00"
+      "weight": 1.0677,
+      "calls": 111,
+      "ema_signal": 1.0677,
+      "last_updated": "2026-04-28T16:29:26.597889+00:00"
     },
     "get_recent_deployments": {
-      "weight": 1.0733,
-      "calls": 47,
-      "ema_signal": 1.0733,
-      "last_updated": "2026-04-11T23:29:38.516080+00:00"
+      "weight": 1.0682,
+      "calls": 108,
+      "ema_signal": 1.0682,
+      "last_updated": "2026-04-28T16:29:26.597895+00:00"
     },
     "get_workflow_runs": {
-      "weight": 1.0733,
-      "calls": 47,
-      "ema_signal": 1.0733,
-      "last_updated": "2026-04-11T23:29:38.516083+00:00"
-    },
-    "get_k8s_events": {
-      "weight": 0.9509,
-      "calls": 6,
-      "ema_signal": 0.9509,
-      "last_updated": "2026-04-11T23:29:16.748698+00:00"
+      "weight": 1.0682,
+      "calls": 108,
+      "ema_signal": 1.0682,
+      "last_updated": "2026-04-28T16:29:26.597898+00:00"
     }
   },
   "_meta": {
-    "last_updated": "2026-04-19T05:12:16.531751+00:00",
-    "total_updates": 961
+    "last_updated": "2026-04-28T16:29:26.767051+00:00",
+    "total_updates": 1576
   },
   "missing_data": {
     "get_incident_by_id": {
-      "weight": 1.0563,
-      "calls": 55,
-      "ema_signal": 1.0563,
-      "last_updated": "2026-04-11T23:29:38.609558+00:00"
+      "weight": 0.9728,
+      "calls": 111,
+      "ema_signal": 0.9728,
+      "last_updated": "2026-04-28T16:29:26.650385+00:00"
     },
     "get_ci_details": {
-      "weight": 1.0563,
-      "calls": 55,
-      "ema_signal": 1.0563,
-      "last_updated": "2026-04-11T23:29:38.609569+00:00"
+      "weight": 0.9728,
+      "calls": 111,
+      "ema_signal": 0.9728,
+      "last_updated": "2026-04-28T16:29:26.650400+00:00"
     },
     "get_known_errors": {
-      "weight": 1.0563,
-      "calls": 55,
-      "ema_signal": 1.0563,
-      "last_updated": "2026-04-11T23:29:38.609573+00:00"
+      "weight": 0.9728,
+      "calls": 111,
+      "ema_signal": 0.9728,
+      "last_updated": "2026-04-28T16:29:26.650404+00:00"
     },
     "search_incidents": {
-      "weight": 1.0563,
-      "calls": 55,
-      "ema_signal": 1.0563,
-      "last_updated": "2026-04-11T23:29:38.609576+00:00"
+      "weight": 0.9728,
+      "calls": 111,
+      "ema_signal": 0.9728,
+      "last_updated": "2026-04-28T16:29:26.650407+00:00"
     },
     "search_runbooks": {
-      "weight": 1.0563,
-      "calls": 55,
-      "ema_signal": 1.0563,
-      "last_updated": "2026-04-11T23:29:38.609579+00:00"
+      "weight": 0.9728,
+      "calls": 111,
+      "ema_signal": 0.9728,
+      "last_updated": "2026-04-28T16:29:26.650411+00:00"
     },
     "search_postmortems": {
-      "weight": 1.0563,
-      "calls": 55,
-      "ema_signal": 1.0563,
-      "last_updated": "2026-04-11T23:29:38.609582+00:00"
+      "weight": 0.9728,
+      "calls": 111,
+      "ema_signal": 0.9728,
+      "last_updated": "2026-04-28T16:29:26.650415+00:00"
     },
     "search_similar": {
-      "weight": 1.0563,
-      "calls": 55,
-      "ema_signal": 1.0563,
-      "last_updated": "2026-04-11T23:29:38.609585+00:00"
+      "weight": 0.9728,
+      "calls": 111,
+      "ema_signal": 0.9728,
+      "last_updated": "2026-04-28T16:29:26.650418+00:00"
     },
     "search_logs": {
-      "weight": 1.0563,
-      "calls": 55,
-      "ema_signal": 1.0563,
-      "last_updated": "2026-04-11T23:29:38.609589+00:00"
+      "weight": 0.9728,
+      "calls": 111,
+      "ema_signal": 0.9728,
+      "last_updated": "2026-04-28T16:29:26.650421+00:00"
     },
     "get_golden_signals": {
-      "weight": 1.0563,
-      "calls": 55,
-      "ema_signal": 1.0563,
-      "last_updated": "2026-04-11T23:29:38.609592+00:00"
+      "weight": 0.9728,
+      "calls": 111,
+      "ema_signal": 0.9728,
+      "last_updated": "2026-04-28T16:29:26.650424+00:00"
     },
     "get_events": {
-      "weight": 1.0563,
-      "calls": 55,
-      "ema_signal": 1.0563,
-      "last_updated": "2026-04-11T23:29:38.609595+00:00"
+      "weight": 0.9728,
+      "calls": 111,
+      "ema_signal": 0.9728,
+      "last_updated": "2026-04-28T16:29:26.650427+00:00"
     },
     "get_change_data": {
-      "weight": 1.0563,
-      "calls": 55,
-      "ema_signal": 1.0563,
-      "last_updated": "2026-04-11T23:29:38.609598+00:00"
-    },
-    "get_k8s_events": {
-      "weight": 1.0632,
-      "calls": 30,
-      "ema_signal": 1.0632,
-      "last_updated": "2026-04-11T23:29:38.609601+00:00"
-    },
-    "query_metrics": {
-      "weight": 1.0632,
-      "calls": 30,
-      "ema_signal": 1.0632,
-      "last_updated": "2026-04-11T23:29:38.609604+00:00"
+      "weight": 0.9728,
+      "calls": 111,
+      "ema_signal": 0.9728,
+      "last_updated": "2026-04-28T16:29:26.650430+00:00"
     }
   },
   "flapping": {
     "get_incident_by_id": {
-      "weight": 1.0769,
-      "calls": 51,
-      "ema_signal": 1.0769,
-      "last_updated": "2026-04-11T23:29:38.671337+00:00"
+      "weight": 1.0906,
+      "calls": 105,
+      "ema_signal": 1.0906,
+      "last_updated": "2026-04-28T16:29:26.712775+00:00"
     },
     "get_ci_details": {
-      "weight": 1.0769,
-      "calls": 51,
-      "ema_signal": 1.0769,
-      "last_updated": "2026-04-11T23:29:38.671349+00:00"
+      "weight": 1.0906,
+      "calls": 105,
+      "ema_signal": 1.0906,
+      "last_updated": "2026-04-28T16:29:26.712786+00:00"
     },
     "get_known_errors": {
-      "weight": 1.0769,
-      "calls": 51,
-      "ema_signal": 1.0769,
-      "last_updated": "2026-04-11T23:29:38.671353+00:00"
+      "weight": 1.0906,
+      "calls": 105,
+      "ema_signal": 1.0906,
+      "last_updated": "2026-04-28T16:29:26.712790+00:00"
     },
     "search_incidents": {
-      "weight": 1.0769,
-      "calls": 51,
-      "ema_signal": 1.0769,
-      "last_updated": "2026-04-11T23:29:38.671379+00:00"
+      "weight": 1.0906,
+      "calls": 105,
+      "ema_signal": 1.0906,
+      "last_updated": "2026-04-28T16:29:26.712793+00:00"
     },
     "search_runbooks": {
-      "weight": 1.0769,
-      "calls": 51,
-      "ema_signal": 1.0769,
-      "last_updated": "2026-04-11T23:29:38.671383+00:00"
+      "weight": 1.0906,
+      "calls": 105,
+      "ema_signal": 1.0906,
+      "last_updated": "2026-04-28T16:29:26.712797+00:00"
     },
     "search_postmortems": {
-      "weight": 1.0769,
-      "calls": 51,
-      "ema_signal": 1.0769,
-      "last_updated": "2026-04-11T23:29:38.671387+00:00"
+      "weight": 1.0906,
+      "calls": 105,
+      "ema_signal": 1.0906,
+      "last_updated": "2026-04-28T16:29:26.712800+00:00"
     },
     "search_similar": {
-      "weight": 1.0769,
-      "calls": 51,
-      "ema_signal": 1.0769,
-      "last_updated": "2026-04-11T23:29:38.671391+00:00"
+      "weight": 1.0906,
+      "calls": 105,
+      "ema_signal": 1.0906,
+      "last_updated": "2026-04-28T16:29:26.712804+00:00"
     },
     "search_logs": {
-      "weight": 1.0769,
-      "calls": 51,
-      "ema_signal": 1.0769,
-      "last_updated": "2026-04-11T23:29:38.671395+00:00"
+      "weight": 1.0906,
+      "calls": 105,
+      "ema_signal": 1.0906,
+      "last_updated": "2026-04-28T16:29:26.712807+00:00"
     },
     "query_metrics": {
-      "weight": 1.0769,
-      "calls": 51,
-      "ema_signal": 1.0769,
-      "last_updated": "2026-04-11T23:29:38.671402+00:00"
+      "weight": 1.0906,
+      "calls": 105,
+      "ema_signal": 1.0906,
+      "last_updated": "2026-04-28T16:29:26.712814+00:00"
     },
     "get_golden_signals": {
-      "weight": 1.0769,
-      "calls": 51,
-      "ema_signal": 1.0769,
-      "last_updated": "2026-04-11T23:29:38.671399+00:00"
+      "weight": 1.0906,
+      "calls": 105,
+      "ema_signal": 1.0906,
+      "last_updated": "2026-04-28T16:29:26.712811+00:00"
     },
     "get_change_data": {
-      "weight": 1.0769,
-      "calls": 51,
-      "ema_signal": 1.0769,
-      "last_updated": "2026-04-11T23:29:38.671406+00:00"
-    },
-    "get_k8s_events": {
-      "weight": 1.0,
-      "calls": 3,
-      "ema_signal": null,
-      "last_updated": "2026-04-11T23:29:15.962371+00:00"
+      "weight": 1.0906,
+      "calls": 105,
+      "ema_signal": 1.0906,
+      "last_updated": "2026-04-28T16:29:26.712818+00:00"
     }
   },
   "silent_failure": {
     "get_incident_by_id": {
-      "weight": 0.9983,
-      "calls": 51,
-      "ema_signal": 0.9983,
-      "last_updated": "2026-04-11T23:29:38.726903+00:00"
+      "weight": 0.6825,
+      "calls": 105,
+      "ema_signal": 0.6825,
+      "last_updated": "2026-04-28T16:29:26.766993+00:00"
     },
     "get_ci_details": {
-      "weight": 0.9983,
-      "calls": 51,
-      "ema_signal": 0.9983,
-      "last_updated": "2026-04-11T23:29:38.726912+00:00"
+      "weight": 0.6825,
+      "calls": 105,
+      "ema_signal": 0.6825,
+      "last_updated": "2026-04-28T16:29:26.767007+00:00"
     },
     "get_known_errors": {
-      "weight": 0.9983,
-      "calls": 51,
-      "ema_signal": 0.9983,
-      "last_updated": "2026-04-11T23:29:38.726916+00:00"
+      "weight": 0.6825,
+      "calls": 105,
+      "ema_signal": 0.6825,
+      "last_updated": "2026-04-28T16:29:26.767013+00:00"
     },
     "search_incidents": {
-      "weight": 0.9983,
-      "calls": 51,
-      "ema_signal": 0.9983,
-      "last_updated": "2026-04-11T23:29:38.726919+00:00"
+      "weight": 0.6825,
+      "calls": 105,
+      "ema_signal": 0.6825,
+      "last_updated": "2026-04-28T16:29:26.767018+00:00"
     },
     "search_runbooks": {
-      "weight": 0.9983,
-      "calls": 51,
-      "ema_signal": 0.9983,
-      "last_updated": "2026-04-11T23:29:38.726922+00:00"
+      "weight": 0.6825,
+      "calls": 105,
+      "ema_signal": 0.6825,
+      "last_updated": "2026-04-28T16:29:26.767023+00:00"
     },
     "search_postmortems": {
-      "weight": 0.9983,
-      "calls": 51,
-      "ema_signal": 0.9983,
-      "last_updated": "2026-04-11T23:29:38.726925+00:00"
+      "weight": 0.6825,
+      "calls": 105,
+      "ema_signal": 0.6825,
+      "last_updated": "2026-04-28T16:29:26.767027+00:00"
     },
     "search_similar": {
-      "weight": 0.9983,
-      "calls": 51,
-      "ema_signal": 0.9983,
-      "last_updated": "2026-04-11T23:29:38.726928+00:00"
+      "weight": 0.6825,
+      "calls": 105,
+      "ema_signal": 0.6825,
+      "last_updated": "2026-04-28T16:29:26.767032+00:00"
     },
     "search_logs": {
-      "weight": 0.9983,
-      "calls": 51,
-      "ema_signal": 0.9983,
-      "last_updated": "2026-04-11T23:29:38.726931+00:00"
+      "weight": 0.6825,
+      "calls": 105,
+      "ema_signal": 0.6825,
+      "last_updated": "2026-04-28T16:29:26.767037+00:00"
     },
     "get_golden_signals": {
-      "weight": 0.9983,
-      "calls": 51,
-      "ema_signal": 0.9983,
-      "last_updated": "2026-04-11T23:29:38.726934+00:00"
+      "weight": 0.6825,
+      "calls": 105,
+      "ema_signal": 0.6825,
+      "last_updated": "2026-04-28T16:29:26.767042+00:00"
     },
     "query_metrics": {
-      "weight": 0.9983,
-      "calls": 51,
-      "ema_signal": 0.9983,
-      "last_updated": "2026-04-11T23:29:38.726936+00:00"
-    },
-    "get_change_data": {
-      "weight": 1.0138,
-      "calls": 27,
-      "ema_signal": 1.0138,
-      "last_updated": "2026-04-11T23:29:38.726940+00:00"
-    },
-    "get_k8s_events": {
-      "weight": 1.0138,
-      "calls": 27,
-      "ema_signal": 1.0138,
-      "last_updated": "2026-04-11T23:29:38.726942+00:00"
-    },
-    "get_error_logs": {
-      "weight": 1.0138,
-      "calls": 27,
-      "ema_signal": 1.0138,
-      "last_updated": "2026-04-11T23:29:38.726945+00:00"
+      "weight": 0.6825,
+      "calls": 105,
+      "ema_signal": 0.6825,
+      "last_updated": "2026-04-28T16:29:26.767047+00:00"
     }
   },
   "timeout": {
     "get_incident_by_id": {
-      "weight": 1.187,
-      "calls": 188,
-      "ema_signal": 1.187,
-      "last_updated": "2026-04-11T23:29:38.827385+00:00"
+      "weight": 0.9895,
+      "calls": 278,
+      "ema_signal": 0.9895,
+      "last_updated": "2026-04-28T16:29:26.294012+00:00"
     },
     "get_ci_details": {
-      "weight": 1.187,
-      "calls": 188,
-      "ema_signal": 1.187,
-      "last_updated": "2026-04-11T23:29:38.827397+00:00"
+      "weight": 0.9895,
+      "calls": 278,
+      "ema_signal": 0.9895,
+      "last_updated": "2026-04-28T16:29:26.294022+00:00"
     },
     "get_known_errors": {
-      "weight": 1.187,
-      "calls": 188,
-      "ema_signal": 1.187,
-      "last_updated": "2026-04-11T23:29:38.827401+00:00"
+      "weight": 0.9895,
+      "calls": 278,
+      "ema_signal": 0.9895,
+      "last_updated": "2026-04-28T16:29:26.294026+00:00"
     },
     "search_incidents": {
-      "weight": 1.187,
-      "calls": 188,
-      "ema_signal": 1.187,
-      "last_updated": "2026-04-11T23:29:38.827404+00:00"
+      "weight": 0.9895,
+      "calls": 278,
+      "ema_signal": 0.9895,
+      "last_updated": "2026-04-28T16:29:26.294029+00:00"
     },
     "search_runbooks": {
-      "weight": 1.187,
-      "calls": 188,
-      "ema_signal": 1.187,
-      "last_updated": "2026-04-11T23:29:38.827407+00:00"
+      "weight": 0.9895,
+      "calls": 278,
+      "ema_signal": 0.9895,
+      "last_updated": "2026-04-28T16:29:26.294032+00:00"
     },
     "search_postmortems": {
-      "weight": 1.187,
-      "calls": 188,
-      "ema_signal": 1.187,
-      "last_updated": "2026-04-11T23:29:38.827410+00:00"
+      "weight": 0.9895,
+      "calls": 278,
+      "ema_signal": 0.9895,
+      "last_updated": "2026-04-28T16:29:26.294035+00:00"
     },
     "search_similar": {
-      "weight": 1.187,
-      "calls": 188,
-      "ema_signal": 1.187,
-      "last_updated": "2026-04-11T23:29:38.827413+00:00"
+      "weight": 0.999,
+      "calls": 272,
+      "ema_signal": 0.999,
+      "last_updated": "2026-04-28T16:29:26.294039+00:00"
     },
     "search_logs": {
-      "weight": 1.187,
-      "calls": 188,
-      "ema_signal": 1.187,
-      "last_updated": "2026-04-11T23:29:38.827416+00:00"
+      "weight": 1.0039,
+      "calls": 269,
+      "ema_signal": 1.0039,
+      "last_updated": "2026-04-28T16:29:26.294042+00:00"
     },
     "get_golden_signals": {
-      "weight": 1.187,
-      "calls": 188,
-      "ema_signal": 1.187,
-      "last_updated": "2026-04-11T23:29:38.827419+00:00"
+      "weight": 0.9997,
+      "calls": 272,
+      "ema_signal": 0.9997,
+      "last_updated": "2026-04-28T16:29:26.294045+00:00"
     },
     "get_change_data": {
-      "weight": 1.187,
-      "calls": 188,
-      "ema_signal": 1.187,
-      "last_updated": "2026-04-11T23:29:38.827425+00:00"
+      "weight": 1.0069,
+      "calls": 266,
+      "ema_signal": 1.0069,
+      "last_updated": "2026-04-28T16:29:26.294052+00:00"
     },
     "get_recent_deployments": {
-      "weight": 1.197,
-      "calls": 172,
-      "ema_signal": 1.197,
-      "last_updated": "2026-04-11T23:29:38.827428+00:00"
+      "weight": 1.007,
+      "calls": 254,
+      "ema_signal": 1.007,
+      "last_updated": "2026-04-28T16:29:26.294055+00:00"
     },
     "get_workflow_runs": {
-      "weight": 1.197,
-      "calls": 172,
-      "ema_signal": 1.197,
-      "last_updated": "2026-04-11T23:29:38.827430+00:00"
+      "weight": 1.007,
+      "calls": 254,
+      "ema_signal": 1.007,
+      "last_updated": "2026-04-28T16:29:26.294058+00:00"
     },
     "query_metrics": {
-      "weight": 1.192,
-      "calls": 178,
-      "ema_signal": 1.192,
-      "last_updated": "2026-04-11T23:29:38.827422+00:00"
+      "weight": 0.9955,
+      "calls": 258,
+      "ema_signal": 0.9955,
+      "last_updated": "2026-04-28T16:29:26.294048+00:00"
     },
     "analyze_diff": {
       "weight": 1.0,
-      "calls": 4,
+      "calls": 3,
       "ema_signal": null,
-      "last_updated": "2026-04-11T23:29:14.191960+00:00"
-    },
-    "get_k8s_events": {
-      "weight": 1.187,
-      "calls": 117,
-      "ema_signal": 1.187,
-      "last_updated": "2026-04-11T23:29:38.827433+00:00"
+      "last_updated": "2026-04-28T16:28:54.182820+00:00"
     }
   },
   "oomkill": {
     "get_incident_by_id": {
-      "weight": 1.0155,
-      "calls": 62,
-      "ema_signal": 1.0155,
-      "last_updated": "2026-04-11T23:29:38.866925+00:00"
+      "weight": 0.7447,
+      "calls": 132,
+      "ema_signal": 0.7447,
+      "last_updated": "2026-04-28T16:29:26.348794+00:00"
     },
     "get_ci_details": {
-      "weight": 1.0155,
-      "calls": 62,
-      "ema_signal": 1.0155,
-      "last_updated": "2026-04-11T23:29:38.866937+00:00"
+      "weight": 0.7447,
+      "calls": 132,
+      "ema_signal": 0.7447,
+      "last_updated": "2026-04-28T16:29:26.348808+00:00"
     },
     "get_known_errors": {
-      "weight": 1.0155,
-      "calls": 62,
-      "ema_signal": 1.0155,
-      "last_updated": "2026-04-11T23:29:38.866943+00:00"
+      "weight": 0.7447,
+      "calls": 132,
+      "ema_signal": 0.7447,
+      "last_updated": "2026-04-28T16:29:26.348814+00:00"
     },
     "search_incidents": {
-      "weight": 1.0155,
-      "calls": 62,
-      "ema_signal": 1.0155,
-      "last_updated": "2026-04-11T23:29:38.866947+00:00"
+      "weight": 0.7447,
+      "calls": 132,
+      "ema_signal": 0.7447,
+      "last_updated": "2026-04-28T16:29:26.348817+00:00"
     },
     "search_runbooks": {
-      "weight": 1.0155,
-      "calls": 62,
-      "ema_signal": 1.0155,
-      "last_updated": "2026-04-11T23:29:38.866951+00:00"
+      "weight": 0.7447,
+      "calls": 132,
+      "ema_signal": 0.7447,
+      "last_updated": "2026-04-28T16:29:26.348821+00:00"
     },
     "search_postmortems": {
-      "weight": 1.0155,
-      "calls": 62,
-      "ema_signal": 1.0155,
-      "last_updated": "2026-04-11T23:29:38.866954+00:00"
+      "weight": 0.7447,
+      "calls": 132,
+      "ema_signal": 0.7447,
+      "last_updated": "2026-04-28T16:29:26.348825+00:00"
     },
     "search_similar": {
-      "weight": 1.0155,
-      "calls": 62,
-      "ema_signal": 1.0155,
-      "last_updated": "2026-04-11T23:29:38.866957+00:00"
+      "weight": 0.7447,
+      "calls": 132,
+      "ema_signal": 0.7447,
+      "last_updated": "2026-04-28T16:29:26.348828+00:00"
     },
     "search_logs": {
-      "weight": 1.0155,
-      "calls": 62,
-      "ema_signal": 1.0155,
-      "last_updated": "2026-04-11T23:29:38.866960+00:00"
+      "weight": 0.7447,
+      "calls": 132,
+      "ema_signal": 0.7447,
+      "last_updated": "2026-04-28T16:29:26.348831+00:00"
     },
     "query_metrics": {
-      "weight": 1.0155,
-      "calls": 62,
-      "ema_signal": 1.0155,
-      "last_updated": "2026-04-11T23:29:38.866963+00:00"
+      "weight": 0.7447,
+      "calls": 132,
+      "ema_signal": 0.7447,
+      "last_updated": "2026-04-28T16:29:26.348835+00:00"
     },
     "get_events": {
-      "weight": 1.0155,
-      "calls": 62,
-      "ema_signal": 1.0155,
-      "last_updated": "2026-04-11T23:29:38.866966+00:00"
-    },
-    "get_change_data": {
-      "weight": 1.0201,
-      "calls": 33,
-      "ema_signal": 1.0201,
-      "last_updated": "2026-04-11T23:29:38.866970+00:00"
-    },
-    "get_k8s_events": {
-      "weight": 1.0201,
-      "calls": 33,
-      "ema_signal": 1.0201,
-      "last_updated": "2026-04-11T23:29:38.866973+00:00"
-    },
-    "get_golden_signals": {
-      "weight": 1.0201,
-      "calls": 33,
-      "ema_signal": 1.0201,
-      "last_updated": "2026-04-11T23:29:38.866976+00:00"
+      "weight": 0.7447,
+      "calls": 132,
+      "ema_signal": 0.7447,
+      "last_updated": "2026-04-28T16:29:26.348838+00:00"
     }
   },
   "error_spike": {
     "get_incident_by_id": {
-      "weight": 1.0318,
-      "calls": 326,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949707+00:00"
+      "weight": 1.0134,
+      "calls": 383,
+      "ema_signal": 1.0134,
+      "last_updated": "2026-04-28T16:29:26.389473+00:00"
     },
     "get_ci_details": {
-      "weight": 1.0318,
-      "calls": 326,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949719+00:00"
+      "weight": 1.0134,
+      "calls": 383,
+      "ema_signal": 1.0134,
+      "last_updated": "2026-04-28T16:29:26.389488+00:00"
     },
     "get_known_errors": {
-      "weight": 1.0318,
-      "calls": 326,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949723+00:00"
+      "weight": 1.0134,
+      "calls": 383,
+      "ema_signal": 1.0134,
+      "last_updated": "2026-04-28T16:29:26.389494+00:00"
     },
     "search_incidents": {
-      "weight": 1.0318,
-      "calls": 326,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949726+00:00"
+      "weight": 1.0134,
+      "calls": 383,
+      "ema_signal": 1.0134,
+      "last_updated": "2026-04-28T16:29:26.389500+00:00"
     },
     "search_runbooks": {
-      "weight": 1.0318,
-      "calls": 326,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949729+00:00"
+      "weight": 1.0134,
+      "calls": 383,
+      "ema_signal": 1.0134,
+      "last_updated": "2026-04-28T16:29:26.389505+00:00"
     },
     "search_postmortems": {
-      "weight": 1.0318,
-      "calls": 326,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949732+00:00"
+      "weight": 1.0134,
+      "calls": 383,
+      "ema_signal": 1.0134,
+      "last_updated": "2026-04-28T16:29:26.389509+00:00"
     },
     "search_similar": {
-      "weight": 1.0318,
-      "calls": 326,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949735+00:00"
+      "weight": 1.0134,
+      "calls": 383,
+      "ema_signal": 1.0134,
+      "last_updated": "2026-04-28T16:29:26.389512+00:00"
     },
     "search_logs": {
-      "weight": 1.0318,
-      "calls": 326,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949738+00:00"
+      "weight": 1.0134,
+      "calls": 383,
+      "ema_signal": 1.0134,
+      "last_updated": "2026-04-28T16:29:26.389515+00:00"
     },
     "get_golden_signals": {
-      "weight": 1.0318,
-      "calls": 326,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949741+00:00"
+      "weight": 1.0134,
+      "calls": 383,
+      "ema_signal": 1.0134,
+      "last_updated": "2026-04-28T16:29:26.389518+00:00"
     },
     "get_change_records": {
-      "weight": 1.0318,
-      "calls": 326,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949744+00:00"
+      "weight": 1.0134,
+      "calls": 383,
+      "ema_signal": 1.0134,
+      "last_updated": "2026-04-28T16:29:26.389521+00:00"
     },
     "get_change_data": {
-      "weight": 1.0318,
-      "calls": 326,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949751+00:00"
+      "weight": 1.0134,
+      "calls": 383,
+      "ema_signal": 1.0134,
+      "last_updated": "2026-04-28T16:29:26.389527+00:00"
     },
     "get_events": {
-      "weight": 1.0318,
-      "calls": 326,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949748+00:00"
+      "weight": 1.0134,
+      "calls": 383,
+      "ema_signal": 1.0134,
+      "last_updated": "2026-04-28T16:29:26.389524+00:00"
     },
     "get_recent_deployments": {
-      "weight": 1.1422,
-      "calls": 68,
-      "ema_signal": 1.1422,
-      "last_updated": "2026-04-11T23:29:38.949754+00:00"
+      "weight": 1.0437,
+      "calls": 133,
+      "ema_signal": 1.0437,
+      "last_updated": "2026-04-28T16:29:26.389530+00:00"
     },
     "get_workflow_runs": {
-      "weight": 1.1422,
-      "calls": 68,
-      "ema_signal": 1.1422,
-      "last_updated": "2026-04-11T23:29:38.949757+00:00"
+      "weight": 1.0437,
+      "calls": 133,
+      "ema_signal": 1.0437,
+      "last_updated": "2026-04-28T16:29:26.389534+00:00"
     },
     "analyze_diff": {
-      "weight": 1.1429,
-      "calls": 12,
-      "ema_signal": 1.1429,
-      "last_updated": "2026-04-11T23:29:14.355026+00:00"
-    },
-    "get_k8s_events": {
-      "weight": 1.0318,
-      "calls": 198,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949760+00:00"
-    },
-    "query_metrics": {
-      "weight": 1.0318,
-      "calls": 198,
-      "ema_signal": 1.0318,
-      "last_updated": "2026-04-11T23:29:38.949763+00:00"
+      "weight": 1.0286,
+      "calls": 9,
+      "ema_signal": 1.0286,
+      "last_updated": "2026-04-28T16:28:54.281268+00:00"
     }
   },
   "latency": {
     "get_incident_by_id": {
-      "weight": 1.031,
-      "calls": 60,
-      "ema_signal": 1.031,
-      "last_updated": "2026-04-11T23:29:39.034039+00:00"
+      "weight": 0.9476,
+      "calls": 109,
+      "ema_signal": 0.9476,
+      "last_updated": "2026-04-28T16:29:26.442191+00:00"
     },
     "get_ci_details": {
-      "weight": 1.031,
-      "calls": 60,
-      "ema_signal": 1.031,
-      "last_updated": "2026-04-11T23:29:39.034051+00:00"
+      "weight": 0.9476,
+      "calls": 109,
+      "ema_signal": 0.9476,
+      "last_updated": "2026-04-28T16:29:26.442202+00:00"
     },
     "get_known_errors": {
-      "weight": 1.031,
-      "calls": 60,
-      "ema_signal": 1.031,
-      "last_updated": "2026-04-11T23:29:39.034055+00:00"
+      "weight": 0.9476,
+      "calls": 109,
+      "ema_signal": 0.9476,
+      "last_updated": "2026-04-28T16:29:26.442206+00:00"
     },
     "search_incidents": {
-      "weight": 1.031,
-      "calls": 60,
-      "ema_signal": 1.031,
-      "last_updated": "2026-04-11T23:29:39.034058+00:00"
+      "weight": 0.9476,
+      "calls": 109,
+      "ema_signal": 0.9476,
+      "last_updated": "2026-04-28T16:29:26.442209+00:00"
     },
     "search_runbooks": {
-      "weight": 1.031,
-      "calls": 60,
-      "ema_signal": 1.031,
-      "last_updated": "2026-04-11T23:29:39.034061+00:00"
+      "weight": 0.9476,
+      "calls": 109,
+      "ema_signal": 0.9476,
+      "last_updated": "2026-04-28T16:29:26.442212+00:00"
     },
     "search_postmortems": {
-      "weight": 1.031,
-      "calls": 60,
-      "ema_signal": 1.031,
-      "last_updated": "2026-04-11T23:29:39.034064+00:00"
+      "weight": 0.9476,
+      "calls": 109,
+      "ema_signal": 0.9476,
+      "last_updated": "2026-04-28T16:29:26.442216+00:00"
     },
     "search_similar": {
-      "weight": 1.031,
-      "calls": 60,
-      "ema_signal": 1.031,
-      "last_updated": "2026-04-11T23:29:39.034067+00:00"
+      "weight": 0.9476,
+      "calls": 109,
+      "ema_signal": 0.9476,
+      "last_updated": "2026-04-28T16:29:26.442219+00:00"
     },
     "search_logs": {
-      "weight": 1.031,
-      "calls": 60,
-      "ema_signal": 1.031,
-      "last_updated": "2026-04-11T23:29:39.034070+00:00"
+      "weight": 0.9476,
+      "calls": 109,
+      "ema_signal": 0.9476,
+      "last_updated": "2026-04-28T16:29:26.442222+00:00"
     },
     "get_golden_signals": {
-      "weight": 1.031,
-      "calls": 60,
-      "ema_signal": 1.031,
-      "last_updated": "2026-04-11T23:29:39.034073+00:00"
+      "weight": 0.9476,
+      "calls": 109,
+      "ema_signal": 0.9476,
+      "last_updated": "2026-04-28T16:29:26.442226+00:00"
     },
     "query_metrics": {
-      "weight": 1.031,
-      "calls": 60,
-      "ema_signal": 1.031,
-      "last_updated": "2026-04-11T23:29:39.034077+00:00"
+      "weight": 0.9476,
+      "calls": 109,
+      "ema_signal": 0.9476,
+      "last_updated": "2026-04-28T16:29:26.442229+00:00"
     },
     "get_change_data": {
-      "weight": 1.031,
-      "calls": 60,
-      "ema_signal": 1.031,
-      "last_updated": "2026-04-11T23:29:39.034080+00:00"
+      "weight": 0.9476,
+      "calls": 109,
+      "ema_signal": 0.9476,
+      "last_updated": "2026-04-28T16:29:26.442232+00:00"
     },
-    "get_k8s_events": {
-      "weight": 1.034,
-      "calls": 33,
-      "ema_signal": 1.034,
-      "last_updated": "2026-04-11T23:29:39.034083+00:00"
+    "get_recent_deployments": {
+      "weight": 1.0,
+      "calls": 3,
+      "ema_signal": null,
+      "last_updated": "2026-04-28T16:29:24.272861+00:00"
     },
-    "get_error_logs": {
-      "weight": 1.034,
-      "calls": 33,
-      "ema_signal": 1.034,
-      "last_updated": "2026-04-11T23:29:39.034086+00:00"
+    "get_workflow_runs": {
+      "weight": 1.0,
+      "calls": 3,
+      "ema_signal": null,
+      "last_updated": "2026-04-28T16:29:24.272863+00:00"
     }
   },
   "saturation": {
     "get_incident_by_id": {
-      "weight": 1.1271,
-      "calls": 56,
-      "ema_signal": 1.1271,
-      "last_updated": "2026-04-11T23:29:39.075397+00:00"
+      "weight": 0.7781,
+      "calls": 118,
+      "ema_signal": 0.7781,
+      "last_updated": "2026-04-28T16:29:26.497298+00:00"
     },
     "get_ci_details": {
-      "weight": 1.1271,
-      "calls": 56,
-      "ema_signal": 1.1271,
-      "last_updated": "2026-04-11T23:29:39.075409+00:00"
+      "weight": 0.7781,
+      "calls": 118,
+      "ema_signal": 0.7781,
+      "last_updated": "2026-04-28T16:29:26.497312+00:00"
     },
     "get_known_errors": {
-      "weight": 1.1271,
-      "calls": 56,
-      "ema_signal": 1.1271,
-      "last_updated": "2026-04-11T23:29:39.075413+00:00"
+      "weight": 0.7781,
+      "calls": 118,
+      "ema_signal": 0.7781,
+      "last_updated": "2026-04-28T16:29:26.497318+00:00"
     },
     "search_incidents": {
-      "weight": 1.1271,
-      "calls": 56,
-      "ema_signal": 1.1271,
-      "last_updated": "2026-04-11T23:29:39.075417+00:00"
+      "weight": 0.7781,
+      "calls": 118,
+      "ema_signal": 0.7781,
+      "last_updated": "2026-04-28T16:29:26.497323+00:00"
     },
     "search_runbooks": {
-      "weight": 1.1271,
-      "calls": 56,
-      "ema_signal": 1.1271,
-      "last_updated": "2026-04-11T23:29:39.075420+00:00"
+      "weight": 0.7781,
+      "calls": 118,
+      "ema_signal": 0.7781,
+      "last_updated": "2026-04-28T16:29:26.497329+00:00"
     },
     "search_postmortems": {
-      "weight": 1.1271,
-      "calls": 56,
-      "ema_signal": 1.1271,
-      "last_updated": "2026-04-11T23:29:39.075423+00:00"
+      "weight": 0.7781,
+      "calls": 118,
+      "ema_signal": 0.7781,
+      "last_updated": "2026-04-28T16:29:26.497334+00:00"
     },
     "search_similar": {
-      "weight": 1.1271,
-      "calls": 56,
-      "ema_signal": 1.1271,
-      "last_updated": "2026-04-11T23:29:39.075426+00:00"
+      "weight": 0.7781,
+      "calls": 118,
+      "ema_signal": 0.7781,
+      "last_updated": "2026-04-28T16:29:26.497349+00:00"
     },
     "get_golden_signals": {
-      "weight": 1.1271,
-      "calls": 56,
-      "ema_signal": 1.1271,
-      "last_updated": "2026-04-11T23:29:39.075429+00:00"
+      "weight": 0.7781,
+      "calls": 118,
+      "ema_signal": 0.7781,
+      "last_updated": "2026-04-28T16:29:26.497361+00:00"
     },
     "query_metrics": {
-      "weight": 1.1271,
-      "calls": 56,
-      "ema_signal": 1.1271,
-      "last_updated": "2026-04-11T23:29:39.075432+00:00"
+      "weight": 0.7781,
+      "calls": 118,
+      "ema_signal": 0.7781,
+      "last_updated": "2026-04-28T16:29:26.497355+00:00"
     },
     "search_logs": {
-      "weight": 1.1271,
-      "calls": 56,
-      "ema_signal": 1.1271,
-      "last_updated": "2026-04-11T23:29:39.075436+00:00"
+      "weight": 0.7781,
+      "calls": 118,
+      "ema_signal": 0.7781,
+      "last_updated": "2026-04-28T16:29:26.497365+00:00"
     },
     "get_change_records": {
-      "weight": 1.1271,
-      "calls": 56,
-      "ema_signal": 1.1271,
-      "last_updated": "2026-04-11T23:29:39.075439+00:00"
+      "weight": 0.7781,
+      "calls": 118,
+      "ema_signal": 0.7781,
+      "last_updated": "2026-04-28T16:29:26.497368+00:00"
     },
     "get_change_data": {
-      "weight": 1.1271,
-      "calls": 56,
-      "ema_signal": 1.1271,
-      "last_updated": "2026-04-11T23:29:39.075442+00:00"
+      "weight": 0.7781,
+      "calls": 118,
+      "ema_signal": 0.7781,
+      "last_updated": "2026-04-28T16:29:26.497371+00:00"
     },
     "get_recent_deployments": {
-      "weight": 1.1504,
-      "calls": 48,
-      "ema_signal": 1.1504,
-      "last_updated": "2026-04-11T23:29:39.075445+00:00"
+      "weight": 0.7786,
+      "calls": 112,
+      "ema_signal": 0.7786,
+      "last_updated": "2026-04-28T16:29:26.497374+00:00"
     },
     "get_workflow_runs": {
-      "weight": 1.1504,
-      "calls": 48,
-      "ema_signal": 1.1504,
-      "last_updated": "2026-04-11T23:29:39.075448+00:00"
-    },
-    "get_k8s_events": {
-      "weight": 1.1377,
-      "calls": 30,
-      "ema_signal": 1.1377,
-      "last_updated": "2026-04-11T23:29:39.075451+00:00"
-    },
-    "get_error_logs": {
-      "weight": 1.1377,
-      "calls": 30,
-      "ema_signal": 1.1377,
-      "last_updated": "2026-04-11T23:29:39.075454+00:00"
+      "weight": 0.7786,
+      "calls": 112,
+      "ema_signal": 0.7786,
+      "last_updated": "2026-04-28T16:29:26.497377+00:00"
     }
   },
   "network": {
     "get_incident_by_id": {
-      "weight": 1.1286,
-      "calls": 59,
-      "ema_signal": 1.1286,
-      "last_updated": "2026-04-19T05:12:16.488744+00:00"
+      "weight": 1.0139,
+      "calls": 124,
+      "ema_signal": 1.0139,
+      "last_updated": "2026-04-28T16:29:26.542706+00:00"
     },
     "get_ci_details": {
-      "weight": 1.1286,
-      "calls": 59,
-      "ema_signal": 1.1286,
-      "last_updated": "2026-04-19T05:12:16.488755+00:00"
+      "weight": 1.0139,
+      "calls": 124,
+      "ema_signal": 1.0139,
+      "last_updated": "2026-04-28T16:29:26.542721+00:00"
     },
     "get_known_errors": {
-      "weight": 1.1286,
-      "calls": 59,
-      "ema_signal": 1.1286,
-      "last_updated": "2026-04-19T05:12:16.488758+00:00"
+      "weight": 1.0139,
+      "calls": 124,
+      "ema_signal": 1.0139,
+      "last_updated": "2026-04-28T16:29:26.542725+00:00"
     },
     "search_incidents": {
-      "weight": 1.1286,
-      "calls": 59,
-      "ema_signal": 1.1286,
-      "last_updated": "2026-04-19T05:12:16.488761+00:00"
+      "weight": 1.0139,
+      "calls": 124,
+      "ema_signal": 1.0139,
+      "last_updated": "2026-04-28T16:29:26.542729+00:00"
     },
     "search_runbooks": {
-      "weight": 1.1286,
-      "calls": 59,
-      "ema_signal": 1.1286,
-      "last_updated": "2026-04-19T05:12:16.488764+00:00"
+      "weight": 1.0139,
+      "calls": 124,
+      "ema_signal": 1.0139,
+      "last_updated": "2026-04-28T16:29:26.542732+00:00"
     },
     "search_postmortems": {
-      "weight": 1.1286,
-      "calls": 59,
-      "ema_signal": 1.1286,
-      "last_updated": "2026-04-19T05:12:16.488767+00:00"
+      "weight": 1.0139,
+      "calls": 124,
+      "ema_signal": 1.0139,
+      "last_updated": "2026-04-28T16:29:26.542736+00:00"
     },
     "search_similar": {
-      "weight": 1.1286,
-      "calls": 59,
-      "ema_signal": 1.1286,
-      "last_updated": "2026-04-19T05:12:16.488769+00:00"
+      "weight": 1.0139,
+      "calls": 124,
+      "ema_signal": 1.0139,
+      "last_updated": "2026-04-28T16:29:26.542739+00:00"
     },
     "search_logs": {
-      "weight": 0.9531,
-      "calls": 61,
-      "ema_signal": 0.9531,
-      "last_updated": "2026-04-19T05:12:16.531727+00:00"
+      "weight": 1.0139,
+      "calls": 124,
+      "ema_signal": 1.0139,
+      "last_updated": "2026-04-28T16:29:26.542742+00:00"
     },
     "get_golden_signals": {
-      "weight": 0.9531,
-      "calls": 61,
-      "ema_signal": 0.9531,
-      "last_updated": "2026-04-19T05:12:16.531732+00:00"
+      "weight": 1.0139,
+      "calls": 124,
+      "ema_signal": 1.0139,
+      "last_updated": "2026-04-28T16:29:26.542746+00:00"
     },
     "get_change_records": {
-      "weight": 1.1286,
-      "calls": 59,
-      "ema_signal": 1.1286,
-      "last_updated": "2026-04-19T05:12:16.488787+00:00"
+      "weight": 1.0139,
+      "calls": 124,
+      "ema_signal": 1.0139,
+      "last_updated": "2026-04-28T16:29:26.542749+00:00"
     },
     "get_change_data": {
-      "weight": 1.1286,
-      "calls": 59,
-      "ema_signal": 1.1286,
-      "last_updated": "2026-04-19T05:12:16.488789+00:00"
+      "weight": 1.0139,
+      "calls": 124,
+      "ema_signal": 1.0139,
+      "last_updated": "2026-04-28T16:29:26.542752+00:00"
     },
     "get_recent_deployments": {
-      "weight": 1.1083,
-      "calls": 45,
-      "ema_signal": 1.1083,
-      "last_updated": "2026-04-11T23:29:39.166476+00:00"
+      "weight": 1.0143,
+      "calls": 115,
+      "ema_signal": 1.0143,
+      "last_updated": "2026-04-28T16:29:26.542755+00:00"
     },
     "get_workflow_runs": {
-      "weight": 1.1083,
-      "calls": 45,
-      "ema_signal": 1.1083,
-      "last_updated": "2026-04-11T23:29:39.166479+00:00"
-    },
-    "get_k8s_events": {
-      "weight": 1.1305,
-      "calls": 33,
-      "ema_signal": 1.1305,
-      "last_updated": "2026-04-19T05:12:16.488792+00:00"
-    },
-    "get_error_logs": {
-      "weight": 1.1305,
-      "calls": 33,
-      "ema_signal": 1.1305,
-      "last_updated": "2026-04-19T05:12:16.488795+00:00"
-    },
-    "get_service_metrics": {
-      "weight": 0.3,
-      "calls": 4,
-      "ema_signal": 0.3,
-      "last_updated": "2026-04-19T05:12:16.531745+00:00"
-    },
-    "get_apm_data": {
-      "weight": 0.3,
-      "calls": 2,
-      "ema_signal": 0.3,
-      "last_updated": "2026-04-19T05:12:16.531714+00:00"
-    },
-    "get_recent_errors": {
-      "weight": 0.3,
-      "calls": 2,
-      "ema_signal": 0.3,
-      "last_updated": "2026-04-19T05:12:16.531721+00:00"
-    }
-  },
-  "_service_weights": {
-    "network.get_incident_by_id.inventory-service": {
-      "weight": 1.0,
-      "calls": 2,
-      "ema_signal": null,
-      "last_updated": "2026-04-19T05:12:16.488798+00:00"
-    },
-    "network.get_ci_details.inventory-service": {
-      "weight": 1.0,
-      "calls": 2,
-      "ema_signal": null,
-      "last_updated": "2026-04-19T05:12:16.488801+00:00"
-    },
-    "network.get_known_errors.inventory-service": {
-      "weight": 1.0,
-      "calls": 2,
-      "ema_signal": null,
-      "last_updated": "2026-04-19T05:12:16.488803+00:00"
-    },
-    "network.search_incidents.inventory-service": {
-      "weight": 1.0,
-      "calls": 2,
-      "ema_signal": null,
-      "last_updated": "2026-04-19T05:12:16.488804+00:00"
-    },
-    "network.search_runbooks.inventory-service": {
-      "weight": 1.0,
-      "calls": 2,
-      "ema_signal": null,
-      "last_updated": "2026-04-19T05:12:16.488806+00:00"
-    },
-    "network.search_postmortems.inventory-service": {
-      "weight": 1.0,
-      "calls": 2,
-      "ema_signal": null,
-      "last_updated": "2026-04-19T05:12:16.488807+00:00"
-    },
-    "network.search_similar.inventory-service": {
-      "weight": 1.0,
-      "calls": 2,
-      "ema_signal": null,
-      "last_updated": "2026-04-19T05:12:16.488809+00:00"
-    },
-    "network.search_logs.inventory-service": {
-      "weight": 0.3,
-      "calls": 4,
-      "ema_signal": 0.3,
-      "last_updated": "2026-04-19T05:12:16.531730+00:00"
-    },
-    "network.get_golden_signals.inventory-service": {
-      "weight": 0.3,
-      "calls": 4,
-      "ema_signal": 0.3,
-      "last_updated": "2026-04-19T05:12:16.531735+00:00"
-    },
-    "network.get_change_records.inventory-service": {
-      "weight": 1.0,
-      "calls": 2,
-      "ema_signal": null,
-      "last_updated": "2026-04-19T05:12:16.488813+00:00"
-    },
-    "network.get_change_data.inventory-service": {
-      "weight": 1.0,
-      "calls": 2,
-      "ema_signal": null,
-      "last_updated": "2026-04-19T05:12:16.488815+00:00"
-    },
-    "network.get_k8s_events.inventory-service": {
-      "weight": 1.0,
-      "calls": 2,
-      "ema_signal": null,
-      "last_updated": "2026-04-19T05:12:16.488816+00:00"
-    },
-    "network.get_error_logs.inventory-service": {
-      "weight": 1.0,
-      "calls": 2,
-      "ema_signal": null,
-      "last_updated": "2026-04-19T05:12:16.488818+00:00"
-    },
-    "network.get_service_metrics.inventory-service": {
-      "weight": 0.3,
-      "calls": 4,
-      "ema_signal": 0.3,
-      "last_updated": "2026-04-19T05:12:16.531749+00:00"
-    },
-    "network.get_apm_data.inventory-service": {
-      "weight": 0.3,
-      "calls": 2,
-      "ema_signal": 0.3,
-      "last_updated": "2026-04-19T05:12:16.531718+00:00"
-    },
-    "network.get_recent_errors.inventory-service": {
-      "weight": 0.3,
-      "calls": 2,
-      "ema_signal": 0.3,
-      "last_updated": "2026-04-19T05:12:16.531724+00:00"
+      "weight": 1.0143,
+      "calls": 115,
+      "ema_signal": 1.0143,
+      "last_updated": "2026-04-28T16:29:26.542758+00:00"
     }
   }
 }

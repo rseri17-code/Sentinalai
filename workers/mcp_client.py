@@ -388,6 +388,13 @@ _TOOL_TO_SERVER: dict[str, str] = {
     "github.get_pr_details": "github",
     "github.get_commit_diff": "github",
     "github.get_workflow_runs": "github",
+    "github.create_fix_pr": "github",
+    "github.create_pull_request": "github",
+    # Kubernetes (rollback / scale)
+    "kubernetes.rollback_deployment": "kubernetes",
+    "kubernetes.scale_service": "kubernetes",
+    "kubernetes.get_deployment_status": "kubernetes",
+    "kubernetes.get_pod_logs": "kubernetes",
     # Confluence (documentation / runbooks / post-mortems)
     "confluence.search_runbooks": "confluence",
     "confluence.search_postmortems": "confluence",
@@ -407,6 +414,7 @@ _SERVER_TO_TARGET: dict[str, str] = {
     "servicenow": os.environ.get("AGENTCORE_TARGET_SERVICENOW", "ServiceNowTarget"),
     "github": os.environ.get("AGENTCORE_TARGET_GITHUB", "GitHubTarget"),
     "confluence": os.environ.get("AGENTCORE_TARGET_CONFLUENCE", "ConfluenceTarget"),
+    "kubernetes": os.environ.get("AGENTCORE_TARGET_KUBERNETES", "KubernetesTarget"),
 }
 
 
@@ -1148,13 +1156,66 @@ def _stub_servicenow(action: str, params: dict) -> dict:
 def _stub_github(action: str, params: dict) -> dict:
     if "deployment" in action:
         return {"deployments": []}
-    if "pr" in action:
-        return {"pr": {}}
+    if "create" in action and ("pr" in action or "pull" in action):
+        repo = params.get("repo", params.get("repository", "org/service"))
+        branch = params.get("branch", params.get("head_branch", "fix/auto-remediation"))
+        pr_num = 9001
+        return {
+            "pr": {
+                "number": pr_num,
+                "url": f"https://github.com/{repo}/pull/{pr_num}",
+                "html_url": f"https://github.com/{repo}/pull/{pr_num}",
+                "state": "open",
+                "title": params.get("title", "Auto-remediation fix"),
+                "head": {"ref": branch},
+                "base": {"ref": params.get("base_branch", "main")},
+                "mergeable": True,
+            },
+            "pr_url": f"https://github.com/{repo}/pull/{pr_num}",
+            "pr_number": pr_num,
+        }
+    if "pr" in action or "pull" in action:
+        return {"pr": {"number": 0, "state": "open", "mergeable": True}}
     if "commit" in action or "diff" in action:
         return {"commit": {}}
     if "workflow" in action:
         return {"workflow_runs": []}
     return {}
+
+
+def _stub_kubernetes(action: str, params: dict) -> dict:
+    service = params.get("service", params.get("deployment", "unknown-service"))
+    namespace = params.get("namespace", "default")
+    if "rollback" in action:
+        return {
+            "success": True,
+            "deployment": service,
+            "namespace": namespace,
+            "rolled_back_to": params.get("revision", "previous"),
+            "status": "RolloutComplete",
+            "message": f"Deployment {service} rolled back successfully",
+        }
+    if "scale" in action:
+        replicas = params.get("replicas", 2)
+        return {
+            "success": True,
+            "deployment": service,
+            "namespace": namespace,
+            "replicas": replicas,
+            "status": "ScalingComplete",
+            "message": f"Deployment {service} scaled to {replicas} replicas",
+        }
+    if "status" in action:
+        return {
+            "deployment": service,
+            "namespace": namespace,
+            "ready_replicas": 2,
+            "desired_replicas": 2,
+            "available": True,
+        }
+    if "log" in action:
+        return {"logs": [], "pod_count": 0}
+    return {"success": True, "service": service}
 
 
 def _stub_confluence(action: str, params: dict) -> dict:
@@ -1176,6 +1237,7 @@ _STUB_DISPATCH: dict[str, Any] = {
     "servicenow": _stub_servicenow,
     "github": _stub_github,
     "confluence": _stub_confluence,
+    "kubernetes": _stub_kubernetes,
 }
 
 

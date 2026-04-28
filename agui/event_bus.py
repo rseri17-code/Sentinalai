@@ -21,11 +21,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 from collections import defaultdict
-from typing import Any, Awaitable, Callable, Optional, Protocol, runtime_checkable
+from typing import Awaitable, Callable, Optional, Protocol, runtime_checkable
 
-from agui.schemas.events import AGUIEvent, EventType
+from agui.schemas.events import AGUIEvent
 
 logger = logging.getLogger(__name__)
 

@@ -3,10 +3,7 @@ from __future__ import annotations
 
 import json
 import os
-import tempfile
-import time
 
-import pytest
 
 os.environ.setdefault("INCIDENT_GIT_LINKER_ENABLED", "true")
 
@@ -213,7 +210,7 @@ class TestPublicAPI:
 
     def test_disabled_returns_none(self, monkeypatch):
         monkeypatch.setenv("INCIDENT_GIT_LINKER_ENABLED", "false")
-        import importlib, supervisor.incident_git_linker as mod
+        import supervisor.incident_git_linker as mod
         monkeypatch.setattr(mod, "LINKER_ENABLED", False)
 
         result = mod.link_incident_to_commit("INC-999", "sha", "org/r", "caused_by")
@@ -221,3 +218,105 @@ class TestPublicAPI:
 
         commits = mod.get_commits_for_incident("INC-999")
         assert commits == []
+
+
+# ---------------------------------------------------------------------------
+# Coverage gap-fill tests
+# ---------------------------------------------------------------------------
+
+class TestGetIncidentsForCommitRelationshipFilter:
+    """Cover line 146: get_incidents_for_commit with relationship filter."""
+
+    def test_relationship_filter_in_reverse_lookup(self):
+        from supervisor.incident_git_linker import _GitIncidentIndex, GitLink
+        idx = _GitIncidentIndex()
+        sha = "deadbeef12345678"
+        idx.link(GitLink("INC-A", sha, "org/r", "caused_by"))
+        idx.link(GitLink("INC-B", sha, "org/r", "fixed_by"))
+
+        caused = idx.get_incidents_for_commit(sha, "caused_by")
+        fixed  = idx.get_incidents_for_commit(sha, "fixed_by")
+
+        assert all(lnk.relationship == "caused_by" for lnk in caused)
+        assert all(lnk.relationship == "fixed_by"  for lnk in fixed)
+        assert len(caused) == 1
+        assert len(fixed)  == 1
+
+
+class TestCorruptJsonStartsFresh:
+    """Cover lines 227-228: corrupt JSON index file falls back gracefully."""
+
+    def test_corrupt_json_starts_fresh(self, tmp_path, monkeypatch, caplog):
+        import supervisor.incident_git_linker as mod
+        index_path = str(tmp_path / "corrupt_idx.json")
+
+        # Write garbage JSON
+        with open(index_path, "w") as f:
+            f.write("NOT VALID JSON {{{")
+
+        monkeypatch.setattr(mod, "INDEX_PATH", index_path)
+        monkeypatch.setattr(mod, "_index", None)  # reset singleton
+
+        # _get_index() should log a warning and return a fresh empty index
+        idx = mod._get_index()
+        assert idx.stats()["total_links"] == 0
+
+
+class TestLinkSaveFailure:
+    """Cover lines 278-279: save() failure is logged, not re-raised."""
+
+    def test_save_failure_does_not_raise(self, tmp_path, monkeypatch):
+        from unittest.mock import patch
+        import supervisor.incident_git_linker as mod
+        monkeypatch.setattr(mod, "LINKER_ENABLED", True)
+        monkeypatch.setattr(mod, "_index", None)
+        monkeypatch.setattr(mod, "INDEX_PATH", str(tmp_path / "idx.json"))
+
+        def bad_save(self, path=None):
+            raise OSError("disk full")
+
+        with patch.object(mod._GitIncidentIndex, "save", bad_save):
+            link = mod.link_incident_to_commit(
+                "INC-SAVE-FAIL", "aabbccdd", "org/r", "caused_by", save=True
+            )
+
+        # Link was still recorded in memory even though save failed
+        assert link is not None
+        assert link.incident_id == "INC-SAVE-FAIL"
+
+
+class TestDisabledLinkerPaths:
+    """Cover lines 307, 315, 331-333: disabled linker returns empty/default values."""
+
+    def test_disabled_get_incidents_for_commit(self, monkeypatch):
+        """Cover line 307."""
+        import supervisor.incident_git_linker as mod
+        monkeypatch.setattr(mod, "LINKER_ENABLED", False)
+        result = mod.get_incidents_for_commit("any-sha")
+        assert result == []
+
+    def test_disabled_get_incident_audit_trail(self, monkeypatch):
+        """Cover line 315."""
+        import supervisor.incident_git_linker as mod
+        monkeypatch.setattr(mod, "LINKER_ENABLED", False)
+        trail = mod.get_incident_audit_trail("INC-DISABLED")
+        assert trail["incident_id"] == "INC-DISABLED"
+        assert trail["enabled"] is False
+
+    def test_disabled_index_stats(self, monkeypatch):
+        """Cover line 332 (disabled path)."""
+        import supervisor.incident_git_linker as mod
+        monkeypatch.setattr(mod, "LINKER_ENABLED", False)
+        stats = mod.index_stats()
+        assert stats == {}
+
+    def test_enabled_index_stats(self, tmp_path, monkeypatch):
+        """Cover line 333 (enabled path): module-level index_stats() call."""
+        import supervisor.incident_git_linker as mod
+        monkeypatch.setattr(mod, "LINKER_ENABLED", True)
+        monkeypatch.setattr(mod, "_index", None)
+        monkeypatch.setattr(mod, "INDEX_PATH", str(tmp_path / "stats_idx.json"))
+
+        mod.link_incident_to_commit("INC-STATS", "sha-st", "org/r", "caused_by")
+        stats = mod.index_stats()
+        assert stats["total_links"] >= 1

@@ -195,7 +195,6 @@ def rebuild_calibrator_from_db() -> int:
             return 0
 
         with _calibrator_lock:
-            from supervisor.confidence_calibrator import _calibrator as _global_ref
             import supervisor.confidence_calibrator as _cal_mod
             calibrator = ConfidenceCalibrator()   # fresh bins
             calibrator.update(records)

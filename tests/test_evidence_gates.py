@@ -1,7 +1,6 @@
 """Tests for supervisor.evidence_gates."""
 from __future__ import annotations
 
-import pytest
 
 from supervisor.evidence_gates import (
     GateVerdict,

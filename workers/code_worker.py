@@ -34,7 +34,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any
 
 from workers.base_worker import BaseWorker
 from workers.mcp_client import McpGateway
@@ -93,7 +92,7 @@ class CodeWorker(BaseWorker):
             return {"error": "diff is required", "confidence": 0}
 
         # Try LLM-powered analysis first
-        from supervisor.llm import is_enabled as llm_enabled, converse
+        from supervisor.llm import is_enabled as llm_enabled
         if llm_enabled():
             return self._llm_analyze_diff(diff, error_context, repo, sha, params)
 

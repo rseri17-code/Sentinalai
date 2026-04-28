@@ -1,10 +1,7 @@
 """Tests for supervisor.regression_harness."""
 from __future__ import annotations
 
-import json
-import os
 import pytest
-import tempfile
 
 from supervisor.regression_harness import (
     RegressionBaseline,
@@ -13,8 +10,6 @@ from supervisor.regression_harness import (
     update_baseline_if_better,
     load_baseline,
     _save_baseline,
-    _now,
-    THRESHOLDS,
 )
 
 

@@ -368,7 +368,7 @@ def get_evolved_playbook(incident_type: str) -> list[dict]:
             logger.info(
                 "Evolved playbook for %s: %s",
                 incident_type,
-                " → ".join(str(l) for l in reordered_labels),
+                " → ".join(str(label) for label in reordered_labels),
             )
         return sorted_steps
 

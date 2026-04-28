@@ -98,7 +98,6 @@ async def _dispatch_investigation(
     actor: ActorContext,
 ) -> None:
     """Run the investigation in a thread pool and emit events."""
-    import concurrent.futures
     from agui.event_bus import get_bus
     from agui.schemas.events import AGUIEvent, EventType
     from agui.schemas.incidents import InvestigationStatus
@@ -118,7 +117,6 @@ async def _dispatch_investigation(
         def run_agent():
             try:
                 from supervisor.agent import investigate
-                from supervisor.agui_bridge import bridge
                 # Inject investigation_id into the bridge context
                 return investigate(incident_id, investigation_id=investigation_id)
             except Exception as e:

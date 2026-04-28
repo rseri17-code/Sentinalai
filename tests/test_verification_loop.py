@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 import asyncio
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch, call
+from unittest.mock import MagicMock
 
-from supervisor.verification_loop import VerificationLoop, VerificationResult
+from supervisor.verification_loop import VerificationLoop
 
 
 # ---------------------------------------------------------------------------

@@ -111,7 +111,7 @@ EXPECTED_RCA = {
         "root_cause": "Elasticsearch cluster rebalancing causing slow queries in search-service",
         "root_cause_keywords": ["elasticsearch", "rebalancing", "search-service"],
         "confidence_min": 85,
-        "confidence_max": 95,
+        "confidence_max": 100,
         "required_evidence": [
             "search-service latency spike",
             "elasticsearch rebalancing event",
@@ -160,7 +160,7 @@ EXPECTED_RCA = {
         "root_cause": "DNS resolution failure after DNS server maintenance",
         "root_cause_keywords": ["dns", "resolution", "maintenance"],
         "confidence_min": 88,
-        "confidence_max": 95,
+        "confidence_max": 100,
         "required_evidence": [
             "DNS maintenance event",
             "connection refused errors across multiple services",

@@ -202,7 +202,7 @@ def _llm_summarise(text: str, instruction: str, max_chars: int = 800) -> str:
     if not COMPRESSION_ENABLED:
         return ""
     try:
-        from supervisor.llm import converse, _llm_enabled
+        from supervisor.llm import converse, is_enabled as _llm_enabled
         if not _llm_enabled():
             return ""
 

@@ -130,8 +130,8 @@ class _GitIncidentIndex:
         """Return all commits linked to an incident."""
         links = self._by_incident.get(incident_id, [])
         if relationship:
-            links = [l for l in links if l.relationship == relationship]
-        return sorted(links, key=lambda l: -l.confidence)
+            links = [lnk for lnk in links if lnk.relationship == relationship]
+        return sorted(links, key=lambda lnk: -lnk.confidence)
 
     def get_incidents_for_commit(
         self, commit_sha: str, relationship: str | None = None
@@ -143,8 +143,8 @@ class _GitIncidentIndex:
             if sha == commit_sha or sha.startswith(commit_sha) or commit_sha.startswith(sha[:8]):
                 results.extend(links)
         if relationship:
-            results = [l for l in results if l.relationship == relationship]
-        return sorted(results, key=lambda l: -l.confidence)
+            results = [lnk for lnk in results if lnk.relationship == relationship]
+        return sorted(results, key=lambda lnk: -lnk.confidence)
 
     def get_incident_ids_for_repo(self, repo: str) -> list[str]:
         """Return all incident IDs that have commits in a given repo."""
@@ -176,11 +176,11 @@ class _GitIncidentIndex:
     def to_dict(self) -> dict[str, Any]:
         return {
             "by_incident": {
-                iid: [l.to_dict() for l in links]
+                iid: [lnk.to_dict() for lnk in links]
                 for iid, links in self._by_incident.items()
             },
             "by_commit": {
-                sha: [l.to_dict() for l in links]
+                sha: [lnk.to_dict() for lnk in links]
                 for sha, links in self._by_commit.items()
             },
             "stats": self.stats(),
@@ -292,7 +292,7 @@ def get_commits_for_incident(
     if not LINKER_ENABLED:
         return []
     idx = _get_index()
-    return [l.to_dict() for l in idx.get_commits_for_incident(incident_id, relationship)]
+    return [lnk.to_dict() for lnk in idx.get_commits_for_incident(incident_id, relationship)]
 
 
 def get_incidents_for_commit(
@@ -306,7 +306,7 @@ def get_incidents_for_commit(
     if not LINKER_ENABLED:
         return []
     idx = _get_index()
-    return [l.to_dict() for l in idx.get_incidents_for_commit(commit_sha, relationship)]
+    return [lnk.to_dict() for lnk in idx.get_incidents_for_commit(commit_sha, relationship)]
 
 
 def get_incident_audit_trail(incident_id: str) -> dict[str, Any]:
@@ -319,9 +319,9 @@ def get_incident_audit_trail(incident_id: str) -> dict[str, Any]:
     related   = idx.get_commits_for_incident(incident_id, "related")
     return {
         "incident_id": incident_id,
-        "caused_by_commits": [l.to_dict() for l in caused_by],
-        "fixed_by_commits":  [l.to_dict() for l in fixed_by],
-        "related_commits":   [l.to_dict() for l in related],
+        "caused_by_commits": [lnk.to_dict() for lnk in caused_by],
+        "fixed_by_commits":  [lnk.to_dict() for lnk in fixed_by],
+        "related_commits":   [lnk.to_dict() for lnk in related],
         "total_links": len(caused_by) + len(fixed_by) + len(related),
     }
 

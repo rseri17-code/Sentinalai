@@ -39,6 +39,14 @@ Thumbs.db
 # Knowledge graph store
 .knowledge_store/
 
+# Runtime eval artifacts — auto-generated, not source-controlled
+eval/experience_store.json
+eval/evolved_strategy.json
+eval/incident_git_index.json
+eval/knowledge_graph.json
+eval/gap_patterns.json
+eval/adaptive_thresholds.json
+
 # Third-party reference repos
 amazon-bedrock-agentcore-samples/
 

@@ -11,7 +11,6 @@ Validates that the agent meets 2029-ready performance targets:
 import time
 import threading
 import concurrent.futures
-from unittest.mock import patch
 
 
 from supervisor.agent import SentinalAISupervisor

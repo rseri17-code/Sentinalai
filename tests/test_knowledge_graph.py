@@ -4,12 +4,9 @@ from __future__ import annotations
 import json
 import os
 import pytest
-import tempfile
 
 from supervisor.knowledge_graph import (
     KnowledgeGraph,
-    KGNode,
-    KGEdge,
     _normalise_rc_id,
 )
 

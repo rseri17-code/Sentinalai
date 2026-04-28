@@ -238,8 +238,10 @@ class TestKnowledgeRetrievalPaths:
         mock_retrieval.retrieve_similar.return_value = [
             {"incident_id": "INC99999", "root_cause": "old issue", "similarity_score": 0.9}
         ]
-        # Create a hypothesis with no evidence refs to trigger the cap
-        def fake_generate(incident_type, service, summary, logs, signals, metrics, events, changes, timeline):
+        # Create a hypothesis with no evidence refs to trigger the cap.
+        # Accept **kwargs so the test keeps working when _generate_hypotheses
+        # grows new optional keyword arguments (e.g. suggested_root_causes).
+        def fake_generate(incident_type, service, summary, logs, signals, metrics, events, changes, timeline, **_kwargs):
             return [Hypothesis(
                 name="test_hyp",
                 root_cause="test root cause",

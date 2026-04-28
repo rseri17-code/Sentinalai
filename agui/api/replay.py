@@ -8,7 +8,6 @@ Routes:
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -16,10 +15,9 @@ from pydantic import BaseModel
 from agui.middleware.auth import ActorContext, require_role, get_actor
 from agui.state_store import get_state_store
 from agui.receipt_store import get_receipt_store
-from agui.replay_engine import get_replay_engine, ReplayMode, ReplayStatus
-from agui.graph_builder import rebuild_from_events
+from agui.replay_engine import get_replay_engine, ReplayMode
 from agui.event_bus import get_bus
-from agui.schemas.events import AGUIEvent, EventType
+from agui.schemas.events import AGUIEvent
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/investigations", tags=["replay"])

@@ -164,7 +164,6 @@ class GitWorker(BaseWorker):
             return {"error": "repo or service required"}
 
         incident_time = params.get("incident_time", "")
-        bad_sha = params.get("bad_sha", "HEAD")
         good_sha = params.get("good_sha", "")
         paths = params.get("paths", [])
         max_depth = min(int(params.get("max_depth", GIT_BISECT_MAX_COMMITS)), GIT_BISECT_MAX_COMMITS)

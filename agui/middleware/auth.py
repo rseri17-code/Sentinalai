@@ -180,6 +180,7 @@ def make_test_token(
         return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
     except ImportError:
         # Return a base64 stub if PyJWT not installed
-        import base64, json
+        import base64
+        import json
         payload = {"sub": actor_id, "custom:agui_role": role}
         return base64.b64encode(json.dumps(payload).encode()).decode()

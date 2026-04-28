@@ -19,6 +19,14 @@ from database.connection import get_engine
 
 logger = logging.getLogger("sentinalai.persistence")
 
+# Module-level sqlalchemy import so callers can patch `database.persistence.text`
+# in tests without needing sqlalchemy installed.
+try:
+    from sqlalchemy import text
+except ImportError:
+    def text(sql: str) -> str:  # type: ignore[misc]
+        return sql
+
 
 def is_enabled() -> bool:
     """Check whether database persistence is available."""
@@ -46,8 +54,6 @@ def persist_investigation(
         return None
 
     try:
-        from sqlalchemy import text
-
         with engine.connect() as conn:
             result = conn.execute(
                 text("""
@@ -105,8 +111,6 @@ def persist_tool_usage(
         return 0
 
     try:
-        from sqlalchemy import text
-
         count = 0
         with engine.connect() as conn:
             for receipt in receipts:
@@ -158,8 +162,6 @@ def persist_knowledge_entry(
         return False
 
     try:
-        from sqlalchemy import text
-
         with engine.connect() as conn:
             conn.execute(
                 text("""
@@ -208,8 +210,6 @@ def persist_eval_result(
         return False
 
     try:
-        from sqlalchemy import text
-
         with engine.connect() as conn:
             conn.execute(
                 text("""
@@ -257,8 +257,6 @@ def load_eval_results_for_calibration(limit: int = 500) -> list[dict]:
         return []
 
     try:
-        from sqlalchemy import text
-
         with engine.connect() as conn:
             result = conn.execute(
                 text("""
@@ -289,8 +287,6 @@ def load_investigation(incident_id: str) -> dict | None:
         return None
 
     try:
-        from sqlalchemy import text
-
         with engine.connect() as conn:
             result = conn.execute(
                 text("""
@@ -338,9 +334,6 @@ def persist_kg_snapshot(nodes: list[dict], edges: list[dict]) -> bool:
         return False
 
     try:
-        from sqlalchemy import text
-        import json as _json
-
         with engine.connect() as conn:
             for node in nodes:
                 conn.execute(
@@ -355,7 +348,7 @@ def persist_kg_snapshot(nodes: list[dict], edges: list[dict]) -> bool:
                         "node_id": node["node_id"],
                         "node_type": node["node_type"],
                         "label": node["label"],
-                        "props": _json.dumps(node.get("props", {})),
+                        "props": json.dumps(node.get("props", {})),
                         "created_at": node.get("created_at", 0),
                     },
                 )
@@ -374,7 +367,7 @@ def persist_kg_snapshot(nodes: list[dict], edges: list[dict]) -> bool:
                         "dst_id": edge["dst_id"],
                         "rel_type": edge["rel_type"],
                         "weight": edge.get("weight", 1.0),
-                        "props": _json.dumps(edge.get("props", {})),
+                        "props": json.dumps(edge.get("props", {})),
                         "created_at": edge.get("created_at", 0),
                     },
                 )
@@ -396,9 +389,6 @@ def load_kg_snapshot() -> dict | None:
         return None
 
     try:
-        from sqlalchemy import text
-        import json as _json
-
         with engine.connect() as conn:
             nodes_result = conn.execute(
                 text("""
@@ -412,7 +402,7 @@ def load_kg_snapshot() -> dict | None:
             nodes = [
                 {
                     "node_id": r[0], "node_type": r[1], "label": r[2],
-                    "props": r[3] if isinstance(r[3], dict) else _json.loads(r[3] or "{}"),
+                    "props": r[3] if isinstance(r[3], dict) else json.loads(r[3] or "{}"),
                     "created_at": float(r[4] or 0),
                 }
                 for r in nodes_result.fetchall()
@@ -435,7 +425,7 @@ def load_kg_snapshot() -> dict | None:
                 {
                     "edge_id": r[0], "src_id": r[1], "dst_id": r[2],
                     "rel_type": r[3], "weight": float(r[4] or 1.0),
-                    "props": r[5] if isinstance(r[5], dict) else _json.loads(r[5] or "{}"),
+                    "props": r[5] if isinstance(r[5], dict) else json.loads(r[5] or "{}"),
                     "created_at": float(r[6] or 0),
                 }
                 for r in edges_result.fetchall()
@@ -453,7 +443,6 @@ def evict_expired_kg_nodes() -> int:
     if engine is None:
         return 0
     try:
-        from sqlalchemy import text
         with engine.connect() as conn:
             result = conn.execute(
                 text("DELETE FROM kg_nodes WHERE ttl_expires_at IS NOT NULL AND ttl_expires_at <= NOW()")

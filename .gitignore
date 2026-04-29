@@ -61,3 +61,4 @@ ui/dist/
 ui/tests/e2e/report/
 ui/tests/e2e/results/
 ui/tests/e2e/screenshots/
+test-results/

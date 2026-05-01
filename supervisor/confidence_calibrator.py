@@ -142,13 +142,24 @@ class ConfidenceCalibrator:
 
         return calibrated
 
-    def update(self, eval_results: list[dict]) -> None:
+    def update(self, eval_results: list[dict], decay_factor: float = 1.0) -> None:
         """Update calibration bins from ground truth evaluation results.
 
         Each result dict must have:
             - predicted_confidence: int
             - actual_correct: bool
+
+        Args:
+            decay_factor: Multiply existing bin counts by this before adding new
+                          observations.  Use < 1.0 (e.g. 0.95) to make old data
+                          count less than recent data.  Default 1.0 = no decay.
         """
+        if decay_factor != 1.0 and 0.0 < decay_factor < 1.0:
+            for b in self._bins:
+                b.total = int(b.total * decay_factor)
+                b.correct = int(b.correct * decay_factor)
+                b.sum_confidence *= decay_factor
+
         updated = 0
         for r in eval_results:
             conf = r.get("predicted_confidence", 0)
@@ -162,7 +173,16 @@ class ConfidenceCalibrator:
             updated += 1
 
         if updated:
-            logger.info("Calibration updated: %d results processed", updated)
+            logger.info("Calibration updated: %d results processed (decay=%.2f)", updated, decay_factor)
+
+    def update_with_decay(self, eval_results: list[dict], decay_factor: float = 0.95) -> None:
+        """Convenience wrapper applying temporal decay before updating.
+
+        Call this instead of update() when incorporating new observations so that
+        older predictions gradually lose influence.  A decay_factor of 0.95 means
+        each update retains 95% of prior weight, giving a half-life of ~14 updates.
+        """
+        self.update(eval_results, decay_factor=decay_factor)
 
     def get_calibration_report(self) -> dict:
         """Return a summary of the current calibration state."""
@@ -172,9 +192,37 @@ class ConfidenceCalibrator:
         return {
             "total_samples": total_samples,
             "bins_with_data": bins_with_data,
+            "ece": round(self.expected_calibration_error(), 4),
             "bins": [b.to_dict() for b in self._bins],
             "enabled": CALIBRATION_ENABLED,
         }
+
+    def expected_calibration_error(self) -> float:
+        """Compute Expected Calibration Error (ECE) across bins.
+
+        ECE = weighted average of |avg_confidence - accuracy| per bin.
+        Lower is better; 0.0 = perfectly calibrated.
+        Returns 0.0 if there are no samples.
+        """
+        total = sum(b.total for b in self._bins)
+        if total == 0:
+            return 0.0
+        ece = sum(
+            (b.total / total) * abs(b.avg_confidence / 100.0 - b.accuracy)
+            for b in self._bins
+            if b.total > 0
+        )
+        return round(ece, 4)
+
+    def is_stale(self, max_ece: float = 0.15, min_samples: int = 20) -> bool:
+        """Return True if the calibrator needs retraining.
+
+        Considered stale when ECE exceeds max_ece OR total samples < min_samples.
+        """
+        total = sum(b.total for b in self._bins)
+        if total < min_samples:
+            return True
+        return self.expected_calibration_error() > max_ece
 
     def reset(self) -> None:
         """Reset all calibration bins."""

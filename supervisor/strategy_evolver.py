@@ -60,6 +60,14 @@ EMA_ALPHA      = float(os.environ.get("EMA_ALPHA", "0.12"))
 MIN_CALLS_TO_EVOLVE = int(os.environ.get("MIN_CALLS_TO_EVOLVE", "5"))
 QUALITY_NORM   = 0.70   # online_score / QUALITY_NORM = signal
 
+# Rolling quality circuit-breaker: if the rolling average of the last
+# _ROLLING_WINDOW investigations drops below _QUALITY_FLOOR, all evolved
+# weights are reset to defaults to prevent the system from converging on a
+# bad local optimum.
+_ROLLING_WINDOW  = 20
+_QUALITY_FLOOR   = 0.40
+_rolling_scores: list[float] = []
+
 _strategy_lock = threading.Lock()
 
 
@@ -144,6 +152,9 @@ def record_outcome(
     """
     if not STRATEGY_EVOLVER_ENABLED:
         return
+
+    # Track rolling quality and trigger circuit breaker if needed
+    _track_rolling_quality(online_quality_score)
 
     signal = online_quality_score / QUALITY_NORM  # normalised around 0.70 = 1.0
 
@@ -379,6 +390,154 @@ def get_report() -> dict:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def record_outcome_decomposed(
+    incident_type: str,
+    receipts: list[dict],
+    online_quality_score: float,
+    dimensions: dict[str, float] | None = None,
+    service: str = "",
+) -> None:
+    """Update step weights using per-dimension quality signals.
+
+    Unlike record_outcome() which applies a single blended signal to all steps,
+    this function maps each quality dimension to the steps most responsible for
+    it, giving a more precise learning signal:
+
+      - volume / coherence  → evidence-gathering steps (search_logs, get_golden_signals, …)
+      - specificity         → analysis steps (analysis, get_incident_by_id, …)
+      - calibration         → confidence-adjusting steps
+      - diversity           → hypothesis-generating steps
+
+    Falls back to the blended signal for steps not mapped to a specific dimension.
+    """
+    if not STRATEGY_EVOLVER_ENABLED:
+        return
+
+    dims = dimensions or {}
+    _track_rolling_quality(online_quality_score)
+    blended_signal = online_quality_score / QUALITY_NORM
+
+    # Map dimension → step label substrings that primarily contribute to it
+    _DIM_STEP_HINTS: dict[str, list[str]] = {
+        "volume":    ["search_logs", "get_error_logs", "query_metrics", "get_events",
+                      "get_change_data", "get_recent_deployments"],
+        "coherence": ["get_golden_signals", "get_apm_signals", "check_golden_signals",
+                      "get_apm_traces", "get_apm_dependencies"],
+        "specificity": ["get_incident_by_id", "get_incident_history", "get_trace_context",
+                        "get_blast_radius", "get_service_dependencies"],
+    }
+
+    step_labels = _extract_step_labels(receipts)
+    if not step_labels:
+        return
+
+    def _signal_for_step(label: str) -> float:
+        for dim, hints in _DIM_STEP_HINTS.items():
+            if any(h in label for h in hints) and dim in dims:
+                return dims[dim] / QUALITY_NORM
+        return blended_signal
+
+    try:
+        with _strategy_lock:
+            strategy = _load_raw()
+            type_weights = strategy.setdefault(incident_type, {})
+            svc_weights = strategy.setdefault("_service_weights", {})
+
+            for label in step_labels:
+                sig = _signal_for_step(label)
+                entry = type_weights.setdefault(label, {"weight": 1.0, "calls": 0, "ema_signal": None})
+                entry["calls"] += 1
+                if entry["calls"] >= MIN_CALLS_TO_EVOLVE:
+                    old_ema = entry.get("ema_signal")
+                    new_ema = sig if old_ema is None else EMA_ALPHA * sig + (1 - EMA_ALPHA) * old_ema
+                    entry["ema_signal"] = round(new_ema, 4)
+                    entry["weight"] = round(max(0.3, min(2.0, new_ema)), 4)
+                entry["last_updated"] = datetime.now(timezone.utc).isoformat()
+
+                if service:
+                    svc_key = f"{incident_type}.{label}.{service}"
+                    svc_entry = svc_weights.setdefault(svc_key, {"weight": 1.0, "calls": 0, "ema_signal": None})
+                    svc_entry["calls"] += 1
+                    if svc_entry["calls"] >= MIN_CALLS_TO_EVOLVE:
+                        old = svc_entry.get("ema_signal")
+                        new = sig if old is None else EMA_ALPHA * sig + (1 - EMA_ALPHA) * old
+                        svc_entry["ema_signal"] = round(new, 4)
+                        svc_entry["weight"] = round(max(0.3, min(2.0, new)), 4)
+                    svc_entry["last_updated"] = datetime.now(timezone.utc).isoformat()
+
+            strategy["_meta"] = {
+                "last_updated": datetime.now(timezone.utc).isoformat(),
+                "total_updates": strategy.get("_meta", {}).get("total_updates", 0) + 1,
+            }
+            _save_raw(strategy)
+
+    except Exception as exc:
+        logger.warning("record_outcome_decomposed failed (non-critical): %s", exc)
+
+
+def _track_rolling_quality(score: float) -> None:
+    """Add score to rolling window and fire circuit breaker if quality degrades."""
+    global _rolling_scores
+    _rolling_scores.append(score)
+    if len(_rolling_scores) > _ROLLING_WINDOW:
+        _rolling_scores = _rolling_scores[-_ROLLING_WINDOW:]
+
+    if len(_rolling_scores) >= _ROLLING_WINDOW:
+        avg = sum(_rolling_scores) / len(_rolling_scores)
+        if avg < _QUALITY_FLOOR:
+            logger.warning(
+                "Quality circuit breaker triggered: rolling_avg=%.3f < floor=%.2f "
+                "— resetting evolved weights to defaults",
+                avg, _QUALITY_FLOOR,
+            )
+            _reset_weights_to_defaults()
+            _rolling_scores.clear()
+
+
+def _reset_weights_to_defaults() -> None:
+    """Reset all evolved step weights to 1.0 while preserving call counts.
+
+    Preserving call counts means the system retains memory of which steps it
+    has tried — only the learned weights are cleared so re-learning starts
+    unbiased.
+    """
+    try:
+        with _strategy_lock:
+            strategy = _load_raw()
+            for inc_type, steps in strategy.items():
+                if inc_type.startswith("_") or not isinstance(steps, dict):
+                    continue
+                for label, entry in steps.items():
+                    if isinstance(entry, dict):
+                        entry["weight"] = 1.0
+                        entry["ema_signal"] = None
+            for svc_key, entry in strategy.get("_service_weights", {}).items():
+                if isinstance(entry, dict):
+                    entry["weight"] = 1.0
+                    entry["ema_signal"] = None
+            strategy.setdefault("_meta", {})["circuit_breaker_reset_at"] = (
+                datetime.now(timezone.utc).isoformat()
+            )
+            _save_raw(strategy)
+        logger.info("Strategy weights reset to defaults by circuit breaker")
+    except Exception as exc:
+        logger.warning("_reset_weights_to_defaults failed: %s", exc)
+
+
+def get_rolling_quality_stats() -> dict:
+    """Return rolling quality window statistics for health monitoring."""
+    if not _rolling_scores:
+        return {"window": 0, "avg": None, "min": None, "status": "no_data"}
+    avg = sum(_rolling_scores) / len(_rolling_scores)
+    return {
+        "window": len(_rolling_scores),
+        "avg": round(avg, 3),
+        "min": round(min(_rolling_scores), 3),
+        "floor": _QUALITY_FLOOR,
+        "status": "degraded" if avg < _QUALITY_FLOOR else "healthy",
+    }
+
 
 def _extract_step_labels(receipts: list[dict]) -> list[str]:
     """Extract unique step labels from receipts (tool.action format).

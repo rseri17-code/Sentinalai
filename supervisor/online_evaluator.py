@@ -106,6 +106,11 @@ def evaluate(
     # --- Dimension 5: Hypothesis diversity ---
     diversity = _score_diversity(hypothesis_count)
 
+    # Overconfidence penalty: high claimed confidence with thin evidence is a
+    # hallucination risk signal. Applied as a direct multiplier, not a dimension,
+    # so it can drag down an otherwise-high score without being gameable.
+    overconfidence_penalty = _overconfidence_penalty(confidence, source_count, specificity)
+
     weights = {
         "volume":      0.20,
         "coherence":   0.25,
@@ -120,7 +125,7 @@ def evaluate(
         weights["specificity"] * specificity +
         weights["diversity"]   * diversity
     )
-    overall = round(min(1.0, max(0.0, overall)), 3)
+    overall = round(min(1.0, max(0.0, overall * overconfidence_penalty)), 3)
 
     dims = {
         "volume":      round(volume, 3),
@@ -128,13 +133,14 @@ def evaluate(
         "calibration": round(calibration, 3),
         "specificity": round(specificity, 3),
         "diversity":   round(diversity, 3),
+        "overconfidence_penalty": round(overconfidence_penalty, 3),
     }
 
     logger.info(
         "Online eval: overall=%.3f vol=%.2f coh=%.2f cal=%.2f spec=%.2f div=%.2f "
-        "sources=%d hyps=%d",
+        "overconf_penalty=%.2f sources=%d hyps=%d",
         overall, volume, coherence, calibration, specificity, diversity,
-        source_count, hypothesis_count,
+        overconfidence_penalty, source_count, hypothesis_count,
     )
     return OnlineScore(
         overall=overall,
@@ -268,6 +274,36 @@ def _score_diversity(hypothesis_count: int) -> float:
     if hypothesis_count == 3:
         return 0.80
     return min(1.0, 0.80 + (hypothesis_count - 3) * 0.05)
+
+
+def _overconfidence_penalty(confidence: int, source_count: int, specificity: float) -> float:
+    """Return a [0.5, 1.0] multiplier that penalises overconfident thin RCAs.
+
+    Overconfidence = high claimed confidence with insufficient supporting
+    evidence. This is the primary hallucination risk signal.
+
+    Two independent triggers:
+      - Confidence > 70 but only 0–1 evidence sources → strong penalty (0.55)
+      - Confidence > 80 but specificity < 0.40 → moderate penalty (0.70)
+        (generic RCA claiming high certainty)
+      - Both triggered simultaneously → max penalty (0.50)
+
+    No penalty when confidence ≤ 50 (low-confidence results are expected to
+    have thin evidence), or when source_count ≥ 3 (well-evidenced).
+    """
+    if confidence <= 50 or source_count >= 3:
+        return 1.0
+
+    thin_evidence = confidence > 70 and source_count <= 1
+    vague_high_conf = confidence > 80 and specificity < 0.40
+
+    if thin_evidence and vague_high_conf:
+        return 0.50
+    if thin_evidence:
+        return 0.55
+    if vague_high_conf:
+        return 0.70
+    return 1.0
 
 
 # ---------------------------------------------------------------------------

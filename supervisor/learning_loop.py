@@ -182,6 +182,167 @@ def _update_calibrator(eval_result: object, incident_id: str) -> None:
         logger.warning("Failed to update calibrator for %s: %s", incident_id, exc)
 
 
+def generate_self_eval_report() -> dict:
+    """Generate a comprehensive health report of the entire self-learning stack.
+
+    Synthesises the state of all learning components and produces actionable
+    recommendations.  Safe to call at any time — all reads are non-destructive.
+
+    Returns a dict suitable for logging, API response, or nightly alerting.
+    """
+    report: dict = {
+        "generated_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+        "components": {},
+        "overall_status": "OK",
+        "action_items": [],
+    }
+
+    # --- Adaptive thresholds ---
+    try:
+        from supervisor.adaptive_thresholds import get_health_report as _ath_health
+        ath = _ath_health()
+        report["components"]["adaptive_thresholds"] = ath
+        if ath.get("overall_status") == "CRITICAL":
+            report["overall_status"] = "CRITICAL"
+            report["action_items"].extend(ath.get("recommendations", []))
+        elif ath.get("overall_status") == "WARNING" and report["overall_status"] == "OK":
+            report["overall_status"] = "WARNING"
+            report["action_items"].extend(ath.get("recommendations", []))
+    except Exception as exc:
+        report["components"]["adaptive_thresholds"] = {"error": str(exc)}
+
+    # --- Confidence calibrator ---
+    try:
+        with _calibrator_lock:
+            calibrator = get_calibrator()
+            cal_report = calibrator.get_calibration_report()
+        report["components"]["confidence_calibrator"] = cal_report
+        if calibrator.is_stale():
+            if report["overall_status"] == "OK":
+                report["overall_status"] = "WARNING"
+            report["action_items"].append(
+                f"Calibrator is stale: ECE={cal_report.get('ece', '?')} "
+                f"samples={cal_report.get('total_samples', 0)} — run rebuild_calibrator_from_db()"
+            )
+    except Exception as exc:
+        report["components"]["confidence_calibrator"] = {"error": str(exc)}
+
+    # --- Strategy evolver ---
+    try:
+        from supervisor.strategy_evolver import get_rolling_quality_stats, get_report as _se_report
+        rolling = get_rolling_quality_stats()
+        report["components"]["strategy_evolver"] = {
+            "rolling_quality": rolling,
+            "report_summary": _se_report().get("meta", {}),
+        }
+        if rolling.get("status") == "degraded":
+            report["overall_status"] = "CRITICAL"
+            report["action_items"].append(
+                f"Strategy evolver quality degraded: rolling_avg={rolling.get('avg')} "
+                f"< floor={rolling.get('floor')} — circuit breaker may fire"
+            )
+    except Exception as exc:
+        report["components"]["strategy_evolver"] = {"error": str(exc)}
+
+    # --- Adaptive thresholds drift (detailed) ---
+    try:
+        from supervisor.adaptive_thresholds import detect_drift
+        drift = detect_drift()
+        drifted = {k: v for k, v in drift.items() if v.get("drifted")}
+        report["components"]["threshold_drift"] = drift
+        if drifted:
+            report["action_items"].append(
+                f"Drifted thresholds: {list(drifted.keys())} — consider calling auto_damp_drift()"
+            )
+    except Exception as exc:
+        report["components"]["threshold_drift"] = {"error": str(exc)}
+
+    # --- DB availability ---
+    try:
+        db_ok = _db_enabled()
+        report["components"]["database"] = {"enabled": db_ok}
+        if not db_ok:
+            report["action_items"].append(
+                "Database unavailable — calibrator cannot load historical eval results"
+            )
+    except Exception as exc:
+        report["components"]["database"] = {"error": str(exc)}
+
+    if not report["action_items"]:
+        report["action_items"].append("All learning components healthy — no action required")
+
+    logger.info(
+        "Self-eval report: status=%s action_items=%d",
+        report["overall_status"], len(report["action_items"]),
+    )
+    return report
+
+
+def run_nightly_self_improvement() -> dict:
+    """Run the nightly self-improvement cycle.
+
+    Executes a sequence of corrective actions based on the current health
+    report:
+      1. Detect and auto-damp drifted adaptive thresholds
+      2. Rebuild calibrator from DB if stale
+      3. Log a full health report
+
+    Returns a dict summarising what was done.
+    Designed to be called from a nightly cron / scheduled task.
+    Never raises — all exceptions are caught and logged.
+    """
+    summary: dict = {
+        "run_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+        "actions_taken": [],
+        "errors": [],
+    }
+
+    # Step 1 — auto-damp drifted thresholds
+    try:
+        from supervisor.adaptive_thresholds import auto_damp_drift
+        damp_actions = auto_damp_drift()
+        damped = {k: v for k, v in damp_actions.items() if v != "no_action"}
+        if damped:
+            summary["actions_taken"].append(f"Auto-damped thresholds: {damped}")
+            logger.info("Nightly self-improvement: damped thresholds %s", damped)
+        else:
+            summary["actions_taken"].append("Threshold drift check: all within bounds, no damping needed")
+    except Exception as exc:
+        summary["errors"].append(f"auto_damp_drift failed: {exc}")
+        logger.warning("Nightly self-improvement: auto_damp_drift error: %s", exc)
+
+    # Step 2 — rebuild calibrator from DB if stale
+    try:
+        with _calibrator_lock:
+            calibrator = get_calibrator()
+            stale = calibrator.is_stale()
+        if stale:
+            n = rebuild_calibrator_from_db()
+            summary["actions_taken"].append(f"Rebuilt calibrator from {n} DB records (was stale)")
+            logger.info("Nightly self-improvement: calibrator rebuilt from %d records", n)
+        else:
+            summary["actions_taken"].append("Calibrator health check: not stale, no rebuild needed")
+    except Exception as exc:
+        summary["errors"].append(f"calibrator rebuild failed: {exc}")
+        logger.warning("Nightly self-improvement: calibrator rebuild error: %s", exc)
+
+    # Step 3 — generate and log full report
+    try:
+        report = generate_self_eval_report()
+        summary["health_report"] = report
+        summary["overall_status"] = report.get("overall_status", "UNKNOWN")
+    except Exception as exc:
+        summary["errors"].append(f"generate_self_eval_report failed: {exc}")
+
+    logger.info(
+        "Nightly self-improvement complete: actions=%d errors=%d status=%s",
+        len(summary["actions_taken"]),
+        len(summary["errors"]),
+        summary.get("overall_status", "UNKNOWN"),
+    )
+    return summary
+
+
 def rebuild_calibrator_from_db() -> int:
     """Rebuild the calibration map from all persisted eval results.
 

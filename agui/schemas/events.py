@@ -99,6 +99,11 @@ class EventType(str, Enum):
     DEV_NEEDS_HUMAN          = "dev.needs_human"
     DEV_FAILED               = "dev.failed"
 
+    # Pattern Intelligence Layer
+    INTELLIGENCE_PREDICTION  = "intelligence.prediction"
+    INTELLIGENCE_SLO_BURNING = "intelligence.slo_burning"
+    INTELLIGENCE_CYCLE_DONE  = "intelligence.cycle_done"
+
     # System
     HEARTBEAT = "system.heartbeat"
 

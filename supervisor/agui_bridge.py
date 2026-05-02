@@ -314,6 +314,7 @@ class AGUIBridge:
         duration_ms: float,
         tool_calls_total: int,
         confidence: float,
+        service: str = "",
     ) -> None:
         from agui.schemas.events import AGUIEvent, EventType
         self._emit(AGUIEvent(
@@ -328,6 +329,13 @@ class AGUIBridge:
                 "confidence": confidence,
             },
         ))
+        # Close the prediction feedback loop: mark pending predictions as true positives
+        if service and incident_id:
+            try:
+                from intelligence.background_runner import get_runner
+                get_runner().record_outcome(service, incident_id)
+            except Exception:
+                pass
 
     def emit_investigation_failed(
         self,

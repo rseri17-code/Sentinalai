@@ -114,7 +114,7 @@ class IntelligenceRunner:
         # 1. Collect telemetry
         try:
             snapshots = self._aggregator.collect_all()
-            services = list({s.service for s in snapshots}) if snapshots else self._aggregator._discover_services()
+            services = list({s.service for s in snapshots}) if snapshots else self._aggregator.get_monitored_services()
         except Exception as exc:
             logger.warning("Telemetry collection failed: %s", exc)
             services = []

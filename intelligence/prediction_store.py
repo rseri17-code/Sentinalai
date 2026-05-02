@@ -241,8 +241,7 @@ class PredictionStore:
     def _feed_calibration(self, pred: Prediction) -> None:
         """Send prediction outcome to ConfidenceCalibrator."""
         try:
-            from supervisor.confidence_calibrator import get_calibrator
-            from supervisor.learning_loop import _calibrator_lock
+            from supervisor.confidence_calibrator import get_calibrator, _calibrator_lock
             actual_correct = pred.outcome == "true_positive"
             data = [{"predicted_confidence": int(pred.confidence * 100), "actual_correct": actual_correct}]
             with _calibrator_lock:

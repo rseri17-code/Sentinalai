@@ -176,6 +176,10 @@ class TelemetryAggregator:
     def is_baseline_ready(self, service: str) -> bool:
         return self.get_observation_count(service) >= MIN_OBSERVATIONS_FOR_BASELINE
 
+    def get_monitored_services(self) -> list[str]:
+        """Public accessor for service discovery (used by background runner)."""
+        return self._discover_services()
+
     def prune_old_snapshots(self) -> int:
         """Delete snapshots older than TELEMETRY_RETENTION_DAYS. Returns rows deleted."""
         from database.persistence import get_engine
@@ -259,9 +263,8 @@ class TelemetryAggregator:
                 latest = deploys[0]
                 deploy_time = latest.get("created_at", latest.get("timestamp", ""))
                 if deploy_time:
-                    import datetime as dt
                     try:
-                        ts = dt.datetime.fromisoformat(deploy_time.replace("Z", "+00:00"))
+                        ts = datetime.fromisoformat(deploy_time.replace("Z", "+00:00"))
                         age_min = (datetime.now(timezone.utc) - ts).total_seconds() / 60
                         snap.deploy_age_minutes = round(age_min, 1)
                         snap.recent_deploy = age_min <= 30

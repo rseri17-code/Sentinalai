@@ -86,3 +86,61 @@ CREATE INDEX IF NOT EXISTS idx_kg_nodes_ttl ON kg_nodes(ttl_expires_at) WHERE tt
 CREATE INDEX IF NOT EXISTS idx_kg_edges_src ON kg_edges(src_id);
 CREATE INDEX IF NOT EXISTS idx_kg_edges_dst ON kg_edges(dst_id);
 CREATE INDEX IF NOT EXISTS idx_kg_edges_rel ON kg_edges(rel_type);
+
+-- -----------------------------------------------------------------------
+-- Pattern Intelligence Layer
+-- -----------------------------------------------------------------------
+
+-- Telemetry snapshots — rolling 7-day window of golden-signal metrics
+CREATE TABLE IF NOT EXISTS telemetry_snapshots (
+    id SERIAL PRIMARY KEY,
+    service VARCHAR(200) NOT NULL,
+    source VARCHAR(50) NOT NULL,
+    collected_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    collected_at_epoch FLOAT NOT NULL,
+    metrics JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_telemetry_service ON telemetry_snapshots(service);
+CREATE INDEX IF NOT EXISTS idx_telemetry_epoch   ON telemetry_snapshots(collected_at_epoch DESC);
+CREATE INDEX IF NOT EXISTS idx_telemetry_svc_epoch ON telemetry_snapshots(service, collected_at_epoch DESC);
+
+-- SLO definitions — one row per (service, metric) pair
+CREATE TABLE IF NOT EXISTS slo_definitions (
+    id SERIAL PRIMARY KEY,
+    service VARCHAR(200) NOT NULL,
+    metric VARCHAR(100) NOT NULL,
+    target FLOAT NOT NULL,
+    window_days INTEGER NOT NULL DEFAULT 30,
+    threshold_value FLOAT NOT NULL DEFAULT 0.0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_slo_service_metric UNIQUE (service, metric)
+);
+
+-- Pattern predictions — every prediction stored for outcome tracking
+CREATE TABLE IF NOT EXISTS pattern_predictions (
+    id SERIAL PRIMARY KEY,
+    prediction_id VARCHAR(36) UNIQUE NOT NULL,
+    service VARCHAR(200) NOT NULL,
+    pattern_type VARCHAR(50) NOT NULL,
+    severity VARCHAR(20) NOT NULL,
+    metric VARCHAR(100) NOT NULL,
+    confidence FLOAT NOT NULL,
+    current_value FLOAT NOT NULL,
+    explanation TEXT NOT NULL,
+    predicted_breach_hours FLOAT,
+    related_service VARCHAR(200) NOT NULL DEFAULT '',
+    evidence JSONB NOT NULL DEFAULT '{}',
+    published BOOLEAN NOT NULL DEFAULT TRUE,
+    outcome VARCHAR(30) NOT NULL DEFAULT 'pending',
+    outcome_incident_id VARCHAR(100) NOT NULL DEFAULT '',
+    outcome_resolved_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_predictions_service ON pattern_predictions(service);
+CREATE INDEX IF NOT EXISTS idx_predictions_outcome ON pattern_predictions(outcome);
+CREATE INDEX IF NOT EXISTS idx_predictions_created ON pattern_predictions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_predictions_published ON pattern_predictions(published, outcome) WHERE published = TRUE;

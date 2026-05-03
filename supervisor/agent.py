@@ -878,6 +878,13 @@ class SentinalAISupervisor:
                 elapsed_ms=elapsed,
             )
 
+            # Close the Pattern Intelligence feedback loop: mark pending predictions TP
+            try:
+                from intelligence.background_runner import get_runner
+                get_runner().record_outcome(service, incident_id)
+            except Exception:
+                pass
+
             return result
 
     # ------------------------------------------------------------------ #

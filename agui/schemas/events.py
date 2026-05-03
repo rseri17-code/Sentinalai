@@ -81,6 +81,29 @@ class EventType(str, Enum):
     # Postmortem collaboration
     POSTMORTEM_COMMENT_ADDED = "postmortem.comment_added"
 
+    # Dev loop — closed-loop agent-driven development
+    DEV_TASK_CREATED         = "dev.task_created"
+    DEV_IMPLEMENTING         = "dev.implementing"
+    DEV_VALIDATION_STARTED   = "dev.validation_started"
+    DEV_VALIDATION_PASSED    = "dev.validation_passed"
+    DEV_VALIDATION_FAILED    = "dev.validation_failed"
+    DEV_VALIDATION_ITERATING = "dev.validation_iterating"
+    DEV_PR_CREATED           = "dev.pr_created"
+    DEV_CI_STARTED           = "dev.ci_started"
+    DEV_CI_PASSED            = "dev.ci_passed"
+    DEV_CI_FAILED            = "dev.ci_failed"
+    DEV_CI_FIXING            = "dev.ci_fixing"
+    DEV_REVIEW_COMMENT       = "dev.review_comment"
+    DEV_REVIEW_RESPONDED     = "dev.review_responded"
+    DEV_COMPLETED            = "dev.completed"
+    DEV_NEEDS_HUMAN          = "dev.needs_human"
+    DEV_FAILED               = "dev.failed"
+
+    # Pattern Intelligence Layer
+    INTELLIGENCE_PREDICTION  = "intelligence.prediction"
+    INTELLIGENCE_SLO_BURNING = "intelligence.slo_burning"
+    INTELLIGENCE_CYCLE_DONE  = "intelligence.cycle_done"
+
     # System
     HEARTBEAT = "system.heartbeat"
 

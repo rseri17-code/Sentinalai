@@ -1,9 +1,10 @@
 """AG UI Metrics API — investigation performance dashboard.
 
 Routes:
-  GET /api/v1/metrics/dashboard    → aggregate stats (MTTR, confidence, FP rate)
-  GET /api/v1/metrics/trend        → time-series investigation counts
-  GET /api/v1/metrics/calibration  → confidence calibration curve data
+  GET /api/v1/metrics/dashboard         → aggregate stats (MTTR, confidence, FP rate)
+  GET /api/v1/metrics/trend             → time-series investigation counts
+  GET /api/v1/metrics/calibration       → confidence calibration curve data
+  GET /api/v1/metrics/intelligence      → pattern intelligence accuracy + SLO burn summary
 """
 from __future__ import annotations
 
@@ -80,4 +81,95 @@ async def get_calibration_curve(
         "buckets": buckets,
         "curve": curve,
         "note": "actual_correct_rate is proxied by (has_root_cause AND confidence >= 60)",
+    }
+
+
+@router.get("/mttr")
+async def get_mttr_dashboard(
+    window_hours: int = Query(default=168, ge=1, le=8760, description="Lookback window (default 7 days)"),
+    human_baseline_minutes: float = Query(default=45.0, ge=1.0, le=480.0),
+    actor: ActorContext = Depends(get_actor),
+):
+    """Full MTTR dashboard data in one call.
+
+    Returns everything the MTTRDashboard component needs:
+    - KPI summary (median/p95/p99 MTTR, root-cause rate, deflection rate)
+    - 30-day daily trend (sparkline data)
+    - Per-service breakdown table
+    - ROI summary (time saved vs human baseline)
+    - Calibration curve
+    """
+    from supervisor.metrics_dashboard import get_dashboard_engine
+    engine = get_dashboard_engine()
+
+    snapshot = engine.get_dashboard().to_dict()
+    trend = engine.get_mttr_trend_by_day(window_days=30)
+    service_breakdown = engine.get_service_breakdown(window_hours=window_hours)
+    roi = engine.get_roi_summary(
+        human_baseline_minutes=human_baseline_minutes,
+        window_hours=window_hours,
+    )
+    calibration = engine.get_calibration_curve(buckets=10)
+
+    return {
+        "window_hours": window_hours,
+        "kpis": {
+            "mttr_median_ms": snapshot["mttr_median_ms"],
+            "mttr_p95_ms": snapshot["mttr_p95_ms"],
+            "mttr_p99_ms": snapshot["mttr_p99_ms"],
+            "total_investigations": snapshot["total_investigations"],
+            "last_24h_count": snapshot["last_24h_count"],
+            "last_7d_count": snapshot["last_7d_count"],
+            "root_cause_found_rate": snapshot["root_cause_found_rate"],
+            "mean_confidence": snapshot["mean_confidence"],
+            "fix_proposed_rate": snapshot["fix_proposed_rate"],
+            "fix_applied_rate": snapshot["fix_applied_rate"],
+        },
+        "trend": trend,
+        "service_breakdown": service_breakdown,
+        "roi": roi,
+        "calibration": calibration,
+    }
+
+
+async def get_intelligence_metrics(
+    actor: ActorContext = Depends(get_actor),
+):
+    """Return Pattern Intelligence Layer accuracy and SLO health summary.
+
+    Combines:
+    - Prediction accuracy by pattern type (precision, TP/FP counts)
+    - Active prediction counts by severity
+    - SLO burn status summary (OK/BURNING/CRITICAL/BREACHED counts)
+    - Total predictions tracked
+    """
+    from intelligence.background_runner import get_runner
+    runner = get_runner()
+
+    accuracy = runner.get_accuracy_report()
+
+    active = runner.get_active_predictions("WATCH")
+    severity_counts: dict[str, int] = {}
+    for p in active:
+        severity_counts[p.severity] = severity_counts.get(p.severity, 0) + 1
+
+    slo_statuses = runner.get_slo_statuses()
+    slo_summary: dict[str, int] = {}
+    for s in slo_statuses:
+        slo_summary[s.status] = slo_summary.get(s.status, 0) + 1
+
+    return {
+        "accuracy": accuracy,
+        "active_predictions": {
+            "total": len(active),
+            "by_severity": severity_counts,
+        },
+        "slo_health": {
+            "total_slos": len(slo_statuses),
+            "by_status": slo_summary,
+            "burning_or_worse": sum(
+                slo_summary.get(s, 0) for s in ("BURNING", "CRITICAL", "BREACHED")
+            ),
+        },
+        "runner_iteration": runner._iteration,
     }

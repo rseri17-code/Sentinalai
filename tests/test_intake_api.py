@@ -34,9 +34,14 @@ def intake_client():
     _fake_store = AsyncMock()
     _fake_store.put_state = AsyncMock(return_value=None)
 
+    def _consume_coro(coro):
+        """close() the coroutine so Python doesn't warn about it never being awaited."""
+        if hasattr(coro, "close"):
+            coro.close()
+
     with (
         patch("agui.api.intake.get_state_store", return_value=_fake_store),
-        patch("agui.api.intake.asyncio.create_task"),  # don't actually spawn tasks
+        patch("agui.api.intake.asyncio.create_task", side_effect=_consume_coro),
     ):
         with TestClient(app, raise_server_exceptions=True) as client:
             yield client

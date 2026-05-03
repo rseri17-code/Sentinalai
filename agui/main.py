@@ -45,6 +45,7 @@ from agui.api.control import router as control_router
 from agui.api.learning import router as learning_router
 from agui.api.metrics import router as metrics_router
 from agui.api.intake import router as intake_router
+from agui.api.intelligence import router as intelligence_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -99,6 +100,7 @@ def create_app() -> FastAPI:
     app.include_router(learning_router)
     app.include_router(metrics_router)
     app.include_router(intake_router)
+    app.include_router(intelligence_router)
 
     # ── Health endpoints ──────────────────────────────────────────────────
     @app.get("/api/v1/health", tags=["health"])
@@ -238,12 +240,26 @@ async def startup_event() -> None:
             return await state_store.get_events(investigation_id, since_seq)
 
     bus.set_backend(StateBusBackend())
+
+    # Start Pattern Intelligence background loop
+    try:
+        from intelligence.background_runner import get_runner as get_intelligence_runner
+        await get_intelligence_runner().start()
+        logger.info("Pattern Intelligence runner started")
+    except Exception as exc:
+        logger.warning("Pattern Intelligence runner failed to start: %s", exc)
+
     logger.info("AG UI BFF ready on port %d", BFF_PORT)
 
 
 @app.on_event("shutdown")
 async def shutdown_event() -> None:
     """Graceful shutdown."""
+    try:
+        from intelligence.background_runner import get_runner as get_intelligence_runner
+        await get_intelligence_runner().stop()
+    except Exception:
+        pass
     bus = get_bus()
     await bus.stop()
     ws_manager = get_ws_manager()

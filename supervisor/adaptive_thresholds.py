@@ -289,6 +289,121 @@ def reset(name: str | None = None) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Drift detection and auto-correction
+# ---------------------------------------------------------------------------
+
+# If a threshold drifts more than this fraction of its [lo, hi] range from
+# its default, it is considered "drifted" and eligible for auto-damping.
+_DRIFT_FRACTION_WARN  = 0.30   # 30% of range → log warning
+_DRIFT_FRACTION_DAMP  = 0.50   # 50% of range → apply damping pull-back
+_DAMP_ALPHA           = 0.20   # how strongly to pull back toward default
+
+
+def detect_drift() -> dict[str, dict]:
+    """Check whether any threshold has drifted far from its default.
+
+    Returns a dict keyed by threshold name with:
+        current, default, drift_fraction, drifted (bool), recommendation (str)
+    """
+    results: dict[str, dict] = {}
+    try:
+        store = _load()
+        for name, default in _DEFAULTS.items():
+            lo, hi = _BOUNDS[name]
+            raw = store.get(name)
+            current = float(raw.get("value", default)) if isinstance(raw, dict) else default
+            observations = int(raw.get("observations", 0)) if isinstance(raw, dict) else 0
+            drift = abs(current - default) / max(1e-9, hi - lo)
+            drifted = drift >= _DRIFT_FRACTION_WARN
+            if drift >= _DRIFT_FRACTION_DAMP:
+                rec = f"CRITICAL: auto-damp recommended (drift={drift:.0%})"
+            elif drifted:
+                rec = f"WARNING: threshold shifted {drift:.0%} from default — monitor"
+            else:
+                rec = "OK"
+            results[name] = {
+                "current": round(current, 4),
+                "default": default,
+                "drift_fraction": round(drift, 3),
+                "observations": observations,
+                "drifted": drifted,
+                "recommendation": rec,
+            }
+    except Exception as exc:
+        logger.warning("detect_drift failed: %s", exc)
+    return results
+
+
+def auto_damp_drift() -> dict[str, str]:
+    """Pull drifted thresholds back toward their defaults.
+
+    For each threshold drifted > _DRIFT_FRACTION_DAMP of its range, apply a
+    weighted blend: new = (1-_DAMP_ALPHA) * current + _DAMP_ALPHA * default.
+    This avoids a hard reset while correcting runaway drift.
+
+    Returns a dict of {name: action_taken}.
+    """
+    actions: dict[str, str] = {}
+    try:
+        with _lock:
+            store = _load()
+            for name, default in _DEFAULTS.items():
+                lo, hi = _BOUNDS[name]
+                raw = store.get(name)
+                if not isinstance(raw, dict):
+                    continue
+                current = float(raw.get("value", default))
+                drift = abs(current - default) / max(1e-9, hi - lo)
+                if drift < _DRIFT_FRACTION_DAMP:
+                    actions[name] = "no_action"
+                    continue
+                damped = (1.0 - _DAMP_ALPHA) * current + _DAMP_ALPHA * default
+                damped = round(max(lo, min(hi, damped)), 4)
+                raw["value"] = damped
+                raw["last_updated"] = datetime.now(timezone.utc).isoformat()
+                store[name] = raw
+                actions[name] = f"damped {current:.4f} → {damped:.4f}"
+                logger.warning(
+                    "Adaptive threshold auto-damped: %s %.4f → %.4f (drift was %.0%% of range)",
+                    name, current, damped, drift * 100,
+                )
+            _save(store)
+    except Exception as exc:
+        logger.warning("auto_damp_drift failed: %s", exc)
+    return actions
+
+
+def get_health_report() -> dict:
+    """Return a health summary of all adaptive thresholds.
+
+    Includes current values, drift status, observation counts, and
+    actionable recommendations for each threshold.
+    """
+    drift = detect_drift()
+    health: dict = {
+        "thresholds": drift,
+        "overall_status": "OK",
+        "drifted_count": sum(1 for v in drift.values() if v.get("drifted")),
+        "recommendations": [],
+    }
+    for name, info in drift.items():
+        if "CRITICAL" in info.get("recommendation", ""):
+            health["overall_status"] = "CRITICAL"
+            health["recommendations"].append(
+                f"Run auto_damp_drift() — {name} has drifted {info['drift_fraction']:.0%} from default"
+            )
+        elif "WARNING" in info.get("recommendation", ""):
+            if health["overall_status"] == "OK":
+                health["overall_status"] = "WARNING"
+            health["recommendations"].append(
+                f"Monitor {name}: current={info['current']} default={info['default']} drift={info['drift_fraction']:.0%}"
+            )
+    if not health["recommendations"]:
+        health["recommendations"].append("All thresholds within healthy range")
+    return health
+
+
+# ---------------------------------------------------------------------------
 # Persistence helpers
 # ---------------------------------------------------------------------------
 

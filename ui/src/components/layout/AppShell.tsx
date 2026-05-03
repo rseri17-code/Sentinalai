@@ -9,6 +9,7 @@ import { MemoryTracePanel } from '@/components/MemoryTracePanel'
 import { ReplayMode } from '@/components/ReplayMode'
 import { ControlPanel } from '@/components/ControlPanel'
 import { RiskConfidenceLayer } from '@/components/RiskConfidenceLayer'
+import MTTRDashboard from '@/components/MTTRDashboard'
 import { useInvestigationStore } from '@/store/investigationStore'
 
 function InvestigationView() {
@@ -182,6 +183,7 @@ export function AppShell() {
           <Routes>
             <Route path="/investigations" element={<InvestigationsList />} />
             <Route path="/investigations/:investigationId" element={<InvestigationView />} />
+            <Route path="/dashboard" element={<MTTRDashboard />} />
             <Route path="*" element={<Navigate to="/investigations" replace />} />
           </Routes>
         </main>

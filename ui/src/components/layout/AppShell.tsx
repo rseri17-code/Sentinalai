@@ -10,6 +10,7 @@ import { ReplayMode } from '@/components/ReplayMode'
 import { ControlPanel } from '@/components/ControlPanel'
 import { RiskConfidenceLayer } from '@/components/RiskConfidenceLayer'
 import MTTRDashboard from '@/components/MTTRDashboard'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useInvestigationStore } from '@/store/investigationStore'
 
 function InvestigationView() {
@@ -33,12 +34,12 @@ function InvestigationView() {
       {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 overflow-hidden">
-          {activePanel === 'timeline' && <IncidentCommandCenter />}
-          {activePanel === 'graph' && <ExecutionGraph />}
-          {activePanel === 'evidence' && <EvidenceDrawer />}
-          {activePanel === 'memory' && <MemoryTracePanel />}
-          {activePanel === 'replay' && <ReplayMode />}
-          {activePanel === 'control' && <ControlPanel />}
+          {activePanel === 'timeline' && <ErrorBoundary label="Timeline"><IncidentCommandCenter /></ErrorBoundary>}
+          {activePanel === 'graph' && <ErrorBoundary label="Execution Graph"><ExecutionGraph /></ErrorBoundary>}
+          {activePanel === 'evidence' && <ErrorBoundary label="Evidence"><EvidenceDrawer /></ErrorBoundary>}
+          {activePanel === 'memory' && <ErrorBoundary label="Memory Trace"><MemoryTracePanel /></ErrorBoundary>}
+          {activePanel === 'replay' && <ErrorBoundary label="Replay"><ReplayMode /></ErrorBoundary>}
+          {activePanel === 'control' && <ErrorBoundary label="Control Panel"><ControlPanel /></ErrorBoundary>}
         </div>
       </div>
     </div>
@@ -181,9 +182,9 @@ export function AppShell() {
         <TopBar />
         <main className="flex-1 overflow-hidden">
           <Routes>
-            <Route path="/investigations" element={<InvestigationsList />} />
-            <Route path="/investigations/:investigationId" element={<InvestigationView />} />
-            <Route path="/dashboard" element={<MTTRDashboard />} />
+            <Route path="/investigations" element={<ErrorBoundary label="Investigations"><InvestigationsList /></ErrorBoundary>} />
+            <Route path="/investigations/:investigationId" element={<ErrorBoundary label="Investigation"><InvestigationView /></ErrorBoundary>} />
+            <Route path="/dashboard" element={<ErrorBoundary label="MTTR Dashboard"><MTTRDashboard /></ErrorBoundary>} />
             <Route path="*" element={<Navigate to="/investigations" replace />} />
           </Routes>
         </main>

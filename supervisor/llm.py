@@ -42,6 +42,60 @@ MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "anthropic.claude-sonnet-4-5-20250
 LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.0"))
 LLM_MAX_TOKENS = int(os.environ.get("LLM_MAX_TOKENS", "2048"))
 LLM_ENABLED = os.environ.get("LLM_ENABLED", "true").lower() in ("true", "1", "yes")
+# Token-bucket: max concurrent LLM calls and per-minute call cap
+LLM_MAX_CONCURRENT = int(os.environ.get("LLM_MAX_CONCURRENT", "5"))
+LLM_MAX_CALLS_PER_MIN = int(os.environ.get("LLM_MAX_CALLS_PER_MIN", "60"))
+
+# ---------------------------------------------------------------------------
+# Token-bucket rate limiter — prevents 429s under concurrent investigations
+# ---------------------------------------------------------------------------
+
+class _TokenBucket:
+    """Thread-safe token-bucket rate limiter."""
+
+    def __init__(self, max_concurrent: int, max_per_minute: int) -> None:
+        self._semaphore = threading.Semaphore(max_concurrent)
+        self._max_per_minute = max_per_minute
+        self._call_times: list[float] = []
+        self._lock = threading.Lock()
+
+    def acquire(self, timeout: float = 30.0) -> bool:
+        """Block until a call slot is available. Returns False on timeout."""
+        deadline = time.monotonic() + timeout
+        # Per-minute cap: wait if we've hit the limit in the last 60s
+        while True:
+            with self._lock:
+                now = time.monotonic()
+                self._call_times = [t for t in self._call_times if now - t < 60]
+                if len(self._call_times) < self._max_per_minute:
+                    break
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(0.5)
+        # Concurrency cap
+        acquired = self._semaphore.acquire(timeout=max(0.0, deadline - time.monotonic()))
+        if acquired:
+            with self._lock:
+                self._call_times.append(time.monotonic())
+        return acquired
+
+    def release(self) -> None:
+        self._semaphore.release()
+
+
+_rate_limiter: _TokenBucket | None = None
+_rate_limiter_lock = threading.Lock()
+
+
+def _get_rate_limiter() -> _TokenBucket:
+    global _rate_limiter
+    if _rate_limiter is not None:
+        return _rate_limiter
+    with _rate_limiter_lock:
+        if _rate_limiter is None:
+            _rate_limiter = _TokenBucket(LLM_MAX_CONCURRENT, LLM_MAX_CALLS_PER_MIN)
+    return _rate_limiter
+
 
 # ---------------------------------------------------------------------------
 # Boto3 client (lazy init — lock protects against concurrent first-call races)
@@ -122,6 +176,25 @@ def converse(
     if client is None:
         return _disabled_response()
 
+    # Rate-limit: block until a call slot is free (max 30s wait)
+    limiter = _get_rate_limiter()
+    if not limiter.acquire(timeout=30.0):
+        logger.warning("LLM rate limiter timeout — dropping call (too many concurrent requests)")
+        return {**_disabled_response(), "error": "rate_limited"}
+    try:
+        return _do_converse(client, system_prompt, user_message, model_id, temperature, max_tokens)
+    finally:
+        limiter.release()
+
+
+def _do_converse(
+    client: Any,
+    system_prompt: str,
+    user_message: str,
+    model_id: str | None,
+    temperature: float | None,
+    max_tokens: int | None,
+) -> dict[str, Any]:
     resolved_model = model_id or MODEL_ID
     resolved_temp = temperature if temperature is not None else LLM_TEMPERATURE
     resolved_max = max_tokens or LLM_MAX_TOKENS
@@ -207,6 +280,7 @@ def refine_hypothesis(
     summary: str,
     evidence_summary: str,
     hypotheses: list[dict[str, Any]],
+    pil_context: str = "",
 ) -> dict[str, Any]:
     """Use LLM to refine and re-rank hypotheses given evidence.
 
@@ -228,12 +302,14 @@ def refine_hypothesis(
         "\"score\": int, \"reasoning\": str}]}"
     )
 
+    pil_block = f"\n\n{pil_context}" if pil_context else ""
     user_message = (
         f"Incident type: {incident_type}\n"
         f"Service: {service}\n"
         f"Summary: {summary}\n\n"
         f"Evidence collected:\n{evidence_summary}\n\n"
-        f"Initial hypotheses:\n{json.dumps(hypotheses, indent=2)}\n\n"
+        f"Initial hypotheses:\n{json.dumps(hypotheses, indent=2)}\n"
+        f"{pil_block}\n"
         "Refine and re-rank these hypotheses based on the evidence. "
         "Return JSON with the refined hypotheses."
     )
@@ -270,6 +346,7 @@ def generate_reasoning(
     root_cause: str,
     evidence_summary: str,
     timeline_summary: str,
+    pil_context: str = "",
 ) -> dict[str, Any]:
     """Use LLM to generate a detailed, human-readable reasoning narrative.
 
@@ -289,11 +366,13 @@ def generate_reasoning(
         "Explain the causal chain. Keep it under 200 words."
     )
 
+    pil_block = f"\n\n{pil_context}" if pil_context else ""
     user_message = (
         f"Incident: {incident_type} on {service}\n"
         f"Root cause: {root_cause}\n\n"
         f"Evidence:\n{evidence_summary}\n\n"
-        f"Timeline:\n{timeline_summary}\n\n"
+        f"Timeline:\n{timeline_summary}\n"
+        f"{pil_block}\n"
         "Write the reasoning section for this RCA report."
     )
 

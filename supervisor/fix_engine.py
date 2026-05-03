@@ -245,6 +245,13 @@ class FixEngine:
                     "Fix applied: inv=%s fix_id=%s action=%s success=%s",
                     investigation_id, fix.fix_id, application.action_taken, application.success,
                 )
+                try:
+                    from supervisor.metrics_dashboard import get_dashboard_engine
+                    get_dashboard_engine().update_outcome(
+                        investigation_id, fix_applied=application.success
+                    )
+                except Exception:
+                    pass
                 return application
 
             except Exception as exc:

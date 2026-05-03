@@ -266,6 +266,15 @@ class IntelligenceRunner:
             return []
         return self._store.get_active_predictions(min_severity)
 
+    def get_active_predictions_for_service(self, service: str, min_severity: str = "WATCH") -> list:
+        """Return active predictions scoped to a specific service (used by supervisor agent)."""
+        if self._store is None:
+            return []
+        return [
+            p for p in self._store.get_active_predictions(min_severity)
+            if p.service == service
+        ]
+
     def get_slo_statuses(self) -> list:
         if self._slo_engine is None or self._aggregator is None:
             return []

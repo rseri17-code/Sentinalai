@@ -10,6 +10,7 @@ import {
 import {
   Clock, TrendingDown, CheckCircle2, Zap,
   AlertCircle, BarChart2, RefreshCw, ChevronUp, ChevronDown,
+  Brain, Flame, Activity,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import clsx from 'clsx'
@@ -75,6 +76,19 @@ interface DashboardData {
   service_breakdown: ServiceRow[]
   roi: ROI
   calibration: CalibrationBucket[]
+}
+
+interface SLOHealth {
+  total_slos: number
+  by_status: Record<string, number>
+  burning_or_worse: number
+}
+
+interface PILMetrics {
+  accuracy: Record<string, { precision: number; tp: number; fp: number }>
+  active_predictions: { total: number; by_severity: Record<string, number> }
+  slo_health: SLOHealth
+  runner_iteration: number
 }
 
 // ---------------------------------------------------------------------------
@@ -427,6 +441,113 @@ function ServiceTable({ rows }: { rows: ServiceRow[] }) {
 }
 
 // ---------------------------------------------------------------------------
+// Pattern Intelligence Panel
+// ---------------------------------------------------------------------------
+
+function PILPanel({ pil }: { pil: PILMetrics }) {
+  const severityColors: Record<string, string> = {
+    IMMINENT: 'text-red-400 bg-red-900/30 border-red-800/40',
+    LIKELY:   'text-yellow-400 bg-yellow-900/30 border-yellow-800/40',
+    WATCH:    'text-blue-400 bg-blue-900/30 border-blue-800/40',
+  }
+
+  const sloStatusColors: Record<string, string> = {
+    BREACHED:  'text-red-400',
+    CRITICAL:  'text-orange-400',
+    BURNING:   'text-yellow-400',
+    WATCHING:  'text-blue-400',
+    OK:        'text-green-400',
+  }
+
+  const patternLabels: Record<string, string> = {
+    trend_drift:   'Trend Drift',
+    rate_accel:    'Rate Accel',
+    cross_service: 'Cross-Service',
+    post_deploy:   'Post-Deploy',
+    slo_burn:      'SLO Burn',
+  }
+
+  return (
+    <div className="bg-slate-900 rounded-xl border border-slate-800 p-5 space-y-5">
+      <div className="flex items-center gap-2">
+        <Brain size={15} className="text-indigo-400" />
+        <h2 className="text-sm font-semibold text-slate-200">Pattern Intelligence Layer</h2>
+        <span className="ml-auto text-xs text-slate-500">cycle #{pil.runner_iteration}</span>
+      </div>
+
+      {/* Active predictions by severity */}
+      <div>
+        <div className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Active Predictions</div>
+        <div className="flex gap-2 flex-wrap">
+          {pil.active_predictions.total === 0 ? (
+            <span className="text-xs text-slate-500 italic">No active predictions</span>
+          ) : (
+            Object.entries(pil.active_predictions.by_severity).map(([sev, count]) => (
+              <span key={sev} className={clsx(
+                'px-2.5 py-1 rounded-full text-xs font-medium border',
+                severityColors[sev] ?? 'text-slate-400 bg-slate-800 border-slate-700'
+              )}>
+                {sev} · {count}
+              </span>
+            ))
+          )}
+          <span className="px-2.5 py-1 rounded-full text-xs text-slate-400 bg-slate-800 border border-slate-700">
+            Total: {pil.active_predictions.total}
+          </span>
+        </div>
+      </div>
+
+      {/* Detector accuracy table */}
+      {Object.keys(pil.accuracy).length > 0 && (
+        <div>
+          <div className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Detector Precision</div>
+          <div className="space-y-1.5">
+            {Object.entries(pil.accuracy).map(([pattern, stats]) => (
+              <div key={pattern} className="flex items-center gap-3 text-xs">
+                <span className="w-28 text-slate-400 shrink-0">{patternLabels[pattern] ?? pattern}</span>
+                <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-indigo-500 rounded-full"
+                    style={{ width: `${(stats.precision * 100).toFixed(0)}%` }}
+                  />
+                </div>
+                <span className="w-10 text-right tabular-nums text-slate-300">
+                  {(stats.precision * 100).toFixed(0)}%
+                </span>
+                <span className="text-slate-600">
+                  {stats.tp}TP / {stats.fp}FP
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* SLO health summary */}
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <Flame size={13} className={pil.slo_health.burning_or_worse > 0 ? 'text-orange-400' : 'text-slate-600'} />
+          <div className="text-xs text-slate-400 uppercase tracking-wider">SLO Health</div>
+          {pil.slo_health.burning_or_worse > 0 && (
+            <span className="text-xs text-orange-400 font-medium">
+              {pil.slo_health.burning_or_worse} burning or worse
+            </span>
+          )}
+          <span className="ml-auto text-xs text-slate-500">{pil.slo_health.total_slos} SLOs tracked</span>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {Object.entries(pil.slo_health.by_status).map(([status, count]) => (
+            <span key={status} className={clsx('text-xs font-medium tabular-nums', sloStatusColors[status] ?? 'text-slate-400')}>
+              {status}: {count}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Empty state
 // ---------------------------------------------------------------------------
 
@@ -448,6 +569,7 @@ function EmptyState() {
 
 export default function MTTRDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
+  const [pil, setPil] = useState<PILMetrics | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastFetch, setLastFetch] = useState(new Date())
@@ -456,12 +578,15 @@ export default function MTTRDashboard() {
   const fetchData = useCallback(async () => {
     try {
       const token = localStorage.getItem('agui_token')
-      const res = await fetch(`/api/v1/metrics/mttr?window_hours=${windowHours}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json = await res.json()
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const [mttrRes, pilRes] = await Promise.all([
+        fetch(`/api/v1/metrics/mttr?window_hours=${windowHours}`, { headers }),
+        fetch('/api/v1/metrics/intelligence', { headers }),
+      ])
+      if (!mttrRes.ok) throw new Error(`HTTP ${mttrRes.status}`)
+      const json = await mttrRes.json()
       setData(json)
+      if (pilRes.ok) setPil(await pilRes.json())
       setError(null)
       setLastFetch(new Date())
     } catch (e: any) {
@@ -605,6 +730,9 @@ export default function MTTRDashboard() {
                 <ServiceTable rows={data?.service_breakdown ?? []} />
               </div>
             </div>
+
+            {/* Pattern Intelligence Layer */}
+            {pil && <PILPanel pil={pil} />}
           </>
         )}
       </div>

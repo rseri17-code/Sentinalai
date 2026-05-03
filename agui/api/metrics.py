@@ -132,6 +132,7 @@ async def get_mttr_dashboard(
     }
 
 
+@router.get("/intelligence")
 async def get_intelligence_metrics(
     actor: ActorContext = Depends(get_actor),
 ):

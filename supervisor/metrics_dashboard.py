@@ -134,9 +134,48 @@ class MetricsDashboard:
         self._lock = threading.Lock()
 
     def record(self, outcome: InvestigationOutcome) -> None:
-        """Append an investigation outcome to the ring buffer."""
+        """Append an investigation outcome to the ring buffer and flush to DB."""
         with self._lock:
             self._ring.append(outcome)
+        try:
+            from database.persistence import persist_investigation_outcome, is_enabled
+            if is_enabled():
+                persist_investigation_outcome(outcome)
+        except Exception:
+            pass
+
+    def update_outcome(
+        self,
+        investigation_id: str,
+        *,
+        fix_applied: Optional[bool] = None,
+        fix_verified: Optional[bool] = None,
+    ) -> bool:
+        """Patch fix_applied / fix_verified on an existing ring buffer entry.
+
+        Returns True if the entry was found and updated, False if not found
+        (e.g. ring buffer was reset since the investigation ran).
+        """
+        updated_outcome = None
+        with self._lock:
+            for outcome in self._ring:
+                if outcome.investigation_id == investigation_id:
+                    if fix_applied is not None:
+                        outcome.fix_applied = fix_applied
+                    if fix_verified is not None:
+                        outcome.fix_verified = fix_verified
+                    updated_outcome = outcome
+                    break
+
+        if updated_outcome is not None:
+            try:
+                from database.persistence import persist_investigation_outcome, is_enabled
+                if is_enabled():
+                    persist_investigation_outcome(updated_outcome)
+            except Exception:
+                pass
+            return True
+        return False
 
     def get_dashboard(self) -> DashboardSnapshot:
         """Compute and return aggregate metrics from the ring buffer."""
@@ -404,7 +443,26 @@ def get_dashboard_engine() -> MetricsDashboard:
     with _dashboard_lock:
         if _dashboard is None:
             _dashboard = MetricsDashboard()
+            _hydrate_from_db(_dashboard)
     return _dashboard
+
+
+def _hydrate_from_db(dashboard: MetricsDashboard) -> None:
+    """Load persisted outcomes into the ring buffer on first startup."""
+    try:
+        from database.persistence import load_recent_outcomes, is_enabled
+        if not is_enabled():
+            return
+        rows = load_recent_outcomes(limit=_RING_SIZE)
+        # Rows are newest-first from DB; insert oldest-first into deque
+        for row in reversed(rows):
+            outcome = InvestigationOutcome(**row)
+            with dashboard._lock:
+                dashboard._ring.append(outcome)
+        if rows:
+            logger.info("Hydrated MTTR ring buffer with %d outcomes from DB", len(rows))
+    except Exception as exc:
+        logger.warning("Failed to hydrate ring buffer from DB: %s", exc)
 
 
 def record_investigation_outcome(

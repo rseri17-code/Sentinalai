@@ -360,6 +360,32 @@ class SyntheticIncidentGenerator:
         except Exception:
             pass
 
+        # Record into MTTR dashboard so dev-inject populates the metrics UI
+        try:
+            from supervisor.metrics_dashboard import record_investigation_outcome
+            conf_pct = scenario["confidence"] * 100
+            record_investigation_outcome(
+                investigation_id=inv_id,
+                incident_id=incident_id,
+                incident_type=incident_type,
+                service=scenario.get("service", "unknown"),
+                root_cause=scenario.get("root_cause", ""),
+                confidence=conf_pct,
+                severity={"critical": 1, "high": 2, "medium": 3, "low": 4}.get(
+                    scenario.get("severity", "medium"), 3
+                ),
+                elapsed_ms=float(total_duration),
+                tool_calls=len(scenario.get("playbook", [])) + 1,
+                llm_input_tokens=self._rng.randint(3000, 6000),
+                llm_output_tokens=self._rng.randint(500, 1200),
+                citation_coverage=self._rng.uniform(0.65, 0.95),
+                fix_proposed=scenario["confidence"] >= 0.75,
+                fix_applied=False,
+                fix_verified=False,
+            )
+        except Exception:
+            pass
+
         return inv_id, events
 
     def _worker_action(self, worker: str) -> str:

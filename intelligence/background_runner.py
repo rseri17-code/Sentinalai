@@ -133,7 +133,7 @@ class IntelligenceRunner:
         except Exception as exc:
             logger.warning("Pattern detection failed: %s", exc)
 
-        # 4. Store detections as predictions
+        # 4. Store detections as predictions; write cross-service edges to KG
         published = 0
         for detection in detections:
             try:
@@ -144,6 +144,11 @@ class IntelligenceRunner:
                     self._emit_prediction_event(pred)
             except Exception as exc:
                 logger.debug("Store prediction failed: %s", exc)
+
+            if detection.pattern_type == "cross_service" and detection.related_service:
+                self._write_correlation_edge(
+                    detection.related_service, detection.service, round(detection.confidence, 3)
+                )
 
         # 5. Expire stale predictions
         try:
@@ -192,6 +197,34 @@ class IntelligenceRunner:
         self._slo_engine  = SLOEngine()
         self._detector    = PatternDetector()
         self._store       = PredictionStore()
+
+    # ------------------------------------------------------------------
+    # KG integration
+    # ------------------------------------------------------------------
+
+    def _write_correlation_edge(self, leader: str, follower: str, pearson_r: float) -> None:
+        """Write a CORRELATED_WITH edge into the Knowledge Graph.
+
+        The leader service degraded first and the follower historically follows.
+        Edge weight = Pearson r so the KG can rank correlation strength.
+        """
+        try:
+            from supervisor.knowledge_graph import KnowledgeGraph
+            kg = KnowledgeGraph.get_graph()
+            for svc in (leader, follower):
+                if svc not in kg._nodes:
+                    kg.add_node(f"service::{svc}", node_type="service", label=svc)
+            kg.add_edge(
+                f"service::{leader}", f"service::{follower}",
+                rel_type="CORRELATED_WITH",
+                weight=pearson_r,
+                source="pattern_intelligence",
+            )
+            logger.debug(
+                "KG edge written: %s CORRELATED_WITH %s (r=%.3f)", leader, follower, pearson_r
+            )
+        except Exception as exc:
+            logger.debug("KG correlation edge write failed: %s", exc)
 
     # ------------------------------------------------------------------
     # Events

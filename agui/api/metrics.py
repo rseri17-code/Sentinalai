@@ -1,9 +1,10 @@
 """AG UI Metrics API — investigation performance dashboard.
 
 Routes:
-  GET /api/v1/metrics/dashboard    → aggregate stats (MTTR, confidence, FP rate)
-  GET /api/v1/metrics/trend        → time-series investigation counts
-  GET /api/v1/metrics/calibration  → confidence calibration curve data
+  GET /api/v1/metrics/dashboard         → aggregate stats (MTTR, confidence, FP rate)
+  GET /api/v1/metrics/trend             → time-series investigation counts
+  GET /api/v1/metrics/calibration       → confidence calibration curve data
+  GET /api/v1/metrics/intelligence      → pattern intelligence accuracy + SLO burn summary
 """
 from __future__ import annotations
 
@@ -80,4 +81,48 @@ async def get_calibration_curve(
         "buckets": buckets,
         "curve": curve,
         "note": "actual_correct_rate is proxied by (has_root_cause AND confidence >= 60)",
+    }
+
+
+@router.get("/intelligence")
+async def get_intelligence_metrics(
+    actor: ActorContext = Depends(get_actor),
+):
+    """Return Pattern Intelligence Layer accuracy and SLO health summary.
+
+    Combines:
+    - Prediction accuracy by pattern type (precision, TP/FP counts)
+    - Active prediction counts by severity
+    - SLO burn status summary (OK/BURNING/CRITICAL/BREACHED counts)
+    - Total predictions tracked
+    """
+    from intelligence.background_runner import get_runner
+    runner = get_runner()
+
+    accuracy = runner.get_accuracy_report()
+
+    active = runner.get_active_predictions("WATCH")
+    severity_counts: dict[str, int] = {}
+    for p in active:
+        severity_counts[p.severity] = severity_counts.get(p.severity, 0) + 1
+
+    slo_statuses = runner.get_slo_statuses()
+    slo_summary: dict[str, int] = {}
+    for s in slo_statuses:
+        slo_summary[s.status] = slo_summary.get(s.status, 0) + 1
+
+    return {
+        "accuracy": accuracy,
+        "active_predictions": {
+            "total": len(active),
+            "by_severity": severity_counts,
+        },
+        "slo_health": {
+            "total_slos": len(slo_statuses),
+            "by_status": slo_summary,
+            "burning_or_worse": sum(
+                slo_summary.get(s, 0) for s in ("BURNING", "CRITICAL", "BREACHED")
+            ),
+        },
+        "runner_iteration": runner._iteration,
     }

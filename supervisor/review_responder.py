@@ -283,8 +283,8 @@ Do not explain your reasoning beyond the reply. Output: code block (if needed) +
         try:
             from workers.mcp_client import MCPClient
             MCPClient().call(
-                "github.create_pull_request",  # reuse create stub for comments
-                {"pr_number": pr_number, "comment_id": comment_id, "body": reply, "_action": "reply"},
+                "github.reply_to_review_comment",
+                {"pr_number": pr_number, "comment_id": comment_id, "body": reply},
             )
         except Exception as exc:
             logger.debug("Post reply failed: %s", exc)
@@ -294,8 +294,8 @@ Do not explain your reasoning beyond the reply. Output: code block (if needed) +
         try:
             from workers.mcp_client import MCPClient
             MCPClient().call(
-                "github.get_pr_details",
-                {"pr_number": pr_number, "request_review_from": [reviewer]},
+                "github.request_reviewers",
+                {"pr_number": pr_number, "reviewers": [reviewer]},
             )
         except Exception as exc:
             logger.debug("Re-request review failed: %s", exc)

@@ -390,6 +390,8 @@ _TOOL_TO_SERVER: dict[str, str] = {
     "github.get_workflow_runs": "github",
     "github.create_fix_pr": "github",
     "github.create_pull_request": "github",
+    "github.reply_to_review_comment": "github",
+    "github.request_reviewers": "github",
     # Kubernetes (rollback / scale)
     "kubernetes.rollback_deployment": "kubernetes",
     "kubernetes.scale_service": "kubernetes",

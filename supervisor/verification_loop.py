@@ -214,6 +214,13 @@ class VerificationLoop:
                         )
                     except Exception:
                         pass
+                    try:
+                        from supervisor.metrics_dashboard import get_dashboard_engine
+                        get_dashboard_engine().update_outcome(
+                            investigation_id, fix_verified=True
+                        )
+                    except Exception:
+                        pass
                     return result
             else:
                 stable_count = 0
@@ -255,6 +262,13 @@ class VerificationLoop:
                 investigation_id=investigation_id,
                 rca_was_correct=False,
                 verification_duration_sec=duration,
+            )
+        except Exception:
+            pass
+        try:
+            from supervisor.metrics_dashboard import get_dashboard_engine
+            get_dashboard_engine().update_outcome(
+                investigation_id, fix_verified=False
             )
         except Exception:
             pass

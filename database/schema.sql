@@ -142,5 +142,29 @@ CREATE TABLE IF NOT EXISTS pattern_predictions (
 
 CREATE INDEX IF NOT EXISTS idx_predictions_service ON pattern_predictions(service);
 CREATE INDEX IF NOT EXISTS idx_predictions_outcome ON pattern_predictions(outcome);
+
+-- Investigation outcomes — durable ring buffer for MTTR dashboard persistence
+CREATE TABLE IF NOT EXISTS investigation_outcomes (
+    id SERIAL PRIMARY KEY,
+    investigation_id VARCHAR(100) NOT NULL UNIQUE,
+    incident_id VARCHAR(100) NOT NULL,
+    incident_type VARCHAR(50) NOT NULL DEFAULT 'unknown',
+    service VARCHAR(200) NOT NULL DEFAULT 'unknown',
+    root_cause TEXT NOT NULL DEFAULT '',
+    confidence FLOAT NOT NULL DEFAULT 0,
+    severity INTEGER NOT NULL DEFAULT 3,
+    elapsed_ms FLOAT NOT NULL DEFAULT 0,
+    tool_calls INTEGER NOT NULL DEFAULT 0,
+    llm_input_tokens INTEGER NOT NULL DEFAULT 0,
+    llm_output_tokens INTEGER NOT NULL DEFAULT 0,
+    citation_coverage FLOAT NOT NULL DEFAULT 0,
+    fix_proposed BOOLEAN NOT NULL DEFAULT FALSE,
+    fix_applied BOOLEAN NOT NULL DEFAULT FALSE,
+    fix_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    recorded_at DOUBLE PRECISION NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())
+);
+
+CREATE INDEX IF NOT EXISTS idx_outcomes_recorded_at ON investigation_outcomes(recorded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_outcomes_service ON investigation_outcomes(service);
 CREATE INDEX IF NOT EXISTS idx_predictions_created ON pattern_predictions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_predictions_published ON pattern_predictions(published, outcome) WHERE published = TRUE;

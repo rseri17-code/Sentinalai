@@ -452,3 +452,106 @@ def evict_expired_kg_nodes() -> int:
     except Exception as exc:
         logger.warning("Failed to evict expired KG nodes: %s", exc)
         return 0
+
+
+def persist_investigation_outcome(outcome: "InvestigationOutcome") -> bool:  # type: ignore[name-defined]
+    """Upsert one InvestigationOutcome to the investigation_outcomes table.
+
+    Uses ON CONFLICT DO UPDATE so that a subsequent update_outcome() call
+    (which mutates fix_applied / fix_verified in memory) can be flushed again
+    to keep the DB in sync.
+    """
+    engine = get_engine()
+    if engine is None:
+        return False
+    try:
+        with engine.connect() as conn:
+            conn.execute(
+                text("""
+                    INSERT INTO investigation_outcomes (
+                        investigation_id, incident_id, incident_type, service,
+                        root_cause, confidence, severity, elapsed_ms, tool_calls,
+                        llm_input_tokens, llm_output_tokens, citation_coverage,
+                        fix_proposed, fix_applied, fix_verified, recorded_at
+                    ) VALUES (
+                        :investigation_id, :incident_id, :incident_type, :service,
+                        :root_cause, :confidence, :severity, :elapsed_ms, :tool_calls,
+                        :llm_input_tokens, :llm_output_tokens, :citation_coverage,
+                        :fix_proposed, :fix_applied, :fix_verified, :recorded_at
+                    )
+                    ON CONFLICT (investigation_id) DO UPDATE SET
+                        fix_applied  = EXCLUDED.fix_applied,
+                        fix_verified = EXCLUDED.fix_verified,
+                        root_cause   = EXCLUDED.root_cause,
+                        confidence   = EXCLUDED.confidence
+                """),
+                {
+                    "investigation_id": outcome.investigation_id,
+                    "incident_id": outcome.incident_id,
+                    "incident_type": outcome.incident_type,
+                    "service": outcome.service,
+                    "root_cause": outcome.root_cause,
+                    "confidence": outcome.confidence,
+                    "severity": outcome.severity,
+                    "elapsed_ms": outcome.elapsed_ms,
+                    "tool_calls": outcome.tool_calls,
+                    "llm_input_tokens": outcome.llm_input_tokens,
+                    "llm_output_tokens": outcome.llm_output_tokens,
+                    "citation_coverage": outcome.citation_coverage,
+                    "fix_proposed": outcome.fix_proposed,
+                    "fix_applied": outcome.fix_applied,
+                    "fix_verified": outcome.fix_verified,
+                    "recorded_at": outcome.recorded_at,
+                },
+            )
+            conn.commit()
+            return True
+    except Exception as exc:
+        logger.warning("Failed to persist investigation outcome %s: %s", outcome.investigation_id, exc)
+        return False
+
+
+def load_recent_outcomes(limit: int = 10_000) -> list[dict]:
+    """Load the most recent investigation outcomes from DB for ring buffer hydration on startup."""
+    engine = get_engine()
+    if engine is None:
+        return []
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("""
+                    SELECT investigation_id, incident_id, incident_type, service,
+                           root_cause, confidence, severity, elapsed_ms, tool_calls,
+                           llm_input_tokens, llm_output_tokens, citation_coverage,
+                           fix_proposed, fix_applied, fix_verified, recorded_at
+                    FROM investigation_outcomes
+                    ORDER BY recorded_at DESC
+                    LIMIT :limit
+                """),
+                {"limit": limit},
+            )
+            rows = result.fetchall()
+        return [
+            {
+                "investigation_id": r[0],
+                "incident_id": r[1],
+                "incident_type": r[2],
+                "service": r[3],
+                "root_cause": r[4],
+                "confidence": float(r[5]),
+                "severity": int(r[6]),
+                "elapsed_ms": float(r[7]),
+                "tool_calls": int(r[8]),
+                "llm_input_tokens": int(r[9]),
+                "llm_output_tokens": int(r[10]),
+                "citation_coverage": float(r[11]),
+                "fix_proposed": bool(r[12]),
+                "fix_applied": bool(r[13]),
+                "fix_verified": bool(r[14]),
+                "recorded_at": float(r[15]),
+            }
+            for r in rows
+        ]
+    except Exception as exc:
+        logger.warning("Failed to load recent outcomes from DB: %s", exc)
+        return []

@@ -2307,6 +2307,20 @@ class SentinalAISupervisor:
                 incident_type=incident_type,
             )
 
+        # Fetch PIL predictions for this service — inject as priors into LLM calls
+        pil_context = ""
+        try:
+            from intelligence.background_runner import get_runner as _get_intel_runner
+            from supervisor.system_prompt import build_pil_context_block
+            _runner = _get_intel_runner()
+            if _runner is not None:
+                _preds = _runner.get_active_predictions_for_service(service)
+                pil_context = build_pil_context_block(
+                    [p.to_dict() for p in _preds] if _preds else []
+                )
+        except Exception:
+            pass
+
         # LLM hypothesis refinement (optional, graceful degradation)
         llm_metrics = {}
         if _llm_enabled():
@@ -2315,6 +2329,7 @@ class SentinalAISupervisor:
                 logs, signals, metrics, events, changes,
                 suggested_root_causes=suggested_root_causes,
                 tool_recommendations=tool_recommendations,
+                pil_context=pil_context,
             )
 
         # W2: Select winner — highest score, deterministic tiebreak by name
@@ -2335,6 +2350,7 @@ class SentinalAISupervisor:
             reasoning_metrics = self._llm_generate_reasoning(
                 incident_type, service, root_cause, reasoning,
                 logs, signals, metrics, events, changes, timeline,
+                pil_context=pil_context,
             )
             if reasoning_metrics.get("reasoning"):
                 reasoning = reasoning_metrics["reasoning"]
@@ -2408,6 +2424,7 @@ class SentinalAISupervisor:
         changes: list[dict],
         suggested_root_causes: list[str] | None = None,
         tool_recommendations: dict[str, float] | None = None,
+        pil_context: str = "",
     ) -> dict:
         """Use LLM to refine and re-rank hypotheses. Returns GenAI metrics."""
         try:
@@ -2420,7 +2437,8 @@ class SentinalAISupervisor:
                 {"name": h.name, "root_cause": h.root_cause, "score": h.base_score, "reasoning": h.reasoning}
                 for h in hypotheses
             ]
-            result = _llm_refine(incident_type, service, summary, evidence_summary, hyp_dicts)
+            result = _llm_refine(incident_type, service, summary, evidence_summary, hyp_dicts,
+                                 pil_context=pil_context)
 
             refined = result.get("refined_hypotheses", [])
             if refined and isinstance(refined[0], dict):
@@ -2463,6 +2481,7 @@ class SentinalAISupervisor:
         events: list[dict],
         changes: list[dict],
         timeline: list[dict],
+        pil_context: str = "",
     ) -> dict:
         """Use LLM to generate enhanced reasoning narrative. Returns reasoning + metrics."""
         try:
@@ -2471,7 +2490,10 @@ class SentinalAISupervisor:
                 f"  [{e.get('timestamp', '?')}] ({e.get('source', '?')}) {e.get('event', '?')}"
                 for e in timeline[:10]
             )
-            result = _llm_reasoning(incident_type, service, root_cause, evidence_summary, timeline_summary)
+            result = _llm_reasoning(
+                incident_type, service, root_cause, evidence_summary, timeline_summary,
+                pil_context=pil_context,
+            )
 
             # Record GenAI usage
             record_llm_usage(

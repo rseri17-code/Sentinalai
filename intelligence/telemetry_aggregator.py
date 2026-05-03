@@ -20,6 +20,7 @@ Configuration:
 """
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import os
 import time
@@ -32,6 +33,8 @@ logger = logging.getLogger("sentinalai.telemetry_aggregator")
 TELEMETRY_POLL_INTERVAL_SEC = int(os.environ.get("TELEMETRY_POLL_INTERVAL_SEC", "60"))
 TELEMETRY_RETENTION_DAYS    = int(os.environ.get("TELEMETRY_RETENTION_DAYS", "7"))
 TELEMETRY_ENABLED           = os.environ.get("TELEMETRY_ENABLED", "true").lower() in ("1", "true", "yes")
+# Max wall-clock seconds to wait for any single service's MCP calls before skipping
+COLLECT_TIMEOUT_SEC         = int(os.environ.get("TELEMETRY_COLLECT_TIMEOUT_SEC", "10"))
 
 # Minimum observations before pattern detector trusts this service's baseline
 MIN_OBSERVATIONS_FOR_BASELINE = 24   # 24 × 60s = 24 minutes minimum; 1440 = 24h recommended
@@ -102,14 +105,22 @@ class TelemetryAggregator:
             services = self._discover_services()
 
         snapshots: list[TelemetrySnapshot] = []
-        for service in services:
-            snap = self._collect_service(service)
-            if snap:
-                snapshots.append(snap)
-                self._persist(snap)
-                self._observation_counts[service] = (
-                    self._observation_counts.get(service, 0) + 1
-                )
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+            futures = {pool.submit(self._collect_service, svc): svc for svc in services}
+            for future in concurrent.futures.as_completed(futures, timeout=COLLECT_TIMEOUT_SEC * len(services)):
+                svc = futures[future]
+                try:
+                    snap = future.result(timeout=COLLECT_TIMEOUT_SEC)
+                    if snap:
+                        snapshots.append(snap)
+                        self._persist(snap)
+                        self._observation_counts[svc] = (
+                            self._observation_counts.get(svc, 0) + 1
+                        )
+                except concurrent.futures.TimeoutError:
+                    logger.warning("Telemetry collection timed out for service: %s", svc)
+                except Exception as exc:
+                    logger.warning("Telemetry collection failed for %s: %s", svc, exc)
 
         logger.debug("Telemetry collected: %d services", len(snapshots))
         return snapshots

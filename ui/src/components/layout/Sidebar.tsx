@@ -1,7 +1,7 @@
 import React from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 import {
-  Activity, GitBranch, FileText, Brain, RotateCcw, Shield, AlertTriangle
+  Activity, GitBranch, FileText, Brain, RotateCcw, Shield, AlertTriangle, BarChart2
 } from 'lucide-react'
 import { useInvestigationStore, useAuthStore } from '@/store/investigationStore'
 import type { ActivePanel } from '@/types'
@@ -61,6 +61,20 @@ export function Sidebar() {
         >
           <Activity size={15} />
           All Investigations
+        </NavLink>
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) =>
+            clsx(
+              'flex items-center gap-2 px-3 py-2 mx-1 rounded text-sm transition-colors',
+              isActive
+                ? 'bg-blue-900/40 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            )
+          }
+        >
+          <BarChart2 size={15} />
+          MTTR Dashboard
         </NavLink>
 
         {/* Investigation panels — only shown when viewing an investigation */}

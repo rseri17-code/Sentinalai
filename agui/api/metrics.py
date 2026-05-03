@@ -84,7 +84,54 @@ async def get_calibration_curve(
     }
 
 
-@router.get("/intelligence")
+@router.get("/mttr")
+async def get_mttr_dashboard(
+    window_hours: int = Query(default=168, ge=1, le=8760, description="Lookback window (default 7 days)"),
+    human_baseline_minutes: float = Query(default=45.0, ge=1.0, le=480.0),
+    actor: ActorContext = Depends(get_actor),
+):
+    """Full MTTR dashboard data in one call.
+
+    Returns everything the MTTRDashboard component needs:
+    - KPI summary (median/p95/p99 MTTR, root-cause rate, deflection rate)
+    - 30-day daily trend (sparkline data)
+    - Per-service breakdown table
+    - ROI summary (time saved vs human baseline)
+    - Calibration curve
+    """
+    from supervisor.metrics_dashboard import get_dashboard_engine
+    engine = get_dashboard_engine()
+
+    snapshot = engine.get_dashboard().to_dict()
+    trend = engine.get_mttr_trend_by_day(window_days=30)
+    service_breakdown = engine.get_service_breakdown(window_hours=window_hours)
+    roi = engine.get_roi_summary(
+        human_baseline_minutes=human_baseline_minutes,
+        window_hours=window_hours,
+    )
+    calibration = engine.get_calibration_curve(buckets=10)
+
+    return {
+        "window_hours": window_hours,
+        "kpis": {
+            "mttr_median_ms": snapshot["mttr_median_ms"],
+            "mttr_p95_ms": snapshot["mttr_p95_ms"],
+            "mttr_p99_ms": snapshot["mttr_p99_ms"],
+            "total_investigations": snapshot["total_investigations"],
+            "last_24h_count": snapshot["last_24h_count"],
+            "last_7d_count": snapshot["last_7d_count"],
+            "root_cause_found_rate": snapshot["root_cause_found_rate"],
+            "mean_confidence": snapshot["mean_confidence"],
+            "fix_proposed_rate": snapshot["fix_proposed_rate"],
+            "fix_applied_rate": snapshot["fix_applied_rate"],
+        },
+        "trend": trend,
+        "service_breakdown": service_breakdown,
+        "roi": roi,
+        "calibration": calibration,
+    }
+
+
 async def get_intelligence_metrics(
     actor: ActorContext = Depends(get_actor),
 ):

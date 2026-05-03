@@ -189,6 +189,99 @@ class MetricsDashboard:
             last_7d_count=len(last_7d),
         )
 
+    def get_service_breakdown(self, window_hours: int = 168) -> list[dict]:
+        """Return per-service MTTR and quality stats, sorted by investigation count desc."""
+        with self._lock:
+            outcomes = list(self._ring)
+
+        cutoff = time.time() - window_hours * 3600
+        outcomes = [o for o in outcomes if o.recorded_at >= cutoff]
+        if not outcomes:
+            return []
+
+        groups: dict[str, list[InvestigationOutcome]] = defaultdict(list)
+        for o in outcomes:
+            groups[o.service].append(o)
+
+        result = []
+        for svc, group in groups.items():
+            n = len(group)
+            elapsed = [o.elapsed_ms for o in group]
+            result.append({
+                "service": svc,
+                "count": n,
+                "mttr_median_ms": _safe_percentile(elapsed, 50),
+                "mttr_p95_ms": _safe_percentile(elapsed, 95),
+                "root_cause_found_rate": round(sum(1 for o in group if o.has_root_cause) / n, 3),
+                "mean_confidence": round(_safe_mean([o.confidence for o in group]), 1),
+                "fix_proposed_rate": round(sum(1 for o in group if o.fix_proposed) / n, 3),
+            })
+
+        result.sort(key=lambda x: x["count"], reverse=True)
+        return result
+
+    def get_mttr_trend_by_day(self, window_days: int = 30) -> list[dict]:
+        """Return daily median MTTR and investigation count for trend sparklines."""
+        with self._lock:
+            outcomes = list(self._ring)
+
+        now = time.time()
+        result = []
+        for day_offset in range(window_days - 1, -1, -1):
+            day_start = now - (day_offset + 1) * 86_400
+            day_end   = now - day_offset * 86_400
+            bucket = [o for o in outcomes if day_start <= o.recorded_at < day_end]
+            result.append({
+                "date": time.strftime("%Y-%m-%d", time.gmtime(day_start)),
+                "count": len(bucket),
+                "mttr_median_ms": _safe_percentile([o.elapsed_ms for o in bucket], 50),
+                "root_cause_found": sum(1 for o in bucket if o.has_root_cause),
+                "mean_confidence": _safe_mean([o.confidence for o in bucket]) if bucket else 0,
+            })
+        return result
+
+    def get_roi_summary(
+        self,
+        human_baseline_minutes: float = 45.0,
+        window_hours: int = 168,
+    ) -> dict:
+        """Compute agent ROI: time saved, incidents deflected, cost avoided.
+
+        human_baseline_minutes: median human MTTR without agent (industry ~45min for P2).
+        """
+        with self._lock:
+            outcomes = list(self._ring)
+
+        cutoff = time.time() - window_hours * 3600
+        window_outcomes = [o for o in outcomes if o.recorded_at >= cutoff]
+
+        if not window_outcomes:
+            return {"window_hours": window_hours, "investigations": 0}
+
+        n = len(window_outcomes)
+        agent_median_ms = _safe_percentile([o.elapsed_ms for o in window_outcomes], 50)
+        agent_median_min = agent_median_ms / 60_000
+
+        time_saved_per_inc_min = max(0.0, human_baseline_minutes - agent_median_min)
+        total_time_saved_hours = round(n * time_saved_per_inc_min / 60, 1)
+
+        # Deflections: investigations resolved autonomously (high confidence, fix proposed, no human control)
+        deflected = sum(
+            1 for o in window_outcomes
+            if o.confidence >= 70 and o.has_root_cause
+        )
+
+        return {
+            "window_hours": window_hours,
+            "investigations": n,
+            "agent_median_mttr_min": round(agent_median_min, 1),
+            "human_baseline_min": human_baseline_minutes,
+            "time_saved_per_incident_min": round(time_saved_per_inc_min, 1),
+            "total_time_saved_hours": total_time_saved_hours,
+            "deflection_count": deflected,
+            "deflection_rate": round(deflected / n, 3) if n else 0.0,
+        }
+
     def get_calibration_curve(self, buckets: int = 10) -> list[dict]:
         """Return calibration curve data for charting.
 

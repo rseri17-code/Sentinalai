@@ -41,6 +41,13 @@ export type EventType =
   | 'subscribed'
   | 'pong'
   | 'heartbeat'
+  | 'intelligence.prediction'
+  | 'intelligence.slo_burning'
+  | 'intelligence.cycle_done'
+  | 'harness.reflection'
+  | 'harness.pre_flight'
+  | 'harness.correction'
+  | 'harness.complete'
 
 export interface AGUIEvent {
   event_id: string
@@ -296,10 +303,54 @@ export interface ReplaySession {
   completed_at?: number
 }
 
+// ── Harness / Self-Awareness Types ───────────────────────────────────────────
+
+export interface HarnessCorrectionRecord {
+  round: number
+  score_before: number
+  score_after: number
+  gaps_addressed: string[]
+  gap_queries_run: number
+  improved: boolean
+}
+
+export interface HarnessReflection {
+  investigation_id: string
+  incident_id: string
+  initial_quality: number
+  final_quality: number
+  rounds_run: number
+  corrections: HarnessCorrectionRecord[]
+  stuck: boolean
+  confidence_raw: number
+  confidence_calibrated: number
+  experience_matches: number
+  similar_incident_types: string[]
+  calibration_ece: number
+  strategy_quality: number | null
+  learning_updated: boolean
+  experience_stored: boolean
+  narrative: string
+  elapsed_ms: number
+}
+
+export interface HarnessStatus {
+  harness_enabled: boolean
+  max_rounds: number
+  quality_gate: number
+  overall_status: 'OK' | 'WARNING' | 'DEGRADED' | 'UNKNOWN'
+  components: {
+    confidence_calibrator?: { ece: number; total_samples: number; stale: boolean }
+    strategy_evolver?: { avg?: number; status?: string }
+    experience_store?: { total: number; avg_quality: number }
+    adaptive_thresholds?: { drifted_count: number; drifted_keys: string[] }
+  }
+}
+
 // ── UI State Types ────────────────────────────────────────────────────────────
 
 export type WSStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
-export type ActivePanel = 'timeline' | 'graph' | 'evidence' | 'memory' | 'replay' | 'control'
+export type ActivePanel = 'timeline' | 'graph' | 'evidence' | 'memory' | 'replay' | 'control' | 'reflection'
 export type UserRole = 'viewer' | 'operator' | 'approver' | 'admin'
 
 export interface AppUser {

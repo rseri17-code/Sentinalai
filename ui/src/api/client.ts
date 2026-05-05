@@ -236,4 +236,21 @@ export const devApi = {
   },
 }
 
+export const harnessApi = {
+  getStatus: async () => {
+    const res = await api.get('/api/v1/harness/status')
+    return res.data
+  },
+
+  getSelfReport: async () => {
+    const res = await api.get('/api/v1/harness/self-report')
+    return res.data
+  },
+
+  getReflection: async (investigationId: string) => {
+    const res = await api.get(`/api/v1/harness/reflection/${investigationId}`)
+    return res.data
+  },
+}
+
 export default api

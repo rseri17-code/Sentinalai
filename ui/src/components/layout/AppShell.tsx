@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Routes, Route, useParams, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { IncidentCommandCenter } from '@/components/IncidentCommandCenter'
@@ -9,6 +9,7 @@ import { MemoryTracePanel } from '@/components/MemoryTracePanel'
 import { ReplayMode } from '@/components/ReplayMode'
 import { ControlPanel } from '@/components/ControlPanel'
 import { RiskConfidenceLayer } from '@/components/RiskConfidenceLayer'
+import { ReflectionPanel } from '@/components/ReflectionPanel'
 import MTTRDashboard from '@/components/MTTRDashboard'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useInvestigationStore } from '@/store/investigationStore'
@@ -40,6 +41,7 @@ function InvestigationView() {
           {activePanel === 'memory' && <ErrorBoundary label="Memory Trace"><MemoryTracePanel /></ErrorBoundary>}
           {activePanel === 'replay' && <ErrorBoundary label="Replay"><ReplayMode /></ErrorBoundary>}
           {activePanel === 'control' && <ErrorBoundary label="Control Panel"><ControlPanel /></ErrorBoundary>}
+          {activePanel === 'reflection' && <ErrorBoundary label="Self-Awareness"><ReflectionPanel /></ErrorBoundary>}
         </div>
       </div>
     </div>

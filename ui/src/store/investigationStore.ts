@@ -13,6 +13,7 @@ import type {
   WSStatus,
   ActivePanel,
   HypothesisSummary,
+  HarnessReflection,
 } from '@/types'
 import { AGUIWebSocket } from '@/api/ws'
 import { investigationsApi, receiptsApi, replayApi, controlApi } from '@/api/client'
@@ -56,6 +57,10 @@ interface InvestigationStore {
   ws: AGUIWebSocket | null
   wsStatus: WSStatus
   connectionId: string | null
+
+  // Harness / self-awareness
+  harnessReflection: HarnessReflection | null
+  harnessPhase: string | null
 
   // UI state
   activePanel: ActivePanel
@@ -113,6 +118,8 @@ export const useInvestigationStore = create<InvestigationStore>((set, get) => ({
   ws: null,
   wsStatus: 'disconnected',
   connectionId: null,
+  harnessReflection: null,
+  harnessPhase: null,
   activePanel: 'timeline',
   isDrawerOpen: false,
   drawerReceiptId: null,
@@ -123,7 +130,7 @@ export const useInvestigationStore = create<InvestigationStore>((set, get) => ({
       existing.disconnect()
     }
 
-    set({ investigationId, events: [], graph: null, receipts: [] })
+    set({ investigationId, events: [], graph: null, receipts: [], harnessReflection: null, harnessPhase: null })
 
     // Load initial state
     investigationsApi.get(investigationId)
@@ -351,6 +358,21 @@ export const useInvestigationStore = create<InvestigationStore>((set, get) => ({
           .then((graph) => set({ graph }))
           .catch(() => null)
       }
+    }
+
+    // Harness reflection events — live self-awareness feed
+    if (event_type === 'harness.reflection' || event_type === 'harness.complete') {
+      const phase = payload?.phase as string | undefined
+      set({ harnessPhase: phase || 'complete' })
+      if (phase === 'reflection_complete' || event_type === 'harness.complete') {
+        set({ harnessReflection: payload as unknown as HarnessReflection })
+      }
+    }
+    if (event_type === 'harness.pre_flight') {
+      set({ harnessPhase: 'pre_flight' })
+    }
+    if (event_type === 'harness.correction') {
+      set({ harnessPhase: 'correcting' })
     }
   },
 

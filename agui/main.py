@@ -46,6 +46,7 @@ from agui.api.learning import router as learning_router
 from agui.api.metrics import router as metrics_router
 from agui.api.intake import router as intake_router
 from agui.api.intelligence import router as intelligence_router
+from agui.api.harness import router as harness_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -101,6 +102,7 @@ def create_app() -> FastAPI:
     app.include_router(metrics_router)
     app.include_router(intake_router)
     app.include_router(intelligence_router)
+    app.include_router(harness_router)
 
     # ── Health endpoints ──────────────────────────────────────────────────
     @app.get("/api/v1/health", tags=["health"])

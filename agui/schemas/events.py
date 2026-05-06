@@ -104,6 +104,12 @@ class EventType(str, Enum):
     INTELLIGENCE_SLO_BURNING = "intelligence.slo_burning"
     INTELLIGENCE_CYCLE_DONE  = "intelligence.cycle_done"
 
+    # Agent Harness — self-correction and self-awareness
+    HARNESS_REFLECTION = "harness.reflection"
+    HARNESS_PRE_FLIGHT = "harness.pre_flight"
+    HARNESS_CORRECTION = "harness.correction"
+    HARNESS_COMPLETE   = "harness.complete"
+
     # System
     HEARTBEAT = "system.heartbeat"
 

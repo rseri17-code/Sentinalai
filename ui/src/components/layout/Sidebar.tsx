@@ -1,7 +1,7 @@
 import React from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 import {
-  Activity, GitBranch, FileText, Brain, RotateCcw, Shield, AlertTriangle, BarChart2
+  Activity, GitBranch, FileText, Brain, RotateCcw, Shield, AlertTriangle, BarChart2, Sparkles
 } from 'lucide-react'
 import { useInvestigationStore, useAuthStore } from '@/store/investigationStore'
 import type { ActivePanel } from '@/types'
@@ -12,13 +12,14 @@ const PANELS: { id: ActivePanel; label: string; icon: React.ReactNode; minRole: 
   { id: 'graph', label: 'Execution Graph', icon: <GitBranch size={16} />, minRole: 'viewer' },
   { id: 'evidence', label: 'Evidence', icon: <FileText size={16} />, minRole: 'viewer' },
   { id: 'memory', label: 'Memory Trace', icon: <Brain size={16} />, minRole: 'viewer' },
+  { id: 'reflection', label: 'Self-Awareness', icon: <Sparkles size={16} />, minRole: 'viewer' },
   { id: 'replay', label: 'Replay', icon: <RotateCcw size={16} />, minRole: 'operator' },
   { id: 'control', label: 'Control', icon: <Shield size={16} />, minRole: 'operator' },
 ]
 
 export function Sidebar() {
   const { investigationId } = useParams<{ investigationId?: string }>()
-  const { activePanel, setActivePanel, wsStatus, pendingApproval } = useInvestigationStore()
+  const { activePanel, setActivePanel, wsStatus, pendingApproval, harnessPhase } = useInvestigationStore()
   const { hasRole } = useAuthStore()
 
   const wsColor = {
@@ -104,6 +105,10 @@ export function Sidebar() {
                   {/* Pending approval indicator */}
                   {panel.id === 'control' && pendingApproval && (
                     <AlertTriangle size={12} className="text-yellow-400 animate-pulse" />
+                  )}
+                  {/* Harness active indicator */}
+                  {panel.id === 'reflection' && harnessPhase && harnessPhase !== 'reflection_complete' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
                   )}
                 </button>
               )

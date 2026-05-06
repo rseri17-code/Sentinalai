@@ -113,12 +113,11 @@ async def _dispatch_investigation(
 
     loop = asyncio.get_event_loop()
     try:
-        # Run the synchronous agent in a thread pool
+        # Run the synchronous agent in a thread pool (via harness for self-correction)
         def run_agent():
             try:
-                from supervisor.agent import investigate
-                # Inject investigation_id into the bridge context
-                return investigate(incident_id, investigation_id=investigation_id)
+                from supervisor.agent_harness import run_with_harness
+                return run_with_harness(incident_id, investigation_id=investigation_id)
             except Exception as e:
                 logger.error("Agent investigation failed: %s", e)
                 raise

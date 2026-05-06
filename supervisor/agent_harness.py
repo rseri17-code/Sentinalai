@@ -176,17 +176,24 @@ class InvestigationHarness:
             if not result:
                 return result or {}
 
+            # Retrieve the cached evidence immediately after the first pass.
+            # supervisor.investigate() stores evidence in TLS; get_last_evidence()
+            # returns a copy so we can safely mutate it during gap filling.
+            cached_evidence = supervisor.get_last_evidence()
+
             reflection.confidence_raw = result.get("confidence", 0)
             initial_score = result.get("_online_quality_score", 0.0)
             reflection.initial_quality = initial_score
             prev_score = initial_score
 
-            # --- Layer 2: Self-correction loop ---
+            # --- Layer 2: Evidence-cached self-correction loop ---
+            # Correction rounds call supervisor.reanalyze(enriched_evidence) instead
+            # of supervisor.investigate() — skipping the expensive playbook re-run
+            # (typically 90-110s saved per round).
             for round_num in range(1, HARNESS_MAX_ROUNDS + 1):
                 critique_meta = result.get("_critique", {})
                 score = critique_meta.get("score", initial_score)
                 gaps = critique_meta.get("gaps", [])
-                gap_queries = []  # gap_queries not persisted in result by default
 
                 self._emit_harness_event(
                     investigation_id, incident_id, "round_evaluated",
@@ -215,7 +222,6 @@ class InvestigationHarness:
                     )
                     break
 
-                # Build gap queries from critique
                 if not gaps:
                     logger.debug("Harness: no gaps identified — stopping correction loop")
                     break
@@ -223,39 +229,43 @@ class InvestigationHarness:
                 gap_queries = self._build_gap_queries_from_critique(
                     critique_meta, result, incident_id
                 )
-
                 if not gap_queries:
                     break
 
-                # Run gap queries and enrich evidence
+                # Run only the targeted gap queries (fast — no playbook)
                 evidence_patch, queries_run = self._run_gap_queries(
                     supervisor, gap_queries, incident_id
                 )
 
-                score_after = score  # updated after re-analysis
-                if evidence_patch:
+                score_after = score
+                if evidence_patch and cached_evidence:
+                    enriched = {**cached_evidence, **evidence_patch}
                     try:
-                        # Re-run with hint context embedded in the result
-                        # (we inject as _harness_gap_evidence so _analyze_evidence
-                        #  can pick it up if the supervisor is harness-aware)
-                        result["_harness_gap_evidence"] = evidence_patch
-                        result["_harness_retry_hints"] = gaps
-                        re_result = supervisor.investigate(
-                            incident_id,
-                        )
+                        # reanalyze() skips incident fetch + playbook entirely:
+                        # analyze → calibrate → cite → online-eval only.
+                        re_result = supervisor.reanalyze(incident_id, enriched)
                         if re_result:
                             new_score = re_result.get("_online_quality_score", score)
-                            new_conf = re_result.get("confidence", 0)
+                            new_conf  = re_result.get("confidence", 0)
                             orig_conf = result.get("confidence", 0)
                             if new_conf >= orig_conf:
                                 result = re_result
+                                cached_evidence = enriched  # next round uses richer evidence
                                 score_after = new_score
                                 logger.info(
-                                    "Harness: round %d improved confidence %d → %d (quality %.3f → %.3f)",
+                                    "Harness: round %d reanalyze improved conf %d→%d quality %.3f→%.3f",
                                     round_num, orig_conf, new_conf, score, score_after,
                                 )
+                            else:
+                                logger.info(
+                                    "Harness: round %d reanalyze did not improve (%d vs %d) — original kept",
+                                    round_num, new_conf, orig_conf,
+                                )
                     except Exception as exc:
-                        logger.warning("Harness: re-investigation in round %d failed: %s", round_num, exc)
+                        logger.warning("Harness: reanalyze in round %d failed: %s", round_num, exc)
+                elif not cached_evidence:
+                    logger.warning("Harness: no cached evidence available for round %d — skipping", round_num)
+                    break
 
                 correction = CorrectionRecord(
                     round_num=round_num,

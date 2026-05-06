@@ -657,6 +657,10 @@ class SentinalAISupervisor:
 
             # Step 4: Analyze
             _stream.emit_phase(incident_id, "analyze", incident_type=incident_type)
+            # Cache evidence + context in TLS so the harness can call reanalyze()
+            # on enriched evidence without repeating the expensive playbook.
+            self._tls.last_evidence = dict(evidence)
+            self._tls.last_incident_type = incident_type
             result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
             # Attach collection-gate result now that result dict exists
             result["_gate_post_collection"] = _gate_post_collection.to_dict()
@@ -3574,3 +3578,80 @@ class SentinalAISupervisor:
             "evidence_timeline": [],
             "reasoning": f"Investigation could not proceed: {reason}",
         }
+
+    # =========================================================================
+    # Harness support — evidence-cached re-analysis without playbook re-run
+    # =========================================================================
+
+    def get_last_evidence(self) -> dict:
+        """Return the evidence dict from the most recent investigate() call on this thread.
+
+        Used by InvestigationHarness to enrich evidence with gap queries and
+        then call reanalyze() — avoiding a full playbook re-run per correction round.
+        Returns an empty dict if no investigation has been run yet on this thread.
+        """
+        return dict(getattr(self._tls, "last_evidence", {}))
+
+    def reanalyze(self, incident_id: str, evidence: dict) -> dict:
+        """Re-run the analysis pipeline on pre-collected (possibly enriched) evidence.
+
+        Skips incident fetch and playbook execution entirely.  Runs:
+          _analyze_evidence → calibrate → cite → online-eval
+
+        This is the fast correction path used by InvestigationHarness after
+        gap queries enrich the evidence from the initial investigation pass.
+        The caller is responsible for merging gap evidence into the dict before
+        calling this method.
+
+        Args:
+            incident_id: Original incident identifier (for logging / event emission).
+            evidence:    Full evidence dict (original + any gap-filled additions).
+
+        Returns:
+            Result dict with the same structure as investigate().
+        """
+        incident = getattr(self._tls, "current_incident", None) or {}
+        incident_type = getattr(self._tls, "last_incident_type", "error_spike") or "error_spike"
+
+        logger.info(
+            "reanalyze: incident=%s type=%s evidence_keys=%d",
+            incident_id, incident_type, len(evidence),
+        )
+
+        try:
+            result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
+        except Exception as exc:
+            logger.warning("reanalyze: _analyze_evidence failed: %s", exc)
+            return {}
+
+        # Confidence calibration
+        raw_conf = result.get("confidence", 0)
+        try:
+            calibrated = get_calibrator().calibrate(raw_conf)
+            if calibrated != raw_conf:
+                result["confidence"] = calibrated
+                result["raw_confidence"] = raw_conf
+        except Exception:
+            pass
+
+        # Citation annotation (grounding)
+        try:
+            annotate_citations(result, evidence)
+        except Exception:
+            pass
+
+        # Online quality evaluation
+        hypothesis_count = result.pop("_hypothesis_count", 0)
+        result.pop("_winner_hypothesis", None)
+        result.pop("_llm_metrics", None)
+        try:
+            online_score = _online_evaluate(result, evidence, 0, hypothesis_count)
+            _annotate_online(result, online_score)
+        except Exception:
+            pass
+
+        result["_evidence_snapshot"] = {
+            k: bool(v) for k, v in evidence.items() if not k.startswith("_")
+        }
+        result["_reanalyzed"] = True
+        return result

@@ -16,8 +16,9 @@ Design decisions:
   - Async write queue: caller never blocks; background thread batches writes
   - Corruption guard: PRAGMA integrity_check on startup; rename+recreate on fail
   - Bounded retention: DELETE WHERE timestamp < cutoff run on startup
-  - Atomic schema migration: CREATE TABLE IF NOT EXISTS (idempotent)
+  - Forward-only migration: schema_version tracked; _MIGRATIONS applied at startup
   - All reads wrapped in try/except; DB unavailability never blocks RCA pipeline
+  - Queue saturation tracked: dropped writes and saturation events counted
 """
 
 from __future__ import annotations
@@ -50,7 +51,33 @@ _QUEUE_MAX   = int(os.environ.get("OPS_QUEUE_MAX",   "2000"))
 _BATCH_SIZE  = int(os.environ.get("OPS_BATCH_SIZE",  "50"))
 _BATCH_DELAY = float(os.environ.get("OPS_BATCH_DELAY", "1.0"))  # seconds
 
-# ── Schema ────────────────────────────────────────────────────────────────────
+# ── Schema versioning ─────────────────────────────────────────────────────────
+
+# Increment when a new migration is added to _MIGRATIONS below.
+CURRENT_SCHEMA_VERSION = 2
+
+# Forward-only migrations: version_number → list of SQL DDL/DML statements.
+# Each entry brings the DB from (version - 1) to version.
+# Rules:
+#   - Append-only; never modify or remove an existing entry.
+#   - Statements must be idempotent (ALTER TABLE … ADD COLUMN is safe; duplicate
+#     column errors are swallowed to handle re-runs).
+#   - No data-destructive migrations (no DROP COLUMN, no DROP TABLE).
+_MIGRATIONS: dict[int, list[str]] = {
+    2: [
+        # Add 'source' to safety_events so callers can record which component
+        # fired the event (e.g. "strategy_evolver", "adaptive_thresholds").
+        "ALTER TABLE safety_events ADD COLUMN source TEXT NOT NULL DEFAULT ''",
+    ],
+}
+
+# ── Replay meta validation ─────────────────────────────────────────────────────
+
+# Fields that must be present and non-empty in the reflection dict; rows with
+# missing required fields are logged and dropped before enqueue.
+_REPLAY_META_REQUIRED: frozenset[str] = frozenset({"investigation_id"})
+
+# ── Schema (base — version 1) ─────────────────────────────────────────────────
 
 _DDL = """
 PRAGMA journal_mode = WAL;
@@ -157,6 +184,11 @@ CREATE TABLE IF NOT EXISTS kv_state (
     value_json  TEXT NOT NULL DEFAULT 'null',
     updated_at  REAL NOT NULL DEFAULT (unixepoch())
 );
+
+CREATE TABLE IF NOT EXISTS schema_meta (
+    key        TEXT PRIMARY KEY,
+    value_json TEXT NOT NULL DEFAULT 'null'
+);
 """
 
 # ── Write item ─────────────────────────────────────────────────────────────────
@@ -179,6 +211,10 @@ class OpsPersistence:
         self._ready = False
         self._lock = threading.Lock()
 
+        # Queue saturation counters — incremented under _lock
+        self._drops: int = 0          # total writes dropped (queue full)
+        self._q_sat_events: int = 0   # number of distinct queue-full events
+
     # ── Startup / shutdown ──────────────────────────────────────────────────
 
     def start(self) -> None:
@@ -194,13 +230,14 @@ class OpsPersistence:
             if not self._integrity_ok():
                 self._quarantine_db()
             self._ensure_schema()
+            self._run_migrations()
             self._run_retention_cleanup()
             self._thread = threading.Thread(
                 target=self._writer_loop, daemon=True, name="ops-persistence-writer"
             )
             self._thread.start()
             self._ready = True
-            logger.info("Ops persistence ready: %s", self._db_path)
+            logger.info("Ops persistence ready: %s (schema v%d)", self._db_path, CURRENT_SCHEMA_VERSION)
         except Exception as exc:
             logger.warning("Ops persistence startup failed (non-fatal): %s", exc)
 
@@ -237,6 +274,52 @@ class OpsPersistence:
             logger.error("Corrupt ops DB quarantined to %s — starting fresh", corrupt)
         except OSError:
             pass
+
+    # ── Schema migrations ─────────────────────────────────────────────────
+
+    def _get_schema_version(self) -> int:
+        """Return persisted schema version, or 1 (base) if not recorded."""
+        try:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT value_json FROM schema_meta WHERE key = 'schema_version'"
+                ).fetchone()
+                if row:
+                    return int(json.loads(row["value_json"]))
+        except Exception:
+            pass
+        return 1  # base schema; schema_meta may be newly created
+
+    def _set_schema_version(self, version: int) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO schema_meta (key, value_json) VALUES ('schema_version', ?)",
+                (json.dumps(version),),
+            )
+            conn.commit()
+
+    def _run_migrations(self) -> None:
+        """Apply all pending forward-only migrations in version order."""
+        current = self._get_schema_version()
+        if current >= CURRENT_SCHEMA_VERSION:
+            return
+        for v in range(current + 1, CURRENT_SCHEMA_VERSION + 1):
+            stmts = _MIGRATIONS.get(v, [])
+            if stmts:
+                with self._connect() as conn:
+                    for stmt in stmts:
+                        try:
+                            conn.execute(stmt)
+                        except sqlite3.OperationalError as exc:
+                            if "duplicate column name" in str(exc).lower():
+                                pass  # idempotent — column already present
+                            else:
+                                raise
+                    conn.commit()
+            self._set_schema_version(v)
+        logger.info(
+            "Schema migrated: v%d → v%d", current, CURRENT_SCHEMA_VERSION
+        )
 
     # ── Background writer ─────────────────────────────────────────────────
 
@@ -276,7 +359,13 @@ class OpsPersistence:
         try:
             self._q.put_nowait(_WriteItem(sql, params))
         except queue.Full:
-            logger.debug("Ops persistence queue full — dropping write")
+            with self._lock:
+                self._drops += 1
+                self._q_sat_events += 1
+            logger.debug(
+                "Ops persistence queue full — dropping write (total drops: %d)",
+                self._drops,
+            )
 
     # ── Retention cleanup ─────────────────────────────────────────────────
 
@@ -397,20 +486,33 @@ class OpsPersistence:
         drift_fraction: float = 0.0,
         context: str = "",
         details: dict | None = None,
+        source: str = "",
     ) -> None:
         self._enqueue(
             """INSERT INTO safety_events
                (ts, event_type, threshold_name, old_value, new_value,
-                drift_fraction, context, details_json)
-               VALUES (?,?,?,?,?,?,?,?)""",
+                drift_fraction, context, details_json, source)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
             (time.time(), event_type, threshold_name,
              round(old_value, 4), round(new_value, 4),
              round(drift_fraction, 4), context,
-             json.dumps(details or {}, default=str)),
+             json.dumps(details or {}, default=str),
+             source),
         )
 
     def persist_replay_meta(self, reflection_dict: dict) -> None:
-        """Persist a HarnessReflection.to_dict() payload."""
+        """Persist a HarnessReflection.to_dict() payload.
+
+        Drops the row and logs a warning if any required field is missing or
+        empty — prevents silent insertion of unidentifiable records.
+        """
+        missing = [f for f in _REPLAY_META_REQUIRED if not reflection_dict.get(f)]
+        if missing:
+            logger.warning(
+                "persist_replay_meta skipped — missing required fields: %s", missing
+            )
+            return
+
         d = reflection_dict
         self._enqueue(
             """INSERT OR REPLACE INTO replay_meta
@@ -527,8 +629,9 @@ class OpsPersistence:
             return default
 
     def get_health(self) -> dict:
-        """Return row counts and queue depth for monitoring."""
+        """Return row counts, queue metrics, and schema version for monitoring."""
         counts = {}
+        schema_ver = None
         if self._ready:
             try:
                 with self._connect() as conn:
@@ -536,13 +639,22 @@ class OpsPersistence:
                               "pattern_history", "safety_events", "replay_meta"):
                         row = conn.execute(f"SELECT COUNT(*) AS n FROM {t}").fetchone()
                         counts[t] = row["n"] if row else 0
+                schema_ver = self._get_schema_version()
             except Exception:
                 pass
+
+        with self._lock:
+            drops = self._drops
+            sat_events = self._q_sat_events
+
         return {
             "enabled": OPS_DB_ENABLED,
             "ready": self._ready,
             "db_path": self._db_path,
+            "schema_version": schema_ver,
             "queue_depth": self._q.qsize(),
+            "dropped_writes": drops,
+            "queue_saturation_events": sat_events,
             "row_counts": counts,
         }
 

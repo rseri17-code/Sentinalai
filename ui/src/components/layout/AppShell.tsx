@@ -10,6 +10,7 @@ import { ReplayMode } from '@/components/ReplayMode'
 import { ControlPanel } from '@/components/ControlPanel'
 import { RiskConfidenceLayer } from '@/components/RiskConfidenceLayer'
 import { ReflectionPanel } from '@/components/ReflectionPanel'
+import { ToolCallInspector } from '@/components/ToolCallInspector'
 import MTTRDashboard from '@/components/MTTRDashboard'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useInvestigationStore } from '@/store/investigationStore'
@@ -42,6 +43,7 @@ function InvestigationView() {
           {activePanel === 'replay' && <ErrorBoundary label="Replay"><ReplayMode /></ErrorBoundary>}
           {activePanel === 'control' && <ErrorBoundary label="Control Panel"><ControlPanel /></ErrorBoundary>}
           {activePanel === 'reflection' && <ErrorBoundary label="Self-Awareness"><ReflectionPanel /></ErrorBoundary>}
+          {activePanel === 'tools' && <ErrorBoundary label="Tool Inspector"><ToolCallInspector /></ErrorBoundary>}
         </div>
       </div>
     </div>

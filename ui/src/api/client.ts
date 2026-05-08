@@ -253,4 +253,37 @@ export const harnessApi = {
   },
 }
 
+// ── Transparency ──────────────────────────────────────────────────────────────
+
+export const transparencyApi = {
+  listToolCalls: async (
+    investigationId: string,
+    params?: { phase?: string; status?: string; worker?: string; limit?: number; offset?: number }
+  ) => {
+    const res = await api.get(`/api/v1/transparency/${investigationId}/tool-calls`, { params })
+    return res.data as {
+      items: import('@/types').EnrichedToolReceipt[]
+      total: number
+      offset: number
+      limit: number
+      investigation_id: string
+    }
+  },
+
+  getToolCall: async (investigationId: string, receiptId: string) => {
+    const res = await api.get(`/api/v1/transparency/${investigationId}/tool-calls/${receiptId}`)
+    return res.data as import('@/types').EnrichedToolReceipt
+  },
+
+  getEvidenceAtlas: async (investigationId: string) => {
+    const res = await api.get(`/api/v1/transparency/${investigationId}/evidence-atlas`)
+    return res.data
+  },
+
+  getCausalChain: async (investigationId: string) => {
+    const res = await api.get(`/api/v1/transparency/${investigationId}/causal-chain`)
+    return res.data
+  },
+}
+
 export default api

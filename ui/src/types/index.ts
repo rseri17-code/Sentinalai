@@ -347,10 +347,52 @@ export interface HarnessStatus {
   }
 }
 
+// ── Tool Call Transparency Types ──────────────────────────────────────────────
+
+export interface SignalFact {
+  category: 'error' | 'anomaly' | 'change' | 'threshold' | 'service' | 'generic'
+  text: string
+  weight: number
+}
+
+export interface HypothesisDelta {
+  name: string
+  score_before: number
+  score_after: number
+  delta: number
+}
+
+export interface EnrichedToolReceipt {
+  receipt_id: string
+  investigation_id: string
+  // Layer 1 – Intent
+  phase: string
+  worker: string
+  action: string
+  intent_summary: string
+  // Layer 2 – The Call
+  params: Record<string, unknown>
+  called_at_ms: number
+  latency_ms: number
+  status: 'success' | 'error' | 'timeout'
+  // Layer 3 – Response
+  result_count: number
+  signal_facts: SignalFact[]
+  noise_ratio: number
+  raw_preview: string
+  error_msg: string
+  // Layer 4 – Influence
+  hypothesis_deltas: HypothesisDelta[]
+  confidence_before: number
+  confidence_after: number
+  confidence_delta: number
+  signal_count: number
+}
+
 // ── UI State Types ────────────────────────────────────────────────────────────
 
 export type WSStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
-export type ActivePanel = 'timeline' | 'graph' | 'evidence' | 'memory' | 'replay' | 'control' | 'reflection'
+export type ActivePanel = 'timeline' | 'graph' | 'evidence' | 'memory' | 'replay' | 'control' | 'reflection' | 'tools'
 export type UserRole = 'viewer' | 'operator' | 'approver' | 'admin'
 
 export interface AppUser {

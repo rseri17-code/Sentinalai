@@ -364,6 +364,8 @@ class SentinalAISupervisor:
             self._tls.current_incident = None
             self._tls.itsm_evidence = None
             self._tls.devops_evidence = None
+            self._tls.current_investigation_id = incident_id
+            self._tls.current_phase = "collect"
 
             # LLM call graph — thread-local DAG for this investigation
             call_graph = CallGraph(investigation_id=incident_id)
@@ -1478,12 +1480,33 @@ class SentinalAISupervisor:
                 record_worker_call(worker_name, action, "success", call_elapsed)
                 if circuits:
                     circuits.get(worker_name).record_success(worker_name)
+                try:
+                    from supervisor.tool_transparency import get_emitter as _tt
+                    _tt().record_call_result(
+                        investigation_id=receipts.case_id if receipts else "",
+                        worker=worker_name, action=action, params=params,
+                        raw_response=result, latency_ms=call_elapsed, status="success",
+                        phase=getattr(self._tls, "current_phase", "collect"),
+                    )
+                except Exception:
+                    pass
                 return result
 
             except concurrent.futures.TimeoutError:
                 call_elapsed = (time.monotonic() - call_start) * 1000
                 last_error = f"timeout after {self._call_timeout}s"
                 self._record_timeout(receipt, receipts, worker_name, action, call_elapsed)
+                try:
+                    from supervisor.tool_transparency import get_emitter as _tt
+                    _tt().record_call_result(
+                        investigation_id=receipts.case_id if receipts else "",
+                        worker=worker_name, action=action, params=params,
+                        raw_response=None, latency_ms=call_elapsed, status="timeout",
+                        phase=getattr(self._tls, "current_phase", "collect"),
+                        error_msg=last_error,
+                    )
+                except Exception:
+                    pass
 
             except Exception as exc:
                 call_elapsed = (time.monotonic() - call_start) * 1000
@@ -1492,6 +1515,17 @@ class SentinalAISupervisor:
                     receipts.finish(receipt, None, error=last_error)
                 record_worker_call(worker_name, action, "error", call_elapsed)
                 logger.warning("Error in %s.%s: %s (attempt %d/%d)", worker_name, action, exc, attempt + 1, attempts)
+                try:
+                    from supervisor.tool_transparency import get_emitter as _tt
+                    _tt().record_call_result(
+                        investigation_id=receipts.case_id if receipts else "",
+                        worker=worker_name, action=action, params=params,
+                        raw_response=None, latency_ms=call_elapsed, status="error",
+                        phase=getattr(self._tls, "current_phase", "collect"),
+                        error_msg=last_error,
+                    )
+                except Exception:
+                    pass
 
         if circuits:
             circuits.get(worker_name).record_failure(worker_name)
@@ -2328,6 +2362,14 @@ class SentinalAISupervisor:
         # LLM hypothesis refinement (optional, graceful degradation)
         llm_metrics = {}
         if _llm_enabled():
+            _inv_id = getattr(self._tls, "current_investigation_id", "")
+            _conf_before = hypotheses[0].base_score if hypotheses else 0.0
+            try:
+                from supervisor.tool_transparency import get_emitter as _tt
+                _tt().record_pre_llm_scores(_inv_id, hypotheses)
+            except Exception:
+                pass
+            self._tls.current_phase = "analyze"
             llm_metrics = self._llm_refine_hypotheses(
                 incident_type, service, summary, hypotheses,
                 logs, signals, metrics, events, changes,
@@ -2335,6 +2377,13 @@ class SentinalAISupervisor:
                 tool_recommendations=tool_recommendations,
                 pil_context=pil_context,
             )
+            _conf_after = hypotheses[0].base_score if hypotheses else 0.0
+            try:
+                from supervisor.tool_transparency import get_emitter as _tt
+                _tt().record_post_llm_scores(_inv_id, hypotheses, _conf_before, _conf_after)
+            except Exception:
+                pass
+            self._tls.current_phase = "collect"
 
         # W2: Select winner — highest score, deterministic tiebreak by name
         hypotheses.sort(key=lambda h: (-h.base_score, h.name))

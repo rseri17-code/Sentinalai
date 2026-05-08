@@ -125,3 +125,40 @@ async def get_calibration_history(actor: ActorContext = Depends(get_actor)):
     except Exception as exc:
         logger.warning("calibration history failed: %s", exc)
         return {"bins": [], "ece": 0, "total_samples": 0, "stale": True}
+
+
+@router.get("/replay-history")
+async def get_replay_history(
+    limit: int = 50,
+    actor: ActorContext = Depends(get_actor),
+):
+    """Return recent HarnessReflection records from durable ops store."""
+    try:
+        from database.ops_persistence import get_ops_store
+        return {"records": get_ops_store().load_recent_replay_meta(limit=limit)}
+    except Exception as exc:
+        logger.warning("replay-history failed: %s", exc)
+        return {"records": []}
+
+
+@router.get("/ops-health")
+async def get_ops_health(actor: ActorContext = Depends(get_actor)):
+    """Return ops persistence store health: row counts, queue depth, db path."""
+    try:
+        from database.ops_persistence import get_ops_store
+        return get_ops_store().get_health()
+    except Exception as exc:
+        return {"enabled": False, "ready": False, "error": str(exc)}
+
+
+@router.get("/safety-events")
+async def get_safety_events(
+    limit: int = 50,
+    actor: ActorContext = Depends(get_actor),
+):
+    """Return recent learning safety events (threshold drift, circuit breaker)."""
+    try:
+        from database.ops_persistence import get_ops_store
+        return {"events": get_ops_store().load_recent_safety_events(limit=limit)}
+    except Exception as exc:
+        return {"events": []}

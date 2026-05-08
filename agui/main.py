@@ -245,6 +245,14 @@ async def startup_event() -> None:
 
     bus.set_backend(StateBusBackend())
 
+    # Start ops persistence (SQLite write queue + integrity check + retention cleanup)
+    try:
+        from database.ops_persistence import get_ops_store
+        get_ops_store()  # triggers start() via singleton initialisation
+        logger.info("Ops persistence store ready")
+    except Exception as exc:
+        logger.warning("Ops persistence startup failed (non-fatal): %s", exc)
+
     # Start Pattern Intelligence background loop
     try:
         from intelligence.background_runner import get_runner as get_intelligence_runner
@@ -259,6 +267,11 @@ async def startup_event() -> None:
 @app.on_event("shutdown")
 async def shutdown_event() -> None:
     """Graceful shutdown."""
+    try:
+        from database.ops_persistence import get_ops_store
+        get_ops_store().stop()
+    except Exception:
+        pass
     try:
         from intelligence.background_runner import get_runner as get_intelligence_runner
         await get_intelligence_runner().stop()

@@ -302,7 +302,15 @@ class InvestigationHarness:
             reflection.elapsed_ms = (time.monotonic() - t0) * 1000
 
             # Embed in result
-            result["harness_reflection"] = reflection.to_dict()
+            reflection_dict = reflection.to_dict()
+            result["harness_reflection"] = reflection_dict
+
+            # Persist replay metadata durably
+            try:
+                from database.ops_persistence import get_ops_store
+                get_ops_store().persist_replay_meta(reflection_dict)
+            except Exception:
+                pass
 
             # Emit final reflection event
             self._emit_harness_event(

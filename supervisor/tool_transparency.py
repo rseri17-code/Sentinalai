@@ -282,6 +282,12 @@ class ToolTransparencyEmitter:
             error_msg=error_msg,
         )
         self._store(investigation_id).add(receipt)
+        # Persist asynchronously — never block the investigation
+        try:
+            from database.ops_persistence import get_ops_store
+            get_ops_store().persist_receipt(receipt)
+        except Exception:
+            pass
         return receipt
 
     def record_pre_llm_scores(self, investigation_id: str, hypotheses: list) -> None:
@@ -314,7 +320,35 @@ class ToolTransparencyEmitter:
                 break
 
     def get_receipts(self, investigation_id: str) -> list[EnrichedToolReceipt]:
-        return self._store(investigation_id).all()
+        store = self._store(investigation_id)
+        existing = store.all()
+        if existing:
+            return existing
+        # Recovery path: reload from DB when in-memory store is empty
+        try:
+            from database.ops_persistence import get_ops_store
+            rows = get_ops_store().load_receipts_for_investigation(investigation_id)
+            for row in rows:
+                r = EnrichedToolReceipt(
+                    receipt_id=row["receipt_id"],
+                    investigation_id=row["investigation_id"],
+                    phase=row.get("phase", ""),
+                    worker=row.get("worker", ""),
+                    action=row.get("action", ""),
+                    intent_summary=row.get("intent_summary", ""),
+                    called_at_ms=row.get("called_at_ms", 0.0),
+                    latency_ms=row.get("latency_ms", 0.0),
+                    status=row.get("status", "success"),
+                    result_count=row.get("result_count", 0),
+                    noise_ratio=row.get("noise_ratio", 0.0),
+                    error_msg=row.get("error_msg", ""),
+                    confidence_before=row.get("confidence_before", 0.0),
+                    confidence_after=row.get("confidence_after", 0.0),
+                )
+                store.add(r)
+        except Exception:
+            pass
+        return store.all()
 
     def get_receipt(self, investigation_id: str, receipt_id: str) -> EnrichedToolReceipt | None:
         return self._store(investigation_id).get(receipt_id)

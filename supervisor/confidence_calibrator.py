@@ -174,6 +174,22 @@ class ConfidenceCalibrator:
 
         if updated:
             logger.info("Calibration updated: %d results processed (decay=%.2f)", updated, decay_factor)
+            try:
+                from database.ops_persistence import get_ops_store
+                total = sum(b.total for b in self._bins)
+                bins_w = sum(1 for b in self._bins if b.total > 0)
+                mean_conf = (
+                    sum(b.sum_confidence for b in self._bins) / total if total else 0.0
+                )
+                get_ops_store().persist_convergence_snapshot(
+                    investigation_id="",
+                    ece=self.expected_calibration_error(),
+                    total_samples=total,
+                    mean_confidence=mean_conf,
+                    bins_with_data=bins_w,
+                )
+            except Exception:
+                pass
 
     def update_with_decay(self, eval_results: list[dict], decay_factor: float = 0.95) -> None:
         """Convenience wrapper applying temporal decay before updating.

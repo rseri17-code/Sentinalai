@@ -184,8 +184,19 @@ def record_outcome(
                     else:
                         new_ema = EMA_ALPHA * signal + (1 - EMA_ALPHA) * old_ema
                     entry["ema_signal"] = round(new_ema, 4)
-                    # Weight is the EMA signal, clamped to [0.3, 2.0]
-                    entry["weight"] = round(max(0.3, min(2.0, new_ema)), 4)
+                    old_weight = entry.get("weight", 1.0)
+                    new_weight = round(max(0.3, min(2.0, new_ema)), 4)
+                    entry["weight"] = new_weight
+                    # Persist weight change to ops history
+                    try:
+                        from database.ops_persistence import get_ops_store
+                        get_ops_store().persist_weight_change(
+                            incident_type=incident_type, step_label=label,
+                            weight_before=old_weight, weight_after=new_weight,
+                            quality_signal=signal, calls=entry["calls"],
+                        )
+                    except Exception:
+                        pass
 
                 entry["last_updated"] = datetime.now(timezone.utc).isoformat()
 
@@ -491,6 +502,17 @@ def _track_rolling_quality(score: float) -> None:
                 "— resetting evolved weights to defaults",
                 avg, _QUALITY_FLOOR,
             )
+            try:
+                from database.ops_persistence import get_ops_store
+                get_ops_store().persist_safety_event(
+                    event_type="circuit_breaker_fired",
+                    context="strategy_evolver",
+                    old_value=avg,
+                    new_value=_QUALITY_FLOOR,
+                    details={"rolling_window": len(_rolling_scores), "quality_floor": _QUALITY_FLOOR},
+                )
+            except Exception:
+                pass
             _reset_weights_to_defaults()
             _rolling_scores.clear()
 

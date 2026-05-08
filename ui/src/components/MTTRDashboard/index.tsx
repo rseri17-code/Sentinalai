@@ -91,6 +91,26 @@ interface PILMetrics {
   runner_iteration: number
 }
 
+// Intelligence surface decision-metrics shapes
+interface PatternEntry {
+  pattern_type: string
+  active_count: number
+  avg_confidence: number
+  warming: boolean
+  precision: number
+  reinforcement_count: number
+}
+interface DecisionMetrics {
+  pattern_intelligence: { patterns: PatternEntry[]; total_active: number; runner_ready: boolean }
+  feedback_quality: { total_investigations: number; warming: boolean; root_cause_found_rate: number; low_confidence_rate: number; mean_confidence: number; citation_coverage: number; unresolved_rca_count: number }
+  convergence: { warming: boolean; calibration_ece: number; calibration_samples: number; mean_confidence: number; mean_source_count: number; hypothesis_diversity: number }
+  adaptive_intelligence: { warming: boolean; learning_mode: string; rolling_quality: number | null; deterministic_influence_pct: number; adaptive_influence_pct: number; total_evolved_steps: number }
+  evidence_diversity: { warming: boolean; total_analyzed: number; multi_source_pct: number; single_source_warning_count: number }
+  source_weights: { warming: boolean; rows: { incident_type: string; step: string; weight: number; delta: number; calls: number; stable: boolean; neutral: boolean }[]; total_evolved: number }
+  learning_safety: { threshold_status: string; drifted_thresholds: number; circuit_breaker_fired: boolean; calibration_stale: boolean; experience_count: number; experience_warming: boolean; no_behavioral_drift: boolean; recommendations: string[] }
+  mttr_impact: { investigation_count: number; rca_confidence_quality: number; evidence_usefulness: number; fix_proposed_rate: number; warming: boolean }
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -548,6 +568,260 @@ function PILPanel({ pil }: { pil: PILMetrics }) {
 }
 
 // ---------------------------------------------------------------------------
+// Intelligence Surface Widgets
+// ---------------------------------------------------------------------------
+
+function WarmingBadge({ label = 'Evidence warming' }: { label?: string }) {
+  return (
+    <span className="text-xs text-slate-500 italic flex items-center gap-1">
+      <span className="w-1.5 h-1.5 rounded-full bg-slate-600 animate-pulse inline-block" />
+      {label}
+    </span>
+  )
+}
+
+function IntelRow({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: string }) {
+  return (
+    <div className="flex items-center justify-between text-xs py-1">
+      <span className="text-slate-400">{label}</span>
+      <div className="text-right">
+        <span className={accent ?? 'text-slate-200'}>{value}</span>
+        {sub && <span className="text-slate-600 ml-1.5">{sub}</span>}
+      </div>
+    </div>
+  )
+}
+
+function IntelSection({ title, icon, children, borderColor = 'border-slate-800' }: {
+  title: string
+  icon: React.ReactNode
+  children: React.ReactNode
+  borderColor?: string
+}) {
+  const [open, setOpen] = useState(true)
+  return (
+    <div className={clsx('bg-slate-900 rounded-xl border p-4', borderColor)}>
+      <button
+        className="w-full flex items-center gap-2 mb-3"
+        onClick={() => setOpen(v => !v)}
+      >
+        <span className="text-slate-500">{icon}</span>
+        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex-1 text-left">{title}</span>
+        {open ? <ChevronUp size={12} className="text-slate-600" /> : <ChevronDown size={12} className="text-slate-600" />}
+      </button>
+      {open && children}
+    </div>
+  )
+}
+
+function PatternIntelWidget({ dm }: { dm: DecisionMetrics }) {
+  const pi = dm.pattern_intelligence
+  if (!pi.runner_ready) return (
+    <IntelSection title="Pattern Intelligence" icon={<Brain size={13} />}>
+      <WarmingBadge label="Runner initialising" />
+    </IntelSection>
+  )
+  const patternLabels: Record<string, string> = {
+    trend_drift: 'Trend Drift', rate_accel: 'Rate Accel',
+    cross_service: 'Cross-Service', post_deploy: 'Post-Deploy', slo_burn: 'SLO Burn',
+  }
+  return (
+    <IntelSection title="Pattern Intelligence" icon={<Brain size={13} />}>
+      {pi.patterns.length === 0 ? (
+        <WarmingBadge label="No active patterns" />
+      ) : (
+        <div className="space-y-2">
+          {pi.patterns.map(p => (
+            <div key={p.pattern_type} className="flex items-center gap-3">
+              <span className="w-28 text-xs text-slate-400 shrink-0">{patternLabels[p.pattern_type] ?? p.pattern_type}</span>
+              <div className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${(p.avg_confidence * 100).toFixed(0)}%` }} />
+              </div>
+              <span className="text-xs text-slate-300 tabular-nums w-8 text-right">{(p.avg_confidence * 100).toFixed(0)}%</span>
+              <span className="text-xs text-slate-600 w-16 text-right">{p.reinforcement_count} reinforced</span>
+              {p.warming && <WarmingBadge label="warming" />}
+            </div>
+          ))}
+        </div>
+      )}
+    </IntelSection>
+  )
+}
+
+function FeedbackQualityWidget({ dm }: { dm: DecisionMetrics }) {
+  const fq = dm.feedback_quality
+  return (
+    <IntelSection title="Feedback & Quality" icon={<Activity size={13} />}>
+      {fq.warming ? <WarmingBadge /> : (
+        <div className="divide-y divide-slate-800/50">
+          <IntelRow label="Investigations analyzed" value={String(fq.total_investigations)} />
+          <IntelRow label="RCA found rate" value={`${(fq.root_cause_found_rate * 100).toFixed(1)}%`}
+            accent={fq.root_cause_found_rate >= 0.8 ? 'text-green-400' : fq.root_cause_found_rate >= 0.6 ? 'text-yellow-400' : 'text-red-400'} />
+          <IntelRow label="Low-confidence rate" value={`${(fq.low_confidence_rate * 100).toFixed(1)}%`}
+            accent={fq.low_confidence_rate < 0.1 ? 'text-green-400' : 'text-yellow-400'} />
+          <IntelRow label="Unresolved RCAs" value={String(fq.unresolved_rca_count)} />
+          <IntelRow label="Evidence usefulness" value={`${(fq.citation_coverage * 100).toFixed(0)}%`} sub="citation coverage" />
+        </div>
+      )}
+    </IntelSection>
+  )
+}
+
+function ConvergenceWidget({ dm }: { dm: DecisionMetrics }) {
+  const cv = dm.convergence
+  return (
+    <IntelSection title="Intelligence Convergence" icon={<TrendingDown size={13} />}>
+      {cv.warming ? <WarmingBadge label="Calibration warming" /> : (
+        <div className="divide-y divide-slate-800/50">
+          <IntelRow label="Calibration ECE" value={cv.calibration_ece.toFixed(3)}
+            accent={cv.calibration_ece < 0.05 ? 'text-green-400' : cv.calibration_ece < 0.15 ? 'text-yellow-400' : 'text-red-400'}
+            sub={`${cv.calibration_samples} samples`} />
+          <IntelRow label="Mean confidence" value={`${cv.mean_confidence.toFixed(0)}%`} />
+          <IntelRow label="Avg sources/investigation" value={cv.mean_source_count.toFixed(1)} />
+        </div>
+      )}
+    </IntelSection>
+  )
+}
+
+function AdaptiveIntelWidget({ dm }: { dm: DecisionMetrics }) {
+  const ai = dm.adaptive_intelligence
+  const modeColor = ai.learning_mode === 'healthy' ? 'text-green-400'
+    : ai.learning_mode === 'degraded' ? 'text-red-400' : 'text-slate-500'
+  const modeLabel = ai.learning_mode === 'healthy' ? 'Learning active'
+    : ai.learning_mode === 'degraded' ? 'Circuit breaker fired'
+    : 'Adaptive scoring observing'
+  return (
+    <IntelSection title="Adaptive Intelligence" icon={<Zap size={13} />}>
+      {ai.warming ? <WarmingBadge label="Neutral weights" /> : (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className={clsx('text-xs font-medium', modeColor)}>{modeLabel}</span>
+            {ai.rolling_quality !== null && (
+              <span className="text-xs text-slate-500 ml-auto">rolling avg {(ai.rolling_quality * 100).toFixed(0)}%</span>
+            )}
+          </div>
+          <div className="divide-y divide-slate-800/50">
+            <IntelRow label="Deterministic influence" value={`${(ai.deterministic_influence_pct * 100).toFixed(0)}%`} />
+            <IntelRow label="Adaptive influence" value={`${(ai.adaptive_influence_pct * 100).toFixed(0)}%`}
+              accent={ai.adaptive_influence_pct > 0.1 ? 'text-violet-400' : 'text-slate-200'} />
+            <IntelRow label="Evolved steps tracked" value={String(ai.total_evolved_steps)} />
+          </div>
+        </div>
+      )}
+    </IntelSection>
+  )
+}
+
+function EvidenceDiversityWidget({ dm }: { dm: DecisionMetrics }) {
+  const ev = dm.evidence_diversity
+  return (
+    <IntelSection title="Evidence Diversity" icon={<BarChart2 size={13} />}>
+      {ev.warming ? <WarmingBadge /> : (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(ev.multi_source_pct * 100).toFixed(0)}%` }} />
+            </div>
+            <span className="text-xs text-slate-300 tabular-nums w-10 text-right">
+              {(ev.multi_source_pct * 100).toFixed(0)}%
+            </span>
+          </div>
+          <div className="divide-y divide-slate-800/50">
+            <IntelRow label="Multi-source corroboration" value={`${(ev.multi_source_pct * 100).toFixed(0)}%`}
+              accent={ev.multi_source_pct >= 0.7 ? 'text-green-400' : 'text-yellow-400'} />
+            <IntelRow label="Single-source RCAs" value={String(ev.single_source_warning_count)}
+              accent={ev.single_source_warning_count > 0 ? 'text-yellow-400' : 'text-green-400'} />
+            <IntelRow label="Investigations analyzed" value={String(ev.total_analyzed)} />
+          </div>
+          {ev.single_source_warning_count > 0 && (
+            <p className="text-xs text-yellow-600 italic mt-1">
+              {ev.single_source_warning_count} investigations relied on a single evidence source
+            </p>
+          )}
+        </div>
+      )}
+    </IntelSection>
+  )
+}
+
+function SourceWeightWidget({ dm }: { dm: DecisionMetrics }) {
+  const sw = dm.source_weights
+  const topRows = sw.rows.slice(0, 8)
+  return (
+    <IntelSection title="Source Weight Evolution" icon={<Activity size={13} />} borderColor="border-slate-800">
+      {sw.warming ? <WarmingBadge label="Neutral weights — no data yet" /> : (
+        <div className="space-y-2">
+          <div className="text-xs text-slate-500 mb-2">
+            {sw.total_evolved} steps diverged from neutral baseline (1.0)
+          </div>
+          <div className="space-y-1">
+            {topRows.map((r, i) => {
+              const bar = Math.min(100, Math.abs(r.delta) / 0.5 * 100)
+              const color = r.delta > 0 ? 'bg-green-500' : 'bg-red-500'
+              return (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  <span className="w-28 text-slate-500 truncate">{r.step}</span>
+                  <div className="w-20 h-1 bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${color}`} style={{ width: `${bar}%` }} />
+                  </div>
+                  <span className={clsx('tabular-nums w-12 text-right', r.delta > 0 ? 'text-green-400' : 'text-red-400')}>
+                    {r.delta > 0 ? '+' : ''}{r.delta.toFixed(2)}
+                  </span>
+                  <span className="text-slate-600 w-8 text-right">{r.calls}</span>
+                  {!r.stable && <span className="text-slate-600 italic">warming</span>}
+                </div>
+              )
+            })}
+          </div>
+          {sw.rows.length > 8 && (
+            <p className="text-xs text-slate-600">+{sw.rows.length - 8} more steps</p>
+          )}
+        </div>
+      )}
+    </IntelSection>
+  )
+}
+
+function LearningSafetyWidget({ dm }: { dm: DecisionMetrics }) {
+  const ls = dm.learning_safety
+  const statusColor = ls.threshold_status === 'OK' ? 'text-green-400'
+    : ls.threshold_status === 'WARNING' ? 'text-yellow-400' : 'text-red-400'
+  return (
+    <IntelSection title="Learning Safety" icon={<CheckCircle2 size={13} />}
+      borderColor={ls.circuit_breaker_fired || ls.drifted_thresholds > 0 ? 'border-yellow-800/40' : 'border-slate-800'}>
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2 mb-2">
+          <span className={clsx('text-xs px-2 py-0.5 rounded-full border',
+            ls.no_behavioral_drift ? 'text-green-400 border-green-800/40 bg-green-900/20' : 'text-yellow-400 border-yellow-800/40 bg-yellow-900/20')}>
+            {ls.no_behavioral_drift ? 'No drift detected' : `${ls.drifted_thresholds} threshold(s) drifted`}
+          </span>
+          <span className={clsx('text-xs px-2 py-0.5 rounded-full border',
+            !ls.circuit_breaker_fired ? 'text-green-400 border-green-800/40 bg-green-900/20' : 'text-red-400 border-red-800/40 bg-red-900/20')}>
+            {ls.circuit_breaker_fired ? 'Circuit breaker fired' : 'Reinforcement active'}
+          </span>
+          {ls.experience_warming && (
+            <span className="text-xs px-2 py-0.5 rounded-full border text-slate-500 border-slate-700 bg-slate-800/50">
+              Experience warming
+            </span>
+          )}
+        </div>
+        <div className="divide-y divide-slate-800/50">
+          <IntelRow label="Threshold status" value={ls.threshold_status} accent={statusColor} />
+          <IntelRow label="Drifted thresholds" value={String(ls.drifted_thresholds)} />
+          <IntelRow label="Calibration stale" value={ls.calibration_stale ? 'Yes' : 'No'}
+            accent={ls.calibration_stale ? 'text-yellow-400' : 'text-green-400'} />
+          <IntelRow label="Stored experiences" value={String(ls.experience_count)} />
+        </div>
+        {ls.recommendations?.slice(0, 2).map((r, i) => (
+          <p key={i} className="text-xs text-slate-500 italic">{r}</p>
+        ))}
+      </div>
+    </IntelSection>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Empty state
 // ---------------------------------------------------------------------------
 
@@ -570,6 +844,7 @@ function EmptyState() {
 export default function MTTRDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [pil, setPil] = useState<PILMetrics | null>(null)
+  const [decisionMetrics, setDecisionMetrics] = useState<DecisionMetrics | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastFetch, setLastFetch] = useState(new Date())
@@ -578,15 +853,17 @@ export default function MTTRDashboard() {
   const fetchData = useCallback(async () => {
     try {
       const token = localStorage.getItem('agui_token')
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      const [mttrRes, pilRes] = await Promise.all([
+      const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
+      const [mttrRes, pilRes, dmRes] = await Promise.all([
         fetch(`/api/v1/metrics/mttr?window_hours=${windowHours}`, { headers }),
         fetch('/api/v1/metrics/intelligence', { headers }),
+        fetch('/api/v1/intelligence/decision-metrics', { headers }),
       ])
       if (!mttrRes.ok) throw new Error(`HTTP ${mttrRes.status}`)
       const json = await mttrRes.json()
       setData(json)
       if (pilRes.ok) setPil(await pilRes.json())
+      if (dmRes.ok) setDecisionMetrics(await dmRes.json())
       setError(null)
       setLastFetch(new Date())
     } catch (e: any) {
@@ -733,6 +1010,25 @@ export default function MTTRDashboard() {
 
             {/* Pattern Intelligence Layer */}
             {pil && <PILPanel pil={pil} />}
+
+            {/* Intelligence Surface Widgets (decision-metrics) */}
+            {decisionMetrics && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 pt-2">
+                  <Activity size={14} className="text-slate-500" />
+                  <span className="text-xs text-slate-500 uppercase tracking-wider font-medium">Intelligence Surfaces</span>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <PatternIntelWidget dm={decisionMetrics} />
+                  <FeedbackQualityWidget dm={decisionMetrics} />
+                  <ConvergenceWidget dm={decisionMetrics} />
+                  <AdaptiveIntelWidget dm={decisionMetrics} />
+                  <EvidenceDiversityWidget dm={decisionMetrics} />
+                  <LearningSafetyWidget dm={decisionMetrics} />
+                </div>
+                <SourceWeightWidget dm={decisionMetrics} />
+              </div>
+            )}
           </>
         )}
       </div>

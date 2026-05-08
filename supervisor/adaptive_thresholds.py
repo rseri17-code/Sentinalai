@@ -364,7 +364,7 @@ def auto_damp_drift() -> dict[str, str]:
                 store[name] = raw
                 actions[name] = f"damped {current:.4f} → {damped:.4f}"
                 logger.warning(
-                    "Adaptive threshold auto-damped: %s %.4f → %.4f (drift was %.0%% of range)",
+                    "Adaptive threshold auto-damped: %s %.4f → %.4f (drift was %.0f%% of range)",
                     name, current, damped, drift * 100,
                 )
                 try:

@@ -188,10 +188,12 @@ class OpsPersistence:
             return
         try:
             os.makedirs(os.path.dirname(os.path.abspath(self._db_path)), exist_ok=True)
-            self._ensure_schema()
+            # Integrity check before schema: a totally corrupt (non-SQLite) file
+            # crashes executescript(); quarantine it first so _ensure_schema() gets
+            # a clean slate.
             if not self._integrity_ok():
                 self._quarantine_db()
-                self._ensure_schema()
+            self._ensure_schema()
             self._run_retention_cleanup()
             self._thread = threading.Thread(
                 target=self._writer_loop, daemon=True, name="ops-persistence-writer"
@@ -316,8 +318,7 @@ class OpsPersistence:
                 receipt.worker,
                 receipt.action,
                 receipt.intent_summary,
-                json.dumps([{"category": f.category, "text": f.text, "weight": f.weight}
-                             for f in receipt.signal_facts], default=str),
+                json.dumps(receipt.params, default=str),
                 receipt.called_at_ms,
                 receipt.latency_ms,
                 receipt.status,

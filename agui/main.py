@@ -48,6 +48,7 @@ from agui.api.intake import router as intake_router
 from agui.api.intelligence import router as intelligence_router
 from agui.api.harness import router as harness_router
 from agui.api.transparency import router as transparency_router
+from agui.api.postmortem import router as postmortem_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -105,6 +106,49 @@ def create_app() -> FastAPI:
     app.include_router(intelligence_router)
     app.include_router(harness_router)
     app.include_router(transparency_router)
+    app.include_router(postmortem_router)
+
+    # ── Tenant management endpoints ───────────────────────────────────────
+    @app.get("/api/v1/tenants", tags=["tenants"])
+    async def list_tenants(actor: ActorContext = Depends(get_actor)):
+        """List all configured tenant org IDs."""
+        from integrations.tenant_config import list_tenants as _list
+        return {"tenants": _list()}
+
+    @app.get("/api/v1/tenants/{org_id}", tags=["tenants"])
+    async def get_tenant(org_id: str, actor: ActorContext = Depends(get_actor)):
+        """Return config for a specific tenant."""
+        from integrations.tenant_config import get_tenant_config
+        cfg = get_tenant_config(org_id)
+        return cfg.to_dict()
+
+    @app.post("/api/v1/tenants/{org_id}", tags=["tenants"])
+    async def upsert_tenant(org_id: str, body: dict, actor: ActorContext = Depends(get_actor)):
+        """Create or update a tenant configuration."""
+        from agui.middleware.auth import ROLE_HIERARCHY
+        if ROLE_HIERARCHY.get(actor.actor_role, 0) < ROLE_HIERARCHY.get("admin", 99):
+            return JSONResponse(status_code=403, content={"detail": "Admin only"})
+        from integrations.tenant_config import upsert_tenant as _upsert
+        cfg = _upsert(org_id, body)
+        return {"ok": True, "tenant": cfg.to_dict()}
+
+    @app.post("/api/v1/tenants/{org_id}/seed", tags=["tenants"])
+    async def seed_tenant(
+        org_id: str,
+        force: bool = False,
+        actor: ActorContext = Depends(get_actor),
+    ):
+        """Run the cold-start seeder for a new tenant (idempotent)."""
+        from agui.middleware.auth import ROLE_HIERARCHY
+        if ROLE_HIERARCHY.get(actor.actor_role, 0) < ROLE_HIERARCHY.get("admin", 99):
+            return JSONResponse(status_code=403, content={"detail": "Admin only"})
+        import asyncio as _asyncio
+        loop = _asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: __import__("supervisor.cold_start_seeder", fromlist=["seed_tenant"]).seed_tenant(org_id, force=force),
+        )
+        return {"ok": True, "org_id": org_id, **result}
 
     # ── Health endpoints ──────────────────────────────────────────────────
     @app.get("/api/v1/health", tags=["health"])

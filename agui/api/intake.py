@@ -4,19 +4,27 @@ Routes:
   POST /api/v1/webhooks/moogsoft    → Moogsoft alert webhook
   POST /api/v1/webhooks/pagerduty   → PagerDuty event webhook (v2/v3)
   POST /api/v1/webhooks/servicenow  → ServiceNow incident webhook
+  POST /api/v1/webhooks/opsgenie    → OpsGenie alert webhook
+  POST /api/v1/webhooks/grafana     → Grafana alerting webhook (unified + legacy)
+  POST /api/v1/webhooks/cloudwatch  → AWS CloudWatch alarm webhook (SNS-wrapped)
   POST /api/v1/incidents            → Manual incident submission (any format)
 
 All endpoints:
   1. Validate optional HMAC signature
-  2. Normalize to canonical Incident model
-  3. Create IncidentState record in state store
-  4. Dispatch investigation asynchronously
-  5. Return 202 Accepted with investigation_id
+  2. Deduplicate via AlertDeduplicator (fingerprint + cooldown window)
+  3. Normalize to canonical Incident model
+  4. Create IncidentState record in state store
+  5. Dispatch investigation asynchronously
+  6. Notify via NotificationRouter on completion
+  7. Return 202 Accepted with investigation_id
 
 Signature validation (opt-in via env vars):
   MOOGSOFT_WEBHOOK_SECRET   — shared secret for X-Moogsoft-Signature header
   PAGERDUTY_WEBHOOK_SECRET  — shared secret for X-PagerDuty-Signature header
   SNOW_WEBHOOK_SECRET       — shared secret for X-ServiceNow-Hmac header
+  OPSGENIE_WEBHOOK_SECRET   — shared secret for X-OpsGenie-Hmac header
+  GRAFANA_WEBHOOK_SECRET    — shared secret for X-Grafana-Signature header
+  CLOUDWATCH_WEBHOOK_SECRET — shared secret for X-CloudWatch-Signature header
 """
 from __future__ import annotations
 
@@ -47,6 +55,9 @@ router = APIRouter(tags=["intake"])
 _MOOGSOFT_SECRET = os.environ.get("MOOGSOFT_WEBHOOK_SECRET", "")
 _PAGERDUTY_SECRET = os.environ.get("PAGERDUTY_WEBHOOK_SECRET", "")
 _SNOW_SECRET = os.environ.get("SNOW_WEBHOOK_SECRET", "")
+_OPSGENIE_SECRET = os.environ.get("OPSGENIE_WEBHOOK_SECRET", "")
+_GRAFANA_SECRET = os.environ.get("GRAFANA_WEBHOOK_SECRET", "")
+_CLOUDWATCH_SECRET = os.environ.get("CLOUDWATCH_WEBHOOK_SECRET", "")
 
 
 # ---------------------------------------------------------------------------
@@ -81,9 +92,39 @@ async def _check_sig(request: Request, secret: str, header_name: str) -> None:
 # Shared investigation dispatch
 # ---------------------------------------------------------------------------
 
-async def _accept_and_dispatch(incident: Incident, trace_id: str = "") -> dict[str, Any]:
-    """Persist IncidentState and kick off investigation. Returns response dict."""
+async def _accept_and_dispatch(
+    incident: Incident, trace_id: str = "", org_id: str = ""
+) -> dict[str, Any]:
+    """Deduplicate, persist IncidentState, and kick off investigation."""
+    # ── Alert deduplication ────────────────────────────────────────────────
     investigation_id = str(uuid.uuid4())
+    try:
+        from supervisor.alert_dedup import get_deduplicator
+        dedup = get_deduplicator()
+        dedup_result = dedup.check_and_register(
+            incident_id=incident.incident_id,
+            service=incident.affected_service,
+            severity=incident.severity,
+            tags=incident.tags,
+            investigation_id=investigation_id,
+        )
+        if dedup_result.is_duplicate:
+            logger.info(
+                "Dedup HIT: incident=%s → existing=%s (%.0fs remaining)",
+                incident.incident_id, dedup_result.existing_investigation_id,
+                dedup_result.cooldown_remaining_secs,
+            )
+            return {
+                "status": "deduplicated",
+                "investigation_id": dedup_result.existing_investigation_id,
+                "incident_id": incident.incident_id,
+                "source": incident.source,
+                "reason": dedup_result.reason,
+                "ws_url": f"/ws/investigations/{dedup_result.existing_investigation_id}",
+            }
+    except Exception as exc:
+        logger.debug("Dedup check failed (non-fatal): %s", exc)
+
     state = IncidentState(
         investigation_id=investigation_id,
         incident_id=incident.incident_id,
@@ -94,7 +135,7 @@ async def _accept_and_dispatch(incident: Incident, trace_id: str = "") -> dict[s
     store = get_state_store()
     await store.put_state(state)
 
-    asyncio.create_task(_run_investigation(investigation_id, incident, trace_id, store))
+    asyncio.create_task(_run_investigation(investigation_id, incident, trace_id, store, org_id))
 
     logger.info(
         "Webhook accepted: source=%s incident=%s investigation=%s",
@@ -114,14 +155,16 @@ async def _run_investigation(
     incident: Incident,
     trace_id: str,
     store: Any,
+    org_id: str = "",
 ) -> None:
-    """Run investigation in a thread pool, update state when done."""
+    """Run investigation in a thread pool, update state when done, notify on completion."""
     state = await store.get_state(investigation_id)
     if state:
         state.status = InvestigationStatus.RUNNING
         await store.put_state(state)
 
     loop = asyncio.get_event_loop()
+    result = None
     try:
         def _run_agent():
             from supervisor.agent import investigate
@@ -138,12 +181,45 @@ async def _run_investigation(
             state.replay_available = True
             await store.put_state(state)
 
+        # ── Notify on success ────────────────────────────────────────────
+        _notify_rca_complete(investigation_id, incident.incident_id, result, org_id)
+
     except Exception as exc:
         logger.error("Intake investigation %s failed: %s", investigation_id, exc)
         state = await store.get_state(investigation_id)
         if state:
             state.status = InvestigationStatus.FAILED
             await store.put_state(state)
+
+        _notify_investigation_failed(investigation_id, incident.incident_id, exc, org_id)
+
+
+def _notify_rca_complete(
+    investigation_id: str, incident_id: str, result: Any, org_id: str
+) -> None:
+    try:
+        from integrations.notification_router import get_notification_router
+        get_notification_router().notify_rca_complete(
+            investigation_id=investigation_id,
+            incident_id=incident_id,
+            rca_result=result or {},
+        )
+    except Exception as exc:
+        logger.debug("Notification skipped: %s", exc)
+
+
+def _notify_investigation_failed(
+    investigation_id: str, incident_id: str, error: Exception, org_id: str
+) -> None:
+    try:
+        from integrations.notification_router import get_notification_router
+        get_notification_router().notify_investigation_failed(
+            investigation_id=investigation_id,
+            incident_id=incident_id,
+            error=error,
+        )
+    except Exception as exc:
+        logger.debug("Failure notification skipped: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -296,6 +372,298 @@ async def servicenow_webhook(request: Request):
 
 
 # ---------------------------------------------------------------------------
+# OpsGenie webhook
+# ---------------------------------------------------------------------------
+
+_OPSGENIE_ALERT_TRIGGERS = {"Create"}
+
+
+@router.post(
+    "/api/v1/webhooks/opsgenie",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="OpsGenie alert webhook",
+)
+async def opsgenie_webhook(request: Request):
+    """Accept OpsGenie alert webhook and trigger investigation.
+
+    OpsGenie sends webhook payloads with fields:
+      action, alert.alertId, alert.message, alert.entity, alert.priority,
+      alert.tags, alert.details
+
+    Only 'Create' actions trigger investigations.
+
+    Optional signature validation via OPSGENIE_WEBHOOK_SECRET env var.
+    """
+    await _check_sig(request, _OPSGENIE_SECRET, "X-OpsGenie-Hmac")
+    payload = await request.json()
+
+    action = payload.get("action", "")
+    if action not in _OPSGENIE_ALERT_TRIGGERS:
+        return {"status": "ok", "investigation_id": None, "note": f"action '{action}' ignored"}
+
+    alert = payload.get("alert", payload)
+    if not alert:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty OpsGenie payload")
+
+    try:
+        incident = _opsgenie_to_incident(alert)
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Invalid OpsGenie payload: {exc}")
+
+    return await _accept_and_dispatch(incident)
+
+
+def _opsgenie_to_incident(alert: dict) -> "Incident":
+    """Normalize an OpsGenie alert dict to a canonical Incident."""
+    # OpsGenie priority: P1 (critical) → P5 (info); map to 1-5
+    priority_map = {"P1": 1, "P2": 2, "P3": 3, "P4": 4, "P5": 5}
+    priority_str = str(alert.get("priority", "P3")).upper()
+    severity = priority_map.get(priority_str, 3)
+
+    tags_raw = alert.get("tags", [])
+    tags = tags_raw if isinstance(tags_raw, list) else [str(tags_raw)]
+
+    # Entity is the affected service in OpsGenie
+    entity = alert.get("entity", alert.get("source", "unknown"))
+
+    return Incident(
+        incident_id=str(alert.get("alertId", alert.get("id", str(uuid.uuid4())))),
+        summary=str(alert.get("message", alert.get("summary", ""))),
+        affected_service=entity,
+        severity=severity,
+        source="opsgenie",
+        status="open",
+        description=str(alert.get("description", alert.get("details", ""))),
+        tags=tags,
+        raw_data=alert,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Grafana alerting webhook
+# ---------------------------------------------------------------------------
+
+_GRAFANA_FIRING_STATES = {"alerting", "firing"}
+
+
+@router.post(
+    "/api/v1/webhooks/grafana",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Grafana unified alerting webhook",
+)
+async def grafana_webhook(request: Request):
+    """Accept Grafana unified alerting webhook and trigger investigation.
+
+    Supports both:
+    - Grafana 9+ unified alerting: {"alerts": [...], "status": "firing"}
+    - Grafana legacy alerting:     {"state": "alerting", "ruleName": "..."}
+
+    Only 'firing' / 'alerting' states trigger investigations.
+
+    Optional signature validation via GRAFANA_WEBHOOK_SECRET env var.
+    """
+    await _check_sig(request, _GRAFANA_SECRET, "X-Grafana-Signature")
+    payload = await request.json()
+
+    results = []
+
+    # Grafana unified alerting (9+): top-level "alerts" array
+    if "alerts" in payload:
+        for alert in payload.get("alerts", []):
+            state = alert.get("status", "").lower()
+            if state not in _GRAFANA_FIRING_STATES:
+                continue
+            try:
+                incident = _grafana_unified_to_incident(alert, payload)
+                results.append(await _accept_and_dispatch(incident))
+            except Exception as exc:
+                logger.warning("Grafana unified alert skipped: %s", exc)
+
+    # Legacy Grafana alerting: flat dict with "state"
+    elif payload.get("state", "").lower() in _GRAFANA_FIRING_STATES:
+        try:
+            incident = _grafana_legacy_to_incident(payload)
+            results.append(await _accept_and_dispatch(incident))
+        except Exception as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=f"Invalid Grafana payload: {exc}")
+    else:
+        state = payload.get("status", payload.get("state", "unknown"))
+        return {"status": "ok", "investigation_id": None, "note": f"state '{state}' ignored"}
+
+    if not results:
+        return {"status": "ok", "investigation_id": None, "note": "no firing alerts"}
+
+    return results[0] if len(results) == 1 else {"accepted": results}
+
+
+def _grafana_unified_to_incident(alert: dict, envelope: dict) -> "Incident":
+    """Normalize a Grafana unified alert to a canonical Incident."""
+    labels = alert.get("labels", {})
+    annotations = alert.get("annotations", {})
+
+    service = (labels.get("service") or labels.get("job") or
+               labels.get("namespace") or envelope.get("groupLabels", {}).get("service", "unknown"))
+
+    # Map Grafana severity label → 1-5
+    sev_str = labels.get("severity", "warning").lower()
+    severity_map = {"critical": 1, "high": 2, "warning": 3, "low": 4, "info": 5}
+    severity = severity_map.get(sev_str, 3)
+
+    summary = (annotations.get("summary") or annotations.get("description") or
+               alert.get("alertname") or labels.get("alertname", ""))
+
+    tags = [f"{k}={v}" for k, v in labels.items() if k not in ("__name__", "alertname")]
+
+    return Incident(
+        incident_id=alert.get("fingerprint", str(uuid.uuid4())),
+        summary=summary,
+        affected_service=service,
+        severity=severity,
+        source="grafana",
+        status="open",
+        created_at=alert.get("startsAt", ""),
+        description=annotations.get("description", summary),
+        tags=tags[:10],
+        raw_data=alert,
+    )
+
+
+def _grafana_legacy_to_incident(payload: dict) -> "Incident":
+    """Normalize a Grafana legacy alert payload to a canonical Incident."""
+    rule_name = payload.get("ruleName", payload.get("title", ""))
+    eval_matches = payload.get("evalMatches", [])
+    service = "unknown"
+    if eval_matches and isinstance(eval_matches[0], dict):
+        tags_raw = eval_matches[0].get("tags", {})
+        service = tags_raw.get("service", tags_raw.get("job", "unknown"))
+
+    return Incident(
+        incident_id=str(payload.get("ruleId", str(uuid.uuid4()))),
+        summary=rule_name,
+        affected_service=service,
+        severity=3,  # legacy format doesn't expose severity
+        source="grafana",
+        status="open",
+        description=payload.get("message", rule_name),
+        tags=[],
+        raw_data=payload,
+    )
+
+
+# ---------------------------------------------------------------------------
+# AWS CloudWatch alarm webhook (SNS-wrapped)
+# ---------------------------------------------------------------------------
+
+_CW_ALARM_TRIGGERS = {"ALARM"}
+
+
+@router.post(
+    "/api/v1/webhooks/cloudwatch",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="AWS CloudWatch alarm webhook (SNS-wrapped)",
+)
+async def cloudwatch_webhook(request: Request):
+    """Accept AWS CloudWatch alarm via SNS HTTP subscription.
+
+    SNS delivers CloudWatch alarms as:
+    {
+      "Type": "Notification",
+      "Message": "{...alarm JSON...}",
+      "Subject": "ALARM: ...",
+      "TopicArn": "arn:aws:sns:..."
+    }
+
+    Only alarms in 'ALARM' state trigger investigations.
+    Subscription confirmations (Type=SubscriptionConfirmation) are acknowledged.
+
+    Optional signature validation via CLOUDWATCH_WEBHOOK_SECRET env var.
+    """
+    await _check_sig(request, _CLOUDWATCH_SECRET, "X-CloudWatch-Signature")
+    payload = await request.json()
+
+    msg_type = payload.get("Type", "")
+
+    # SNS subscription confirmation — return 200 OK so SNS marks it confirmed
+    if msg_type == "SubscriptionConfirmation":
+        subscribe_url = payload.get("SubscribeURL", "")
+        logger.info("CloudWatch/SNS subscription confirmation received (SubscribeURL=%s)", subscribe_url[:80])
+        return {"status": "ok", "note": "subscription confirmation received"}
+
+    # SNS notification wrapping a CloudWatch alarm
+    if msg_type == "Notification":
+        import json as _json
+        try:
+            alarm = _json.loads(payload.get("Message", "{}"))
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="CloudWatch SNS message is not valid JSON")
+    elif "AlarmName" in payload:
+        # Direct alarm dict (non-SNS, e.g. from EventBridge or direct delivery)
+        alarm = payload
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Unrecognized CloudWatch payload format")
+
+    new_state = alarm.get("NewStateValue", "")
+    if new_state not in _CW_ALARM_TRIGGERS:
+        return {"status": "ok", "investigation_id": None, "note": f"alarm state '{new_state}' ignored"}
+
+    try:
+        incident = _cloudwatch_to_incident(alarm)
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Invalid CloudWatch alarm: {exc}")
+
+    return await _accept_and_dispatch(incident)
+
+
+def _cloudwatch_to_incident(alarm: dict) -> "Incident":
+    """Normalize a CloudWatch alarm dict to a canonical Incident."""
+    alarm_name = alarm.get("AlarmName", "")
+    description = alarm.get("AlarmDescription", alarm_name)
+    namespace = alarm.get("Trigger", {}).get("Namespace", "AWS/Unknown")
+    dimensions = alarm.get("Trigger", {}).get("Dimensions", [])
+
+    # Extract service name from dimensions or namespace
+    service = "unknown"
+    for dim in dimensions:
+        if isinstance(dim, dict):
+            name = dim.get("name", dim.get("Name", ""))
+            value = dim.get("value", dim.get("Value", ""))
+            if name in ("FunctionName", "ServiceName", "ClusterName", "DBInstanceIdentifier", "LoadBalancer"):
+                service = value
+                break
+    if service == "unknown":
+        service = namespace.split("/")[-1].lower().replace(" ", "-")
+
+    # Map namespace to rough severity
+    critical_namespaces = {"AWS/RDS", "AWS/ElastiCache", "AWS/ELB", "AWS/ApplicationELB"}
+    severity = 2 if namespace in critical_namespaces else 3
+
+    tags = [f"namespace={namespace}", f"region={alarm.get('Region', 'unknown')}"]
+    for dim in dimensions:
+        if isinstance(dim, dict):
+            n = dim.get("name", dim.get("Name", ""))
+            v = dim.get("value", dim.get("Value", ""))
+            if n and v:
+                tags.append(f"{n}={v}")
+
+    return Incident(
+        incident_id=f"CW-{alarm_name[:40].replace(' ', '-')}",
+        summary=f"CloudWatch ALARM: {alarm_name}",
+        affected_service=service,
+        severity=severity,
+        source="cloudwatch",
+        status="open",
+        description=description,
+        tags=tags[:8],
+        raw_data=alarm,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Manual trigger endpoint
 # ---------------------------------------------------------------------------
 
@@ -373,6 +741,28 @@ async def list_webhooks():
                 "method": "POST",
                 "signature_validation": bool(_SNOW_SECRET),
                 "env_var": "SNOW_WEBHOOK_SECRET",
+            },
+            {
+                "name": "opsgenie",
+                "url": "/api/v1/webhooks/opsgenie",
+                "method": "POST",
+                "signature_validation": bool(_OPSGENIE_SECRET),
+                "env_var": "OPSGENIE_WEBHOOK_SECRET",
+            },
+            {
+                "name": "grafana",
+                "url": "/api/v1/webhooks/grafana",
+                "method": "POST",
+                "signature_validation": bool(_GRAFANA_SECRET),
+                "env_var": "GRAFANA_WEBHOOK_SECRET",
+            },
+            {
+                "name": "cloudwatch",
+                "url": "/api/v1/webhooks/cloudwatch",
+                "method": "POST",
+                "signature_validation": bool(_CLOUDWATCH_SECRET),
+                "env_var": "CLOUDWATCH_WEBHOOK_SECRET",
+                "note": "Expects SNS-wrapped CloudWatch alarm; also accepts direct alarm dicts",
             },
             {
                 "name": "manual",

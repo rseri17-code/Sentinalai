@@ -26,6 +26,8 @@ ENV/
 
 # Database
 *.db
+*.db-shm
+*.db-wal
 
 # Test
 .pytest_cache/

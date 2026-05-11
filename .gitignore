@@ -57,7 +57,7 @@ amazon-bedrock-agentcore-samples/
 .claude/audit.jsonl
 .claude/session-state.json
 node_modules/
-ui/dist/
+# ui/dist/ — committed so the BFF can serve the built SPA without a separate npm step
 
 # Playwright test artifacts (generated reports/screenshots)
 ui/tests/e2e/report/

@@ -146,6 +146,7 @@ export interface ExecutionGraph {
   is_complete: boolean
   total_events: number
   event_gaps: number[]
+  has_gaps?: boolean
 }
 
 // ── Receipt Types ─────────────────────────────────────────────────────────────

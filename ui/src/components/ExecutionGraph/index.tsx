@@ -171,8 +171,8 @@ function Row({ label, value }: { label: string; value: string | number }) {
 
 export function ExecutionGraph() {
   const { graph, selectedNodeId, selectNode } = useInvestigationStore()
-  const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const [nodes, setNodes, onNodesChange] = useNodesState([] as Node[])
+  const [edges, setEdges, onEdgesChange] = useEdgesState([] as Edge[])
 
   useEffect(() => {
     if (!graph) return

@@ -1,7 +1,7 @@
 import React from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 import {
-  Activity, GitBranch, FileText, Brain, RotateCcw, Shield, AlertTriangle, BarChart2, Sparkles
+  Activity, GitBranch, FileText, Brain, RotateCcw, Shield, AlertTriangle, BarChart2, Sparkles, Wrench
 } from 'lucide-react'
 import { useInvestigationStore, useAuthStore } from '@/store/investigationStore'
 import type { ActivePanel } from '@/types'
@@ -13,6 +13,7 @@ const PANELS: { id: ActivePanel; label: string; icon: React.ReactNode; minRole: 
   { id: 'evidence', label: 'Evidence', icon: <FileText size={16} />, minRole: 'viewer' },
   { id: 'memory', label: 'Memory Trace', icon: <Brain size={16} />, minRole: 'viewer' },
   { id: 'reflection', label: 'Self-Awareness', icon: <Sparkles size={16} />, minRole: 'viewer' },
+  { id: 'tools', label: 'Tool Inspector', icon: <Wrench size={16} />, minRole: 'viewer' },
   { id: 'replay', label: 'Replay', icon: <RotateCcw size={16} />, minRole: 'operator' },
   { id: 'control', label: 'Control', icon: <Shield size={16} />, minRole: 'operator' },
 ]

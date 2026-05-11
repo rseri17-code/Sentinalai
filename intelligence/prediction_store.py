@@ -129,6 +129,8 @@ class PredictionStore:
 
         self._predictions[pred.prediction_id] = pred
         self._persist_prediction(pred)
+        if published:
+            self._persist_pattern_event(pred, "pending")
 
         if not published:
             logger.debug(
@@ -170,6 +172,7 @@ class PredictionStore:
             pred.outcome_resolved_at = now
             self._update_outcome_in_db(pred)
             self._feed_calibration(pred)
+            self._persist_pattern_event(pred, "true_positive")
             resolved += 1
 
         logger.info(
@@ -187,6 +190,7 @@ class PredictionStore:
         pred.outcome_resolved_at = datetime.now(timezone.utc).isoformat()
         self._update_outcome_in_db(pred)
         self._feed_calibration(pred)
+        self._persist_pattern_event(pred, "false_positive")
         logger.info("Prediction %s marked as false positive: %s", prediction_id, reason)
         return True
 
@@ -199,6 +203,7 @@ class PredictionStore:
                 pred.outcome_resolved_at = datetime.now(timezone.utc).isoformat()
                 self._update_outcome_in_db(pred)
                 self._feed_calibration(pred)
+                self._persist_pattern_event(pred, "expired")
                 expired += 1
         if expired:
             logger.info("Expired %d predictions → false_positive", expired)
@@ -258,6 +263,19 @@ class PredictionStore:
     # ------------------------------------------------------------------
     # Persistence
     # ------------------------------------------------------------------
+
+    def _persist_pattern_event(self, pred: Prediction, outcome: str) -> None:
+        try:
+            from database.ops_persistence import get_ops_store
+            get_ops_store().persist_pattern_event(
+                pattern_type=pred.pattern_type,
+                prediction_id=pred.prediction_id,
+                service=pred.service,
+                outcome=outcome,
+                confidence=pred.confidence,
+            )
+        except Exception as exc:
+            logger.debug("persist_pattern_event failed: %s", exc)
 
     def _persist_prediction(self, pred: Prediction) -> None:
         try:

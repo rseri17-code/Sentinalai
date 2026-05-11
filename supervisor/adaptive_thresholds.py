@@ -364,9 +364,21 @@ def auto_damp_drift() -> dict[str, str]:
                 store[name] = raw
                 actions[name] = f"damped {current:.4f} → {damped:.4f}"
                 logger.warning(
-                    "Adaptive threshold auto-damped: %s %.4f → %.4f (drift was %.0%% of range)",
+                    "Adaptive threshold auto-damped: %s %.4f → %.4f (drift was %.0f%% of range)",
                     name, current, damped, drift * 100,
                 )
+                try:
+                    from database.ops_persistence import get_ops_store
+                    get_ops_store().persist_safety_event(
+                        event_type="threshold_damped",
+                        threshold_name=name,
+                        old_value=current,
+                        new_value=damped,
+                        drift_fraction=round(drift, 3),
+                        context="auto_damp_drift",
+                    )
+                except Exception:
+                    pass
             _save(store)
     except Exception as exc:
         logger.warning("auto_damp_drift failed: %s", exc)

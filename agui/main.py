@@ -47,6 +47,7 @@ from agui.api.metrics import router as metrics_router
 from agui.api.intake import router as intake_router
 from agui.api.intelligence import router as intelligence_router
 from agui.api.harness import router as harness_router
+from agui.api.transparency import router as transparency_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -103,6 +104,7 @@ def create_app() -> FastAPI:
     app.include_router(intake_router)
     app.include_router(intelligence_router)
     app.include_router(harness_router)
+    app.include_router(transparency_router)
 
     # ── Health endpoints ──────────────────────────────────────────────────
     @app.get("/api/v1/health", tags=["health"])
@@ -243,6 +245,14 @@ async def startup_event() -> None:
 
     bus.set_backend(StateBusBackend())
 
+    # Start ops persistence (SQLite write queue + integrity check + retention cleanup)
+    try:
+        from database.ops_persistence import get_ops_store
+        get_ops_store()  # triggers start() via singleton initialisation
+        logger.info("Ops persistence store ready")
+    except Exception as exc:
+        logger.warning("Ops persistence startup failed (non-fatal): %s", exc)
+
     # Start Pattern Intelligence background loop
     try:
         from intelligence.background_runner import get_runner as get_intelligence_runner
@@ -257,6 +267,11 @@ async def startup_event() -> None:
 @app.on_event("shutdown")
 async def shutdown_event() -> None:
     """Graceful shutdown."""
+    try:
+        from database.ops_persistence import get_ops_store
+        get_ops_store().stop()
+    except Exception:
+        pass
     try:
         from intelligence.background_runner import get_runner as get_intelligence_runner
         await get_intelligence_runner().stop()

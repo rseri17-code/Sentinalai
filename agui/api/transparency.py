@@ -1,9 +1,9 @@
 """Tool call transparency REST endpoints.
 
-GET  /transparency/{investigation_id}/tool-calls        — paginated waterfall
-GET  /transparency/{investigation_id}/tool-calls/{id}   — single receipt detail
-GET  /transparency/{investigation_id}/evidence-atlas    — bipartite graph
-GET  /transparency/{investigation_id}/causal-chain      — ordered signal chain
+GET  /api/v1/transparency/{investigation_id}/tool-calls        — paginated waterfall
+GET  /api/v1/transparency/{investigation_id}/tool-calls/{id}   — single receipt detail
+GET  /api/v1/transparency/{investigation_id}/evidence-atlas    — bipartite graph
+GET  /api/v1/transparency/{investigation_id}/causal-chain      — ordered signal chain
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-router = APIRouter(prefix="/transparency", tags=["transparency"])
+router = APIRouter(prefix="/api/v1/transparency", tags=["transparency"])
 
 
 def _get_emitter():

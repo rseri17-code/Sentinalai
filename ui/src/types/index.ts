@@ -236,6 +236,8 @@ export interface ControlAction {
 export interface IncidentState {
   investigation_id: string
   incident_id: string
+  org_id?: string
+  ttl?: number
   schema_version: string
   trace_id: string
   x_ray_trace_url?: string

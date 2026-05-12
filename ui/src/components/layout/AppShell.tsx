@@ -54,8 +54,8 @@ function InvestigationsList() {
   const navigate = useNavigate()
   const handleInject = async (type: string) => {
     try {
-      const { default: devApiImport } = await import('@/api/client')
-      const res = await (devApiImport as unknown as { devApi: { injectSynthetic: (t: string) => Promise<{ investigation_id: string }> } }).devApi.injectSynthetic(type)
+      const { devApi } = await import('@/api/client')
+      const res = await devApi.injectSynthetic(type)
       navigate(`/investigations/${res.investigation_id}`)
     } catch (err) {
       console.error(err)

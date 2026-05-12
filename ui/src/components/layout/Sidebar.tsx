@@ -39,7 +39,7 @@ export function Sidebar() {
             AI
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-100">ObserveAI</div>
+            <div className="text-sm font-semibold text-slate-100">SentinalAI</div>
             <div className="text-xs text-slate-500">Agent Control Plane</div>
           </div>
         </div>

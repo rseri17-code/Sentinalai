@@ -7,10 +7,10 @@
 #   OTEL_EXPORTER_OTLP_ENDPOINT, DATABASE_URL, LOG_LEVEL
 
 agent:
-  name: sentinalai-observeai
+  name: sentinalai
   entrypoint: agentcore_runtime.py
   description: >
-    SentinalAI (ObserveAI) - Deterministic incident investigation agent.
+    SentinalAI - Deterministic incident investigation agent.
     Performs root cause analysis using rules-first orchestration with
     evidence-backed outputs and bounded execution.
 

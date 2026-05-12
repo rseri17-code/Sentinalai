@@ -256,7 +256,7 @@ def intelligence_health() -> dict[str, Any]:
 # ------------------------------------------------------------------
 
 @router.get("/decision-metrics")
-def get_decision_metrics() -> dict[str, Any]:
+async def get_decision_metrics() -> dict[str, Any]:
     """Return all 8 intelligence surface metrics in one compact payload.
 
     Sections: pattern_intelligence, feedback_quality, convergence,

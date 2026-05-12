@@ -252,7 +252,7 @@ class ConfidenceCalibrator:
 # ---------------------------------------------------------------------------
 
 _calibrator: ConfidenceCalibrator | None = None
-_calibrator_lock = threading.Lock()
+_calibrator_lock = threading.RLock()  # RLock allows same-thread re-entry (get_calibrator() inside with _calibrator_lock:)
 
 
 def get_calibrator() -> ConfidenceCalibrator:

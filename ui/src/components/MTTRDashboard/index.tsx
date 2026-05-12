@@ -85,7 +85,10 @@ interface SLOHealth {
 }
 
 interface PILMetrics {
-  accuracy: Record<string, { precision: number; tp: number; fp: number }>
+  accuracy: {
+    by_pattern_type: Record<string, { precision: number; tp: number; fp: number }>
+    total_predictions: number
+  }
   active_predictions: { total: number; by_severity: Record<string, number> }
   slo_health: SLOHealth
   runner_iteration: number
@@ -518,11 +521,11 @@ function PILPanel({ pil }: { pil: PILMetrics }) {
       </div>
 
       {/* Detector accuracy table */}
-      {Object.keys(pil.accuracy).length > 0 && (
+      {Object.keys(pil.accuracy.by_pattern_type).length > 0 && (
         <div>
           <div className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Detector Precision</div>
           <div className="space-y-1.5">
-            {Object.entries(pil.accuracy).map(([pattern, stats]) => (
+            {Object.entries(pil.accuracy.by_pattern_type).map(([pattern, stats]) => (
               <div key={pattern} className="flex items-center gap-3 text-xs">
                 <span className="w-28 text-slate-400 shrink-0">{patternLabels[pattern] ?? pattern}</span>
                 <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -880,7 +883,7 @@ export default function MTTRDashboard() {
   }, [fetchData])
 
   const kpis = data?.kpis
-  const hasData = kpis && kpis.total_investigations > 0
+  const hasData = !loading && kpis != null && kpis.total_investigations > 0
 
   return (
     <div className="flex flex-col h-full overflow-y-auto bg-slate-950">
@@ -937,99 +940,96 @@ export default function MTTRDashboard() {
           </div>
         )}
 
-        {!hasData && !loading ? (
-          <EmptyState />
-        ) : (
-          <>
-            {/* KPI row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <KPICard
-                label="Median MTTR"
-                value={kpis ? msToHuman(kpis.mttr_median_ms) : '—'}
-                sub={kpis ? `P95: ${msToHuman(kpis.mttr_p95_ms)}` : undefined}
-                icon={<Clock size={16} />}
-                color="blue"
-              />
-              <KPICard
-                label="RCA Success Rate"
-                value={kpis ? pct(kpis.root_cause_found_rate) : '—'}
-                sub={kpis ? `${kpis.total_investigations} total investigations` : undefined}
-                icon={<CheckCircle2 size={16} />}
-                color="green"
-              />
-              <KPICard
-                label="Avg Confidence"
-                value={kpis ? `${kpis.mean_confidence.toFixed(0)}%` : '—'}
-                sub={kpis ? `Fix proposed: ${pct(kpis.fix_proposed_rate)}` : undefined}
-                icon={<TrendingDown size={16} />}
-                color="purple"
-              />
-              <KPICard
-                label="Last 24h"
-                value={kpis ? String(kpis.last_24h_count) : '—'}
-                sub={kpis ? `7d: ${kpis.last_7d_count} investigations` : undefined}
-                icon={<BarChart2 size={16} />}
-                color="orange"
-              />
-            </div>
+        {/* KPI row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KPICard
+            label="Median MTTR"
+            value={kpis ? msToHuman(kpis.mttr_median_ms) : '—'}
+            sub={kpis ? `P95: ${msToHuman(kpis.mttr_p95_ms)}` : undefined}
+            icon={<Clock size={16} />}
+            color="blue"
+          />
+          <KPICard
+            label="RCA Success Rate"
+            value={kpis ? pct(kpis.root_cause_found_rate) : '—'}
+            sub={kpis ? `${kpis.total_investigations} total investigations` : undefined}
+            icon={<CheckCircle2 size={16} />}
+            color="green"
+          />
+          <KPICard
+            label="Avg Confidence"
+            value={kpis ? `${kpis.mean_confidence.toFixed(0)}%` : '—'}
+            sub={kpis ? `Fix proposed: ${pct(kpis.fix_proposed_rate)}` : undefined}
+            icon={<TrendingDown size={16} />}
+            color="purple"
+          />
+          <KPICard
+            label="Last 24h"
+            value={kpis ? String(kpis.last_24h_count) : '—'}
+            sub={kpis ? `7d: ${kpis.last_7d_count} investigations` : undefined}
+            icon={<BarChart2 size={16} />}
+            color="orange"
+          />
+        </div>
 
-            {/* ROI Banner */}
-            {data?.roi && data.roi.investigations > 0 && (
-              <ROIBanner roi={data.roi} />
+        {/* No-data notice when metrics are empty */}
+        {!hasData && !loading && <EmptyState />}
+
+        {/* ROI Banner */}
+        {data?.roi && data.roi.investigations > 0 && (
+          <ROIBanner roi={data.roi} />
+        )}
+
+        {/* Charts row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="bg-slate-900 rounded-xl border border-slate-800 p-5">
+            <h2 className="text-sm font-semibold text-slate-200 mb-4">Trend</h2>
+            {data?.trend ? <TrendChart data={data.trend} /> : (
+              <div className="h-40 flex items-center justify-center text-slate-600 text-sm">Loading…</div>
             )}
+          </div>
 
-            {/* Charts row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="bg-slate-900 rounded-xl border border-slate-800 p-5">
-                <h2 className="text-sm font-semibold text-slate-200 mb-4">Trend</h2>
-                {data?.trend ? <TrendChart data={data.trend} /> : (
-                  <div className="h-40 flex items-center justify-center text-slate-600 text-sm">Loading…</div>
-                )}
-              </div>
-
-              <div className="bg-slate-900 rounded-xl border border-slate-800 p-5">
-                <h2 className="text-sm font-semibold text-slate-200 mb-4">Confidence Calibration</h2>
-                {data?.calibration ? <CalibrationChart data={data.calibration} /> : (
-                  <div className="h-40 flex items-center justify-center text-slate-600 text-sm">Loading…</div>
-                )}
-              </div>
-            </div>
-
-            {/* Service breakdown */}
-            <div className="bg-slate-900 rounded-xl border border-slate-800">
-              <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-200">Per-Service Breakdown</h2>
-                <span className="text-xs text-slate-500">
-                  {data?.service_breakdown?.length ?? 0} services — {windowHours / 24}d window
-                </span>
-              </div>
-              <div className="p-1">
-                <ServiceTable rows={data?.service_breakdown ?? []} />
-              </div>
-            </div>
-
-            {/* Pattern Intelligence Layer */}
-            {pil && <PILPanel pil={pil} />}
-
-            {/* Intelligence Surface Widgets (decision-metrics) */}
-            {decisionMetrics && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 pt-2">
-                  <Activity size={14} className="text-slate-500" />
-                  <span className="text-xs text-slate-500 uppercase tracking-wider font-medium">Intelligence Surfaces</span>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  <PatternIntelWidget dm={decisionMetrics} />
-                  <FeedbackQualityWidget dm={decisionMetrics} />
-                  <ConvergenceWidget dm={decisionMetrics} />
-                  <AdaptiveIntelWidget dm={decisionMetrics} />
-                  <EvidenceDiversityWidget dm={decisionMetrics} />
-                  <LearningSafetyWidget dm={decisionMetrics} />
-                </div>
-                <SourceWeightWidget dm={decisionMetrics} />
-              </div>
+          <div className="bg-slate-900 rounded-xl border border-slate-800 p-5">
+            <h2 className="text-sm font-semibold text-slate-200 mb-4">Confidence Calibration</h2>
+            {data?.calibration ? <CalibrationChart data={data.calibration} /> : (
+              <div className="h-40 flex items-center justify-center text-slate-600 text-sm">Loading…</div>
             )}
-          </>
+          </div>
+        </div>
+
+        {/* Service breakdown */}
+        <div className="bg-slate-900 rounded-xl border border-slate-800">
+          <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-200">Per-Service Breakdown</h2>
+            <span className="text-xs text-slate-500">
+              {data?.service_breakdown?.length ?? 0} services — {windowHours / 24}d window
+            </span>
+          </div>
+          <div className="p-1">
+            <ServiceTable rows={data?.service_breakdown ?? []} />
+          </div>
+        </div>
+
+        {/* Pattern Intelligence Layer */}
+        {pil && <PILPanel pil={pil} />}
+
+        {/* Intelligence Surface Widgets (decision-metrics) */}
+        {decisionMetrics && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pt-2">
+              <Activity size={14} className="text-slate-500" />
+              <span className="text-xs text-slate-500 uppercase tracking-wider font-medium">Intelligence Surfaces</span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <PatternIntelWidget dm={decisionMetrics} />
+              <FeedbackQualityWidget dm={decisionMetrics} />
+              <ConvergenceWidget dm={decisionMetrics} />
+              <AdaptiveIntelWidget dm={decisionMetrics} />
+              <EvidenceDiversityWidget dm={decisionMetrics} />
+              <LearningSafetyWidget dm={decisionMetrics} />
+            </div>
+            <SourceWeightWidget dm={decisionMetrics} />
+          </div>
         )}
       </div>
     </div>

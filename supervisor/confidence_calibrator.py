@@ -122,17 +122,38 @@ class ConfidenceCalibrator:
             json.dump(data, f, indent=2)
         logger.info("Calibration map saved to %s", path)
 
-    def calibrate(self, raw_confidence: int) -> int:
+    def calibrate(self, raw_confidence: int, evidence_context: dict | None = None) -> int:
         """Apply calibration to a raw confidence score.
 
         Returns calibrated confidence (0-100).
         If calibration is disabled or insufficient data, returns raw value.
+
+        Args:
+            raw_confidence:    The raw 0–100 confidence from the RCA.
+            evidence_context:  Optional result dict containing _online_eval
+                               annotations.  When provided, the neural
+                               confidence calibrator blends its learned
+                               prediction with the binned result for a
+                               smoother, evidence-aware calibration curve.
         """
         if not CALIBRATION_ENABLED:
             return raw_confidence
 
         bin_idx = min(int(raw_confidence / (100 / N_BINS)), N_BINS - 1)
-        calibrated = self._bins[bin_idx].calibrated_confidence
+        binned = self._bins[bin_idx].calibrated_confidence
+
+        # Blend with neural calibrator when it has enough training data.
+        calibrated = binned
+        try:
+            from supervisor.neural_confidence_calibrator import get_neural_calibrator
+            ncal = get_neural_calibrator()
+            neural_cal = ncal.calibrate_with_context(raw_confidence, evidence_context)
+            if neural_cal is not None:
+                alpha = ncal.blend_alpha()
+                calibrated = int(round((1.0 - alpha) * binned + alpha * neural_cal))
+                calibrated = max(0, min(100, calibrated))
+        except Exception:
+            pass
 
         if calibrated != raw_confidence:
             logger.debug(

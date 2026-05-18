@@ -74,9 +74,9 @@ def run_learning_step(incident_id: str, result: dict) -> bool:
     except Exception as exc:
         logger.warning("Persist eval failed for %s (non-critical): %s", incident_id, exc)
 
-    # Step 4 — update calibrator under lock (shared across all threads)
+    # Step 4 — update calibrator + neural models under lock
     try:
-        _update_calibrator(eval_result, incident_id)
+        _update_calibrator(eval_result, incident_id, result)
     except Exception as exc:
         logger.warning("Calibrator update failed for %s (non-critical): %s", incident_id, exc)
 
@@ -120,6 +120,20 @@ def record_verification_outcome(
             calibrator.update(calibration_data)
             calibrator.save()
 
+        # Train neural confidence calibrator on the verification outcome.
+        # No evidence context here — train on confidence-only features as a
+        # partial update (partial information is still a useful gradient signal).
+        try:
+            from supervisor.neural_confidence_calibrator import get_neural_calibrator
+            ncal = get_neural_calibrator()
+            ncal.train_one(
+                raw_confidence=int(conf),
+                actual_correct=1.0 if rca_was_correct else 0.0,
+            )
+            ncal.save()
+        except Exception as exc:
+            logger.debug("NeuralConfidenceCalibrator verification train failed: %s", exc)
+
         logger.info(
             "Verification outcome recorded: inv=%s correct=%s predicted_conf=%.0f duration=%.0fs",
             investigation_id,
@@ -159,8 +173,8 @@ def _persist_eval(eval_result: object, incident_id: str) -> None:
         logger.warning("Failed to persist eval result for %s: %s", incident_id, exc)
 
 
-def _update_calibrator(eval_result: object, incident_id: str) -> None:
-    """Update and save the shared calibrator under the module lock."""
+def _update_calibrator(eval_result: object, incident_id: str, result: dict | None = None) -> None:
+    """Update the binned calibrator, neural calibrator, and quality net under lock."""
     try:
         calibration_data = [
             {
@@ -180,6 +194,39 @@ def _update_calibrator(eval_result: object, incident_id: str) -> None:
         )
     except Exception as exc:
         logger.warning("Failed to update calibrator for %s: %s", incident_id, exc)
+
+    if result is None:
+        return
+
+    target = 1.0 if eval_result.actual_correct else 0.0  # type: ignore[attr-defined]
+
+    # Train neural confidence calibrator on ground-truth outcome
+    try:
+        from supervisor.neural_confidence_calibrator import get_neural_calibrator
+        ncal = get_neural_calibrator()
+        loss = ncal.train_from_result(result, target)
+        ncal.save()
+        logger.debug(
+            "NeuralConfidenceCalibrator trained: incident=%s loss=%.4f samples=%d",
+            incident_id, loss, ncal.total_samples,
+        )
+    except Exception as exc:
+        logger.debug("NeuralConfidenceCalibrator train skipped for %s: %s", incident_id, exc)
+
+    # Train neural quality net on ground-truth outcome
+    try:
+        from supervisor.neural_quality_net import get_quality_net, build_features_from_result
+        net = get_quality_net()
+        features = build_features_from_result(result)
+        if features is not None:
+            loss = net.train_one(features, target)
+            net.save()
+            logger.debug(
+                "NeuralQualityNet trained: incident=%s loss=%.4f samples=%d alpha=%.3f",
+                incident_id, loss, net.total_samples, net.blend_alpha(),
+            )
+    except Exception as exc:
+        logger.debug("NeuralQualityNet train skipped for %s: %s", incident_id, exc)
 
 
 def generate_self_eval_report() -> dict:
@@ -256,6 +303,34 @@ def generate_self_eval_report() -> dict:
             )
     except Exception as exc:
         report["components"]["threshold_drift"] = {"error": str(exc)}
+
+    # --- Neural quality net ---
+    try:
+        from supervisor.neural_quality_net import get_quality_net
+        net = get_quality_net()
+        nqn_report = net.get_report()
+        report["components"]["neural_quality_net"] = nqn_report
+        if not nqn_report["active"]:
+            report["action_items"].append(
+                f"NeuralQualityNet warming: {nqn_report['total_samples']}/{nqn_report.get('min_samples_for_blend', 30)} samples — "
+                "heuristic scoring dominant until training data accumulates"
+            )
+    except Exception as exc:
+        report["components"]["neural_quality_net"] = {"error": str(exc)}
+
+    # --- Neural confidence calibrator ---
+    try:
+        from supervisor.neural_confidence_calibrator import get_neural_calibrator
+        ncal = get_neural_calibrator()
+        ncal_report = ncal.get_report()
+        report["components"]["neural_confidence_calibrator"] = ncal_report
+        if not ncal_report["active"]:
+            report["action_items"].append(
+                f"NeuralConfidenceCalibrator warming: {ncal_report['total_samples']}/{ncal_report.get('min_samples_full', 50)} samples — "
+                "binned calibration dominant"
+            )
+    except Exception as exc:
+        report["components"]["neural_confidence_calibrator"] = {"error": str(exc)}
 
     # --- DB availability ---
     try:

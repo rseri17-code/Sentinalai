@@ -118,14 +118,33 @@ def evaluate(
         "specificity": 0.25,
         "diversity":   0.10,
     }
-    overall = (
+    heuristic_overall = (
         weights["volume"]      * volume +
         weights["coherence"]   * coherence +
         weights["calibration"] * calibration +
         weights["specificity"] * specificity +
         weights["diversity"]   * diversity
     )
-    overall = round(min(1.0, max(0.0, overall * overconfidence_penalty)), 3)
+    heuristic_overall = min(1.0, max(0.0, heuristic_overall * overconfidence_penalty))
+
+    # Blend with neural quality prediction when the model has enough training data.
+    # The neural model learns non-linear feature interactions via backpropagation.
+    dims_snapshot = {
+        "volume": volume, "coherence": coherence, "calibration": calibration,
+        "specificity": specificity, "diversity": diversity,
+    }
+    try:
+        from supervisor.neural_quality_net import get_quality_net, build_features
+        net = get_quality_net()
+        alpha = net.blend_alpha()
+        if alpha > 0.0:
+            features = build_features(dims_snapshot, confidence, sources_found)
+            neural_pred = net.predict(features)
+            overall = round((1.0 - alpha) * heuristic_overall + alpha * neural_pred, 3)
+        else:
+            overall = round(heuristic_overall, 3)
+    except Exception:
+        overall = round(heuristic_overall, 3)
 
     dims = {
         "volume":      round(volume, 3),

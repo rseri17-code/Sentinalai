@@ -477,4 +477,23 @@ async def get_decision_metrics() -> dict[str, Any]:
         logger.warning("decision-metrics mttr_impact failed: %s", exc)
         result["mttr_impact"] = {"warming": True}
 
+    # ── 9. Neural learning models ──────────────────────────────────────────────
+    try:
+        from supervisor.neural_quality_net import get_quality_net
+        from supervisor.neural_confidence_calibrator import get_neural_calibrator
+        nqn = get_quality_net()
+        ncal = get_neural_calibrator()
+        result["neural_learning"] = {
+            "quality_net": nqn.get_report(),
+            "confidence_calibrator": ncal.get_report(),
+            "description": (
+                "Neural quality net blends with heuristic scorer via backpropagation-trained weights. "
+                "Neural confidence calibrator learns evidence-aware Platt scaling. "
+                "Both update online after every ground-truth evaluation."
+            ),
+        }
+    except Exception as exc:
+        logger.warning("decision-metrics neural_learning failed: %s", exc)
+        result["neural_learning"] = {"error": str(exc)}
+
     return result

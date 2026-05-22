@@ -67,9 +67,9 @@ BFF_HOST = os.getenv("AGUI_BFF_HOST", "0.0.0.0")
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="ObserveAI AG UI — BFF",
+        title="SentinalAI AG UI — BFF",
         description=(
-            "Backend for Frontend for the ObserveAI Agent Control UI. "
+            "Backend for Frontend for the SentinalAI Agent Control UI. "
             "Provides real-time event streaming, execution graph, receipt evidence, "
             "memory tracing, deterministic replay, and human-in-the-loop controls."
         ),

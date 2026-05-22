@@ -1,8 +1,8 @@
 {
-  "name": "observeai-agui",
+  "name": "sentinalai-agui",
   "version": "1.0.0",
   "private": true,
-  "description": "ObserveAI AG UI — Agent Control Plane",
+  "description": "SentinalAI AG UI — Agent Control Plane",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -24,7 +24,7 @@
     }
   },
   "_meta": {
-    "last_updated": "2026-04-26T19:56:42.391864+00:00",
+    "last_updated": "2026-05-12T02:03:24.119537+00:00",
     "total_records": 34
   },
   "timeout:api-gateway": {
@@ -53,26 +53,26 @@
   },
   "error_spike:unknown": {
     "_total": {
-      "total_seen": 132,
-      "last_seen": "2026-04-19T05:00:35.307885+00:00"
+      "total_seen": 135,
+      "last_seen": "2026-05-12T02:03:24.117640+00:00"
     },
     "apm_data": {
-      "count": 132,
-      "total_seen": 132,
+      "count": 135,
+      "total_seen": 135,
       "frequency": 1.0,
-      "last_seen": "2026-04-19T05:00:35.307885+00:00"
+      "last_seen": "2026-05-12T02:03:24.117640+00:00"
     },
     "logs": {
-      "count": 132,
-      "total_seen": 132,
+      "count": 135,
+      "total_seen": 135,
       "frequency": 1.0,
-      "last_seen": "2026-04-19T05:00:35.307885+00:00"
+      "last_seen": "2026-05-12T02:03:24.117640+00:00"
     },
     "metrics": {
-      "count": 132,
-      "total_seen": 132,
+      "count": 135,
+      "total_seen": 135,
       "frequency": 1.0,
-      "last_seen": "2026-04-19T05:00:35.307885+00:00"
+      "last_seen": "2026-05-12T02:03:24.117640+00:00"
     }
   },
   "latency:search-service": {

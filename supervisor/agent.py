@@ -693,9 +693,10 @@ class SentinalAISupervisor:
             result["_gate_post_collection"] = _gate_post_collection.to_dict()
 
             confidence = result.get("confidence", 0)
-            # Apply confidence calibration (feedback loop from ground truth)
+            # Apply calibration — pass evidence for neural context (source_count
+            # is extracted from evidence keys; online_eval not yet available here)
             raw_confidence = confidence
-            confidence = get_calibrator().calibrate(confidence)
+            confidence = get_calibrator().calibrate(confidence, evidence_context=evidence)
             if confidence != raw_confidence:
                 result["confidence"] = confidence
                 result["raw_confidence"] = raw_confidence

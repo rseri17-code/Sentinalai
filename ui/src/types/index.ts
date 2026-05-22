@@ -146,6 +146,7 @@ export interface ExecutionGraph {
   is_complete: boolean
   total_events: number
   event_gaps: number[]
+  has_gaps?: boolean
 }
 
 // ── Receipt Types ─────────────────────────────────────────────────────────────
@@ -235,6 +236,8 @@ export interface ControlAction {
 export interface IncidentState {
   investigation_id: string
   incident_id: string
+  org_id?: string
+  ttl?: number
   schema_version: string
   trace_id: string
   x_ray_trace_url?: string

@@ -1,0 +1,33 @@
+{
+  "payment-service::oomkill": {
+    "service": "payment-service",
+    "incident_type": "oomkill",
+    "recurrence_count": 5,
+    "occurrences": [
+      "2026-05-22T21:30:00.860266+00:00",
+      "2026-05-22T21:30:00.861074+00:00",
+      "2026-05-22T21:30:00.861387+00:00",
+      "2026-05-22T21:30:00.861654+00:00",
+      "2026-05-22T21:30:00.861889+00:00"
+    ],
+    "root_causes": [
+      "OOMKilled pod: memory limit exceeded",
+      "OOMKilled pod: memory limit 512Mi exceeded again",
+      "OOM recurrence 0",
+      "OOM recurrence 1",
+      "OOM recurrence 2"
+    ],
+    "remediation_outcomes": [
+      true,
+      true,
+      false
+    ],
+    "permanent_fix_applied": true,
+    "permanent_fix_at": "2026-05-22T21:30:00.862210+00:00",
+    "last_occurrence": "2026-05-22T21:30:00.861889+00:00",
+    "days_since_last": 4.421296296296297e-09,
+    "last_fix_successful": false,
+    "similar_remediation_count": 2,
+    "entity_continuity_risk": 0.587
+  }
+}

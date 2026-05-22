@@ -122,6 +122,31 @@ from supervisor.incident_git_linker import link_incident_to_commit
 from supervisor.trace_correlation import correlate_traces
 from workers.visual_evidence_worker import collect_visual_evidence
 
+# Operational intelligence modules (graceful degradation if unavailable)
+try:
+    from supervisor.grounding_confidence import score as _grounding_score, GroundingResult as _GroundingResult
+    _GROUNDING_AVAILABLE = True
+except ImportError:
+    _GROUNDING_AVAILABLE = False
+
+try:
+    from supervisor.dependency_domain_detector import get_gap_queries as _domain_gap_queries, detect as _detect_domains
+    _DOMAIN_DETECTOR_AVAILABLE = True
+except ImportError:
+    _DOMAIN_DETECTOR_AVAILABLE = False
+
+try:
+    from supervisor.recurrence_tracker import check as _recurrence_check, record as _recurrence_record
+    _RECURRENCE_AVAILABLE = True
+except ImportError:
+    _RECURRENCE_AVAILABLE = False
+
+try:
+    from supervisor.splunk_retrieval_planner import build_plan as _splunk_build_plan, get_stage_queries as _splunk_stage_queries
+    _SPLUNK_PLANNER_AVAILABLE = True
+except ImportError:
+    _SPLUNK_PLANNER_AVAILABLE = False
+
 # Institutional knowledge layer (opt-in via env var, graceful degradation)
 _KNOWLEDGE_ENABLED = os.environ.get("KNOWLEDGE_GRAPH_ENABLED", "").lower() in ("1", "true", "yes")
 try:
@@ -681,6 +706,33 @@ class SentinalAISupervisor:
             winner_hypothesis = result.pop("_winner_hypothesis", "none")
             llm_metrics = result.pop("_llm_metrics", {})
 
+            # Step 4a-i: Multi-dimensional grounding confidence scoring (v2 when enabled)
+            _recurrence_info = None
+            if _RECURRENCE_AVAILABLE:
+                try:
+                    _recurrence_info = _recurrence_check(service, incident_type)
+                except Exception:
+                    pass
+
+            if _GROUNDING_AVAILABLE:
+                try:
+                    _grounding = _grounding_score(
+                        result=result,
+                        evidence=evidence,
+                        incident_type=incident_type,
+                        recurrence_info=_recurrence_info,
+                    )
+                    result["_grounding"] = _grounding.to_dict()
+                    # Emit grounding state for observability
+                    _stream.emit_confidence(
+                        incident_id,
+                        int(_grounding.score * 100),
+                        source="grounding_v2" if _grounding.model_version == "v2" else "grounding_v1",
+                        previous=confidence,
+                    )
+                except Exception as exc:
+                    logger.debug("Grounding confidence scoring skipped: %s", exc)
+
             # Step 4b: Self-critique — evaluate the RCA quality before returning.
             # If the critique identifies gaps and budget allows, gather targeted
             # follow-up evidence and re-analyze (at most once per investigation).
@@ -940,6 +992,36 @@ class SentinalAISupervisor:
                 )
             except Exception:
                 pass
+
+            # Augment gap queries with domain-aware queries from dependency domain detector
+            if _DOMAIN_DETECTOR_AVAILABLE:
+                try:
+                    domain_queries = _domain_gap_queries(
+                        evidence=evidence,
+                        root_cause=result.get("root_cause", ""),
+                        incident_type=incident_type,
+                        min_confidence=0.50,
+                        max_queries=4,
+                    )
+                    if domain_queries:
+                        # Merge: avoid duplicate actions already in critique.gap_queries
+                        existing_actions = {
+                            f"{q.get('worker')}:{q.get('action')}"
+                            for q in critique.gap_queries
+                        }
+                        new_queries = [
+                            q for q in domain_queries
+                            if f"{q.get('worker')}:{q.get('action')}" not in existing_actions
+                        ]
+                        if new_queries:
+                            # critique.gap_queries is a list — extend it
+                            critique.gap_queries = list(critique.gap_queries) + new_queries
+                            logger.info(
+                                "Domain detector added %d gap queries for domain patterns",
+                                len(new_queries),
+                            )
+                except Exception as exc:
+                    logger.debug("Domain detector gap queries skipped: %s", exc)
 
             refinement_triggered = bool(critique.gap_queries)
 
@@ -1386,6 +1468,21 @@ class SentinalAISupervisor:
             )
         except Exception as exc:
             logger.debug("Adaptive confidence outcome failed (non-critical): %s", exc)
+
+        # Recurrence tracking: record this investigation for repeat-offender detection
+        if _RECURRENCE_AVAILABLE and service and incident_type:
+            try:
+                self._parallel_executor.submit(
+                    _recurrence_record,
+                    service,
+                    incident_type,
+                    root_cause,
+                    None,    # occurred_at: let tracker use current time
+                    None,    # remediation_successful: unknown at this stage
+                    False,   # permanent_fix: not determined here
+                )
+            except Exception as exc:
+                logger.debug("Recurrence recording failed (non-critical): %s", exc)
 
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)

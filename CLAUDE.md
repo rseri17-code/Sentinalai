@@ -62,4 +62,13 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ---
 
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+## Claude Code Native Memory
+
+This memory is for **coding-assistant continuity only** — not runtime agent memory.
+
+- **Hot** (`memory/hot/`): load for session continuity. `session_state.md` is auto-generated at start. Write to `current_decisions.md` during the session.
+- **Warm** (`memory/warm/`): load only when relevant to the current coding task.
+- **Cold** (`memory/cold/`): never load unless explicitly requested.
+
+At `SessionEnd`, write reflection and suggest promotion candidates via `[PROMOTE: target]` in `current_decisions.md`. Never promote one-off debugging noise.
+

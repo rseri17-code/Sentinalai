@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 /**
- * SessionStart hook — context initialization
+ * SessionStart hook — context initialization + hot memory refresh
  *
- * Runs at the start of every Claude Code session:
- *   1. Prints a concise repo health summary (branch, last commit, test count)
- *   2. Loads .claude/session-state.json if it exists (post-compaction reload)
- *   3. Detects package manager (npm/pnpm/yarn/bun) for this repo
- *   4. Warns if workers/ has uncommitted changes
+ * 1. Prints concise repo health summary
+ * 2. Writes memory/hot/session_state.md (auto-generated, never manual)
+ * 3. Surfaces any pending PROMOTE markers from memory/hot/stop_log.md
+ * 4. Restores .claude/session-state.json if present (post-compaction reload)
  */
 
 const fs = require('fs');
@@ -21,49 +20,119 @@ function safeExec(cmd) {
   } catch { return ''; }
 }
 
-// --- Repo health summary ---
-const branch = safeExec('git rev-parse --abbrev-ref HEAD');
-const lastCommit = safeExec('git log --oneline -1');
-const testCount = safeExec('find tests -name "test_*.py" | wc -l').trim();
-const workerChanges = safeExec("git diff --name-only -- 'workers/*.py' 'supervisor/*.py'").split('\n').filter(Boolean);
+// --- Gather git facts (cheap, targeted) ---
+const branch      = safeExec('git rev-parse --abbrev-ref HEAD');
+const lastCommit  = safeExec('git log --oneline -1');
+const recentLog   = safeExec('git log --oneline -5').split('\n').filter(Boolean);
+const testCount   = safeExec('find tests -name "test_*.py" | wc -l').trim();
+const modifiedPy  = safeExec("git diff --name-only HEAD -- '*.py'").split('\n').filter(Boolean);
+const staged      = safeExec('git diff --cached --name-only').split('\n').filter(Boolean);
+const workerDirty = safeExec("git diff --name-only -- 'workers/*.py' 'supervisor/*.py'").split('\n').filter(Boolean);
 
+// --- Console summary ---
 console.log('╔══════════════════════════════════════════════════╗');
 console.log('║         SentinalAI — Session Initialized         ║');
 console.log('╚══════════════════════════════════════════════════╝');
 console.log(`  Branch      : ${branch}`);
 console.log(`  Last commit : ${lastCommit}`);
 console.log(`  Test files  : ${testCount}`);
-if (workerChanges.length > 0) {
-  console.log(`  ⚠  Uncommitted changes in: ${workerChanges.join(', ')}`);
+if (workerDirty.length > 0) {
+  console.log(`  ⚠  Uncommitted changes in: ${workerDirty.join(', ')}`);
 }
 
-// --- Restore state after compaction ---
-const stateFile = path.join(repoRoot, '.claude', 'session-state.json');
-if (fs.existsSync(stateFile)) {
+// --- Surface pending PROMOTE markers from stop_log ---
+const stopLogPath = path.join(repoRoot, 'memory', 'hot', 'stop_log.md');
+if (fs.existsSync(stopLogPath)) {
   try {
-    const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-    console.log(`\n  Restoring session state from compaction at ${state.compacted_at}`);
-    if (state.modified_py?.length) {
-      console.log(`  Modified files: ${state.modified_py.join(', ')}`);
-    }
-    if (state.open_tasks?.length) {
-      console.log(`  Open tasks: ${state.open_tasks.join(', ')}`);
+    const log = fs.readFileSync(stopLogPath, 'utf8');
+    const promotes = [...log.matchAll(/\[PROMOTE:\s*([^\]]+)\]/g)].map(m => m[1].trim());
+    if (promotes.length > 0) {
+      console.log(`\n  ⬆  PROMOTE candidates pending (${promotes.length}):`);
+      const unique = [...new Set(promotes)];
+      unique.forEach(p => console.log(`     → ${p}`));
+      console.log('     Run: review memory/hot/stop_log.md to action these.');
     }
   } catch { /* non-critical */ }
 }
 
-// --- Package manager detection ---
-const pkgManagers = [
-  ['pnpm-lock.yaml', 'pnpm'],
-  ['yarn.lock',      'yarn'],
-  ['bun.lockb',      'bun'],
-  ['package-lock.json', 'npm'],
-];
-for (const [lockFile, name] of pkgManagers) {
-  if (fs.existsSync(path.join(repoRoot, lockFile))) {
-    console.log(`\n  Package manager: ${name}`);
-    break;
-  }
+// --- Write memory/hot/session_state.md ---
+const now = new Date().toISOString();
+
+// Detect likely workstream from branch name
+function inferWorkstream(branchName) {
+  if (!branchName || branchName === 'main') return 'main branch — check tasks/todo.md for next task';
+  const name = branchName.replace(/^(fix|feat|chore|claude)\//, '');
+  return name.replace(/-[a-zA-Z0-9]{5}$/, '').replace(/-/g, ' ');
+}
+
+// Read last SessionEnd summary pointer from stop_log
+let lastSessionPointer = '_No previous session recorded._';
+if (fs.existsSync(stopLogPath)) {
+  try {
+    const log = fs.readFileSync(stopLogPath, 'utf8');
+    const headers = [...log.matchAll(/^## Session (.+)$/gm)].map(m => m[1]);
+    if (headers.length > 0) {
+      lastSessionPointer = `Last session: ${headers[headers.length - 1]} → see memory/hot/stop_log.md`;
+    }
+  } catch { /* non-critical */ }
+}
+
+const modifiedSummary = modifiedPy.length > 0
+  ? modifiedPy.map(f => `- ${f}`).join('\n')
+  : '_(none)_';
+
+const stagedSummary = staged.length > 0
+  ? staged.map(f => `- ${f}`).join('\n')
+  : '_(none)_';
+
+const recentLogMd = recentLog.map(l => `- \`${l}\``).join('\n');
+
+const sessionStateMd = `# Session State
+<!-- AUTO-GENERATED by SessionStart hook — do not edit manually -->
+<!-- Edit memory/hot/current_decisions.md for decisions this session -->
+
+Generated: ${now}
+Branch: ${branch}
+Last commit: ${lastCommit}
+
+## Recent Commits
+${recentLogMd}
+
+## Modified Files (vs HEAD)
+${modifiedSummary}
+
+## Staged for Commit
+${stagedSummary}
+
+## Likely Active Workstream
+${inferWorkstream(branch)}
+
+## Hot Memory Links
+- [active_task.md](active_task.md) — current objective + handoff context
+- [current_decisions.md](current_decisions.md) — decisions to record this session
+- [stop_log.md](stop_log.md) — reflection log + promotion queue
+
+## Last Session
+${lastSessionPointer}
+`;
+
+try {
+  const hotDir = path.join(repoRoot, 'memory', 'hot');
+  fs.mkdirSync(hotDir, { recursive: true });
+  fs.writeFileSync(path.join(hotDir, 'session_state.md'), sessionStateMd);
+} catch { /* non-critical — never block session start */ }
+
+// --- Restore post-compaction state if present ---
+const stateFile = path.join(repoRoot, '.claude', 'session-state.json');
+if (fs.existsSync(stateFile)) {
+  try {
+    const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    if (state.compacted_at) {
+      console.log(`\n  ↩  Resuming after compaction (${state.compacted_at})`);
+      if (state.objective) console.log(`     Objective: ${state.objective}`);
+      if (state.next_action) console.log(`     Next: ${state.next_action}`);
+    }
+  } catch { /* non-critical */ }
 }
 
 console.log('');

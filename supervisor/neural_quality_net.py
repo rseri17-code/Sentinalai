@@ -4,8 +4,8 @@ Replaces the fixed-weight heuristics in OnlineEvaluator with a learned
 2-layer network that updates via backpropagation after every investigation.
 No external ML dependencies — implemented with the Python standard library only.
 
-Architecture:  9 inputs → 16 hidden (ReLU) → 8 hidden (ReLU) → 1 output (sigmoid)
-Optimizer:     SGD with Nesterov momentum  (lr=0.01, momentum=0.9)
+Architecture:  9 inputs → 16 hidden (leaky ReLU) → 8 hidden (leaky ReLU) → 1 output (sigmoid)
+Optimizer:     SGD with heavy-ball (classical) momentum  (lr=0.01, momentum=0.9)
 Training:      Online — one gradient step per completed investigation
 Persistence:   eval/neural_quality_net.json  (atomic write)
 
@@ -74,8 +74,8 @@ _LAYER_SIZES: list[int] = [9, 16, 8, 1]
 class _MLP:
     """Minimal pure-Python multi-layer perceptron.
 
-    Hidden layers: ReLU.  Output layer: sigmoid.
-    Optimizer: SGD with Nesterov momentum.
+    Hidden layers: leaky ReLU.  Output layer: sigmoid.
+    Optimizer: SGD with heavy-ball (classical) momentum.
     All weights stored as nested Python lists for JSON serializability.
     """
 
@@ -84,12 +84,14 @@ class _MLP:
         layer_sizes: list[int],
         lr: float = _LR,
         momentum: float = _MOMENTUM,
+        grad_clip: float = _GRAD_CLIP,
         seed: int = 0,
     ) -> None:
         rng = random.Random(seed)
         self.layer_sizes = layer_sizes
         self.lr = lr
         self.momentum = momentum
+        self.grad_clip = grad_clip
         self.n_layers = len(layer_sizes) - 1
         self.total_samples: int = 0
 
@@ -187,16 +189,16 @@ class _MLP:
             ]
             deltas.insert(0, delta_this)
 
-        # Nesterov momentum weight update with gradient clipping
+        # Heavy-ball SGD momentum weight update with gradient clipping
         for i in range(self.n_layers):
             h_in = acts[i]
             delta = deltas[i]
             for j in range(len(delta)):
                 for k in range(len(h_in)):
-                    g = max(-_GRAD_CLIP, min(_GRAD_CLIP, delta[j] * h_in[k]))
+                    g = max(-self.grad_clip, min(self.grad_clip, delta[j] * h_in[k]))
                     self.vW[i][j][k] = self.momentum * self.vW[i][j][k] - self.lr * g
                     self.W[i][j][k] += self.vW[i][j][k]
-                gb = max(-_GRAD_CLIP, min(_GRAD_CLIP, delta[j]))
+                gb = max(-self.grad_clip, min(self.grad_clip, delta[j]))
                 self.vb[i][j] = self.momentum * self.vb[i][j] - self.lr * gb
                 self.b[i][j] += self.vb[i][j]
 
@@ -219,6 +221,7 @@ class _MLP:
             "layer_sizes": self.layer_sizes,
             "lr": self.lr,
             "momentum": self.momentum,
+            "grad_clip": self.grad_clip,
             "total_samples": self.total_samples,
             "W": self.W,
             "b": self.b,
@@ -232,6 +235,7 @@ class _MLP:
             layer_sizes=d["layer_sizes"],
             lr=d.get("lr", _LR),
             momentum=d.get("momentum", _MOMENTUM),
+            grad_clip=d.get("grad_clip", _GRAD_CLIP),
         )
         obj.W = d["W"]
         obj.b = d["b"]
@@ -321,12 +325,39 @@ class NeuralQualityNet:
         return {
             "total_samples": self._mlp.total_samples,
             "blend_alpha": round(self.blend_alpha(), 4),
-            "active": self._mlp.total_samples >= MIN_SAMPLES_FOR_BLEND,
+            # active: model has started contributing (>= 5 samples, consistent with blend_alpha())
+            "active": self._mlp.total_samples >= 5,
+            # fully_blended: model has reached its maximum blend weight
+            "fully_blended": self._mlp.total_samples >= MIN_SAMPLES_FOR_BLEND,
             "min_samples_for_blend": MIN_SAMPLES_FOR_BLEND,
             "max_blend_weight": MAX_BLEND_WEIGHT,
             "layer_sizes": self._mlp.layer_sizes,
             "lr": self._mlp.lr,
             "momentum": self._mlp.momentum,
+        }
+
+    def get_arch_stats(self) -> dict:
+        """Return architecture metadata + per-layer weight norms for UI visualization."""
+        mlp = self._mlp
+        weight_norms = [
+            round(math.sqrt(sum(w * w for row in layer_W for w in row)), 4)
+            for layer_W in mlp.W
+        ]
+        bias_norms = [
+            round(math.sqrt(sum(b * b for b in layer_b)), 4)
+            for layer_b in mlp.b
+        ]
+        return {
+            "layer_sizes": mlp.layer_sizes,
+            "weight_norms": weight_norms,
+            "bias_norms": bias_norms,
+            "total_samples": mlp.total_samples,
+            "blend_alpha": round(self.blend_alpha(), 4),
+            "active": mlp.total_samples >= 5,
+            "fully_blended": mlp.total_samples >= MIN_SAMPLES_FOR_BLEND,
+            "lr": mlp.lr,
+            "momentum": mlp.momentum,
+            "grad_clip": mlp.grad_clip,
         }
 
 
@@ -339,14 +370,22 @@ def build_features(
     raw_confidence: int,
     sources_found: list[str],
 ) -> list[float]:
-    """Build the 9-dimensional feature vector from OnlineEvaluator output."""
+    """Build the 9-dimensional feature vector from OnlineEvaluator output.
+
+    All values are clamped to [0, 1] to match the documented feature range.
+    OnlineEvaluator should already produce values in this range, but clamping
+    prevents any upstream edge case from corrupting the network input.
+    """
+    def _clamp(v: float) -> float:
+        return min(1.0, max(0.0, float(v)))
+
     return [
-        float(dims.get("volume", 0.0)),
-        float(dims.get("coherence", 0.0)),
-        float(dims.get("calibration", 0.0)),
-        float(dims.get("specificity", 0.0)),
-        float(dims.get("diversity", 0.0)),
-        min(1.0, max(0.0, raw_confidence / 100.0)),
+        _clamp(dims.get("volume", 0.0)),
+        _clamp(dims.get("coherence", 0.0)),
+        _clamp(dims.get("calibration", 0.0)),
+        _clamp(dims.get("specificity", 0.0)),
+        _clamp(dims.get("diversity", 0.0)),
+        _clamp(raw_confidence / 100.0),
         1.0 if "logs" in sources_found else 0.0,
         1.0 if "metrics" in sources_found else 0.0,
         1.0 if "signals" in sources_found else 0.0,

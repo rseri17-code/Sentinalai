@@ -6,8 +6,8 @@ model captures non-linear interactions between confidence and evidence
 quality that the binned approach cannot (e.g. "confidence 70 with 4 sources
 is more trustworthy than confidence 80 with 1 source").
 
-Architecture:  5 inputs → 10 hidden (ReLU) → 5 hidden (ReLU) → 1 output (sigmoid)
-Optimizer:     SGD with Nesterov momentum  (lr=0.005, momentum=0.9)
+Architecture:  5 inputs → 16 hidden (leaky ReLU) → 1 output (sigmoid)
+Optimizer:     SGD with heavy-ball (classical) momentum  (lr=0.03, momentum=0.9)
 Training:      Online — one step per evaluation with ground truth
 Persistence:   eval/neural_confidence_calibrator.json
 
@@ -22,6 +22,12 @@ Target:
   actual_correct ∈ {0, 1} from GroundTruthEvaluator
   (pseudo-label: online_quality_score when GT not available)
 
+  WARNING — pseudo-label feedback loop: when ground truth is unavailable,
+  this model trains on the heuristic OnlineEvaluator score.  If the
+  heuristic has a systematic bias, the neural model can amplify it rather
+  than correct it.  Prefer ground-truth labels whenever possible; limit
+  pseudo-label training to cold-start.
+
 Output:  calibrated confidence in [0, 100]
 
 Blending with binned calibrator:
@@ -30,6 +36,11 @@ Blending with binned calibrator:
 
   This ensures the rock-solid binned calibrator dominates until the neural
   model has sufficient training data to be reliable.
+
+Implementation note:
+  Uses _MLP from supervisor.neural_quality_net rather than duplicating MLP
+  code.  The calibrator uses a smaller architecture (5→16→1) and a tighter
+  gradient clip (3.0 vs 5.0) to reflect the simpler calibration task.
 
 Usage:
     from supervisor.neural_confidence_calibrator import get_neural_calibrator
@@ -46,8 +57,9 @@ import json
 import logging
 import math
 import os
-import random
 import threading
+
+from supervisor.neural_quality_net import _MLP
 
 logger = logging.getLogger("sentinalai.neural_conf_cal")
 
@@ -61,105 +73,8 @@ MAX_BLEND: float = 0.60       # max fraction from neural model
 
 _LR: float = 0.03
 _MOMENTUM: float = 0.90
-_GRAD_CLIP: float = 3.0
+_GRAD_CLIP: float = 3.0       # tighter clip than quality net (simpler task)
 _LAYER_SIZES: list[int] = [5, 16, 1]
-
-
-# ---------------------------------------------------------------------------
-# Pure-Python MLP (shared design with neural_quality_net._MLP)
-# ---------------------------------------------------------------------------
-
-class _CalMLP:
-    """Minimal MLP identical in structure to neural_quality_net._MLP."""
-
-    def __init__(self, layer_sizes: list[int], lr: float, momentum: float, seed: int = 1) -> None:
-        rng = random.Random(seed)
-        self.layer_sizes = layer_sizes
-        self.lr = lr
-        self.momentum = momentum
-        self.n_layers = len(layer_sizes) - 1
-        self.total_samples: int = 0
-        self.W: list[list[list[float]]] = []
-        self.b: list[list[float]] = []
-        self.vW: list[list[list[float]]] = []
-        self.vb: list[list[float]] = []
-
-        for i in range(self.n_layers):
-            n_in, n_out = layer_sizes[i], layer_sizes[i + 1]
-            std = math.sqrt(2.0 / n_in)
-            self.W.append([[rng.gauss(0.0, std) for _ in range(n_in)] for _ in range(n_out)])
-            self.b.append([0.0] * n_out)
-            self.vW.append([[0.0] * n_in for _ in range(n_out)])
-            self.vb.append([0.0] * n_out)
-
-    _LEAK: float = 0.01
-
-    @classmethod
-    def _relu(cls, x: float) -> float: return x if x > 0.0 else cls._LEAK * x
-    @classmethod
-    def _relu_d(cls, x: float) -> float: return 1.0 if x > 0.0 else cls._LEAK
-    @staticmethod
-    def _sigmoid(x: float) -> float:
-        x = max(-50.0, min(50.0, x))
-        return 1.0 / (1.0 + math.exp(-x))
-
-    def _forward(self, x: list[float]) -> tuple[list[list[float]], list[list[float]]]:
-        pre_acts: list[list[float]] = []
-        acts: list[list[float]] = [x]
-        for i in range(self.n_layers):
-            W, b = self.W[i], self.b[i]
-            h = acts[-1]
-            z = [sum(W[j][k] * h[k] for k in range(len(h))) + b[j] for j in range(len(b))]
-            pre_acts.append(z)
-            acts.append([self._sigmoid(z[0])] if i == self.n_layers - 1 else [self._relu(v) for v in z])
-        return pre_acts, acts
-
-    def predict(self, x: list[float]) -> float:
-        _, acts = self._forward(x)
-        return acts[-1][0]
-
-    def train_one(self, x: list[float], target: float) -> float:
-        pre_acts, acts = self._forward(x)
-        y_hat = acts[-1][0]
-        loss = (y_hat - target) ** 2
-        out_delta = [2.0 * (y_hat - target) * y_hat * (1.0 - y_hat)]
-        deltas: list[list[float]] = [out_delta]
-        for i in range(self.n_layers - 2, -1, -1):
-            delta_this = [
-                sum(self.W[i + 1][k][j] * deltas[0][k] for k in range(len(deltas[0])))
-                * self._relu_d(pre_acts[i][j])
-                for j in range(len(pre_acts[i]))
-            ]
-            deltas.insert(0, delta_this)
-        for i in range(self.n_layers):
-            h_in = acts[i]
-            delta = deltas[i]
-            for j in range(len(delta)):
-                for k in range(len(h_in)):
-                    g = max(-_GRAD_CLIP, min(_GRAD_CLIP, delta[j] * h_in[k]))
-                    self.vW[i][j][k] = self.momentum * self.vW[i][j][k] - self.lr * g
-                    self.W[i][j][k] += self.vW[i][j][k]
-                gb = max(-_GRAD_CLIP, min(_GRAD_CLIP, delta[j]))
-                self.vb[i][j] = self.momentum * self.vb[i][j] - self.lr * gb
-                self.b[i][j] += self.vb[i][j]
-        self.total_samples += 1
-        return loss
-
-    def to_dict(self) -> dict:
-        return {
-            "layer_sizes": self.layer_sizes, "lr": self.lr, "momentum": self.momentum,
-            "total_samples": self.total_samples,
-            "W": self.W, "b": self.b, "vW": self.vW, "vb": self.vb,
-        }
-
-    @classmethod
-    def from_dict(cls, d: dict) -> "_CalMLP":
-        obj = cls(d["layer_sizes"], lr=d.get("lr", _LR), momentum=d.get("momentum", _MOMENTUM))
-        obj.W, obj.b = d["W"], d["b"]
-        obj.vW = d.get("vW", [[[0.0] * len(obj.W[i][0]) for _ in obj.W[i]] for i in range(obj.n_layers)])
-        obj.vb = d.get("vb", [[0.0] * len(obj.b[i]) for i in range(obj.n_layers)])
-        obj.total_samples = d.get("total_samples", 0)
-        return obj
 
 
 # ---------------------------------------------------------------------------
@@ -167,10 +82,16 @@ class _CalMLP:
 # ---------------------------------------------------------------------------
 
 class NeuralConfidenceCalibrator:
-    """Learned confidence calibration with evidence-aware context."""
+    """Learned confidence calibration with evidence-aware context.
 
-    def __init__(self, mlp: _CalMLP | None = None) -> None:
-        self._mlp = mlp or _CalMLP(_LAYER_SIZES, lr=_LR, momentum=_MOMENTUM)
+    Wraps _MLP (shared with NeuralQualityNet) with calibration-specific
+    feature building, blend logic, and persistence.
+    """
+
+    def __init__(self, mlp: _MLP | None = None) -> None:
+        self._mlp = mlp or _MLP(
+            _LAYER_SIZES, lr=_LR, momentum=_MOMENTUM, grad_clip=_GRAD_CLIP, seed=1
+        )
         self._lock = threading.Lock()
 
     @property
@@ -178,7 +99,7 @@ class NeuralConfidenceCalibrator:
         return self._mlp.total_samples
 
     def blend_alpha(self) -> float:
-        """Neural blend weight in [0, MAX_BLEND]."""
+        """Neural blend weight in [0, MAX_BLEND].  Zero until 5 samples."""
         if self._mlp.total_samples < 5:
             return 0.0
         frac = min(1.0, self._mlp.total_samples / MIN_SAMPLES_FULL)
@@ -291,7 +212,10 @@ class NeuralConfidenceCalibrator:
         try:
             with open(path) as f:
                 data = json.load(f)
-            mlp = _CalMLP.from_dict(data["model"])
+            mlp = _MLP.from_dict(data["model"])
+            # Restore calibrator-specific grad_clip if checkpoint pre-dates this field
+            if "grad_clip" not in data["model"]:
+                mlp.grad_clip = _GRAD_CLIP
             logger.info("NeuralConfidenceCalibrator loaded: samples=%d", mlp.total_samples)
             return cls(mlp)
         except FileNotFoundError:
@@ -308,6 +232,29 @@ class NeuralConfidenceCalibrator:
             "active": self._mlp.total_samples >= 5,
             "layer_sizes": self._mlp.layer_sizes,
             "min_samples_full": MIN_SAMPLES_FULL,
+        }
+
+    def get_arch_stats(self) -> dict:
+        """Return architecture metadata + per-layer weight norms for UI visualization."""
+        mlp = self._mlp
+        weight_norms = [
+            round(math.sqrt(sum(w * w for row in layer_W for w in row)), 4)
+            for layer_W in mlp.W
+        ]
+        bias_norms = [
+            round(math.sqrt(sum(b * b for b in layer_b)), 4)
+            for layer_b in mlp.b
+        ]
+        return {
+            "layer_sizes": mlp.layer_sizes,
+            "weight_norms": weight_norms,
+            "bias_norms": bias_norms,
+            "total_samples": mlp.total_samples,
+            "blend_alpha": round(self.blend_alpha(), 4),
+            "active": mlp.total_samples >= 5,
+            "lr": mlp.lr,
+            "momentum": mlp.momentum,
+            "grad_clip": mlp.grad_clip,
         }
 
 

@@ -12,6 +12,7 @@ import { RiskConfidenceLayer } from '@/components/RiskConfidenceLayer'
 import { ReflectionPanel } from '@/components/ReflectionPanel'
 import { ToolCallInspector } from '@/components/ToolCallInspector'
 import MTTRDashboard from '@/components/MTTRDashboard'
+import { NeuralArchitecturePanel } from '@/components/NeuralArchitecturePanel'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useInvestigationStore } from '@/store/investigationStore'
 
@@ -187,6 +188,7 @@ export function AppShell() {
             <Route path="/investigations" element={<ErrorBoundary label="Investigations"><InvestigationsList /></ErrorBoundary>} />
             <Route path="/investigations/:investigationId" element={<ErrorBoundary label="Investigation"><InvestigationView /></ErrorBoundary>} />
             <Route path="/dashboard" element={<ErrorBoundary label="MTTR Dashboard"><MTTRDashboard /></ErrorBoundary>} />
+            <Route path="/architecture" element={<ErrorBoundary label="Dynamic Architecture"><NeuralArchitecturePanel /></ErrorBoundary>} />
             <Route path="*" element={<Navigate to="/investigations" replace />} />
           </Routes>
         </main>

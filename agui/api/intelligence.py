@@ -497,3 +497,63 @@ async def get_decision_metrics() -> dict[str, Any]:
         result["neural_learning"] = {"error": str(exc)}
 
     return result
+
+
+# ------------------------------------------------------------------
+# Neural Architecture — live model stats for Dynamic Architecture tab
+# ------------------------------------------------------------------
+
+@router.get("/neural-architecture")
+def get_neural_architecture() -> dict[str, Any]:
+    """Return live architecture stats for both neural models.
+
+    Used by the Dynamic Architecture UI tab to render the network
+    topology, weight norms, and training state without exposing raw
+    weight matrices.
+    """
+    result: dict[str, Any] = {}
+
+    try:
+        from supervisor.neural_quality_net import get_quality_net, MIN_SAMPLES_FOR_BLEND, MAX_BLEND_WEIGHT
+        nqn = get_quality_net()
+        result["quality_net"] = {
+            **nqn.get_arch_stats(),
+            "name": "Investigation Quality Net",
+            "description": (
+                "Learns to predict investigation quality from 9 evidence dimensions. "
+                "Blends with the heuristic OnlineEvaluator score (max 40% neural weight)."
+            ),
+            "features": [
+                "volume", "coherence", "calibration", "specificity", "diversity",
+                "raw_confidence", "has_logs", "has_metrics", "has_signals",
+            ],
+            "max_blend_weight": MAX_BLEND_WEIGHT,
+            "min_samples_for_blend": MIN_SAMPLES_FOR_BLEND,
+        }
+    except Exception as exc:
+        logger.warning("neural-architecture quality_net failed: %s", exc)
+        result["quality_net"] = {"error": str(exc)}
+
+    try:
+        from supervisor.neural_confidence_calibrator import (
+            get_neural_calibrator, MIN_SAMPLES_FULL, MAX_BLEND
+        )
+        ncal = get_neural_calibrator()
+        result["confidence_calibrator"] = {
+            **ncal.get_arch_stats(),
+            "name": "Confidence Calibrator",
+            "description": (
+                "Learned Platt scaling: maps raw confidence + evidence context → P(correct). "
+                "Blends with the 10-bin isotonic calibrator (max 60% neural weight)."
+            ),
+            "features": [
+                "raw_confidence", "source_frac", "volume", "coherence", "specificity",
+            ],
+            "max_blend_weight": MAX_BLEND,
+            "min_samples_for_blend": MIN_SAMPLES_FULL,
+        }
+    except Exception as exc:
+        logger.warning("neural-architecture confidence_calibrator failed: %s", exc)
+        result["confidence_calibrator"] = {"error": str(exc)}
+
+    return result

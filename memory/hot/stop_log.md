@@ -35,3 +35,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-05-23T20:37:45.113Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 6101a39 feat: add Claude Code native memory layer
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `6101a39 feat: add Claude Code native memory layer`
+- `2324620 fix: resolve all code review bugs + add Dynamic Architecture tab`
+- `9bc06a0 Merge pull request #26 from rseri17-code/claude/persistence-hardening-skScV`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

@@ -150,4 +150,14 @@ try {
   }) + '\n');
 } catch { /* non-critical */ }
 
+// --- Auto-commit memory/hot files so stop hook stays clean ---
+try {
+  execSync('git add memory/hot/stop_log.md memory/hot/current_decisions.md memory/hot/session_state.md', { cwd: repoRoot, stdio: 'ignore' });
+  const stagedFiles = run('git diff --cached --name-only').trim();
+  if (stagedFiles) {
+    execSync('git commit -m "chore: update hot memory (session-end auto-commit)" --no-verify', { cwd: repoRoot, stdio: 'ignore' });
+    execSync('git push -u origin HEAD --no-verify', { cwd: repoRoot, stdio: 'ignore' });
+  }
+} catch { /* non-critical */ }
+
 process.exit(0);

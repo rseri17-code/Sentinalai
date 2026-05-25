@@ -142,3 +142,85 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-05-24T04:52:28.934Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 9f84b54 chore: auto-commit hot memory files in SessionStart and SessionEnd hooks
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `9f84b54 chore: auto-commit hot memory files in SessionStart and SessionEnd hooks`
+- `bde110a chore: update session state and stop log (hook auto-generated)`
+- `43dec4d feat: redesign UI — Mission Control, MTTI, architecture mini-map, pattern intelligence`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-05-24T18:27:42.166Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 9f84b54 chore: auto-commit hot memory files in SessionStart and SessionEnd hooks
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `9f84b54 chore: auto-commit hot memory files in SessionStart and SessionEnd hooks`
+- `bde110a chore: update session state and stop log (hook auto-generated)`
+- `43dec4d feat: redesign UI — Mission Control, MTTI, architecture mini-map, pattern intelligence`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-05-24T19:34:21.961Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 9f84b54 chore: auto-commit hot memory files in SessionStart and SessionEnd hooks
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `9f84b54 chore: auto-commit hot memory files in SessionStart and SessionEnd hooks`
+- `bde110a chore: update session state and stop log (hook auto-generated)`
+- `43dec4d feat: redesign UI — Mission Control, MTTI, architecture mini-map, pattern intelligence`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

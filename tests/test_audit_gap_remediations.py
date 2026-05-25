@@ -73,6 +73,26 @@ class TestG1_1_Extended:
             is_valid, reason = validate_query(q)
             assert is_valid, f"Expected '{q}' to pass but got: {reason}"
 
+    def test_validate_query_allows_stage2_domain_terms(self):
+        """validate_query() allows Stage 2 domain terms added by Fix 3."""
+        stage2_keywords = [
+            "certificate expired TLS handshake",
+            "tls cert rotation failure",
+            "ssl handshake timeout",
+            "kafka consumer lag high",
+            "restart loop detected",
+            "crashloop backoff",
+            "credential rotation failed",
+            "ORA-00942 table not found",
+            "vault token renewal",
+            "saml assertion failed",
+            "oauth token expired",
+            "ldap bind error",
+        ]
+        for q in stage2_keywords:
+            is_valid, reason = validate_query(q)
+            assert is_valid, f"Expected stage2 query '{q}' to pass but got: {reason}"
+
 
 # =========================================================================
 # G5: Receipt field integration tests
@@ -321,3 +341,150 @@ class TestInvestigationReceiptIntegration:
         assert summary["total_calls"] == 2
         assert summary["succeeded"] == 1
         assert summary["failed"] == 1
+
+
+# =========================================================================
+# Fix 1: v2 grounding model activated by default
+# =========================================================================
+
+class TestFix1_GroundingModelDefault:
+    """Fix 1: GROUNDING_MODEL defaults to 'v2' when env var is unset."""
+
+    def test_grounding_model_default_is_v2(self):
+        """GROUNDING_MODEL constant is 'v2' when env var is unset."""
+        import os
+        import importlib
+        import supervisor.grounding_confidence as gc_mod
+
+        # Reload without the env var to verify the default
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("GROUNDING_MODEL", None)
+            importlib.reload(gc_mod)
+            assert gc_mod.GROUNDING_MODEL == "v2"
+
+    def test_grounding_model_respects_env_override(self):
+        """GROUNDING_MODEL honours explicit GROUNDING_MODEL=v1 override."""
+        import os
+        import importlib
+        import supervisor.grounding_confidence as gc_mod
+
+        with patch.dict(os.environ, {"GROUNDING_MODEL": "v1"}):
+            importlib.reload(gc_mod)
+            assert gc_mod.GROUNDING_MODEL == "v1"
+
+        # Restore
+        importlib.reload(gc_mod)
+
+    def test_score_uses_v2_by_default(self):
+        """score() returns a v2 GroundingResult (with dimensions) when model is v2."""
+        from supervisor.grounding_confidence import score, GROUNDING_MODEL
+
+        assert GROUNDING_MODEL == "v2", "Fix 1: default must be v2"
+
+        rca_result = {
+            "root_cause": "Connection pool exhausted due to DB latency spike",
+            "confidence": 70,
+        }
+        evidence = {
+            "logs": {"results": [
+                {"level": "ERROR", "message": "Connection pool exhausted",
+                 "service": "payment-service"},
+            ], "count": 1},
+        }
+        grounding = score(rca_result, evidence, incident_type="timeout")
+        # v2 populates model_version and dimensions dict; v1 leaves dimensions empty
+        assert grounding.model_version == "v2", "Expected v2 model_version"
+        assert isinstance(grounding.dimensions, dict)
+        assert len(grounding.dimensions) > 0, "v2 should populate dimension scores"
+
+
+# =========================================================================
+# Fix 4: LogWorker incident-type aliases
+# =========================================================================
+
+class TestFix4_LogWorkerAliases:
+    """Fix 4: LogWorker registers 5 incident-type-specific action aliases."""
+
+    def test_all_aliases_registered(self):
+        """LogWorker has all 5 new action aliases registered."""
+        from workers.log_worker import LogWorker
+
+        worker = LogWorker()
+        expected = [
+            "search_oom_logs",
+            "search_timeout_logs",
+            "search_error_logs",
+            "search_saturation_logs",
+            "get_error_logs",
+        ]
+        for action in expected:
+            assert action in worker._handlers, f"LogWorker missing alias '{action}'"
+
+    def test_alias_delegates_to_search_logs(self):
+        """Each alias returns a result with a 'logs' key (same as search_logs)."""
+        from workers.log_worker import LogWorker
+
+        worker = LogWorker()
+        aliases = [
+            "search_oom_logs",
+            "search_timeout_logs",
+            "search_error_logs",
+            "search_saturation_logs",
+            "get_error_logs",
+        ]
+        for alias in aliases:
+            result = worker.execute(alias, {"service": "payment-service",
+                                            "query": "error timeout"})
+            assert "logs" in result or "error" in result, (
+                f"Alias '{alias}' returned unexpected structure: {result!r}"
+            )
+
+
+# =========================================================================
+# Fix 5: Splunk source name env-var routing
+# =========================================================================
+
+class TestFix5_SourceMapRouting:
+    """Fix 5: _src() resolves logical source names via env vars."""
+
+    def test_src_returns_default_when_env_not_set(self):
+        """_src() returns the key itself when no env var is configured."""
+        import os
+        import importlib
+        import supervisor.splunk_retrieval_planner as planner
+
+        env_keys = [
+            "SPLUNK_SOURCE_K8S", "SPLUNK_SOURCE_CERT", "SPLUNK_SOURCE_INFRA",
+            "SPLUNK_SOURCE_AUTH", "SPLUNK_SOURCE_CYBERARK", "SPLUNK_SOURCE_DNS",
+            "SPLUNK_SOURCE_DB", "SPLUNK_SOURCE_KAFKA", "SPLUNK_SOURCE_PROCESS",
+        ]
+        with patch.dict(os.environ, {k: "" for k in env_keys}, clear=False):
+            # Clear each env var
+            for k in env_keys:
+                os.environ.pop(k, None)
+            importlib.reload(planner)
+            assert planner._src("eks_logs") == "eks_logs"
+            assert planner._src("cert_logs") == "cert_logs"
+            assert planner._src("kafka_logs") == "kafka_logs"
+
+        importlib.reload(planner)
+
+    def test_src_returns_env_override(self):
+        """_src() returns the env-var value when SPLUNK_SOURCE_K8S is set."""
+        import os
+        import importlib
+        import supervisor.splunk_retrieval_planner as planner
+
+        with patch.dict(os.environ, {"SPLUNK_SOURCE_K8S": "index=kubernetes sourcetype=kube:*"}):
+            importlib.reload(planner)
+            assert planner._src("eks_logs") == "index=kubernetes sourcetype=kube:*"
+
+        importlib.reload(planner)
+
+    def test_src_unknown_key_returns_key(self):
+        """_src() returns the key unchanged for unknown logical names."""
+        import importlib
+        import supervisor.splunk_retrieval_planner as planner
+
+        result = planner._src("some_unknown_source")
+        assert result == "some_unknown_source"

@@ -109,15 +109,22 @@ class TestSplunkStub:
     def test_search_logs_returns_logs(self):
         result = _splunk("search_logs", {"service": "checkout-service"})
         assert "logs" in result
-        assert len(result["logs"]) > 0
+        # Logs must be wrapped in {"results": [...], "count": N} — not a bare list
+        assert isinstance(result["logs"], dict), "logs must be a dict with 'results' key"
+        assert "results" in result["logs"]
+        assert "count" in result["logs"]
+        assert result["logs"]["count"] == len(result["logs"]["results"])
+        assert len(result["logs"]["results"]) > 0
 
     def test_search_oneshot_returns_logs(self):
         result = _splunk("search_oneshot", {"service": "api-gateway"})
         assert "logs" in result
+        assert isinstance(result["logs"], dict)
+        assert "results" in result["logs"]
 
     def test_log_entries_have_required_fields(self):
         result = _splunk("search_logs", {"service": "svc"})
-        for log in result["logs"]:
+        for log in result["logs"]["results"]:
             assert "level" in log
             assert "message" in log
 

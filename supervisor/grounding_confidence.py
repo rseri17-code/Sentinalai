@@ -41,7 +41,7 @@ from typing import Optional
 
 logger = logging.getLogger("sentinalai.grounding_confidence")
 
-GROUNDING_MODEL = os.environ.get("GROUNDING_MODEL", "v1").lower()
+GROUNDING_MODEL = os.environ.get("GROUNDING_MODEL", "v2").lower()
 
 
 # ---------------------------------------------------------------------------

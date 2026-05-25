@@ -25,6 +25,13 @@ class LogWorker(BaseWorker):
         self._gateway = gateway or McpGateway.get_instance()
         self.register("search_logs", self._search_logs)
         self.register("get_change_data", self._get_change_data)
+        # Aliases for incident-type-specific actions referenced by splunk_retrieval_planner.
+        # All delegate to _search_logs — the incident-specific query string is in params.
+        self.register("search_oom_logs",        self._search_logs)
+        self.register("search_timeout_logs",    self._search_logs)
+        self.register("search_error_logs",      self._search_logs)
+        self.register("search_saturation_logs", self._search_logs)
+        self.register("get_error_logs",         self._search_logs)
 
     def _search_logs(self, params: dict) -> dict:
         """Search Splunk logs via AgentCore gateway.

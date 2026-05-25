@@ -311,32 +311,31 @@ def _splunk(action: str, params: dict) -> dict:
     service = params.get("service", "payment-service")
 
     if action in ("search_logs", "search_oneshot"):
-        return {
-            "logs": [
-                {
-                    "_time": "2024-01-15T14:02:11.123Z",
-                    "host": f"{service}-pod-abc",
-                    "source": f"kubernetes/{service}",
-                    "sourcetype": "kube:container:app",
-                    "index": "production",
-                    "_raw": f"2024-01-15T14:02:11 ERROR pool.exhausted service={service} connections=1024/1024 waiting=47",
-                    "level": "ERROR",
-                    "service": service,
-                    "message": "Connection pool exhausted: connections=1024/1024, waiting=47",
-                },
-                {
-                    "_time": "2024-01-15T14:02:12.456Z",
-                    "host": f"{service}-pod-abc",
-                    "source": f"kubernetes/{service}",
-                    "sourcetype": "kube:container:app",
-                    "index": "production",
-                    "_raw": f"2024-01-15T14:02:12 ERROR timeout.acquiring.connection timeout=30000ms service={service}",
-                    "level": "ERROR",
-                    "service": service,
-                    "message": "Timeout acquiring database connection after 30000ms",
-                },
-            ]
-        }
+        results = [
+            {
+                "_time": "2024-01-15T14:02:11.123Z",
+                "host": f"{service}-pod-abc",
+                "source": f"kubernetes/{service}",
+                "sourcetype": "kube:container:app",
+                "index": "production",
+                "_raw": f"2024-01-15T14:02:11 ERROR pool.exhausted service={service} connections=1024/1024 waiting=47",
+                "level": "ERROR",
+                "service": service,
+                "message": "Connection pool exhausted: connections=1024/1024, waiting=47",
+            },
+            {
+                "_time": "2024-01-15T14:02:12.456Z",
+                "host": f"{service}-pod-abc",
+                "source": f"kubernetes/{service}",
+                "sourcetype": "kube:container:app",
+                "index": "production",
+                "_raw": f"2024-01-15T14:02:12 ERROR timeout.acquiring.connection timeout=30000ms service={service}",
+                "level": "ERROR",
+                "service": service,
+                "message": "Timeout acquiring database connection after 30000ms",
+            },
+        ]
+        return {"logs": {"results": results, "count": len(results)}}
 
     if action == "get_change_data":
         return {

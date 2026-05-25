@@ -184,6 +184,19 @@ SPLUNK_QUERY_ALLOWLIST = [
     "auth",
     "notification",
     "recommendation",
+    # Stage 2 domain terms (certificate, identity, credential, messaging, DB)
+    "certificate",
+    "tls",
+    "ssl",
+    "kafka",
+    "restart",
+    "crashloop",
+    "credential",
+    "ora-",
+    "vault",
+    "saml",
+    "oauth",
+    "ldap",
 ]
 
 # Max Splunk time window (hours)

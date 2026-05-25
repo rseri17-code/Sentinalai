@@ -39,6 +39,27 @@ _STAGE1_THRESHOLD = float(os.environ.get("SPLUNK_STAGE1_THRESHOLD", "0.75"))
 _STAGE2_THRESHOLD = float(os.environ.get("SPLUNK_STAGE2_THRESHOLD", "0.55"))
 _MAX_QUERIES      = int(os.environ.get("SPLUNK_MAX_QUERIES", "15"))
 
+# ---------------------------------------------------------------------------
+# Source routing — configurable per deployment via env vars.
+# Defaults preserve previous hardcoded behaviour.
+# Override in production: SPLUNK_SOURCE_K8S=index=kubernetes sourcetype=kube:*
+# ---------------------------------------------------------------------------
+_SOURCE_MAP: dict[str, str] = {
+    "eks_logs":      os.environ.get("SPLUNK_SOURCE_K8S",        "eks_logs"),
+    "cert_logs":     os.environ.get("SPLUNK_SOURCE_CERT",       "cert_logs"),
+    "infra_logs":    os.environ.get("SPLUNK_SOURCE_INFRA",      "infra_logs"),
+    "auth_logs":     os.environ.get("SPLUNK_SOURCE_AUTH",       "auth_logs"),
+    "cyberark_logs": os.environ.get("SPLUNK_SOURCE_CYBERARK",   "cyberark_logs"),
+    "dns_logs":      os.environ.get("SPLUNK_SOURCE_DNS",        "dns_logs"),
+    "db_logs":       os.environ.get("SPLUNK_SOURCE_DB",         "db_logs"),
+    "kafka_logs":    os.environ.get("SPLUNK_SOURCE_KAFKA",      "kafka_logs"),
+    "process_logs":  os.environ.get("SPLUNK_SOURCE_PROCESS",    "process_logs"),
+}
+
+def _src(key: str) -> str:
+    """Resolve a logical source name to its environment-configured value."""
+    return _SOURCE_MAP.get(key, key)
+
 
 # ---------------------------------------------------------------------------
 # Query spec
@@ -187,7 +208,7 @@ def _build_stage1(incident_type: str, service: str, time_window: str) -> list[Sp
     queries.append(SplunkQuery(
         stage=1, worker="log_worker", action="search_logs",
         params={"service": service, "query": f"container OR pod OR namespace",
-                "source": "eks_logs", "time_window": time_window},
+                "source": _src("eks_logs"), "time_window": time_window},
         priority=5, signal_type="logs",
     ))
 
@@ -213,12 +234,12 @@ def _build_stage2(
         queries.append(SplunkQuery(
             stage=2, worker="log_worker", action="search_logs",
             params={"query": "ssl OR tls OR certificate OR x509 OR handshake",
-                    "source": "cert_logs", "time_window": time_window},
+                    "source": _src("cert_logs"), "time_window": time_window},
             priority=0, signal_type="logs",
         ))
         queries.append(SplunkQuery(
             stage=2, worker="log_worker", action="search_logs",
-            params={"query": "AppViewX OR cert-renewal OR venafi", "source": "infra_logs",
+            params={"query": "AppViewX OR cert-renewal OR venafi", "source": _src("infra_logs"),
                     "time_window": time_window},
             priority=1, signal_type="logs",
         ))
@@ -228,7 +249,7 @@ def _build_stage2(
         queries.append(SplunkQuery(
             stage=2, worker="log_worker", action="search_logs",
             params={"query": "PingFederate OR LDAP OR OAuth OR SAML OR SSO OR token expired",
-                    "source": "auth_logs", "time_window": time_window},
+                    "source": _src("auth_logs"), "time_window": time_window},
             priority=2, signal_type="logs",
         ))
 
@@ -237,7 +258,7 @@ def _build_stage2(
         queries.append(SplunkQuery(
             stage=2, worker="log_worker", action="search_logs",
             params={"query": "CyberArk OR CPM OR password rotation OR vault OR credential rotation",
-                    "source": "cyberark_logs", "time_window": time_window},
+                    "source": _src("cyberark_logs"), "time_window": time_window},
             priority=3, signal_type="logs",
         ))
 
@@ -246,7 +267,7 @@ def _build_stage2(
         queries.append(SplunkQuery(
             stage=2, worker="log_worker", action="search_logs",
             params={"query": "NXDOMAIN OR DNS resolution OR getaddrinfo OR name resolution",
-                    "source": "dns_logs", "time_window": time_window},
+                    "source": _src("dns_logs"), "time_window": time_window},
             priority=4, signal_type="logs",
         ))
 
@@ -255,7 +276,7 @@ def _build_stage2(
         queries.append(SplunkQuery(
             stage=2, worker="log_worker", action="search_logs",
             params={"query": "ORA- OR connection pool OR max connections OR DB authentication",
-                    "source": "db_logs", "time_window": time_window},
+                    "source": _src("db_logs"), "time_window": time_window},
             priority=5, signal_type="logs",
         ))
 
@@ -263,7 +284,7 @@ def _build_stage2(
     queries.append(SplunkQuery(
         stage=2, worker="log_worker", action="search_logs",
         params={"query": "kafka OR consumer.lag OR broker.unavailable OR topic.partition",
-                "source": "kafka_logs", "time_window": time_window},
+                "source": _src("kafka_logs"), "time_window": time_window},
         priority=6, signal_type="logs",
     ))
 
@@ -279,7 +300,7 @@ def _build_stage2(
     queries.append(SplunkQuery(
         stage=2, worker="log_worker", action="search_logs",
         params={"query": "OOMKill OR process.restart OR killed.signal OR SIGTERM OR SIGKILL",
-                "source": "process_logs", "time_window": time_window},
+                "source": _src("process_logs"), "time_window": time_window},
         priority=8, signal_type="logs",
     ))
 

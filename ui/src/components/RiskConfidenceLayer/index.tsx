@@ -57,7 +57,7 @@ function StaleDataWarning({ sources }: { sources: string[] }) {
   )
 }
 
-export function RiskConfidenceLayer() {
+export function RiskConfidenceLayer({ compact }: { compact?: boolean } = {}) {
   const { investigationId, investigation, latestEvent } = useInvestigationStore()
   const [risk, setRisk] = useState<RiskConfidence | null>(null)
 
@@ -80,6 +80,32 @@ export function RiskConfidenceLayer() {
   const avgJudge = Object.values(judgeScores).length > 0
     ? Object.values(judgeScores).reduce((a, b) => a + b, 0) / Object.values(judgeScores).length
     : 0
+
+  // Compact: vertical card for left column in 3-col layout
+  if (compact) {
+    return (
+      <div className="rounded border border-slate-800 bg-slate-900/60 p-2.5 space-y-2 text-xs">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Risk</span>
+          <span className={clsx('badge border text-[9px]', RISK_COLORS[riskLevel] || RISK_COLORS.unknown)}>
+            {riskLevel}
+          </span>
+        </div>
+        {avgJudge > 0 && (
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="text-slate-500">Judge</span>
+            <span className="font-mono text-blue-400">{(avgJudge * 100).toFixed(0)}%</span>
+          </div>
+        )}
+        {stale.length > 0 && (
+          <div className="flex items-center gap-1 text-orange-400 text-[10px]">
+            <AlertTriangle size={9} />
+            <span>Stale: {stale.slice(0, 2).join(', ')}</span>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="bg-slate-900 border-b border-slate-800 px-4 py-2 flex items-center gap-4 shrink-0 overflow-x-auto">

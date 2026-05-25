@@ -224,3 +224,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-05-25T03:04:59.479Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 2f69843 fix: auto-commit memory/hot/ in Stop hook after every turn
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `2f69843 fix: auto-commit memory/hot/ in Stop hook after every turn`
+- `6158fc0 test`
+- `9f84b54 chore: auto-commit hot memory files in SessionStart and SessionEnd hooks`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

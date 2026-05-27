@@ -154,7 +154,7 @@ class TestVerificationLoopWatch:
             max_polls=5,
             stable_threshold=3,
         )
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             loop.watch("inv-001", "payment-service", baseline=BASELINE)
         )
         assert result.success is True
@@ -162,7 +162,7 @@ class TestVerificationLoopWatch:
 
     def test_result_contains_required_fields(self):
         loop, _, _ = _make_loop(max_polls=5, stable_threshold=2)
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             loop.watch("inv-001", "svc")
         )
         assert result.investigation_id == "inv-001"
@@ -172,7 +172,7 @@ class TestVerificationLoopWatch:
 
     def test_success_result_to_dict(self):
         loop, _, _ = _make_loop(max_polls=3, stable_threshold=2)
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             loop.watch("inv-002", "web-service")
         )
         d = result.to_dict()
@@ -187,7 +187,7 @@ class TestVerificationLoopWatch:
             max_polls=3,
             stable_threshold=3,
         )
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             loop.watch("inv-003", "broken-service")
         )
         assert result.success is False
@@ -209,7 +209,7 @@ class TestVerificationLoopWatch:
             max_polls=8,
             stable_threshold=3,
         )
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             loop.watch("inv-004", "flappy-service")
         )
         assert result.success is True
@@ -222,7 +222,7 @@ class TestVerificationLoopWatch:
             events_received.append(event_type)
 
         loop, _, _ = _make_loop(max_polls=3, stable_threshold=2)
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(
             loop.watch("inv-005", "svc", callback=on_event)
         )
 
@@ -240,7 +240,7 @@ class TestVerificationLoopWatch:
             max_polls=3,
             stable_threshold=3,
         )
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(
             loop.watch("inv-006", "svc", callback=on_event)
         )
         assert "verification.failed" in events_received
@@ -256,7 +256,7 @@ class TestSnowTicketClose:
         itsm_worker.execute.return_value = {"updated": {"state": "resolved"}}
 
         loop, _, _ = _make_loop(max_polls=4, stable_threshold=2)
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             loop.watch(
                 "inv-007",
                 "payment-service",
@@ -277,7 +277,7 @@ class TestSnowTicketClose:
             max_polls=3,
             stable_threshold=3,
         )
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(
             loop.watch(
                 "inv-008",
                 "broken-service",
@@ -292,7 +292,7 @@ class TestSnowTicketClose:
         itsm_worker.execute.return_value = {"updated": {"state": "resolved"}}
 
         loop, _, _ = _make_loop(max_polls=3, stable_threshold=2)
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             loop.watch(
                 "inv-009",
                 "svc",
@@ -308,7 +308,7 @@ class TestSnowTicketClose:
         itsm_worker.execute.side_effect = RuntimeError("SNOW unreachable")
 
         loop, _, _ = _make_loop(max_polls=3, stable_threshold=2)
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             loop.watch(
                 "inv-010",
                 "svc",

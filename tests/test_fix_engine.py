@@ -206,7 +206,7 @@ class TestApplyFix:
         devops, itsm = self._make_mock_workers()
 
         with pytest.raises(ValueError, match="APPROVED"):
-            asyncio.get_event_loop().run_until_complete(
+            asyncio.run(
                 engine.apply_fix("inv-001", "alice", devops, itsm)
             )
 
@@ -214,7 +214,7 @@ class TestApplyFix:
         engine = _make_engine()
         devops, itsm = self._make_mock_workers()
         with pytest.raises(ValueError):
-            asyncio.get_event_loop().run_until_complete(
+            asyncio.run(
                 engine.apply_fix("nonexistent", "alice", devops, itsm)
             )
 
@@ -225,7 +225,7 @@ class TestApplyFix:
         engine.approve("inv-001", "alice")
         devops, itsm = self._make_mock_workers(rollback_success=True)
 
-        application = asyncio.get_event_loop().run_until_complete(
+        application = asyncio.run(
             engine.apply_fix("inv-001", "alice", devops, itsm)
         )
         assert application.action_taken == "rollback"
@@ -239,7 +239,7 @@ class TestApplyFix:
         engine.approve("inv-001", "alice")
         devops, itsm = self._make_mock_workers()
 
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(
             engine.apply_fix("inv-001", "alice", devops, itsm)
         )
         assert fix.status == FixStatus.APPLIED
@@ -256,7 +256,7 @@ class TestApplyFix:
         devops.execute.side_effect = RuntimeError("kubernetes unreachable")
         itsm = MagicMock()
 
-        application = asyncio.get_event_loop().run_until_complete(
+        application = asyncio.run(
             engine.apply_fix("inv-001", "alice", devops, itsm)
         )
         assert application.success is False
@@ -272,7 +272,7 @@ class TestApplyFix:
         devops.execute.return_value = {"pr": {"number": 42, "html_url": "https://github.com/..."}}
         itsm = MagicMock()
 
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(
             engine.apply_fix("inv-002", "alice", devops, itsm)
         )
         # Verify create_fix_pr was called

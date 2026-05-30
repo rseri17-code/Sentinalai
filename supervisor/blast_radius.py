@@ -136,6 +136,7 @@ def compute_blast_radius(
     fix_type: str,
     cmdb_topology: dict[str, Any],   # {service: {tier, dependencies, callers, has_circuit_breaker, ...}}
     kg_edges: list[dict] | None = None,  # optional extra edges from knowledge graph
+    co_failure_index=None,            # optional CoFailureIndex for historical co-failure enrichment
 ) -> BlastRadiusReport:
     """Compute the blast radius of a proposed fix before applying it.
 
@@ -176,6 +177,14 @@ def compute_blast_radius(
     # Step 2: BFS to find all reachable affected services
     # ------------------------------------------------------------------
     affected_services = _bfs_affected_services(target_service, fix_type, topology)
+
+    # ------------------------------------------------------------------
+    # Step 2b: Augment with historically-observed co-failure partners
+    # ------------------------------------------------------------------
+    if co_failure_index is not None:
+        affected_services = _augment_with_co_failures(
+            target_service, affected_services, topology, co_failure_index
+        )
 
     # ------------------------------------------------------------------
     # Step 3: Compute aggregate impact
@@ -234,6 +243,61 @@ def compute_blast_radius(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+_CO_FAILURE_MIN_RATE = 0.20   # only include partners observed in ≥20% of incidents
+
+
+def _augment_with_co_failures(
+    target_service: str,
+    affected_services: list[AffectedService],
+    topology: dict[str, Any],
+    co_failure_index: Any,
+) -> list[AffectedService]:
+    """Append historically-observed co-failure partners not already in the BFS set.
+
+    Queries the provided CoFailureIndex for services that have co-failed with
+    target_service in ≥20% of incidents.  Partners already discovered by BFS
+    are skipped.  Co-failure services are classified as "co_failure" dependency
+    type and their estimated impact is scaled by the observed co-failure rate.
+    """
+    try:
+        stats = co_failure_index.get_co_failures(
+            target_service, min_rate=_CO_FAILURE_MIN_RATE
+        )
+    except Exception as exc:
+        logger.debug("CoFailureIndex lookup skipped: %s", exc)
+        return affected_services
+
+    if not stats:
+        return affected_services
+
+    already_named: set[str] = {svc.name for svc in affected_services} | {target_service}
+    augmented = list(affected_services)
+
+    for stat in stats:
+        partner = stat.service_b if stat.service_a == target_service else stat.service_a
+        if partner in already_named:
+            continue
+        svc_info = topology.get(partner, {})
+        tier = svc_info.get("tier", "P3")
+        base_impact = _TIER_BASE_IMPACT.get(tier, 3.0)
+        estimated_impact = round(base_impact * stat.co_failure_rate, 2)
+        augmented.append(AffectedService(
+            name=partner,
+            dependency_type="co_failure",
+            dependency_path=[target_service, partner],
+            tier=tier,
+            estimated_impact_pct=estimated_impact,
+            can_degrade_gracefully=bool(svc_info.get("has_circuit_breaker", False)),
+        ))
+        already_named.add(partner)
+        logger.debug(
+            "Blast radius: co-failure partner %s added (rate=%.2f impact=%.2f%%)",
+            partner, stat.co_failure_rate, estimated_impact,
+        )
+
+    return augmented
+
 
 def _augment_topology_from_kg(
     topology: dict[str, Any],

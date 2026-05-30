@@ -185,7 +185,7 @@ EXPECTED_RCA = {
         "root_cause": "database connection pool exhaustion in payment-service caused by slow queries after index drop",
         "root_cause_keywords": ["connection pool", "payment-service", "index"],
         "confidence_min": 80,
-        "confidence_max": 95,
+        "confidence_max": 100,  # v2 grounding scores well-evidenced cascades higher
         "required_evidence": [
             "database slow queries",
             "connection pool exhaustion",

@@ -27,6 +27,7 @@ Feature vector dimensions (all normalised to [0, 1]):
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import math
@@ -374,6 +375,30 @@ def save_dna_store(
         json.dump([d.to_dict() for d in dnas], f, indent=2)
     os.replace(tmp, store_path)
     logger.debug("Saved %d DNA profiles to %s", len(dnas), store_path)
+
+
+# ---------------------------------------------------------------------------
+# Signature extraction (Phase 2 pattern intelligence)
+# ---------------------------------------------------------------------------
+
+def extract_signature(dna: IncidentDNA, threshold: float = _MATCHING_THRESHOLD) -> str:
+    """Produce a stable fingerprint for a DNA profile.
+
+    The fingerprint is the SHA-256 (truncated to 16 hex chars) of the
+    quantized active-feature bit-string: each dimension is mapped to '1'
+    if it exceeds *threshold*, else '0'.  This creates a content-addressed
+    identity that is stable across incident IDs and timestamps, so
+    structurally identical incidents map to the same fingerprint regardless
+    of when they occurred.
+
+    Two incidents with the same fingerprint share the same anomaly profile
+    and are candidates for the same remediation playbook.
+    """
+    bits = "".join("1" if v > threshold else "0" for v in dna.features)
+    # Include incident_type in the hash so type-distinct incidents never
+    # collide even if their feature vectors happen to look similar.
+    payload = f"{dna.incident_type}:{bits}"
+    return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
 # ---------------------------------------------------------------------------

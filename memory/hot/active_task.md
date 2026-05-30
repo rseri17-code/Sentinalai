@@ -1,34 +1,33 @@
 # Active Task — Compaction Handoff
-<!-- Written by PreCompact hook at 2026-05-25T15:43:37.687Z -->
+<!-- Written by PreCompact hook at 2026-05-30T18:59:25.389Z -->
 <!-- Restored by SessionStart hook — also shown if .claude/session-state.json is present -->
 
 ## Objective
 [DECISION] <what was decided> — <why>
 
 ## Branch
-claude/code-review-analysis-MelXd | 9c8c85c chore: update hot memory (stop hook auto-commit)
+claude/code-review-analysis-MelXd | ce0cc90 feat(harness/p1): evidence provenance — extend Receipt schema and WorkerResult
 
 ## Git Status at Compaction
-- `M scripts/stub_mcp_server.py`
-- ` M supervisor/grounding_confidence.py`
-- ` M supervisor/guardrails.py`
-- ` M supervisor/splunk_retrieval_planner.py`
-- ` M tests/test_stub_mcp_server.py`
-- ` M workers/log_worker.py`
+- `M eval/recurrence_index.json`
+- ` M supervisor/agent.py`
+- ` M supervisor/incident_dna.py`
+- `?? eval/co_failure_index.json`
+- `?? eval/pattern_registry.json`
+- `?? supervisor/co_failure_index.py`
+- `?? supervisor/pattern_registry.py`
+- `?? tests/test_co_failure_index.py`
+- `?? tests/test_pattern_registry.py`
 
 ## Changed Python Files (vs HEAD)
-- scripts/stub_mcp_server.py
-- supervisor/grounding_confidence.py
-- supervisor/guardrails.py
-- supervisor/splunk_retrieval_planner.py
-- tests/test_stub_mcp_server.py
-- workers/log_worker.py
+- supervisor/agent.py
+- supervisor/incident_dna.py
 
 ## Staged for Commit
 _(none)_
 
 ## Open Risks
-- ⚠ 6 Python file(s) modified vs HEAD
+- ⚠ 2 Python file(s) modified vs HEAD
 
 ## Next Recommended Action
 - Continue on branch `claude/code-review-analysis-MelXd`

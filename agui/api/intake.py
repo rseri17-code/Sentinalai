@@ -49,7 +49,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["intake"])
 
 # ---------------------------------------------------------------------------
-# Webhook secrets (opt-in; empty string = no validation)
+# Webhook auth mode
+# ---------------------------------------------------------------------------
+
+# When REQUIRE_WEBHOOK_AUTH=true, every webhook endpoint requires a valid HMAC
+# signature.  Requests without a configured secret or with a missing/invalid
+# header are rejected with 401.  In dev/test (default: false) unsigned webhooks
+# are accepted to match the original opt-in behaviour.
+REQUIRE_WEBHOOK_AUTH: bool = os.environ.get("REQUIRE_WEBHOOK_AUTH", "false").lower() in ("true", "1", "yes")
+
+# ---------------------------------------------------------------------------
+# Webhook secrets
 # ---------------------------------------------------------------------------
 
 _MOOGSOFT_SECRET = os.environ.get("MOOGSOFT_WEBHOOK_SECRET", "")
@@ -58,6 +68,34 @@ _SNOW_SECRET = os.environ.get("SNOW_WEBHOOK_SECRET", "")
 _OPSGENIE_SECRET = os.environ.get("OPSGENIE_WEBHOOK_SECRET", "")
 _GRAFANA_SECRET = os.environ.get("GRAFANA_WEBHOOK_SECRET", "")
 _CLOUDWATCH_SECRET = os.environ.get("CLOUDWATCH_WEBHOOK_SECRET", "")
+
+# Mapping of source name → secret (used for startup validation)
+_WEBHOOK_SECRETS: dict[str, str] = {
+    "moogsoft":   _MOOGSOFT_SECRET,
+    "pagerduty":  _PAGERDUTY_SECRET,
+    "servicenow": _SNOW_SECRET,
+    "opsgenie":   _OPSGENIE_SECRET,
+    "grafana":    _GRAFANA_SECRET,
+    "cloudwatch": _CLOUDWATCH_SECRET,
+}
+
+
+def validate_webhook_secrets_at_startup() -> None:
+    """Raise RuntimeError at startup if REQUIRE_WEBHOOK_AUTH=true but any secret is unset.
+
+    Call this from the application lifespan / startup handler so the server
+    refuses to start rather than silently accepting unauthenticated webhooks.
+    """
+    if not REQUIRE_WEBHOOK_AUTH:
+        return
+    missing = [name for name, secret in _WEBHOOK_SECRETS.items() if not secret]
+    if missing:
+        raise RuntimeError(
+            f"REQUIRE_WEBHOOK_AUTH=true but webhook secrets are not configured for: "
+            f"{', '.join(missing)}. "
+            f"Set the corresponding *_WEBHOOK_SECRET environment variables or "
+            f"disable REQUIRE_WEBHOOK_AUTH for non-production deployments."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -75,9 +113,25 @@ def _verify_hmac_sha256(secret: str, body: bytes, header_value: str) -> bool:
 
 
 async def _check_sig(request: Request, secret: str, header_name: str) -> None:
-    """Raise 401 if signature header is present but invalid.  Skip if no secret configured."""
+    """Validate HMAC signature on a webhook request.
+
+    Behaviour:
+    - REQUIRE_WEBHOOK_AUTH=true, secret configured: header required and verified.
+    - REQUIRE_WEBHOOK_AUTH=true, secret NOT configured: 401 — misconfiguration.
+    - REQUIRE_WEBHOOK_AUTH=false (default), secret configured: header required and verified.
+    - REQUIRE_WEBHOOK_AUTH=false (default), secret NOT configured: skip (opt-in legacy mode).
+    """
+    if REQUIRE_WEBHOOK_AUTH and not secret:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=(
+                f"Webhook auth required (REQUIRE_WEBHOOK_AUTH=true) but "
+                f"no secret is configured for this source. "
+                f"Set the corresponding *_WEBHOOK_SECRET environment variable."
+            ),
+        )
     if not secret:
-        return
+        return  # opt-in legacy mode: no secret = skip validation
     sig = request.headers.get(header_name, "")
     if not sig:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,

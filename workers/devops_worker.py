@@ -39,6 +39,8 @@ class DevopsWorker(BaseWorker):
         self.register("create_fix_pr", self._create_fix_pr)
         self.register("rollback_deployment", self._rollback_deployment)
         self.register("scale_service", self._scale_service)
+        # Registered as backing implementation for change_worker alias
+        self.register("get_config_changes", self._get_config_changes)
 
     def _get_recent_deployments(self, params: dict) -> dict:
         """List recent deployments (merged PRs, releases) for a service repo.
@@ -201,6 +203,31 @@ class DevopsWorker(BaseWorker):
                 "command": params.get("command", f"kubectl rollout undo deployment/{service}"),
                 "actor_id": params.get("actor_id", "sentinalai"),
                 "namespace": params.get("namespace", "production"),
+            },
+        )
+
+    def _get_config_changes(self, params: dict) -> dict:
+        """Retrieve recent config file changes from GitHub for a service repo.
+
+        Params:
+            service: Service name
+            repo: Optional org/repo override
+            time_window_hours: Lookback window (default 24)
+
+        Returns:
+            {"config_changes": [{"filename", "patch", "sha", "author", "merged_at"}]}
+        """
+        service = params.get("service", "")
+        repo = params.get("repo", "")
+        if not service and not repo:
+            return {"error": "service or repo required"}
+        return self._gateway.invoke(
+            "github.get_config_changes",
+            "get_config_changes",
+            {
+                "service": service,
+                "repo": repo,
+                "time_window_hours": params.get("time_window_hours", 24),
             },
         )
 

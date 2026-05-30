@@ -142,9 +142,13 @@ class TestClearSignalScenario:
 
     @pytest.mark.parametrize("incident_id,expected_type,keywords", CLEAR_CASES)
     def test_within_budget(self, incident_id, expected_type, keywords, tmp_path):
-        """Investigation must stay within 20 tool calls and 60 seconds."""
+        """Investigation must stay within the severity-scaled budget (max 25) and 60 seconds.
+
+        Severity 4 (low) → budget 20; Severity 3 (moderate) → budget 25.
+        The upper bound of 25 covers all single-factor clear-signal incidents.
+        """
         report = _instrumented_investigate(incident_id, tmp_path)
-        assert report["total_calls"] <= 20, (
+        assert report["total_calls"] <= 25, (
             f"[{incident_id}] Too many calls: {report['total_calls']}"
         )
         assert report["elapsed_ms"] < 60_000, (

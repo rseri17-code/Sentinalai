@@ -48,6 +48,13 @@ class Receipt:
     trace_id: str = ""
     # G5.1: Full output capture (when RECEIPT_CAPTURE_OUTPUT is enabled)
     output: dict | None = field(default=None, repr=False)
+    # Harness Phase 1: evidence provenance fields
+    entity: str = ""                     # service/entity queried (e.g. "payment-api")
+    time_window_start: str = ""          # ISO8601 start of evidence window
+    time_window_end: str = ""            # ISO8601 end of evidence window
+    signal_strength: float | None = None # 0.0–1.0 quality hint (set by collector)
+    missing_reason: str | None = None    # why evidence was absent, if applicable
+    sequence_order: int = 0              # call order within the investigation
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize for persistence / replay."""
@@ -90,6 +97,7 @@ class ReceiptCollector:
         # G5.4: Store the OTEL trace ID for the investigation
         self.trace_id = trace_id
         self.receipts: list[Receipt] = []
+        self._sequence_counter: int = 0
 
     def start(
         self,
@@ -97,8 +105,12 @@ class ReceiptCollector:
         action: str,
         params: dict,
         policy_ref: str = "",
+        entity: str = "",
+        time_window_start: str = "",
+        time_window_end: str = "",
     ) -> Receipt:
         """Create and register a new receipt (call this before the worker call)."""
+        self._sequence_counter += 1
         receipt = Receipt(
             tool=tool,
             action=action,
@@ -108,6 +120,10 @@ class ReceiptCollector:
             wall_clock_start=datetime.now(timezone.utc).isoformat(),
             policy_ref=policy_ref,
             trace_id=self.trace_id,
+            entity=entity,
+            time_window_start=time_window_start,
+            time_window_end=time_window_end,
+            sequence_order=self._sequence_counter,
         )
         self.receipts.append(receipt)
         return receipt
@@ -123,6 +139,8 @@ class ReceiptCollector:
         else:
             receipt.status = "success"
             receipt.result_count = _count_results(result)
+            if receipt.result_count == 0:
+                receipt.missing_reason = "no_evidence_returned"
             # G5.1: Capture full output when enabled
             if RECEIPT_CAPTURE_OUTPUT and result is not None:
                 receipt.output = _redact_output(result)

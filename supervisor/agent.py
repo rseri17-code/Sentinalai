@@ -286,6 +286,10 @@ class SentinalAISupervisor:
         "confluence_worker": frozenset({"confluence"}),
         "code_worker":      frozenset({"github"}),
         "git_worker":       frozenset({"github"}),
+        # Aliases for planner-referenced workers — backed by existing implementations
+        "signal_worker":    frozenset({"dynatrace", "signalfx"}),  # → ApmWorker
+        "event_worker":     frozenset({"dynatrace", "signalfx"}),  # → ApmWorker (sysdig k8s events)
+        "change_worker":    frozenset({"github"}),                  # → DevopsWorker
     }
 
     def __init__(
@@ -313,6 +317,10 @@ class SentinalAISupervisor:
             "confluence_worker": lambda: ConfluenceWorker(gateway=gw),
             "code_worker":      lambda: CodeWorker(gateway=gw),
             "git_worker":       lambda: GitWorker(gateway=gw),
+            # Planner alias workers backed by existing implementations
+            "signal_worker":    lambda: ApmWorker(gateway=gw),
+            "event_worker":     lambda: ApmWorker(gateway=gw),
+            "change_worker":    lambda: DevopsWorker(gateway=gw),
         }
 
         self.workers: dict[str, Any] = {}
@@ -682,13 +690,30 @@ class SentinalAISupervisor:
             except Exception as exc:
                 logger.debug("Visual evidence skipped: %s", exc)
 
-            # Step 4: Analyze
+            # Step 4: Analyze — guard with deadline before expensive LLM calls
+            _deadline = getattr(self._tls, 'investigation_deadline', None)
+            if _deadline is not None and time.monotonic() > _deadline:
+                logger.warning(
+                    "Investigation deadline exceeded before analysis for %s; returning timeout result",
+                    incident_id,
+                )
+                return self._empty_result(
+                    incident_id,
+                    "investigation_deadline_exceeded",
+                    degraded=True,
+                    degraded_reason="deadline_exceeded_before_analysis",
+                )
             _stream.emit_phase(incident_id, "analyze", incident_type=incident_type)
             # Cache evidence + context in TLS so the harness can call reanalyze()
             # on enriched evidence without repeating the expensive playbook.
             self._tls.last_evidence = dict(evidence)
             self._tls.last_incident_type = incident_type
-            result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
+            with trace_span("analyze_evidence", case_id=incident_id) as _ae_span:
+                _ae_span.set_attribute("incident_type", incident_type)
+                _ae_span.set_attribute("evidence_keys", len(evidence))
+                result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
+                _ae_span.set_attribute("confidence", result.get("confidence", 0))
+                _ae_span.set_attribute("confidence_degraded", result.get("confidence_degraded", False))
             # Attach collection-gate result now that result dict exists
             result["_gate_post_collection"] = _gate_post_collection.to_dict()
 
@@ -920,13 +945,33 @@ class SentinalAISupervisor:
                 fix_verified=False,  # updated later by VerificationLoop
             )
 
-            # Phase: Persist — replay, memory, knowledge graph, RCA report, DB
-            self._persist_results(
-                result, incident_id, incident_type, service, evidence,
-                receipts, budget, confidence, hypothesis_count,
-                winner_hypothesis, severity, summary, llm_metrics,
-                judge_scores, elapsed, incident=incident,
+            # Phase: Persist — skip heavy writes if deadline has passed
+            _persist_deadline = getattr(self._tls, 'investigation_deadline', None)
+            _persist_over_deadline = (
+                _persist_deadline is not None and
+                time.monotonic() > _persist_deadline
             )
+            if _persist_over_deadline:
+                logger.warning(
+                    "Deadline exceeded before persist for %s; skipping non-critical writes",
+                    incident_id,
+                )
+                result["confidence_degraded"] = True
+                result.setdefault("confidence_degraded_reason", "")
+                result["confidence_degraded_reason"] = (
+                    (result["confidence_degraded_reason"] + "; " if result["confidence_degraded_reason"] else "")
+                    + "persist_skipped:deadline_exceeded"
+                )
+            else:
+                with trace_span("persist_results", case_id=incident_id) as _pr_span:
+                    _pr_span.set_attribute("incident_type", incident_type)
+                    _pr_span.set_attribute("confidence", confidence)
+                    self._persist_results(
+                        result, incident_id, incident_type, service, evidence,
+                        receipts, budget, confidence, hypothesis_count,
+                        winner_hypothesis, severity, summary, llm_metrics,
+                        judge_scores, elapsed, incident=incident,
+                    )
 
             _stream.emit_complete(
                 investigation_id=incident_id,
@@ -1485,6 +1530,54 @@ class SentinalAISupervisor:
             except Exception as exc:
                 logger.debug("Recurrence recording failed (non-critical): %s", exc)
 
+        # Phase 2: update PatternRegistry and CoFailureIndex
+        _dna_features = result.pop("_dna_features", [])
+        _fingerprint = result.pop("_dna_fingerprint", "")
+        if _dna_features and _fingerprint and incident_type:
+            try:
+                from supervisor.pattern_registry import get_registry
+                # Extract signal sequence from receipt action names (ordered)
+                _receipt_list = receipts.to_list() if receipts else []
+                _signal_seq = [r.get("action", "") for r in _receipt_list if r.get("status") == "success"]
+                # Steps that appeared in this investigation
+                _steps = list(dict.fromkeys(_signal_seq))  # deduplicated, order preserved
+                get_registry().record(
+                    fingerprint=_fingerprint,
+                    incident_type=incident_type,
+                    features=_dna_features,
+                    root_cause=root_cause,
+                    signal_sequence=_signal_seq,
+                    recommended_steps=_steps,
+                )
+                logger.debug("PatternRegistry updated fingerprint=%s count+1", _fingerprint)
+            except Exception as exc:
+                logger.debug("PatternRegistry record failed (non-critical): %s", exc)
+
+        # Co-failure index: record any services that failed together
+        try:
+            from supervisor.co_failure_index import get_co_failure_index
+            _evidence_timeline = result.get("evidence_timeline", [])
+            _affected_services: list[str] = []
+            for _entry in _evidence_timeline:
+                if isinstance(_entry, dict):
+                    _svc = _entry.get("service") or _entry.get("affected_service", "")
+                    if _svc and _svc != service:
+                        _affected_services.append(_svc)
+            # Also check blast_radius if present
+            _blast = result.get("blast_radius", {})
+            if isinstance(_blast, dict):
+                for _svc in _blast.get("affected_services", []):
+                    _name = _svc if isinstance(_svc, str) else _svc.get("service", "")
+                    if _name and _name != service:
+                        _affected_services.append(_name)
+            if service and _affected_services:
+                get_co_failure_index().record_investigation(
+                    primary_service=service,
+                    co_failing_services=list(set(_affected_services)),
+                )
+        except Exception as exc:
+            logger.debug("CoFailureIndex record failed (non-critical): %s", exc)
+
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
     # ------------------------------------------------------------------ #
@@ -1560,7 +1653,17 @@ class SentinalAISupervisor:
                 time.sleep(backoff_s)
                 logger.info("Retrying %s.%s (attempt %d/%d)", worker_name, action, attempt + 1, attempts)
 
-            receipt = receipts.start(worker_name, action, params, policy_ref=policy_ref) if receipts else None
+            # Harness Phase 1: populate provenance fields for evidence traceability
+            _incident = getattr(self._tls, "current_incident", None) or {}
+            _entity = _incident.get("affected_service", "") if isinstance(_incident, dict) else ""
+            _tw_start = params.get("start_time", params.get("time_window_start", ""))
+            _tw_end = params.get("end_time", params.get("time_window_end", ""))
+            receipt = receipts.start(
+                worker_name, action, params, policy_ref=policy_ref,
+                entity=_entity,
+                time_window_start=str(_tw_start) if _tw_start else "",
+                time_window_end=str(_tw_end) if _tw_end else "",
+            ) if receipts else None
             call_start = time.monotonic()
 
             try:
@@ -1639,23 +1742,27 @@ class SentinalAISupervisor:
         budget: ExecutionBudget | None = None,
         circuits: CircuitBreakerRegistry | None = None,
     ) -> dict | None:
-        result = self._call_worker(
-            self.workers["ops_worker"],
-            "get_incident_by_id",
-            {"incident_id": incident_id},
-            receipts, budget, "ops_worker",
-            circuits=circuits,
-        )
-        raw = result.get("incident") if result else None
-        if not raw:
-            return None
-        # Normalize through canonical Incident model
-        try:
-            incident_obj = Incident.from_dict(raw)
-            return incident_obj.to_legacy_dict()
-        except (ValueError, TypeError) as exc:
-            logger.warning("Incident normalization failed, using raw data: %s", exc)
-            return raw
+        with trace_span("fetch_incident", case_id=incident_id) as span:
+            span.set_attribute("incident_id", incident_id)
+            result = self._call_worker(
+                self.workers["ops_worker"],
+                "get_incident_by_id",
+                {"incident_id": incident_id},
+                receipts, budget, "ops_worker",
+                circuits=circuits,
+            )
+            raw = result.get("incident") if result else None
+            if not raw:
+                span.set_attribute("found", False)
+                return None
+            span.set_attribute("found", True)
+            # Normalize through canonical Incident model
+            try:
+                incident_obj = Incident.from_dict(raw)
+                return incident_obj.to_legacy_dict()
+            except (ValueError, TypeError) as exc:
+                logger.warning("Incident normalization failed, using raw data: %s", exc)
+                return raw
 
     def _fetch_historical_context(
         self, service: str, summary: str, incident_type: str = "",
@@ -2178,6 +2285,19 @@ class SentinalAISupervisor:
                 params = self._build_params(step, incident_id, service)
                 worker = self.workers.get(worker_name)
                 if worker is None:
+                    logger.warning(
+                        "Worker %r not registered — evidence step %r skipped (missing_evidence_reason)",
+                        worker_name, label,
+                    )
+                    results.append((label, {
+                        "error": "worker_unavailable",
+                        "worker": worker_name,
+                        "action": action,
+                        "missing_evidence_reason": (
+                            f"Worker {worker_name!r} is not registered. "
+                            "Check server connectivity and WORKER_SERVERS config."
+                        ),
+                    }))
                     continue
 
                 result = self._call_worker(
@@ -2429,6 +2549,34 @@ class SentinalAISupervisor:
         suggested_root_causes: list[str] = evidence.get("_suggested_root_causes", [])
         tool_recommendations: dict[str, float] = evidence.get("_tool_recommendations", {})
 
+        # Phase 2 pattern intelligence: consult PatternRegistry for pre-ranked hints.
+        # DNA is encoded from available evidence; matched patterns inject their
+        # top hypothesis as a primed root cause candidate.  Non-blocking.
+        _dna_features: list[float] = []
+        _fingerprint: str = ""
+        try:
+            from supervisor.incident_dna import encode_incident, extract_signature
+            from supervisor.pattern_registry import get_registry
+            _dna_flat = self._build_dna_evidence_dict(signals, metrics, evidence, incident_type)
+            _dna = encode_incident(
+                incident_id=incident_id, incident_type=incident_type,
+                service=service, evidence=_dna_flat,
+                rca_confidence=0,  # not yet known; filled in after analysis
+            )
+            _dna_features = _dna.features
+            _fingerprint = extract_signature(_dna)
+            _pattern_matches = get_registry().match(_dna_features, incident_type, top_k=3)
+            for _pm in _pattern_matches:
+                _top_hyp = _pm.top_hypothesis()
+                if _top_hyp and _top_hyp not in suggested_root_causes:
+                    suggested_root_causes = list(suggested_root_causes) + [_top_hyp]
+                    logger.debug(
+                        "PatternRegistry: injected hypothesis %r from pattern %s (count=%d)",
+                        _top_hyp, _pm.fingerprint, _pm.match_count,
+                    )
+        except Exception as exc:
+            logger.debug("PatternRegistry lookup failed (non-critical): %s", exc)
+
         # W2: Multi-hypothesis scoring — include historical priming
         hypotheses = self._generate_hypotheses(
             incident_type, service, summary, logs, signals, metrics, events, changes, timeline,
@@ -2476,6 +2624,12 @@ class SentinalAISupervisor:
                 pil_context=pil_context,
             )
             _conf_after = hypotheses[0].base_score if hypotheses else 0.0
+            if llm_metrics.get("llm_refinement_status") == "failed":
+                # Hypothesis scores are still at pre-refinement values; flag explicitly.
+                llm_metrics["confidence_degraded"] = True
+                llm_metrics["confidence_degraded_reason"] = (
+                    f"llm_refinement_failed:{llm_metrics.get('llm_refinement_error', 'unknown')}"
+                )
             try:
                 from supervisor.tool_transparency import get_emitter as _tt
                 _tt().record_post_llm_scores(_inv_id, hypotheses, _conf_before, _conf_after)
@@ -2540,7 +2694,14 @@ class SentinalAISupervisor:
         elif confidence < 50 and not root_cause.startswith("LOW CONFIDENCE"):
             root_cause = f"LOW CONFIDENCE: {root_cause}"
 
-        result = {
+        # LLM reasoning failure: surface status in result so callers can see stale confidence
+        llm_reasoning_failed = (
+            _llm_enabled() and winner and
+            llm_metrics.get("llm_reasoning_status") == "failed"
+        )
+        llm_refine_failed = llm_metrics.get("llm_refinement_status") == "failed"
+
+        result: dict[str, Any] = {
             "incident_id": incident_id,
             "root_cause": root_cause,
             "confidence": confidence,
@@ -2550,7 +2711,19 @@ class SentinalAISupervisor:
             "retrieval_confidence_boost": retrieval_boost,
             "_hypothesis_count": len(hypotheses),
             "_winner_hypothesis": winner.name if winner else "none",
+            # Phase 2: carry DNA features and fingerprint forward for _persist_results
+            "_dna_features": _dna_features,
+            "_dna_fingerprint": _fingerprint,
         }
+
+        if llm_refine_failed or llm_reasoning_failed:
+            result["confidence_degraded"] = True
+            reasons = []
+            if llm_refine_failed:
+                reasons.append(llm_metrics.get("confidence_degraded_reason", "llm_refinement_failed"))
+            if llm_reasoning_failed:
+                reasons.append(f"llm_reasoning_failed:{llm_metrics.get('llm_reasoning_error', 'unknown')}")
+            result["confidence_degraded_reason"] = "; ".join(reasons)
 
         # Attach LLM usage metrics for OTEL emission
         if llm_metrics:
@@ -2617,8 +2790,11 @@ class SentinalAISupervisor:
                 "refine_model_id": result.get("model_id", ""),
             }
         except Exception as exc:
-            logger.warning("LLM hypothesis refinement failed: %s", exc)
-            return {}
+            logger.warning("LLM hypothesis refinement failed (incident_type=%s): %s", incident_type, exc)
+            return {
+                "llm_refinement_status": "failed",
+                "llm_refinement_error": type(exc).__name__,
+            }
 
     def _llm_generate_reasoning(
         self,
@@ -2664,8 +2840,12 @@ class SentinalAISupervisor:
                 "reasoning_model_id": result.get("model_id", ""),
             }
         except Exception as exc:
-            logger.warning("LLM reasoning generation failed: %s", exc)
-            return {"reasoning": ""}
+            logger.warning("LLM reasoning generation failed (incident_type=%s): %s", incident_type, exc)
+            return {
+                "reasoning": fallback_reasoning,
+                "llm_reasoning_status": "failed",
+                "llm_reasoning_error": type(exc).__name__,
+            }
 
     def _format_evidence_summary(
         self,
@@ -3342,6 +3522,42 @@ class SentinalAISupervisor:
                 all_events.extend(events)
         return sorted(all_events, key=lambda x: x.get("timestamp") or x.get("_time") or x.get("ts") or "")
 
+    def _build_dna_evidence_dict(
+        self,
+        signals: dict,
+        metrics: dict,
+        evidence: dict,
+        incident_type: str,
+    ) -> dict:
+        """Flatten investigation evidence into the flat key-value dict expected by encode_incident.
+
+        Only populates what's readily available; encode_incident handles missing keys
+        gracefully by defaulting to 0.0.
+        """
+        flat: dict = {}
+        gs = signals.get("golden_signals", {}) if signals else {}
+        err = gs.get("errors", {})
+        lat = gs.get("latency", {})
+        if err.get("rate") and err.get("baseline_rate"):
+            flat["observed_error_rate"] = float(err["rate"])
+            flat["baseline_error_rate"] = float(err["baseline_rate"])
+        if lat.get("p95") and lat.get("baseline_p95"):
+            flat["observed_p95"] = float(lat["p95"])
+            flat["baseline_p95"] = float(lat["baseline_p95"])
+        m = metrics.get("metrics", {}) if metrics else {}
+        if m.get("cpu_percent"):
+            flat["cpu_percent"] = float(m["cpu_percent"])
+        if m.get("memory_percent"):
+            flat["memory_percent"] = float(m["memory_percent"])
+        if gs.get("network", {}).get("errors"):
+            flat["network_errors"] = True
+        # Count non-private, non-empty evidence keys as source count
+        flat["num_evidence_sources"] = sum(
+            1 for k, v in evidence.items()
+            if not k.startswith("_") and v not in (None, "", [], {})
+        )
+        return flat
+
     def _extract_changes(self, evidence: dict) -> list[dict]:
         """Extract change/deployment data from evidence (Splunk + ServiceNow)."""
         all_changes = []
@@ -3717,14 +3933,24 @@ class SentinalAISupervisor:
                 return True
         return False
 
-    def _empty_result(self, incident_id: str, reason: str) -> dict:
-        return {
+    def _empty_result(
+        self,
+        incident_id: str,
+        reason: str,
+        degraded: bool = False,
+        degraded_reason: str = "",
+    ) -> dict:
+        result = {
             "incident_id": incident_id,
             "root_cause": reason,
             "confidence": 10,
             "evidence_timeline": [],
             "reasoning": f"Investigation could not proceed: {reason}",
         }
+        if degraded:
+            result["confidence_degraded"] = True
+            result["confidence_degraded_reason"] = degraded_reason or reason
+        return result
 
     # =========================================================================
     # Harness support — evidence-cached re-analysis without playbook re-run

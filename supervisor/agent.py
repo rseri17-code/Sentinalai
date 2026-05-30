@@ -690,7 +690,19 @@ class SentinalAISupervisor:
             except Exception as exc:
                 logger.debug("Visual evidence skipped: %s", exc)
 
-            # Step 4: Analyze
+            # Step 4: Analyze — guard with deadline before expensive LLM calls
+            _deadline = getattr(self._tls, 'investigation_deadline', None)
+            if _deadline is not None and time.monotonic() > _deadline:
+                logger.warning(
+                    "Investigation deadline exceeded before analysis for %s; returning timeout result",
+                    incident_id,
+                )
+                return self._empty_result(
+                    incident_id,
+                    "investigation_deadline_exceeded",
+                    degraded=True,
+                    degraded_reason="deadline_exceeded_before_analysis",
+                )
             _stream.emit_phase(incident_id, "analyze", incident_type=incident_type)
             # Cache evidence + context in TLS so the harness can call reanalyze()
             # on enriched evidence without repeating the expensive playbook.
@@ -928,13 +940,30 @@ class SentinalAISupervisor:
                 fix_verified=False,  # updated later by VerificationLoop
             )
 
-            # Phase: Persist — replay, memory, knowledge graph, RCA report, DB
-            self._persist_results(
-                result, incident_id, incident_type, service, evidence,
-                receipts, budget, confidence, hypothesis_count,
-                winner_hypothesis, severity, summary, llm_metrics,
-                judge_scores, elapsed, incident=incident,
+            # Phase: Persist — skip heavy writes if deadline has passed
+            _persist_deadline = getattr(self._tls, 'investigation_deadline', None)
+            _persist_over_deadline = (
+                _persist_deadline is not None and
+                time.monotonic() > _persist_deadline
             )
+            if _persist_over_deadline:
+                logger.warning(
+                    "Deadline exceeded before persist for %s; skipping non-critical writes",
+                    incident_id,
+                )
+                result["confidence_degraded"] = True
+                result.setdefault("confidence_degraded_reason", "")
+                result["confidence_degraded_reason"] = (
+                    (result["confidence_degraded_reason"] + "; " if result["confidence_degraded_reason"] else "")
+                    + "persist_skipped:deadline_exceeded"
+                )
+            else:
+                self._persist_results(
+                    result, incident_id, incident_type, service, evidence,
+                    receipts, budget, confidence, hypothesis_count,
+                    winner_hypothesis, severity, summary, llm_metrics,
+                    judge_scores, elapsed, incident=incident,
+                )
 
             _stream.emit_complete(
                 investigation_id=incident_id,
@@ -3767,14 +3796,24 @@ class SentinalAISupervisor:
                 return True
         return False
 
-    def _empty_result(self, incident_id: str, reason: str) -> dict:
-        return {
+    def _empty_result(
+        self,
+        incident_id: str,
+        reason: str,
+        degraded: bool = False,
+        degraded_reason: str = "",
+    ) -> dict:
+        result = {
             "incident_id": incident_id,
             "root_cause": reason,
             "confidence": 10,
             "evidence_timeline": [],
             "reasoning": f"Investigation could not proceed: {reason}",
         }
+        if degraded:
+            result["confidence_degraded"] = True
+            result["confidence_degraded_reason"] = degraded_reason or reason
+        return result
 
     # =========================================================================
     # Harness support — evidence-cached re-analysis without playbook re-run

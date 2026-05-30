@@ -6,6 +6,10 @@ Replay mode rehydrates from stored receipts without making external calls.
 Stepwise replay (replay_stepwise) lets callers walk through a past
 investigation one tool call at a time, observing how evidence accumulated
 and how the hypothesis would have evolved at each step.
+
+Retention policy (applied on every save):
+  REPLAY_MAX_AGE_HOURS  — delete artifacts older than this (default: 24)
+  REPLAY_MAX_FILES      — keep at most this many artifacts total (default: 500)
 """
 
 from __future__ import annotations
@@ -13,6 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,6 +26,8 @@ from typing import Any, Callable, Generator
 logger = logging.getLogger(__name__)
 
 DEFAULT_REPLAY_DIR = os.getenv("SENTINALAI_REPLAY_DIR", "/tmp/sentinalai_replays")
+_MAX_AGE_HOURS = float(os.getenv("REPLAY_MAX_AGE_HOURS", "24"))
+_MAX_FILES = int(os.getenv("REPLAY_MAX_FILES", "500"))
 
 
 @dataclass
@@ -73,7 +80,52 @@ class ReplayStore:
 
         path.write_text(json.dumps(artifact, indent=2, default=str))
         logger.info("Saved replay artifact: %s", path)
+        self._purge_old_artifacts()
         return str(path)
+
+    def _purge_old_artifacts(
+        self,
+        max_age_hours: float = _MAX_AGE_HOURS,
+        max_files: int = _MAX_FILES,
+    ) -> int:
+        """Delete artifacts that are too old or exceed the file count limit.
+
+        Returns the number of files deleted.
+        """
+        if not self.replay_dir.exists():
+            return 0
+
+        all_files = sorted(self.replay_dir.glob("*.json"), key=lambda f: f.stat().st_mtime)
+        cutoff = time.time() - max_age_hours * 3600
+        deleted = 0
+
+        # Pass 1: delete by age
+        remaining = []
+        for f in all_files:
+            if f.stat().st_mtime < cutoff:
+                try:
+                    f.unlink()
+                    deleted += 1
+                    logger.debug("Replay purge (age): deleted %s", f.name)
+                except OSError as exc:
+                    logger.warning("Replay purge: could not delete %s: %s", f.name, exc)
+            else:
+                remaining.append(f)
+
+        # Pass 2: delete oldest if count still exceeds limit (newest-first keeps)
+        if len(remaining) > max_files:
+            to_delete = remaining[: len(remaining) - max_files]
+            for f in to_delete:
+                try:
+                    f.unlink()
+                    deleted += 1
+                    logger.debug("Replay purge (count): deleted %s", f.name)
+                except OSError as exc:
+                    logger.warning("Replay purge: could not delete %s: %s", f.name, exc)
+
+        if deleted:
+            logger.info("Replay purge: deleted %d artifact(s)", deleted)
+        return deleted
 
     def load(self, case_id: str) -> dict | None:
         """Load the most recent replay artifact for a case."""

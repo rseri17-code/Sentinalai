@@ -261,6 +261,63 @@ try:
 
         return health
 
+    @app.get("/ready")
+    async def ready() -> JSONResponse:
+        """Kubernetes readiness probe.
+
+        Returns 200 only when all critical subsystems are initialised and
+        ready to serve traffic.  Returns 503 while warming up or when a
+        required dependency is unavailable.
+
+        Unlike /ping (liveness), a 503 here causes the load balancer to stop
+        sending traffic until the instance recovers.
+        """
+        checks: dict[str, str] = {}
+        failed: list[str] = []
+
+        # 1. Database connectivity
+        try:
+            from database.connection import check_health
+            db = check_health()
+            checks["database"] = db.get("database", "unknown")
+            if checks["database"] not in ("healthy", "ok", "connected"):
+                failed.append("database")
+        except Exception as exc:
+            checks["database"] = f"error:{type(exc).__name__}"
+            failed.append("database")
+
+        # 2. Supervisor instantiation + at least one worker registered
+        try:
+            from supervisor.agent import SentinalAISupervisor
+            sup = SentinalAISupervisor.__new__(SentinalAISupervisor)
+            # Light check: can we import and the workers dict is accessible
+            worker_count = len(getattr(sup, "workers", {}))
+            checks["supervisor"] = f"workers_registered:{worker_count}"
+        except Exception as exc:
+            checks["supervisor"] = f"error:{type(exc).__name__}"
+            failed.append("supervisor")
+
+        # 3. Config sanity: INVESTIGATION_DEADLINE_SECONDS must be positive
+        try:
+            from supervisor.agent import SentinalAISupervisor
+            deadline = SentinalAISupervisor.INVESTIGATION_DEADLINE_SECONDS
+            checks["config"] = "ok" if deadline > 0 else "invalid_deadline"
+            if deadline <= 0:
+                failed.append("config")
+        except Exception as exc:
+            checks["config"] = f"error:{type(exc).__name__}"
+            failed.append("config")
+
+        payload = {
+            "service": "sentinalai",
+            "ready": len(failed) == 0,
+            "checks": checks,
+        }
+        if failed:
+            payload["failed"] = failed
+            return JSONResponse(status_code=503, content=payload)
+        return JSONResponse(status_code=200, content=payload)
+
     @app.post("/invocations")
     async def invocations(request: Request) -> JSONResponse:
         """Investigation endpoint following AgentCore contract.

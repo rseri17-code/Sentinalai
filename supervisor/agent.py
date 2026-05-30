@@ -1605,7 +1605,17 @@ class SentinalAISupervisor:
                 time.sleep(backoff_s)
                 logger.info("Retrying %s.%s (attempt %d/%d)", worker_name, action, attempt + 1, attempts)
 
-            receipt = receipts.start(worker_name, action, params, policy_ref=policy_ref) if receipts else None
+            # Harness Phase 1: populate provenance fields for evidence traceability
+            _incident = getattr(self._tls, "current_incident", None) or {}
+            _entity = _incident.get("affected_service", "") if isinstance(_incident, dict) else ""
+            _tw_start = params.get("start_time", params.get("time_window_start", ""))
+            _tw_end = params.get("end_time", params.get("time_window_end", ""))
+            receipt = receipts.start(
+                worker_name, action, params, policy_ref=policy_ref,
+                entity=_entity,
+                time_window_start=str(_tw_start) if _tw_start else "",
+                time_window_end=str(_tw_end) if _tw_end else "",
+            ) if receipts else None
             call_start = time.monotonic()
 
             try:

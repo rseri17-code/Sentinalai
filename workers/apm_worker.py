@@ -25,6 +25,10 @@ class ApmWorker(BaseWorker):
         self._gateway = gateway or McpGateway.get_instance()
         self.register("get_golden_signals", self._get_golden_signals)
         self.register("check_latency", self._get_golden_signals)
+        # Registered as backing implementations for signal_worker / event_worker aliases
+        self.register("get_apm_traces",     self._get_golden_signals)   # traces via APM proxy
+        self.register("get_k8s_events",     self._get_k8s_events)
+        self.register("get_network_events", self._get_k8s_events)       # network events via same source
 
     def _get_golden_signals(self, params: dict) -> dict:
         """Get golden signals from Dynatrace (primary) enriched with SignalFx.
@@ -55,3 +59,11 @@ class ApmWorker(BaseWorker):
             logger.warning("SignalFx enrichment skipped (non-critical): %s", exc)
 
         return result
+
+    def _get_k8s_events(self, params: dict) -> dict:
+        """Get Kubernetes and network events from Sysdig / Dynatrace."""
+        return self._gateway.invoke(
+            "sysdig.get_kubernetes_events",
+            "get_k8s_events",
+            params,
+        )

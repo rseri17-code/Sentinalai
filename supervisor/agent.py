@@ -286,6 +286,10 @@ class SentinalAISupervisor:
         "confluence_worker": frozenset({"confluence"}),
         "code_worker":      frozenset({"github"}),
         "git_worker":       frozenset({"github"}),
+        # Aliases for planner-referenced workers — backed by existing implementations
+        "signal_worker":    frozenset({"dynatrace", "signalfx"}),  # → ApmWorker
+        "event_worker":     frozenset({"dynatrace", "signalfx"}),  # → ApmWorker (sysdig k8s events)
+        "change_worker":    frozenset({"github"}),                  # → DevopsWorker
     }
 
     def __init__(
@@ -313,6 +317,10 @@ class SentinalAISupervisor:
             "confluence_worker": lambda: ConfluenceWorker(gateway=gw),
             "code_worker":      lambda: CodeWorker(gateway=gw),
             "git_worker":       lambda: GitWorker(gateway=gw),
+            # Planner alias workers backed by existing implementations
+            "signal_worker":    lambda: ApmWorker(gateway=gw),
+            "event_worker":     lambda: ApmWorker(gateway=gw),
+            "change_worker":    lambda: DevopsWorker(gateway=gw),
         }
 
         self.workers: dict[str, Any] = {}
@@ -2178,6 +2186,19 @@ class SentinalAISupervisor:
                 params = self._build_params(step, incident_id, service)
                 worker = self.workers.get(worker_name)
                 if worker is None:
+                    logger.warning(
+                        "Worker %r not registered — evidence step %r skipped (missing_evidence_reason)",
+                        worker_name, label,
+                    )
+                    results.append((label, {
+                        "error": "worker_unavailable",
+                        "worker": worker_name,
+                        "action": action,
+                        "missing_evidence_reason": (
+                            f"Worker {worker_name!r} is not registered. "
+                            "Check server connectivity and WORKER_SERVERS config."
+                        ),
+                    }))
                     continue
 
                 result = self._call_worker(

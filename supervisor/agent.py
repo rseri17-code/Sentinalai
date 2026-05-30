@@ -2497,6 +2497,12 @@ class SentinalAISupervisor:
                 pil_context=pil_context,
             )
             _conf_after = hypotheses[0].base_score if hypotheses else 0.0
+            if llm_metrics.get("llm_refinement_status") == "failed":
+                # Hypothesis scores are still at pre-refinement values; flag explicitly.
+                llm_metrics["confidence_degraded"] = True
+                llm_metrics["confidence_degraded_reason"] = (
+                    f"llm_refinement_failed:{llm_metrics.get('llm_refinement_error', 'unknown')}"
+                )
             try:
                 from supervisor.tool_transparency import get_emitter as _tt
                 _tt().record_post_llm_scores(_inv_id, hypotheses, _conf_before, _conf_after)
@@ -2561,7 +2567,14 @@ class SentinalAISupervisor:
         elif confidence < 50 and not root_cause.startswith("LOW CONFIDENCE"):
             root_cause = f"LOW CONFIDENCE: {root_cause}"
 
-        result = {
+        # LLM reasoning failure: surface status in result so callers can see stale confidence
+        llm_reasoning_failed = (
+            _llm_enabled() and winner and
+            llm_metrics.get("llm_reasoning_status") == "failed"
+        )
+        llm_refine_failed = llm_metrics.get("llm_refinement_status") == "failed"
+
+        result: dict[str, Any] = {
             "incident_id": incident_id,
             "root_cause": root_cause,
             "confidence": confidence,
@@ -2572,6 +2585,15 @@ class SentinalAISupervisor:
             "_hypothesis_count": len(hypotheses),
             "_winner_hypothesis": winner.name if winner else "none",
         }
+
+        if llm_refine_failed or llm_reasoning_failed:
+            result["confidence_degraded"] = True
+            reasons = []
+            if llm_refine_failed:
+                reasons.append(llm_metrics.get("confidence_degraded_reason", "llm_refinement_failed"))
+            if llm_reasoning_failed:
+                reasons.append(f"llm_reasoning_failed:{llm_metrics.get('llm_reasoning_error', 'unknown')}")
+            result["confidence_degraded_reason"] = "; ".join(reasons)
 
         # Attach LLM usage metrics for OTEL emission
         if llm_metrics:
@@ -2638,8 +2660,11 @@ class SentinalAISupervisor:
                 "refine_model_id": result.get("model_id", ""),
             }
         except Exception as exc:
-            logger.warning("LLM hypothesis refinement failed: %s", exc)
-            return {}
+            logger.warning("LLM hypothesis refinement failed (incident_type=%s): %s", incident_type, exc)
+            return {
+                "llm_refinement_status": "failed",
+                "llm_refinement_error": type(exc).__name__,
+            }
 
     def _llm_generate_reasoning(
         self,
@@ -2685,8 +2710,12 @@ class SentinalAISupervisor:
                 "reasoning_model_id": result.get("model_id", ""),
             }
         except Exception as exc:
-            logger.warning("LLM reasoning generation failed: %s", exc)
-            return {"reasoning": ""}
+            logger.warning("LLM reasoning generation failed (incident_type=%s): %s", incident_type, exc)
+            return {
+                "reasoning": fallback_reasoning,
+                "llm_reasoning_status": "failed",
+                "llm_reasoning_error": type(exc).__name__,
+            }
 
     def _format_evidence_summary(
         self,

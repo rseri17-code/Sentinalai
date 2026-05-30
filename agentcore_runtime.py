@@ -347,6 +347,13 @@ def main() -> None:
     # G3.5: Check production secrets configuration
     _check_production_secrets_config()
 
+    # Fail startup if REQUIRE_WEBHOOK_AUTH=true but any webhook secrets are missing
+    try:
+        from agui.api.intake import validate_webhook_secrets_at_startup
+        validate_webhook_secrets_at_startup()
+    except ImportError:
+        pass  # agui not installed in this deployment
+
     # Register graceful shutdown
     signal.signal(signal.SIGTERM, _shutdown_handler)
     signal.signal(signal.SIGINT, _shutdown_handler)

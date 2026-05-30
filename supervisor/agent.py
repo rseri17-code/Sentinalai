@@ -708,7 +708,12 @@ class SentinalAISupervisor:
             # on enriched evidence without repeating the expensive playbook.
             self._tls.last_evidence = dict(evidence)
             self._tls.last_incident_type = incident_type
-            result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
+            with trace_span("analyze_evidence", case_id=incident_id) as _ae_span:
+                _ae_span.set_attribute("incident_type", incident_type)
+                _ae_span.set_attribute("evidence_keys", len(evidence))
+                result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
+                _ae_span.set_attribute("confidence", result.get("confidence", 0))
+                _ae_span.set_attribute("confidence_degraded", result.get("confidence_degraded", False))
             # Attach collection-gate result now that result dict exists
             result["_gate_post_collection"] = _gate_post_collection.to_dict()
 
@@ -958,12 +963,15 @@ class SentinalAISupervisor:
                     + "persist_skipped:deadline_exceeded"
                 )
             else:
-                self._persist_results(
-                    result, incident_id, incident_type, service, evidence,
-                    receipts, budget, confidence, hypothesis_count,
-                    winner_hypothesis, severity, summary, llm_metrics,
-                    judge_scores, elapsed, incident=incident,
-                )
+                with trace_span("persist_results", case_id=incident_id) as _pr_span:
+                    _pr_span.set_attribute("incident_type", incident_type)
+                    _pr_span.set_attribute("confidence", confidence)
+                    self._persist_results(
+                        result, incident_id, incident_type, service, evidence,
+                        receipts, budget, confidence, hypothesis_count,
+                        winner_hypothesis, severity, summary, llm_metrics,
+                        judge_scores, elapsed, incident=incident,
+                    )
 
             _stream.emit_complete(
                 investigation_id=incident_id,
@@ -1676,23 +1684,27 @@ class SentinalAISupervisor:
         budget: ExecutionBudget | None = None,
         circuits: CircuitBreakerRegistry | None = None,
     ) -> dict | None:
-        result = self._call_worker(
-            self.workers["ops_worker"],
-            "get_incident_by_id",
-            {"incident_id": incident_id},
-            receipts, budget, "ops_worker",
-            circuits=circuits,
-        )
-        raw = result.get("incident") if result else None
-        if not raw:
-            return None
-        # Normalize through canonical Incident model
-        try:
-            incident_obj = Incident.from_dict(raw)
-            return incident_obj.to_legacy_dict()
-        except (ValueError, TypeError) as exc:
-            logger.warning("Incident normalization failed, using raw data: %s", exc)
-            return raw
+        with trace_span("fetch_incident", case_id=incident_id) as span:
+            span.set_attribute("incident_id", incident_id)
+            result = self._call_worker(
+                self.workers["ops_worker"],
+                "get_incident_by_id",
+                {"incident_id": incident_id},
+                receipts, budget, "ops_worker",
+                circuits=circuits,
+            )
+            raw = result.get("incident") if result else None
+            if not raw:
+                span.set_attribute("found", False)
+                return None
+            span.set_attribute("found", True)
+            # Normalize through canonical Incident model
+            try:
+                incident_obj = Incident.from_dict(raw)
+                return incident_obj.to_legacy_dict()
+            except (ValueError, TypeError) as exc:
+                logger.warning("Incident normalization failed, using raw data: %s", exc)
+                return raw
 
     def _fetch_historical_context(
         self, service: str, summary: str, incident_type: str = "",

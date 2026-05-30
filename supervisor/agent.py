@@ -1530,6 +1530,54 @@ class SentinalAISupervisor:
             except Exception as exc:
                 logger.debug("Recurrence recording failed (non-critical): %s", exc)
 
+        # Phase 2: update PatternRegistry and CoFailureIndex
+        _dna_features = result.pop("_dna_features", [])
+        _fingerprint = result.pop("_dna_fingerprint", "")
+        if _dna_features and _fingerprint and incident_type:
+            try:
+                from supervisor.pattern_registry import get_registry
+                # Extract signal sequence from receipt action names (ordered)
+                _receipt_list = receipts.to_list() if receipts else []
+                _signal_seq = [r.get("action", "") for r in _receipt_list if r.get("status") == "success"]
+                # Steps that appeared in this investigation
+                _steps = list(dict.fromkeys(_signal_seq))  # deduplicated, order preserved
+                get_registry().record(
+                    fingerprint=_fingerprint,
+                    incident_type=incident_type,
+                    features=_dna_features,
+                    root_cause=root_cause,
+                    signal_sequence=_signal_seq,
+                    recommended_steps=_steps,
+                )
+                logger.debug("PatternRegistry updated fingerprint=%s count+1", _fingerprint)
+            except Exception as exc:
+                logger.debug("PatternRegistry record failed (non-critical): %s", exc)
+
+        # Co-failure index: record any services that failed together
+        try:
+            from supervisor.co_failure_index import get_co_failure_index
+            _evidence_timeline = result.get("evidence_timeline", [])
+            _affected_services: list[str] = []
+            for _entry in _evidence_timeline:
+                if isinstance(_entry, dict):
+                    _svc = _entry.get("service") or _entry.get("affected_service", "")
+                    if _svc and _svc != service:
+                        _affected_services.append(_svc)
+            # Also check blast_radius if present
+            _blast = result.get("blast_radius", {})
+            if isinstance(_blast, dict):
+                for _svc in _blast.get("affected_services", []):
+                    _name = _svc if isinstance(_svc, str) else _svc.get("service", "")
+                    if _name and _name != service:
+                        _affected_services.append(_name)
+            if service and _affected_services:
+                get_co_failure_index().record_investigation(
+                    primary_service=service,
+                    co_failing_services=list(set(_affected_services)),
+                )
+        except Exception as exc:
+            logger.debug("CoFailureIndex record failed (non-critical): %s", exc)
+
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
     # ------------------------------------------------------------------ #
@@ -2501,6 +2549,34 @@ class SentinalAISupervisor:
         suggested_root_causes: list[str] = evidence.get("_suggested_root_causes", [])
         tool_recommendations: dict[str, float] = evidence.get("_tool_recommendations", {})
 
+        # Phase 2 pattern intelligence: consult PatternRegistry for pre-ranked hints.
+        # DNA is encoded from available evidence; matched patterns inject their
+        # top hypothesis as a primed root cause candidate.  Non-blocking.
+        _dna_features: list[float] = []
+        _fingerprint: str = ""
+        try:
+            from supervisor.incident_dna import encode_incident, extract_signature
+            from supervisor.pattern_registry import get_registry
+            _dna_flat = self._build_dna_evidence_dict(signals, metrics, evidence, incident_type)
+            _dna = encode_incident(
+                incident_id=incident_id, incident_type=incident_type,
+                service=service, evidence=_dna_flat,
+                rca_confidence=0,  # not yet known; filled in after analysis
+            )
+            _dna_features = _dna.features
+            _fingerprint = extract_signature(_dna)
+            _pattern_matches = get_registry().match(_dna_features, incident_type, top_k=3)
+            for _pm in _pattern_matches:
+                _top_hyp = _pm.top_hypothesis()
+                if _top_hyp and _top_hyp not in suggested_root_causes:
+                    suggested_root_causes = list(suggested_root_causes) + [_top_hyp]
+                    logger.debug(
+                        "PatternRegistry: injected hypothesis %r from pattern %s (count=%d)",
+                        _top_hyp, _pm.fingerprint, _pm.match_count,
+                    )
+        except Exception as exc:
+            logger.debug("PatternRegistry lookup failed (non-critical): %s", exc)
+
         # W2: Multi-hypothesis scoring — include historical priming
         hypotheses = self._generate_hypotheses(
             incident_type, service, summary, logs, signals, metrics, events, changes, timeline,
@@ -2635,6 +2711,9 @@ class SentinalAISupervisor:
             "retrieval_confidence_boost": retrieval_boost,
             "_hypothesis_count": len(hypotheses),
             "_winner_hypothesis": winner.name if winner else "none",
+            # Phase 2: carry DNA features and fingerprint forward for _persist_results
+            "_dna_features": _dna_features,
+            "_dna_fingerprint": _fingerprint,
         }
 
         if llm_refine_failed or llm_reasoning_failed:
@@ -3442,6 +3521,42 @@ class SentinalAISupervisor:
             if isinstance(events, list):
                 all_events.extend(events)
         return sorted(all_events, key=lambda x: x.get("timestamp") or x.get("_time") or x.get("ts") or "")
+
+    def _build_dna_evidence_dict(
+        self,
+        signals: dict,
+        metrics: dict,
+        evidence: dict,
+        incident_type: str,
+    ) -> dict:
+        """Flatten investigation evidence into the flat key-value dict expected by encode_incident.
+
+        Only populates what's readily available; encode_incident handles missing keys
+        gracefully by defaulting to 0.0.
+        """
+        flat: dict = {}
+        gs = signals.get("golden_signals", {}) if signals else {}
+        err = gs.get("errors", {})
+        lat = gs.get("latency", {})
+        if err.get("rate") and err.get("baseline_rate"):
+            flat["observed_error_rate"] = float(err["rate"])
+            flat["baseline_error_rate"] = float(err["baseline_rate"])
+        if lat.get("p95") and lat.get("baseline_p95"):
+            flat["observed_p95"] = float(lat["p95"])
+            flat["baseline_p95"] = float(lat["baseline_p95"])
+        m = metrics.get("metrics", {}) if metrics else {}
+        if m.get("cpu_percent"):
+            flat["cpu_percent"] = float(m["cpu_percent"])
+        if m.get("memory_percent"):
+            flat["memory_percent"] = float(m["memory_percent"])
+        if gs.get("network", {}).get("errors"):
+            flat["network_errors"] = True
+        # Count non-private, non-empty evidence keys as source count
+        flat["num_evidence_sources"] = sum(
+            1 for k, v in evidence.items()
+            if not k.startswith("_") and v not in (None, "", [], {})
+        )
+        return flat
 
     def _extract_changes(self, evidence: dict) -> list[dict]:
         """Extract change/deployment data from evidence (Splunk + ServiceNow)."""

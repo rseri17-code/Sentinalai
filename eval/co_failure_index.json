@@ -1,0 +1,83 @@
+{
+  "stats": [
+    {
+      "service_a": "api-gateway",
+      "service_b": "payment-service",
+      "co_failure_count": 124,
+      "total_incidents_a": 121,
+      "avg_delay_seconds": 0.0,
+      "min_delay_seconds": 0.0,
+      "max_delay_seconds": 0.0
+    },
+    {
+      "service_a": "api-gateway",
+      "service_b": "unknown",
+      "co_failure_count": 2,
+      "total_incidents_a": 121,
+      "avg_delay_seconds": 0.0,
+      "min_delay_seconds": 0.0,
+      "max_delay_seconds": 0.0
+    },
+    {
+      "service_a": "payment-service",
+      "service_b": "unknown",
+      "co_failure_count": 2,
+      "total_incidents_a": 2,
+      "avg_delay_seconds": 0.0,
+      "min_delay_seconds": 0.0,
+      "max_delay_seconds": 0.0
+    },
+    {
+      "service_a": "inventory-service",
+      "service_b": "kube-dns",
+      "co_failure_count": 35,
+      "total_incidents_a": 37,
+      "avg_delay_seconds": 0.0,
+      "min_delay_seconds": 0.0,
+      "max_delay_seconds": 0.0
+    },
+    {
+      "service_a": "api-gateway",
+      "service_b": "checkout-service",
+      "co_failure_count": 33,
+      "total_incidents_a": 121,
+      "avg_delay_seconds": 0.0,
+      "min_delay_seconds": 0.0,
+      "max_delay_seconds": 0.0
+    },
+    {
+      "service_a": "api-gateway",
+      "service_b": "payment-db",
+      "co_failure_count": 34,
+      "total_incidents_a": 121,
+      "avg_delay_seconds": 0.0,
+      "min_delay_seconds": 0.0,
+      "max_delay_seconds": 0.0
+    },
+    {
+      "service_a": "data-pipeline",
+      "service_b": "recommendation-service",
+      "co_failure_count": 31,
+      "total_incidents_a": 31,
+      "avg_delay_seconds": 0.0,
+      "min_delay_seconds": 0.0,
+      "max_delay_seconds": 0.0
+    },
+    {
+      "service_a": "inv",
+      "service_b": "inventory-service",
+      "co_failure_count": 2,
+      "total_incidents_a": 37,
+      "avg_delay_seconds": 0.0,
+      "min_delay_seconds": 0.0,
+      "max_delay_seconds": 0.0
+    }
+  ],
+  "incident_counts": {
+    "api-gateway": 121,
+    "unknown": 2,
+    "inventory-service": 37,
+    "recommendation-service": 31,
+    "payment-service": 3
+  }
+}

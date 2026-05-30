@@ -332,3 +332,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-05-27T18:02:50.443Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 58b6f94 fix: make test suite green (asyncio + budget + confidence range)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `58b6f94 fix: make test suite green (asyncio + budget + confidence range)`
+- `59fa279 chore: update hot memory (stop hook auto-commit)`
+- `cd565b1 chore: update eval indices (auto-generated)`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

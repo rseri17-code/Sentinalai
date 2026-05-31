@@ -435,7 +435,35 @@ def run_nightly_self_improvement() -> dict:
         summary["errors"].append(f"calibrator rebuild failed: {exc}")
         logger.warning("Nightly self-improvement: calibrator rebuild error: %s", exc)
 
-    # Step 3 — generate and log full report
+    # Step 3 — autonomous strategy improvement cycle
+    try:
+        from supervisor.self_improvement_loop import run_improvement_cycle
+        improvement = run_improvement_cycle(max_experiments=5, min_delta=0.02)
+        summary["self_improvement"] = {
+            "cycle_id": improvement.cycle_id,
+            "baseline_score": improvement.baseline_score,
+            "final_score": improvement.final_score,
+            "net_delta": improvement.net_delta,
+            "accepted_count": improvement.accepted_count,
+            "worst_incident_type": improvement.worst_incident_type,
+            "accepted_changes": improvement.accepted_changes,
+        }
+        if improvement.accepted_count > 0:
+            summary["actions_taken"].append(
+                f"Self-improvement: accepted {improvement.accepted_count} strategy changes "
+                f"for '{improvement.worst_incident_type}' "
+                f"(delta={improvement.net_delta:+.4f})"
+            )
+        else:
+            summary["actions_taken"].append(
+                f"Self-improvement: no changes accepted (baseline={improvement.baseline_score:.3f}, "
+                f"0/{improvement.experiments_run} experiments met min_delta)"
+            )
+    except Exception as exc:
+        summary["errors"].append(f"self_improvement_loop failed: {exc}")
+        logger.warning("Nightly self-improvement: self_improvement_loop error: %s", exc)
+
+    # Step 4 — generate and log full report
     try:
         report = generate_self_eval_report()
         summary["health_report"] = report

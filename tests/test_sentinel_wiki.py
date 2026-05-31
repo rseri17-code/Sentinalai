@@ -1,4 +1,4 @@
-"""Tests for the sentinel_wiki Phase 1 implementation."""
+"""Tests for the sentinel_wiki Phase 1 + Phase 2 implementation."""
 
 from __future__ import annotations
 
@@ -308,3 +308,210 @@ class TestNoteId:
 
     def test_id_is_12_chars(self):
         assert len(note_id_for("raw/foo.json")) == 12
+
+
+# ===========================================================================
+# Phase 2: Receipts, Pattern Promotion, Wiki Context
+# ===========================================================================
+
+from sentinel_wiki.receipt_writer import write_receipt, root_cause_hash
+from sentinel_wiki.pattern_promoter import promote, PROMOTE_THRESHOLD
+from sentinel_wiki.wiki_context import get_context
+
+
+def _make_result(
+    root_cause: str = "memory leak in payment-service",
+    confidence: int = 82,
+    quality: float = 0.74,
+    incident_type: str = "error_spike",
+    service: str = "payment-service",
+) -> dict:
+    return {
+        "root_cause": root_cause,
+        "confidence": confidence,
+        "online_quality_score": quality,
+        "incident_type": incident_type,
+        "service": service,
+        "evidence_keys": ["check_golden_signals", "search_error_logs"],
+        "reasoning": "Error rate spiked after v2.3.1 deployment.",
+    }
+
+
+# ---------------------------------------------------------------------------
+# receipt_writer
+# ---------------------------------------------------------------------------
+
+class TestReceiptWriter:
+    def test_write_receipt_creates_file(self, tmp_path):
+        path = write_receipt("INC001", "api", "error_spike", _make_result(), base_path=str(tmp_path))
+        assert path is not None
+        assert (tmp_path / "receipts").exists()
+        # A receipt file was created
+        receipts = list((tmp_path / "receipts").glob("INC001*.md"))
+        assert len(receipts) == 1
+
+    def test_receipt_has_front_matter(self, tmp_path):
+        write_receipt("INC002", "api", "timeout", _make_result(), base_path=str(tmp_path))
+        content = list((tmp_path / "receipts").glob("INC002*.md"))[0].read_text()
+        assert "incident_id: INC002" in content
+        assert "root_cause_hash:" in content
+        assert "quality_score:" in content
+
+    def test_receipt_has_root_cause_section(self, tmp_path):
+        result = _make_result(root_cause="OOM kill on worker pod")
+        write_receipt("INC003", "worker", "oomkill", result, base_path=str(tmp_path))
+        content = list((tmp_path / "receipts").glob("INC003*.md"))[0].read_text()
+        assert "OOM kill on worker pod" in content
+
+    def test_root_cause_hash_stable(self):
+        h1 = root_cause_hash("Memory leak in payment-service")
+        h2 = root_cause_hash("memory leak in payment-service")
+        assert h1 == h2  # case-insensitive
+
+    def test_root_cause_hash_different_causes(self):
+        assert root_cause_hash("memory leak") != root_cause_hash("cpu spike")
+
+    def test_write_receipt_never_raises_on_bad_input(self, tmp_path):
+        # Should return None gracefully, not raise
+        result = write_receipt("", "", "", {}, base_path="/nonexistent/path/xyz")
+        # Either None or a path — should not raise
+        assert result is None or isinstance(result, str)
+
+    def test_receipt_tags_include_incident_type(self, tmp_path):
+        write_receipt("INC004", "svc", "latency", _make_result(), base_path=str(tmp_path))
+        content = list((tmp_path / "receipts").glob("INC004*.md"))[0].read_text()
+        assert "latency" in content
+
+    def test_high_quality_tag_applied(self, tmp_path):
+        result = _make_result(quality=0.85)
+        write_receipt("INC005", "svc", "error_spike", result, base_path=str(tmp_path))
+        content = list((tmp_path / "receipts").glob("INC005*.md"))[0].read_text()
+        assert "high-quality" in content
+
+
+# ---------------------------------------------------------------------------
+# pattern_promoter
+# ---------------------------------------------------------------------------
+
+class TestPatternPromoter:
+    def _write_n_receipts(self, tmp_path, n: int, root_cause: str = "deployment regression") -> None:
+        for i in range(n):
+            write_receipt(
+                f"INC{i:04d}", "payment-service", "error_spike",
+                _make_result(root_cause=root_cause),
+                base_path=str(tmp_path),
+            )
+
+    def test_no_pattern_below_threshold(self, tmp_path):
+        self._write_n_receipts(tmp_path, PROMOTE_THRESHOLD - 1)
+        promoted = promote(str(tmp_path))
+        assert len(promoted) == 0
+
+    def test_pattern_created_at_threshold(self, tmp_path):
+        self._write_n_receipts(tmp_path, PROMOTE_THRESHOLD)
+        promoted = promote(str(tmp_path))
+        assert len(promoted) == 1
+
+    def test_pattern_file_exists_after_promotion(self, tmp_path):
+        self._write_n_receipts(tmp_path, PROMOTE_THRESHOLD)
+        promote(str(tmp_path))
+        patterns = list((tmp_path / "patterns").glob("*.yaml"))
+        assert len(patterns) == 1
+
+    def test_pattern_contains_service(self, tmp_path):
+        self._write_n_receipts(tmp_path, PROMOTE_THRESHOLD)
+        promote(str(tmp_path))
+        import yaml
+        pattern_file = list((tmp_path / "patterns").glob("*.yaml"))[0]
+        data = yaml.safe_load(pattern_file.read_text())
+        assert "payment-service" in data.get("services", [])
+
+    def test_pattern_observation_count(self, tmp_path):
+        n = PROMOTE_THRESHOLD + 2
+        self._write_n_receipts(tmp_path, n)
+        promote(str(tmp_path))
+        import yaml
+        pattern_file = list((tmp_path / "patterns").glob("*.yaml"))[0]
+        data = yaml.safe_load(pattern_file.read_text())
+        assert data["observation_count"] == n
+
+    def test_promote_idempotent(self, tmp_path):
+        self._write_n_receipts(tmp_path, PROMOTE_THRESHOLD)
+        promote(str(tmp_path))
+        promote(str(tmp_path))  # second call
+        patterns = list((tmp_path / "patterns").glob("*.yaml"))
+        assert len(patterns) == 1
+
+    def test_different_root_causes_separate_patterns(self, tmp_path):
+        # Use non-overlapping incident ID ranges to avoid filename collisions
+        for i in range(PROMOTE_THRESHOLD):
+            write_receipt(
+                f"INC_A{i:04d}", "svc", "error_spike",
+                _make_result(root_cause="memory leak"),
+                base_path=str(tmp_path),
+            )
+        for i in range(PROMOTE_THRESHOLD):
+            write_receipt(
+                f"INC_B{i:04d}", "svc", "error_spike",
+                _make_result(root_cause="disk full on /var"),
+                base_path=str(tmp_path),
+            )
+        promote(str(tmp_path))
+        patterns = list((tmp_path / "patterns").glob("*.yaml"))
+        assert len(patterns) == 2
+
+    def test_promote_never_raises_on_empty(self, tmp_path):
+        result = promote(str(tmp_path))
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+# wiki_context
+# ---------------------------------------------------------------------------
+
+class TestWikiContext:
+    def _setup(self, tmp_path, n_receipts: int = 3) -> None:
+        for i in range(n_receipts):
+            write_receipt(
+                f"INC{i:04d}", "api-gateway", "timeout",
+                _make_result(service="api-gateway", incident_type="timeout"),
+                base_path=str(tmp_path),
+            )
+        promote(str(tmp_path))
+
+    def test_get_context_returns_dict(self, tmp_path):
+        self._setup(tmp_path)
+        ctx = get_context("api-gateway", "timeout", base_path=str(tmp_path))
+        assert isinstance(ctx, dict)
+        assert "recent_receipts" in ctx
+        assert "matching_patterns" in ctx
+        assert "context_summary" in ctx
+
+    def test_recent_receipts_for_service(self, tmp_path):
+        self._setup(tmp_path, n_receipts=4)
+        ctx = get_context("api-gateway", "timeout", base_path=str(tmp_path))
+        assert ctx["receipt_count"] > 0
+        assert all(
+            r["service"] == "api-gateway" or r["incident_type"] == "timeout"
+            for r in ctx["recent_receipts"]
+        )
+
+    def test_matching_patterns_returned(self, tmp_path):
+        self._setup(tmp_path, n_receipts=PROMOTE_THRESHOLD)
+        ctx = get_context("api-gateway", "timeout", base_path=str(tmp_path))
+        assert ctx["pattern_count"] > 0
+
+    def test_context_summary_not_empty_when_receipts_exist(self, tmp_path):
+        self._setup(tmp_path, n_receipts=2)
+        ctx = get_context("api-gateway", "timeout", base_path=str(tmp_path))
+        assert ctx["context_summary"] != ""
+
+    def test_unknown_service_returns_empty(self, tmp_path):
+        ctx = get_context("unknown-service-xyz", "unknown-type", base_path=str(tmp_path))
+        assert ctx["receipt_count"] == 0
+        assert ctx["pattern_count"] == 0
+
+    def test_get_context_never_raises(self, tmp_path):
+        # Even with missing directories, should not raise
+        ctx = get_context("svc", "type", base_path=str(tmp_path / "nonexistent"))
+        assert isinstance(ctx, dict)

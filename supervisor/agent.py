@@ -1623,6 +1623,22 @@ class SentinalAISupervisor:
             except Exception as exc:
                 logger.debug("CascadeTracker record failed (non-critical): %s", exc)
 
+        # Wiki receipt: write a structured RCA receipt for long-term memory
+        if incident_id and service:
+            try:
+                from sentinel_wiki.receipt_writer import write_receipt as _write_receipt
+                from sentinel_wiki.pattern_promoter import promote as _promote_patterns
+                _write_receipt(
+                    incident_id=incident_id,
+                    service=service,
+                    incident_type=incident_type,
+                    result=result,
+                    evidence=evidence,
+                )
+                _promote_patterns()
+            except Exception as exc:
+                logger.debug("Wiki receipt write failed (non-critical): %s", exc)
+
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
     # ------------------------------------------------------------------ #

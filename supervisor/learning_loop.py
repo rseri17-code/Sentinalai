@@ -80,6 +80,19 @@ def run_learning_step(incident_id: str, result: dict) -> bool:
     except Exception as exc:
         logger.warning("Calibrator update failed for %s (non-critical): %s", incident_id, exc)
 
+    # Step 5 — feed correctness signal back to PatternRegistry
+    _fp = result.get("_dna_fingerprint", "")
+    _rc = result.get("root_cause", "")
+    if _fp and _rc:
+        try:
+            _update_pattern_outcome(
+                fingerprint=_fp,
+                root_cause=_rc,
+                was_correct=bool(eval_result.actual_correct),  # type: ignore[attr-defined]
+            )
+        except Exception as exc:
+            logger.debug("Pattern outcome update failed for %s (non-critical): %s", incident_id, exc)
+
     return True
 
 
@@ -88,6 +101,8 @@ def record_verification_outcome(
     rca_was_correct: bool,
     predicted_confidence: float | None = None,
     verification_duration_sec: float = 0.0,
+    dna_fingerprint: str = "",
+    root_cause: str = "",
 ) -> None:
     """Feed a production verification signal into the confidence calibrator.
 
@@ -134,6 +149,13 @@ def record_verification_outcome(
         except Exception as exc:
             logger.debug("NeuralConfidenceCalibrator verification train failed: %s", exc)
 
+        # Feed correctness signal back to PatternRegistry when fingerprint is known.
+        if dna_fingerprint and root_cause:
+            try:
+                _update_pattern_outcome(dna_fingerprint, root_cause, rca_was_correct)
+            except Exception as exc:
+                logger.debug("Pattern outcome update failed for inv=%s (non-critical): %s", investigation_id, exc)
+
         logger.info(
             "Verification outcome recorded: inv=%s correct=%s predicted_conf=%.0f duration=%.0fs",
             investigation_id,
@@ -153,6 +175,18 @@ def record_verification_outcome(
 # ------------------------------------------------------------------ #
 # Helpers
 # ------------------------------------------------------------------ #
+
+def _update_pattern_outcome(fingerprint: str, root_cause: str, was_correct: bool) -> None:
+    """Feed a correctness signal into PatternRegistry for the given fingerprint."""
+    if not fingerprint or not root_cause:
+        return
+    from supervisor.pattern_registry import get_registry
+    get_registry().update_outcome(fingerprint, root_cause, was_correct)
+    logger.debug(
+        "PatternRegistry.update_outcome fingerprint=%s hypothesis=%s correct=%s",
+        fingerprint, root_cause, was_correct,
+    )
+
 
 def _persist_eval(eval_result: object, incident_id: str) -> None:
     """Persist EvalResult to database. Fails silently if DB unavailable."""

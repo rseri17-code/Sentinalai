@@ -92,6 +92,10 @@ class HarnessReflection:
     learning_updated: bool = False
     experience_stored: bool = False
 
+    # Phase 4: pattern intelligence context
+    pattern_match_count: int = 0
+    pattern_top_hypothesis: str | None = None
+
     # Narrative
     narrative: str = ""
 
@@ -125,6 +129,8 @@ class HarnessReflection:
             "strategy_quality": self.strategy_quality,
             "learning_updated": self.learning_updated,
             "experience_stored": self.experience_stored,
+            "pattern_match_count": self.pattern_match_count,
+            "pattern_top_hypothesis": self.pattern_top_hypothesis,
             "narrative": self.narrative,
             "elapsed_ms": round(self.elapsed_ms, 1),
         }
@@ -185,6 +191,18 @@ class InvestigationHarness:
             initial_score = result.get("_online_quality_score", 0.0)
             reflection.initial_quality = initial_score
             prev_score = initial_score
+
+            # Phase 4: enrich reflection with pattern registry context
+            try:
+                from supervisor.pattern_registry import get_registry
+                _fp = result.get("_dna_fingerprint", "")
+                if _fp:
+                    _prec = get_registry().get(_fp)
+                    if _prec:
+                        reflection.pattern_match_count = _prec.match_count
+                        reflection.pattern_top_hypothesis = _prec.top_hypothesis()
+            except Exception as exc:
+                logger.debug("Harness: pattern meta enrichment failed: %s", exc)
 
             # --- Layer 2: Evidence-cached self-correction loop ---
             # Correction rounds call supervisor.reanalyze(enriched_evidence) instead
@@ -509,6 +527,18 @@ class InvestigationHarness:
                 _record_strategy(incident_type, step_label, online_score)
         except Exception as exc:
             logger.debug("Post-flight: strategy evolver update failed: %s", exc)
+
+        # Phase 4: Pattern outcome — use online quality score as correctness proxy.
+        # Quality >= 0.70 (the harness gate) is treated as a correct investigation.
+        try:
+            from supervisor.learning_loop import _update_pattern_outcome
+            fingerprint = result.get("_dna_fingerprint", "")
+            root_cause = result.get("root_cause", "")
+            quality = result.get("_online_quality_score", 0.0)
+            if fingerprint and root_cause and quality > 0:
+                _update_pattern_outcome(fingerprint, root_cause, quality >= HARNESS_QUALITY_GATE)
+        except Exception as exc:
+            logger.debug("Post-flight: pattern outcome update failed: %s", exc)
 
         return updated
 

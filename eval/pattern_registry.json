@@ -35,9 +35,9 @@
       "get_k8s_events",
       "get_error_logs"
     ],
-    "match_count": 8,
+    "match_count": 23,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:01:58.403609+00:00",
+    "last_seen": "2026-05-31T04:58:59.093979+00:00",
     "features": [
       0.0,
       0.0,
@@ -52,7 +52,7 @@
       0.0,
       1.0,
       0.67,
-      0.21428571428571425,
+      0.24223602484472054,
       0.0,
       0.75
     ]
@@ -91,9 +91,9 @@
       "get_workflow_runs",
       "get_k8s_events"
     ],
-    "match_count": 5,
+    "match_count": 17,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:02:34.168890+00:00",
+    "last_seen": "2026-05-31T04:59:27.406060+00:00",
     "features": [
       1.0,
       1.0,
@@ -108,7 +108,7 @@
       0.0,
       0.0,
       0.67,
-      0.7142857142857143,
+      0.7142857142857141,
       0.0,
       0.75
     ]
@@ -155,9 +155,9 @@
       "query_metrics",
       "analyze_diff"
     ],
-    "match_count": 40,
+    "match_count": 154,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:02:36.205614+00:00",
+    "last_seen": "2026-05-31T04:59:28.540511+00:00",
     "features": [
       1.0,
       1.0,
@@ -171,8 +171,8 @@
       1.0,
       0.0,
       0.0,
-      0.6700000000000006,
-      0.8678571428571429,
+      0.6700000000000013,
+      0.8682745825602982,
       0.0,
       0.75
     ]
@@ -220,9 +220,9 @@
       "get_error_logs",
       "get_events"
     ],
-    "match_count": 35,
+    "match_count": 134,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:02:36.367011+00:00",
+    "last_seen": "2026-05-31T04:59:28.651988+00:00",
     "features": [
       1.0,
       1.0,
@@ -236,7 +236,7 @@
       0.0,
       1.0,
       0.0,
-      0.6700000000000006,
+      0.6700000000000013,
       1.0,
       0.0,
       0.75
@@ -276,9 +276,9 @@
       "get_k8s_events",
       "query_metrics"
     ],
-    "match_count": 30,
+    "match_count": 117,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:02:36.474428+00:00",
+    "last_seen": "2026-05-31T04:59:28.724414+00:00",
     "features": [
       0.0,
       0.0,
@@ -292,8 +292,8 @@
       0.0,
       0.0,
       0.0,
-      0.6700000000000004,
-      0.7142857142857142,
+      0.6700000000000013,
+      0.7142857142857132,
       0.0,
       0.75
     ]
@@ -331,9 +331,9 @@
       "get_change_data",
       "get_k8s_events"
     ],
-    "match_count": 2,
+    "match_count": 8,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:01:46.155240+00:00",
+    "last_seen": "2026-05-31T04:58:47.804977+00:00",
     "features": [
       0.0,
       1.0,
@@ -348,7 +348,7 @@
       0.0,
       0.0,
       0.67,
-      0.2857142857142857,
+      0.28571428571428564,
       0.0,
       0.75
     ]
@@ -389,9 +389,9 @@
       "get_k8s_events",
       "query_metrics"
     ],
-    "match_count": 2,
+    "match_count": 8,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:01:45.408469+00:00",
+    "last_seen": "2026-05-31T04:58:47.297683+00:00",
     "features": [
       0.0,
       0.0,
@@ -406,7 +406,7 @@
       0.0,
       0.0,
       0.67,
-      0.5714285714285714,
+      0.5714285714285713,
       0.0,
       0.75
     ]
@@ -445,9 +445,9 @@
       "get_k8s_events",
       "get_error_logs"
     ],
-    "match_count": 3,
+    "match_count": 12,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:01:46.002785+00:00",
+    "last_seen": "2026-05-31T04:58:47.696395+00:00",
     "features": [
       0.0,
       1.0,
@@ -462,7 +462,7 @@
       0.0,
       0.0,
       0.67,
-      0.2857142857142857,
+      0.28571428571428564,
       0.0,
       0.75
     ]
@@ -506,9 +506,9 @@
       "get_error_logs",
       "get_events"
     ],
-    "match_count": 3,
+    "match_count": 12,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:01:46.194759+00:00",
+    "last_seen": "2026-05-31T04:58:47.835483+00:00",
     "features": [
       0.0,
       0.0,
@@ -563,9 +563,9 @@
       "get_change_data",
       "get_k8s_events"
     ],
-    "match_count": 1,
+    "match_count": 4,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:01:45.698882+00:00",
+    "last_seen": "2026-05-31T04:58:47.462284+00:00",
     "features": [
       0.0,
       0.0,
@@ -619,9 +619,9 @@
       "get_k8s_events",
       "query_metrics"
     ],
-    "match_count": 3,
+    "match_count": 12,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:01:46.111413+00:00",
+    "last_seen": "2026-05-31T04:58:47.777023+00:00",
     "features": [
       0.0,
       0.0,
@@ -636,7 +636,7 @@
       0.0,
       0.0,
       0.67,
-      0.14285714285714285,
+      0.14285714285714282,
       0.0,
       0.75
     ]
@@ -675,9 +675,9 @@
       "get_k8s_events",
       "get_error_logs"
     ],
-    "match_count": 2,
+    "match_count": 8,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:01:45.842241+00:00",
+    "last_seen": "2026-05-31T04:58:47.572041+00:00",
     "features": [
       0.0,
       0.0,
@@ -692,7 +692,7 @@
       0.0,
       0.0,
       0.67,
-      0.42857142857142855,
+      0.4285714285714285,
       0.0,
       0.75
     ]
@@ -730,9 +730,9 @@
       "get_change_data",
       "get_k8s_events"
     ],
-    "match_count": 2,
+    "match_count": 8,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:01:46.282055+00:00",
+    "last_seen": "2026-05-31T04:58:47.897742+00:00",
     "features": [
       0.0,
       0.0,
@@ -747,7 +747,7 @@
       0.0,
       0.0,
       0.67,
-      0.14285714285714285,
+      0.14285714285714282,
       0.0,
       0.75
     ]
@@ -792,9 +792,9 @@
       "get_workflow_runs",
       "get_k8s_events"
     ],
-    "match_count": 1,
+    "match_count": 4,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:01:46.245222+00:00",
+    "last_seen": "2026-05-31T04:58:47.865934+00:00",
     "features": [
       0.0,
       0.0,
@@ -833,9 +833,9 @@
       "search_runbooks",
       "search_postmortems"
     ],
-    "match_count": 1,
+    "match_count": 4,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-05-30T19:02:34.035277+00:00",
+    "last_seen": "2026-05-31T04:59:27.304396+00:00",
     "features": [
       0.0,
       0.0,

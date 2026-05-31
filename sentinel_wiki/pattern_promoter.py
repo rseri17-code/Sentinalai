@@ -150,7 +150,40 @@ def _promote(base_path: str) -> list[str]:
             "wiki.pattern_promoter: wrote pattern %s (count=%d)", rc_hash, len(all_receipts)
         )
 
+        # Push to Bedrock AgentCore LTM so patterns are semantically retrievable
+        # alongside raw investigations. Silently skipped when LTM is not configured.
+        _push_pattern_to_ltm(entry)
+
     return written
+
+
+def _push_pattern_to_ltm(entry: PatternEntry) -> None:
+    """Push a promoted pattern into Bedrock AgentCore LTM if enabled."""
+    try:
+        from supervisor.memory import store_investigation_result, is_enabled
+        if not is_enabled():
+            return
+        # Use pattern_id as a synthetic incident_id so it's retrievable
+        evidence_summary = (
+            f"Pattern observed {entry.observation_count}x. "
+            f"Common evidence: {', '.join(entry.evidence_signals[:5])}."
+        )
+        store_investigation_result(
+            incident_id=f"pattern:{entry.pattern_id}",
+            incident_type=entry.incident_types[0] if entry.incident_types else "unknown",
+            service=entry.services[0] if entry.services else "unknown",
+            root_cause=entry.root_cause_template,
+            confidence=int(entry.confidence_avg),
+            reasoning=(
+                f"Promoted pattern from {entry.observation_count} incidents. "
+                f"Services: {', '.join(entry.services[:5])}. "
+                f"Types: {', '.join(entry.incident_types[:5])}."
+            ),
+            evidence_summary=evidence_summary,
+        )
+        logger.debug("wiki.pattern_promoter: pushed %s to LTM", entry.pattern_id)
+    except Exception as exc:
+        logger.debug("wiki.pattern_promoter: LTM push skipped: %s", exc)
 
 
 def _load_receipts(receipts_dir: Path) -> list[dict]:

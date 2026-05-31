@@ -12,6 +12,7 @@ from pathlib import Path
 
 from sentinel_wiki import indexer
 from sentinel_wiki.ingester import _SUPPORTED
+from sentinel_wiki.vector_index import WikiVectorIndex
 
 
 @dataclass
@@ -77,6 +78,22 @@ def search(
             if q in line.lower():
                 _add(note_file.name, "text", line.strip())
                 break  # one text hit per file
+
+    # --- Semantic (TF-IDF cosine) search ---
+    try:
+        vec_idx = WikiVectorIndex(base_path)
+        for hit in vec_idx.search(query, top_k=limit):
+            note_name = Path(hit["note_path"]).name
+            if note_name not in hits:
+                hits[note_name] = SearchHit(
+                    note_path=note_name,
+                    score=0,
+                    match_type="semantic",
+                    snippet=f"similarity={hit['score']:.3f}",
+                )
+            hits[note_name].score += 1
+    except Exception:
+        pass
 
     results = sorted(hits.values(), key=lambda h: h.score, reverse=True)
     return results[:limit]

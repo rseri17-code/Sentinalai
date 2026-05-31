@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from sentinel_wiki import note_generator, indexer
+from sentinel_wiki.vector_index import WikiVectorIndex
 
 _SUPPORTED = {".md", ".txt", ".json", ".yaml", ".yml", ".csv"}
 
@@ -47,6 +48,7 @@ def ingest(base_path: str = "sentinel_wiki") -> IngestResult:
     ent_idx = indexer.load_entity_index(indexes_dir)
     tag_idx = indexer.load_tag_index(indexes_dir)
     lnk_idx = indexer.load_link_index(indexes_dir)
+    vec_idx = WikiVectorIndex(str(root))
 
     for raw_file in sorted(raw_dir.rglob("*")):
         if not raw_file.is_file():
@@ -96,6 +98,7 @@ def ingest(base_path: str = "sentinel_wiki") -> IngestResult:
             ent_idx = indexer.upsert_entities(ent_idx, note_rel, entities)
             tag_idx = indexer.upsert_tags(tag_idx, note_rel, tags)
             lnk_idx = indexer.upsert_links(lnk_idx, note_rel, outbound)
+            vec_idx.index_note(note_rel, note_content)
 
             result.ingested.append(source_rel)
 
@@ -107,6 +110,7 @@ def ingest(base_path: str = "sentinel_wiki") -> IngestResult:
     indexer.save_entity_index(indexes_dir, ent_idx)
     indexer.save_tag_index(indexes_dir, tag_idx)
     indexer.save_link_index(indexes_dir, lnk_idx)
+    vec_idx.save()
 
     return result
 

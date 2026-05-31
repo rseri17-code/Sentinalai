@@ -391,6 +391,24 @@ class InvestigationHarness:
         except Exception as exc:
             logger.debug("Meta-state: experience store read failed: %s", exc)
 
+        # Wiki context: prior receipts, known patterns, related notes for this service/type
+        try:
+            from sentinel_wiki.wiki_context import get_context as _wiki_ctx
+            service = meta.get("service", "")
+            incident_type = meta.get("incident_type", "")
+            if not service or not incident_type:
+                # Try to infer from experience store matches
+                if matches:
+                    service = service or matches[0].get("service", "")
+                    incident_type = incident_type or matches[0].get("incident_type", "")
+            if service or incident_type:
+                ctx = _wiki_ctx(service=service, incident_type=incident_type)
+                meta["wiki_context"] = ctx
+                if ctx.get("context_summary"):
+                    logger.debug("Meta-state: wiki context: %s", ctx["context_summary"])
+        except Exception as exc:
+            logger.debug("Meta-state: wiki context read failed: %s", exc)
+
         return meta
 
     # ------------------------------------------------------------------

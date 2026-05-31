@@ -1,0 +1,23 @@
+{
+  "errors": {
+    "notes": [
+      "wiki/payment_errors.md"
+    ],
+    "patterns": [],
+    "receipts": []
+  },
+  "service": {
+    "notes": [
+      "wiki/payment_errors.md"
+    ],
+    "patterns": [],
+    "receipts": []
+  },
+  "threshold": {
+    "notes": [
+      "wiki/payment_errors.md"
+    ],
+    "patterns": [],
+    "receipts": []
+  }
+}

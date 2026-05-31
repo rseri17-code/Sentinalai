@@ -1,0 +1,12 @@
+{
+  "query_id": "",
+  "incident_id": "",
+  "service": "",
+  "tool_name": "",
+  "query_text": "",
+  "result_summary": "",
+  "evidence_keys": [],
+  "timestamp": "",
+  "quality_signal": 0.0,
+  "reuse_count": 0
+}

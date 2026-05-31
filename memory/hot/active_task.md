@@ -1,33 +1,26 @@
 # Active Task — Compaction Handoff
-<!-- Written by PreCompact hook at 2026-05-30T18:59:25.389Z -->
+<!-- Written by PreCompact hook at 2026-05-31T06:19:36.191Z -->
 <!-- Restored by SessionStart hook — also shown if .claude/session-state.json is present -->
 
 ## Objective
 [DECISION] <what was decided> — <why>
 
 ## Branch
-claude/code-review-analysis-MelXd | ce0cc90 feat(harness/p1): evidence provenance — extend Receipt schema and WorkerResult
+claude/code-review-analysis-MelXd | 567decd feat(harness/gaps): close all three remaining Operational Memory gaps
 
 ## Git Status at Compaction
-- `M eval/recurrence_index.json`
-- ` M supervisor/agent.py`
-- ` M supervisor/incident_dna.py`
-- `?? eval/co_failure_index.json`
-- `?? eval/pattern_registry.json`
-- `?? supervisor/co_failure_index.py`
-- `?? supervisor/pattern_registry.py`
-- `?? tests/test_co_failure_index.py`
-- `?? tests/test_pattern_registry.py`
+- `M  memory/hot/session_state.md`
+- `M  memory/hot/stop_log.md`
 
 ## Changed Python Files (vs HEAD)
-- supervisor/agent.py
-- supervisor/incident_dna.py
-
-## Staged for Commit
 _(none)_
 
+## Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
 ## Open Risks
-- ⚠ 2 Python file(s) modified vs HEAD
+- ⚠ 2 file(s) staged but not committed
 
 ## Next Recommended Action
 - Continue on branch `claude/code-review-analysis-MelXd`

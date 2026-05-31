@@ -1,0 +1,16 @@
+{
+  "receipt_id": "",
+  "incident_id": "",
+  "service": "",
+  "incident_type": "",
+  "timestamp": "",
+  "root_cause": "",
+  "evidence_keys": [],
+  "confidence": 0.0,
+  "resolution": "",
+  "verified": false,
+  "quality_score": 0.0,
+  "related_patterns": [],
+  "related_decisions": [],
+  "notes": ""
+}

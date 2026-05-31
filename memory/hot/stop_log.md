@@ -490,3 +490,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-05-30T22:44:26.360Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ee8c1bf chore(eval): update eval store snapshots after Phase 3-5 test runs
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `ee8c1bf chore(eval): update eval store snapshots after Phase 3-5 test runs`
+- `79a795f feat(harness/p3-p5): close learning loop — pattern feedback, harness integration, blast radius`
+- `f10dc5d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

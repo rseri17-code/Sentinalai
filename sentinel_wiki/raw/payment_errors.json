@@ -1,0 +1,1 @@
+{"service": "payment-service", "errors": [{"code": 500, "msg": "NullPointerException"}], "threshold": 0.95}

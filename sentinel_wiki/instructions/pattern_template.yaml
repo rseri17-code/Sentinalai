@@ -1,0 +1,14 @@
+pattern_id: ""
+name: ""
+description: ""
+incident_types: []
+services: []
+root_cause_template: ""
+evidence_signals: []
+resolution_steps: []
+confidence: 0.0
+observation_count: 0
+first_seen: ""
+last_seen: ""
+related_notes: []
+status: active

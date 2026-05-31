@@ -21,8 +21,8 @@ Feature vector dimensions (all normalised to [0, 1]):
   11 incident_type_resource   1.0 if saturation, else 0.0
   12 service_tier             1.0/P1 | 0.67/P2 | 0.33/P3
   13 evidence_source_count    num_evidence_sources / 7                   (capped 1.0)
-  14 confidence_score         rca_confidence / 100
-  15 resolution_time_bucket   0.25/<15 min | 0.5/15-60 min | 0.75/1-4 h | 1.0/>4 h
+  14 time_of_day              1.0/peak-hours | 0.6/shoulder | 0.2/off-peak | 0.0/unknown
+  15 traffic_deviation        observed_traffic / baseline_traffic        (capped 1.0)
 """
 
 from __future__ import annotations
@@ -57,8 +57,8 @@ FEATURE_NAMES: list[str] = [
     "incident_type_resource",
     "service_tier",
     "evidence_source_count",
-    "confidence_score",
-    "resolution_time_bucket",
+    "time_of_day",
+    "traffic_deviation",
 ]
 
 _NUM_FEATURES = len(FEATURE_NAMES)  # 16
@@ -82,8 +82,8 @@ _FEATURE_LABELS: dict[str, str] = {
     "incident_type_resource": "resource-saturation pattern",
     "service_tier":           "high-tier service",
     "evidence_source_count":  "rich evidence signal",
-    "confidence_score":       "high diagnosis confidence",
-    "resolution_time_bucket": "long resolution time",
+    "time_of_day":            "peak business hours",
+    "traffic_deviation":      "elevated traffic",
 }
 
 
@@ -162,7 +162,7 @@ def encode_incident(
     incident_type: str,
     service: str,
     evidence: dict[str, Any],
-    rca_confidence: float,
+    rca_confidence: float = 0,
     service_tier: str = "P2",
     resolution_minutes: int = 60,
 ) -> IncidentDNA:
@@ -177,9 +177,12 @@ def encode_incident(
         service:            Affected service name.
         evidence:           Evidence dict collected during investigation.
                             Expected keys documented inline below.
-        rca_confidence:     RCA confidence 0–100.
+                            Environment factors: incident_hour (0-23),
+                            traffic_ratio (observed/baseline).
+        rca_confidence:     RCA confidence 0–100 (unused in DNA; kept for
+                            backward compatibility with existing callers).
         service_tier:       "P1", "P2", or "P3".
-        resolution_minutes: Time from detection to resolution.
+        resolution_minutes: Unused; kept for backward compatibility.
 
     Returns:
         IncidentDNA with a fully populated 16-dim features list.
@@ -261,18 +264,34 @@ def encode_incident(
         )
     features[13] = min(num_sources / 7.0, 1.0)
 
-    # 14 — confidence_score
-    features[14] = min(max(rca_confidence / 100.0, 0.0), 1.0)
-
-    # 15 — resolution_time_bucket
-    if resolution_minutes < 15:
-        features[15] = 0.25
-    elif resolution_minutes < 60:
-        features[15] = 0.5
-    elif resolution_minutes < 240:
-        features[15] = 0.75
+    # 14 — time_of_day (environment factor)
+    # incident_hour: 0-23; peak=09-18 → 1.0, shoulder=07-09/18-21 → 0.6, off-peak → 0.2
+    incident_hour = _safe_int(evidence, "incident_hour", -1)
+    if incident_hour < 0:
+        features[14] = 0.0   # unknown
+    elif 9 <= incident_hour < 18:
+        features[14] = 1.0   # core business hours — highest incident sensitivity
+    elif (7 <= incident_hour < 9) or (18 <= incident_hour < 21):
+        features[14] = 0.6   # shoulder hours
     else:
+        features[14] = 0.2   # off-peak / overnight
+
+    # 15 — traffic_deviation (environment factor)
+    # traffic_ratio: observed_traffic / baseline_traffic (or requests_ratio)
+    # >2.0 → 1.0 (severe spike), 1.5-2.0 → 0.75, 1.2-1.5 → 0.5, 0.8-1.2 → 0.25, <0.8 → 0.0
+    traffic_ratio = _safe_float(evidence, "traffic_ratio", 0.0)
+    if traffic_ratio <= 0:
+        features[15] = 0.0
+    elif traffic_ratio >= 2.0:
         features[15] = 1.0
+    elif traffic_ratio >= 1.5:
+        features[15] = 0.75
+    elif traffic_ratio >= 1.2:
+        features[15] = 0.5
+    elif traffic_ratio >= 0.8:
+        features[15] = 0.25
+    else:
+        features[15] = 0.0   # low traffic (not a traffic-spike scenario)
 
     return IncidentDNA(
         incident_id=incident_id,

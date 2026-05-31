@@ -1554,10 +1554,10 @@ class SentinalAISupervisor:
                 logger.debug("PatternRegistry record failed (non-critical): %s", exc)
 
         # Co-failure index: record any services that failed together
+        _affected_services: list[str] = []
         try:
             from supervisor.co_failure_index import get_co_failure_index
             _evidence_timeline = result.get("evidence_timeline", [])
-            _affected_services: list[str] = []
             for _entry in _evidence_timeline:
                 if isinstance(_entry, dict):
                     _svc = _entry.get("service") or _entry.get("affected_service", "")
@@ -1577,6 +1577,51 @@ class SentinalAISupervisor:
                 )
         except Exception as exc:
             logger.debug("CoFailureIndex record failed (non-critical): %s", exc)
+
+        # Blast radius history: compare predicted vs actual affected services
+        if service and incident_id:
+            try:
+                from supervisor.blast_radius_history import get_blast_radius_history
+                _blast_report = result.get("blast_radius", {})
+                _predicted: list[str] = []
+                if isinstance(_blast_report, dict):
+                    for _svc in _blast_report.get("affected_services", []):
+                        _n = _svc if isinstance(_svc, str) else _svc.get("service", "")
+                        if _n and _n != service:
+                            _predicted.append(_n)
+                get_blast_radius_history().record(
+                    incident_id=incident_id,
+                    target_service=service,
+                    predicted_services=_predicted,
+                    actual_services=list(set(_affected_services)),
+                )
+            except Exception as exc:
+                logger.debug("BlastRadiusHistory record failed (non-critical): %s", exc)
+
+        # Cascade tracker: record ordered failure propagation chain
+        if service and _affected_services:
+            try:
+                from supervisor.cascade_tracker import get_cascade_tracker
+                # Preserve discovery order from evidence_timeline (earlier = lower index)
+                _ordered: list[str] = []
+                _seen_order: set[str] = set()
+                for _entry in result.get("evidence_timeline", []):
+                    if isinstance(_entry, dict):
+                        _svc = _entry.get("service") or _entry.get("affected_service", "")
+                        if _svc and _svc != service and _svc not in _seen_order:
+                            _ordered.append(_svc)
+                            _seen_order.add(_svc)
+                # Append any remaining affected services not in timeline
+                for _svc in _affected_services:
+                    if _svc not in _seen_order:
+                        _ordered.append(_svc)
+                if _ordered:
+                    get_cascade_tracker().record(
+                        primary_service=service,
+                        ordered_co_failures=_ordered,
+                    )
+            except Exception as exc:
+                logger.debug("CascadeTracker record failed (non-critical): %s", exc)
 
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
@@ -3556,6 +3601,21 @@ class SentinalAISupervisor:
             1 for k, v in evidence.items()
             if not k.startswith("_") and v not in (None, "", [], {})
         )
+
+        # Environment factors (dims 14-15)
+        try:
+            from datetime import datetime, timezone
+            flat["incident_hour"] = datetime.now(timezone.utc).hour
+        except Exception:
+            pass
+
+        # Traffic deviation: requests_ratio from golden signals if available
+        traffic_signals = gs.get("traffic", {}) or gs.get("requests", {})
+        obs_rps = traffic_signals.get("rate") or traffic_signals.get("rps")
+        base_rps = traffic_signals.get("baseline_rate") or traffic_signals.get("baseline_rps")
+        if obs_rps and base_rps and float(base_rps) > 0:
+            flat["traffic_ratio"] = min(float(obs_rps) / float(base_rps), 3.0)
+
         return flat
 
     def _extract_changes(self, evidence: dict) -> list[dict]:

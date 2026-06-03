@@ -1,0 +1,25 @@
+pattern_id: PAT_9d460ed0
+root_cause_hash: 9d460ed0
+root_cause_template: unknown
+services:
+- auth-service
+incident_types:
+- flapping
+observation_count: 4
+confidence_avg: 81.5
+quality_avg: 0.7615
+evidence_signals:
+- check_golden_signals
+- check_pool_metrics
+- search_error_logs
+- check_changes
+- gap_search_logs
+- _kg_similar_incidents
+- _suggested_root_causes
+receipt_ids:
+- INC_H5_20260603
+- INC12353_20260603
+- INC_H5_20260531
+- INC12353_20260531
+first_seen: 2026-05-31 20:36:46.865205+00:00
+last_seen: 2026-06-03 04:23:58.867407+00:00

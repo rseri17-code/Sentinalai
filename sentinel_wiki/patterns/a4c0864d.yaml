@@ -9,21 +9,21 @@ incident_types:
 - saturation
 observation_count: 3
 confidence_avg: 49.0
-quality_avg: 0.6183
+quality_avg: 0.4967
 evidence_signals:
 - check_golden_signals
-- check_changes
 - check_itsm_changes
+- check_changes
 - _kg_similar_incidents
 - _suggested_root_causes
-- check_events
-- search_error_logs
-- gap_get_change_data
-- gap_query_metrics
 - check_cpu_metrics
+- search_cpu_logs
+- search_error_logs
+- check_events
+- gap_get_change_data
 receipt_ids:
-- INC12353_20260531
+- INC_TEST001_20260603
 - INC_TEST001_20260531
-- INC12354_20260531
+- INC12354_20260603
 first_seen: 2026-05-31 20:24:35.291247+00:00
-last_seen: 2026-05-31 20:37:45.103332+00:00
+last_seen: 2026-06-03 04:23:47.667867+00:00

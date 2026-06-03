@@ -1,0 +1,33 @@
+{
+  "doc_id": "OBS-2026-0603-001",
+  "source_type": "golden_signals",
+  "title": "payment-service golden signals — live snapshot",
+  "service": "payment-service",
+  "incident_type": "oomkill",
+  "created_at": "2026-06-03T03:50:00Z",
+  "collected_at": "2026-06-03T03:55:00Z",
+  "metrics": {
+    "error_rate_pct": 18.4,
+    "p99_latency_ms": 4820,
+    "saturation_pct": 97.1,
+    "jvm_heap_used_mb": 2940,
+    "jvm_heap_max_mb":  3072,
+    "connection_pool_active": 198,
+    "connection_pool_max":    200,
+    "pod_restart_count_1h":   3
+  },
+  "alerts_firing": [
+    "HighErrorRate",
+    "JVMHeapCritical",
+    "ConnectionPoolSaturation",
+    "PodRestartingFrequently"
+  ],
+  "tags": ["golden_signals", "payment-service", "oomkill", "memory", "live"],
+  "metadata": {
+    "service": "payment-service",
+    "incident_type": "oomkill",
+    "environment": "production",
+    "cluster": "us-east-1-prod",
+    "collection_method": "prometheus_scrape"
+  }
+}

@@ -21,6 +21,7 @@ Configuration (all overridable via env):
   GATE_CONFIDENCE_FLOOR  — minimum confidence to accept result (default: 25)
   GATE_CITATION_FLOOR    — minimum citation_coverage (default: 0.35)
   GATE_DEAD_EVIDENCE_N   — how many empty responses trigger dead-evidence gate (default: 5)
+  GATE_STALE_FRACTION    — fraction of sources that can be stale before warning (default: 0.60)
   EVIDENCE_GATES_ENABLED — on/off (default: true)
 """
 from __future__ import annotations
@@ -38,6 +39,7 @@ MIN_SOURCES    = int(float(os.environ.get("GATE_MIN_SOURCES",      "2")))
 CONFIDENCE_FLOOR = int(float(os.environ.get("GATE_CONFIDENCE_FLOOR", "25")))
 CITATION_FLOOR   = float(os.environ.get("GATE_CITATION_FLOOR",       "0.35"))
 DEAD_EVIDENCE_N  = int(os.environ.get("GATE_DEAD_EVIDENCE_N",         "5"))
+STALE_FRACTION   = float(os.environ.get("GATE_STALE_FRACTION",        "0.60"))
 
 
 class GateVerdict(str, Enum):
@@ -303,6 +305,69 @@ def _rc_cited(root_cause: str, citation: dict) -> bool:
     rc_words = set(root_cause.lower().split())
     claim_words = set(claim.split())
     return len(rc_words & claim_words) >= 2
+
+
+def check_source_staleness(
+    evidence: dict,
+    collected_at: str | None = None,
+) -> GateCheckResult:
+    """G6 — StaleEvidence: warn when most evidence sources are stale.
+
+    Uses source_confidence staleness model. Fires when stale_fraction
+    of non-empty sources have freshness_factor < 0.50.
+
+    Args:
+        evidence:     The evidence dict from the investigation.
+        collected_at: ISO timestamp when evidence was collected (used for
+                      age computation if individual timestamps not present).
+
+    Returns:
+        GateCheckResult with G6 verdict.
+    """
+    if not GATES_ENABLED:
+        return GateCheckResult(passed=True, verdict=GateVerdict.PASS)
+
+    try:
+        from supervisor.retrieval.source_confidence import score_evidence_dict
+        scores = score_evidence_dict(evidence, collected_at=collected_at)
+    except Exception as exc:
+        logger.debug("G6 source_confidence import failed: %s", exc)
+        return GateCheckResult(passed=True, verdict=GateVerdict.PASS)
+
+    if not scores:
+        return GateCheckResult(passed=True, verdict=GateVerdict.PASS, gates=[
+            GateResult("G6_StaleEvidence", GateVerdict.PASS,
+                       "No evidence sources to evaluate", 0.0, STALE_FRACTION)
+        ])
+
+    stale = [s for s in scores.values() if s.is_stale()]
+    fraction = len(stale) / len(scores)
+
+    if fraction >= STALE_FRACTION:
+        stale_keys = [s.source_type for s in stale][:5]
+        r = GateResult(
+            gate_name="G6_StaleEvidence",
+            verdict=GateVerdict.WARN,
+            reason=(
+                f"{len(stale)}/{len(scores)} evidence sources are stale "
+                f"(freshness < 50%). Stale: {stale_keys}. "
+                "RCA confidence may be degraded."
+            ),
+            metric_value=round(fraction, 3),
+            threshold=STALE_FRACTION,
+        )
+        logger.info("Gate G6 WARN: stale_fraction=%.2f (%d/%d)", fraction, len(stale), len(scores))
+        return GateCheckResult(passed=True, verdict=GateVerdict.WARN, gates=[r])
+
+    return GateCheckResult(passed=True, verdict=GateVerdict.PASS, gates=[
+        GateResult(
+            gate_name="G6_StaleEvidence",
+            verdict=GateVerdict.PASS,
+            reason=f"stale_fraction={fraction:.1%} < {STALE_FRACTION:.1%}",
+            metric_value=round(fraction, 3),
+            threshold=STALE_FRACTION,
+        )
+    ])
 
 
 def _verdict_rank(v: GateVerdict) -> int:

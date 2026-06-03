@@ -1,0 +1,25 @@
+{
+  "doc_id": "CHG-2026-0334",
+  "source_type": "get_change_data",
+  "title": "payment-service v3.8.1 → v3.9.0 deployment",
+  "service": "payment-service",
+  "incident_type": "deployment",
+  "created_at": "2026-06-03T01:00:00Z",
+  "collected_at": "2026-06-03T01:05:00Z",
+  "summary": "Rolled out payment-service v3.9.0. Changed ConnectionPoolManager max-size from 50 to 200. Updated -Xmx flag from 2g to 3g. No canary — straight production push.",
+  "diff_summary": [
+    "ConnectionPoolManager.maxSize: 50 → 200",
+    "-Xmx2g → -Xmx3g in k8s deployment manifest",
+    "Removed idle-timeout guard in ConnectionPoolManager.release()"
+  ],
+  "author": "eng-payments",
+  "approved_by": "platform-team",
+  "tags": ["deployment", "payment-service", "connection-pool", "jvm", "memory"],
+  "metadata": {
+    "service": "payment-service",
+    "incident_type": "deployment",
+    "change_type": "standard",
+    "risk_rating": "high",
+    "rollback_plan": "kubectl rollout undo deployment/payment-service"
+  }
+}

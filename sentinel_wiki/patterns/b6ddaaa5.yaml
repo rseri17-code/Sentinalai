@@ -1,0 +1,21 @@
+pattern_id: PAT_b6ddaaa5
+root_cause_hash: b6ddaaa5
+root_cause_template: unknown
+services:
+- search-service
+incident_types:
+- latency
+observation_count: 3
+confidence_avg: 52.0
+quality_avg: 0.619
+evidence_signals:
+- check_golden_signals
+- check_latency_metrics
+- search_latency_logs
+- check_changes
+receipt_ids:
+- INC_L1_20260603
+- INC_L1_20260605
+- INC_L1_20260531
+first_seen: 2026-05-31 20:36:45.527584+00:00
+last_seen: 2026-06-05 02:17:54.586086+00:00

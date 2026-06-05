@@ -1,0 +1,21 @@
+pattern_id: PAT_311ba17f
+root_cause_hash: 311ba17f
+root_cause_template: unknown
+services:
+- notification-service
+incident_types:
+- missing_data
+observation_count: 3
+confidence_avg: 28.0
+quality_avg: 0.494
+evidence_signals:
+- check_golden_signals
+- check_events
+- search_error_logs
+- check_changes
+receipt_ids:
+- INC_M1_20260531
+- INC_M1_20260605
+- INC_M1_20260603
+first_seen: 2026-05-31 20:36:46.065985+00:00
+last_seen: 2026-06-05 02:17:55.743071+00:00

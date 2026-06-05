@@ -1,0 +1,25 @@
+pattern_id: PAT_2564f02d
+root_cause_hash: 2564f02d
+root_cause_template: unknown
+services:
+- recommendation-service
+incident_types:
+- silent_failure
+observation_count: 3
+confidence_avg: 92.0
+quality_avg: 0.772
+evidence_signals:
+- check_golden_signals
+- check_traffic_metrics
+- search_service_logs
+- search_pipeline_logs
+- _kg_similar_incidents
+- _suggested_root_causes
+- gap_get_change_data
+- gap_get_error_logs
+receipt_ids:
+- INC12354_20260605
+- INC12354_20260531
+- INC12354_20260603
+first_seen: 2026-05-31 20:37:53.137721+00:00
+last_seen: 2026-06-05 02:20:20.490077+00:00

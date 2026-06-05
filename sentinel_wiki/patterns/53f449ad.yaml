@@ -1,0 +1,24 @@
+pattern_id: PAT_53f449ad
+root_cause_hash: 53f449ad
+root_cause_template: unknown
+services:
+- api-gateway
+incident_types:
+- cascading
+observation_count: 3
+confidence_avg: 79.0
+quality_avg: 0.804
+evidence_signals:
+- check_golden_signals
+- search_error_logs
+- check_changes
+- check_itsm_changes
+- check_metrics
+- gap_get_change_data
+- gap_search_logs
+receipt_ids:
+- INC_H9_20260603
+- INC_H9_20260605
+- INC_H9_20260531
+first_seen: 2026-05-31 20:36:47.299266+00:00
+last_seen: 2026-06-05 02:17:58.824212+00:00

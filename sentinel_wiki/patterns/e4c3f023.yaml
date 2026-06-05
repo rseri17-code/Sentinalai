@@ -1,0 +1,25 @@
+pattern_id: PAT_e4c3f023
+root_cause_hash: e4c3f023
+root_cause_template: unknown
+services:
+- payment-service
+incident_types:
+- error_spike
+observation_count: 3
+confidence_avg: 94.0
+quality_avg: 0.815
+evidence_signals:
+- check_golden_signals
+- check_itsm_changes
+- check_events
+- search_error_logs
+- check_changes
+- _kg_similar_incidents
+- _suggested_root_causes
+- gap_get_change_data
+receipt_ids:
+- INC12347_20260603
+- INC12347_20260605
+- INC12347_20260531
+first_seen: 2026-05-31 20:37:52.382600+00:00
+last_seen: 2026-06-05 02:20:18.581509+00:00

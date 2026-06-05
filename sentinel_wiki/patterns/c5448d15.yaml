@@ -1,0 +1,21 @@
+pattern_id: PAT_c5448d15
+root_cause_hash: c5448d15
+root_cause_template: unknown
+services:
+- search-service
+incident_types:
+- latency
+observation_count: 3
+confidence_avg: 86.0
+quality_avg: 0.618
+evidence_signals:
+- check_golden_signals
+- search_latency_logs
+- check_changes
+- check_latency_metrics
+receipt_ids:
+- INC_H2_20260531
+- INC_H2_20260603
+- INC_H2_20260605
+first_seen: 2026-05-31 20:36:46.616806+00:00
+last_seen: 2026-06-05 02:17:57.033710+00:00

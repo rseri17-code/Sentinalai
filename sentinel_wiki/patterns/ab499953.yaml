@@ -1,0 +1,23 @@
+pattern_id: PAT_ab499953
+root_cause_hash: ab499953
+root_cause_template: unknown
+services:
+- order-service
+incident_types:
+- saturation
+observation_count: 3
+confidence_avg: 44.0
+quality_avg: 0.588
+evidence_signals:
+- check_golden_signals
+- check_cpu_metrics
+- check_itsm_changes
+- search_cpu_logs
+- check_changes
+- gap_get_change_data
+receipt_ids:
+- INC_S2_20260603
+- INC_S2_20260531
+- INC_S2_20260605
+first_seen: 2026-05-31 20:36:45.702475+00:00
+last_seen: 2026-06-05 02:17:54.961253+00:00

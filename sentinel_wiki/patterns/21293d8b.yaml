@@ -1,0 +1,24 @@
+pattern_id: PAT_21293d8b
+root_cause_hash: 21293d8b
+root_cause_template: unknown
+services:
+- notification-service
+incident_types:
+- missing_data
+observation_count: 3
+confidence_avg: 72.0
+quality_avg: 0.812
+evidence_signals:
+- check_golden_signals
+- search_error_logs
+- check_changes
+- check_events
+- _kg_similar_incidents
+- _suggested_root_causes
+- gap_get_change_data
+receipt_ids:
+- INC12352_20260531
+- INC12352_20260603
+- INC12352_20260605
+first_seen: 2026-05-31 20:37:52.958706+00:00
+last_seen: 2026-06-05 02:20:19.960523+00:00

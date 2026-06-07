@@ -1,0 +1,17 @@
+{
+  "doc_id": "RB-0042",
+  "source_type": "runbook",
+  "title": "payment-service OOM Runbook",
+  "service": "payment-service",
+  "incident_type": "oomkill",
+  "created_at": "2025-09-01T00:00:00Z",
+  "collected_at": "2025-09-01T00:00:00Z",
+  "text": "When payment-service OOM kills occur check memory limits in the k8s deployment manifest. Verify JVM heap settings with -Xmx flag. Check for memory leak in connection pool using jmap heap dump. Common cause is connection pool not releasing objects after timeout. Resolution: increase memory limit or fix leak in ConnectionPoolManager. kubectl rollout restart deployment/payment-service after fix.",
+  "tags": ["oomkill", "payment-service", "memory", "jvm"],
+  "metadata": {
+    "service": "payment-service",
+    "incident_type": "oomkill",
+    "author": "platform-team",
+    "version": "1.2"
+  }
+}

@@ -1,0 +1,27 @@
+pattern_id: PAT_e30560d2
+root_cause_hash: e30560d2
+root_cause_template: unknown
+services:
+- inventory-service
+incident_types:
+- network
+observation_count: 3
+confidence_avg: 96.0
+quality_avg: 0.81
+evidence_signals:
+- check_golden_signals
+- check_itsm_changes
+- search_network_logs
+- search_dns_logs
+- check_changes
+- _kg_similar_incidents
+- _suggested_root_causes
+- gap_get_change_data
+- gap_get_error_logs
+- gap_search_logs
+receipt_ids:
+- INC12350_20260603
+- INC12350_20260605
+- INC12350_20260531
+first_seen: 2026-05-31 20:37:52.777215+00:00
+last_seen: 2026-06-05 02:20:19.409387+00:00

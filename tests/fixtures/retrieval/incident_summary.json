@@ -1,0 +1,26 @@
+{
+  "doc_id": "INC-2025-0891",
+  "source_type": "experience_store",
+  "title": "payment-service OOM — connection pool leak (resolved)",
+  "service": "payment-service",
+  "incident_type": "oomkill",
+  "created_at": "2025-10-15T14:32:00Z",
+  "collected_at": "2025-10-15T18:00:00Z",
+  "root_cause": "ConnectionPoolManager failed to release objects after socket timeout. Heap grew unbounded over 6h until OOM kill.",
+  "resolution": "Patched ConnectionPoolManager.release() to honour timeout. Increased -Xmx from 1g to 2g as short-term mitigation.",
+  "confidence": 0.91,
+  "citation_coverage": 0.88,
+  "citations": [
+    {"source": "jmap_heap_dump", "excerpt": "ConnectionPoolManager holding 847 unreleased Connection objects"},
+    {"source": "k8s_events",    "excerpt": "OOMKilled exit code 137 at 2025-10-15T14:32:00Z"},
+    {"source": "runbook_RB-0042", "excerpt": "Common cause is connection pool not releasing objects after timeout"}
+  ],
+  "tags": ["oomkill", "payment-service", "memory", "jvm", "connection-pool"],
+  "metadata": {
+    "service": "payment-service",
+    "incident_type": "oomkill",
+    "duration_minutes": 22,
+    "severity": "P1",
+    "resolved_by": "platform-team"
+  }
+}

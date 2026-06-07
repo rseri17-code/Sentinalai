@@ -622,3 +622,137 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-05-31T20:35:37.874Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 9733db2 chore(eval): update eval store snapshots from session runs
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `9733db2 chore(eval): update eval store snapshots from session runs`
+- `2273b55 feat(wiki): add local TF-IDF vector index and pattern→LTM write-back`
+- `bb0ceb6 feat(wiki): Phase 2 — receipts, pattern promotion, and wiki context read path`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-05-31T20:41:16.548Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 7da6614 chore(wiki): update receipts, patterns, and eval snapshots from session runs
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `7da6614 chore(wiki): update receipts, patterns, and eval snapshots from session runs`
+- `b7accde chore: update hot memory (stop hook auto-commit)`
+- `9733db2 chore(eval): update eval store snapshots from session runs`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-03T02:56:20.634Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 7da6614 chore(wiki): update receipts, patterns, and eval snapshots from session runs
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `7da6614 chore(wiki): update receipts, patterns, and eval snapshots from session runs`
+- `b7accde chore: update hot memory (stop hook auto-commit)`
+- `9733db2 chore(eval): update eval store snapshots from session runs`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-03T04:29:24.250Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 37c03c9 chore(eval): commit session runtime artifacts — eval snapshots, wiki receipts, patterns
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `37c03c9 chore(eval): commit session runtime artifacts — eval snapshots, wiki receipts, patterns`
+- `0d2c91e chore: update hot memory (stop hook auto-commit)`
+- `a0b6292 feat(retrieval): add hybrid retrieval quality + evidence control layer`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-03T17:19:30.146Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 37c03c9 chore(eval): commit session runtime artifacts — eval snapshots, wiki receipts, patterns
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `37c03c9 chore(eval): commit session runtime artifacts — eval snapshots, wiki receipts, patterns`
+- `0d2c91e chore: update hot memory (stop hook auto-commit)`
+- `a0b6292 feat(retrieval): add hybrid retrieval quality + evidence control layer`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

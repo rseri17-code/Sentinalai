@@ -1,0 +1,21 @@
+pattern_id: PAT_7259c8f6
+root_cause_hash: 7259c8f6
+root_cause_template: unknown
+services:
+- notification-service
+incident_types:
+- missing_data
+observation_count: 3
+confidence_avg: 67.0
+quality_avg: 0.586
+evidence_signals:
+- check_golden_signals
+- check_events
+- search_error_logs
+- check_changes
+receipt_ids:
+- INC_H1_20260605
+- INC_H1_20260603
+- INC_H1_20260531
+first_seen: 2026-05-31 20:36:46.531608+00:00
+last_seen: 2026-06-05 02:17:56.815040+00:00

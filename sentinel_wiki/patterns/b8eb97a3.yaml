@@ -5,7 +5,7 @@ services:
 - svc
 incident_types:
 - timeout
-observation_count: 3
+observation_count: 4
 confidence_avg: 27.0
 quality_avg: 0.494
 evidence_signals:
@@ -17,5 +17,6 @@ receipt_ids:
 - INC_MW_20260605
 - INC_MW_20260603
 - INC_MW_20260531
+- INC_MW_20260609
 first_seen: 2026-05-31 20:36:47.388899+00:00
-last_seen: 2026-06-05 02:17:59.066796+00:00
+last_seen: 2026-06-09 17:36:16.466616+00:00

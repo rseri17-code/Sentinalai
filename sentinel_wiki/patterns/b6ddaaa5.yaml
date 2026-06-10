@@ -5,7 +5,7 @@ services:
 - search-service
 incident_types:
 - latency
-observation_count: 4
+observation_count: 5
 confidence_avg: 52.0
 quality_avg: 0.619
 evidence_signals:
@@ -16,7 +16,8 @@ evidence_signals:
 receipt_ids:
 - INC_L1_20260609
 - INC_L1_20260603
+- INC_L1_20260610
 - INC_L1_20260605
 - INC_L1_20260531
 first_seen: 2026-05-31 20:36:45.527584+00:00
-last_seen: 2026-06-09 17:36:10.257220+00:00
+last_seen: 2026-06-10 00:46:15.124548+00:00

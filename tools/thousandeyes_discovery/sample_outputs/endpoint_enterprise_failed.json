@@ -1,0 +1,69 @@
+{
+  "_fixture_note": "Enterprise agent failure scenario. All enterprise/endpoint agents fail. Cloud agents healthy. Maps to TE-CORR-007.",
+  "_scenario": "endpoint_enterprise_failed",
+  "_expected_owner": "endpoint",
+  "_expected_confidence_delta": 0.35,
+  "testId": 123456,
+  "testName": "API Gateway Health",
+  "type": "http-server",
+  "scenarioSummary": "All enterprise agents fail (Chicago, London Office). All cloud agents healthy. Users at office locations reporting issues. VPN or local network degradation suspected.",
+  "results": [
+    {
+      "agentId": 10001,
+      "agentName": "New York, NY",
+      "agentType": "Cloud",
+      "roundId": 1749546180,
+      "startTime": "2026-06-10T10:03:00Z",
+      "availability": 100,
+      "responseTime": 142,
+      "responseCode": 200,
+      "errorType": null
+    },
+    {
+      "agentId": 10002,
+      "agentName": "San Francisco, CA",
+      "agentType": "Cloud",
+      "roundId": 1749546180,
+      "startTime": "2026-06-10T10:03:00Z",
+      "availability": 100,
+      "responseTime": 155,
+      "responseCode": 200,
+      "errorType": null
+    },
+    {
+      "agentId": 10006,
+      "agentName": "Chicago Office",
+      "agentType": "Enterprise",
+      "roundId": 1749546180,
+      "startTime": "2026-06-10T10:03:00Z",
+      "availability": 0,
+      "responseTime": 0,
+      "responseCode": 0,
+      "errorType": "CONNECT",
+      "errorDetails": "Connection refused from enterprise agent"
+    },
+    {
+      "agentId": 10007,
+      "agentName": "London Office Endpoint",
+      "agentType": "Endpoint",
+      "roundId": 1749546180,
+      "startTime": "2026-06-10T10:03:00Z",
+      "availability": 0,
+      "responseTime": 0,
+      "responseCode": 0,
+      "errorType": "CONNECT",
+      "errorDetails": "VPN tunnel not established — connection refused"
+    }
+  ],
+  "normalizedEvidence": {
+    "test_type": "http-server",
+    "availability": 0.0,
+    "error_type": "CONNECT",
+    "error_details": "Enterprise and endpoint agents cannot reach service; cloud agents healthy",
+    "affected_scope": "regional",
+    "agent_type": "Enterprise",
+    "recommended_owner": "endpoint",
+    "confidence": 0.75,
+    "_correlation": "Cloud healthy + Enterprise/Endpoint failed = VPN or office network issue"
+  }
+}

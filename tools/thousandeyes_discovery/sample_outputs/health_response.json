@@ -1,0 +1,39 @@
+{
+  "_fixture_note": "MCP server health check response. Returned by GET /health endpoint.",
+  "_scenario": "health_response",
+  "status": "healthy",
+  "version": "1.0.0",
+  "uptime_seconds": 3600,
+  "timestamp": "2026-06-10T10:00:00Z",
+  "checks": {
+    "thousandeyes_api": {
+      "status": "ok",
+      "latency_ms": 85,
+      "message": "ThousandEyes API v7 reachable"
+    },
+    "authentication": {
+      "status": "ok",
+      "message": "Bearer token valid"
+    },
+    "mcp_transport": {
+      "status": "ok",
+      "transport": "http",
+      "port": 8004,
+      "message": "MCP HTTP transport listening"
+    }
+  },
+  "tools_available": [
+    "te_list_tests",
+    "te_get_test_results",
+    "te_get_path_vis",
+    "te_list_agents",
+    "te_list_dashboards",
+    "te_get_dashboard",
+    "te_get_dashboard_widget",
+    "te_list_alerts",
+    "te_get_users",
+    "te_get_account_groups",
+    "te_get_test_details"
+  ],
+  "tools_count": 11
+}

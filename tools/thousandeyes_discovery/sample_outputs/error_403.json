@@ -1,0 +1,10 @@
+{
+  "_fixture_note": "403 Forbidden error response. Token valid but insufficient permissions for this resource.",
+  "_scenario": "error_403",
+  "httpStatus": 403,
+  "error": "Forbidden",
+  "message": "The provided API token does not have permission to access this resource. Ensure the token has the required read permissions.",
+  "code": "FORBIDDEN",
+  "timestamp": "2026-06-10T10:00:00Z",
+  "requestId": "req-00000000-0000-0000-0000-000000000001"
+}

@@ -1,0 +1,64 @@
+{
+  "_fixture_note": "Sanitized DNS server test results. Simulates intermittent DNS failure from primary resolver.",
+  "testId": 123457,
+  "testName": "DNS Resolution — api.example.com",
+  "type": "dns-server",
+  "results": [
+    {
+      "agentId": 10001,
+      "agentName": "New York, NY",
+      "roundId": 1749545700,
+      "startTime": "2026-06-10T09:55:00Z",
+      "domain": "api.example.com",
+      "dnsServer": "8.8.8.8",
+      "resolutionTime": 0,
+      "mappings": [],
+      "errorType": "SERVER_ERROR",
+      "errorDetails": "DNS server returned SERVFAIL for api.example.com",
+      "availability": 0
+    },
+    {
+      "agentId": 10001,
+      "agentName": "New York, NY",
+      "roundId": 1749545760,
+      "startTime": "2026-06-10T10:01:00Z",
+      "domain": "api.example.com",
+      "dnsServer": "8.8.8.8",
+      "resolutionTime": 0,
+      "mappings": [],
+      "errorType": "TIMEOUT",
+      "errorDetails": "DNS query timed out after 5000ms",
+      "availability": 0
+    },
+    {
+      "agentId": 10001,
+      "agentName": "New York, NY",
+      "roundId": 1749545820,
+      "startTime": "2026-06-10T10:07:00Z",
+      "domain": "api.example.com",
+      "dnsServer": "8.8.8.8",
+      "resolutionTime": 45,
+      "mappings": [
+        {"ipAddress": "192.0.2.50", "prefix": "192.0.2.0/24", "network": "Example CDN (AS64502)"}
+      ],
+      "errorType": null,
+      "errorDetails": null,
+      "availability": 100
+    },
+    {
+      "agentId": 10003,
+      "agentName": "London, UK",
+      "roundId": 1749545700,
+      "startTime": "2026-06-10T09:55:00Z",
+      "domain": "api.example.com",
+      "dnsServer": "8.8.8.8",
+      "resolutionTime": 38,
+      "mappings": [
+        {"ipAddress": "198.51.100.50", "prefix": "198.51.100.0/24", "network": "Example CDN EU (AS64503)"}
+      ],
+      "errorType": null,
+      "errorDetails": null,
+      "availability": 100
+    }
+  ]
+}

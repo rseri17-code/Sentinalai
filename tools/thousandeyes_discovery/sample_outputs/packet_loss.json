@@ -1,0 +1,84 @@
+{
+  "_fixture_note": "Packet loss scenario. >20% loss from US-East and US-Central agents. EU healthy. Maps to TE-CORR-001 and TE-CORR-005.",
+  "_scenario": "packet_loss",
+  "_expected_owner": "isp",
+  "_expected_confidence_delta": 0.35,
+  "testId": 123459,
+  "testName": "Network Path — API Gateway",
+  "type": "agent-to-server",
+  "scenarioSummary": "Packet loss 23% from New York and Chicago agents. London and Frankfurt agents healthy. Indicates ISP-regional issue.",
+  "results": [
+    {
+      "agentId": 10001,
+      "agentName": "New York, NY",
+      "roundId": 1749546180,
+      "startTime": "2026-06-10T10:03:00Z",
+      "server": "api.example.com",
+      "serverIp": "192.0.2.50",
+      "loss": 23,
+      "latency": 310,
+      "jitter": 85,
+      "availability": 40,
+      "pathMtu": 1500,
+      "errorType": null
+    },
+    {
+      "agentId": 10006,
+      "agentName": "Chicago, IL",
+      "roundId": 1749546180,
+      "startTime": "2026-06-10T10:03:00Z",
+      "server": "api.example.com",
+      "serverIp": "192.0.2.50",
+      "loss": 18,
+      "latency": 290,
+      "jitter": 72,
+      "availability": 60,
+      "pathMtu": 1500,
+      "errorType": null
+    },
+    {
+      "agentId": 10003,
+      "agentName": "London, UK",
+      "roundId": 1749546180,
+      "startTime": "2026-06-10T10:03:00Z",
+      "server": "api.example.com",
+      "serverIp": "198.51.100.50",
+      "loss": 0,
+      "latency": 45,
+      "jitter": 3,
+      "availability": 100,
+      "pathMtu": 1500,
+      "errorType": null
+    },
+    {
+      "agentId": 10004,
+      "agentName": "Frankfurt, DE",
+      "roundId": 1749546180,
+      "startTime": "2026-06-10T10:03:00Z",
+      "server": "api.example.com",
+      "serverIp": "198.51.100.50",
+      "loss": 0,
+      "latency": 42,
+      "jitter": 2,
+      "availability": 100,
+      "pathMtu": 1500,
+      "errorType": null
+    }
+  ],
+  "affectedAsns": [
+    {"asn": "AS64496", "provider": "Cogent Communications", "region": "us-east"},
+    {"asn": "AS64501", "provider": "Comcast Business", "region": "us-central"}
+  ],
+  "normalizedEvidence": {
+    "test_type": "agent-to-server",
+    "packet_loss": 23,
+    "latency_ms": 310,
+    "jitter_ms": 85,
+    "availability": 40.0,
+    "affected_scope": "regional",
+    "asn": "AS64496",
+    "provider": "Cogent Communications",
+    "recommended_owner": "isp",
+    "confidence": 0.65
+  }
+}

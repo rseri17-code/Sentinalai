@@ -54,7 +54,7 @@ _BATCH_DELAY = float(os.environ.get("OPS_BATCH_DELAY", "1.0"))  # seconds
 # ── Schema versioning ─────────────────────────────────────────────────────────
 
 # Increment when a new migration is added to _MIGRATIONS below.
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 # Forward-only migrations: version_number → list of SQL DDL/DML statements.
 # Each entry brings the DB from (version - 1) to version.
@@ -68,6 +68,110 @@ _MIGRATIONS: dict[int, list[str]] = {
         # Add 'source' to safety_events so callers can record which component
         # fired the event (e.g. "strategy_evolver", "adaptive_thresholds").
         "ALTER TABLE safety_events ADD COLUMN source TEXT NOT NULL DEFAULT ''",
+    ],
+    3: [
+        # Phase 4 intelligence tables — Resolution Memory, Pattern Intelligence,
+        # Incident Graph, Service Dependencies, Change Impact.
+        """CREATE TABLE IF NOT EXISTS resolution_memories (
+            memory_id            TEXT PRIMARY KEY,
+            investigation_id     TEXT NOT NULL DEFAULT '',
+            incident_id          TEXT NOT NULL DEFAULT '',
+            service              TEXT NOT NULL DEFAULT '',
+            environment          TEXT NOT NULL DEFAULT '',
+            incident_type        TEXT NOT NULL DEFAULT '',
+            symptoms             TEXT NOT NULL DEFAULT '[]',
+            detected_root_cause  TEXT NOT NULL DEFAULT '',
+            evidence_used        TEXT NOT NULL DEFAULT '[]',
+            confirmed_resolution TEXT NOT NULL DEFAULT '',
+            fix_action           TEXT NOT NULL DEFAULT '',
+            rollback_action      TEXT NOT NULL DEFAULT '',
+            owner_team           TEXT NOT NULL DEFAULT '',
+            confidence           INTEGER NOT NULL DEFAULT 0,
+            validation_status    TEXT NOT NULL DEFAULT 'candidate',
+            is_confirmed         INTEGER NOT NULL DEFAULT 0,
+            lesson_learned       TEXT NOT NULL DEFAULT '',
+            related_incident_ids TEXT NOT NULL DEFAULT '[]',
+            mttr_minutes         REAL NOT NULL DEFAULT 0,
+            recorded_at          TEXT NOT NULL DEFAULT '',
+            confirmed_at         TEXT
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_rm_service ON resolution_memories(service)",
+        "CREATE INDEX IF NOT EXISTS idx_rm_type ON resolution_memories(incident_type)",
+        "CREATE INDEX IF NOT EXISTS idx_rm_status ON resolution_memories(validation_status)",
+        "CREATE INDEX IF NOT EXISTS idx_rm_recorded ON resolution_memories(recorded_at DESC)",
+        """CREATE TABLE IF NOT EXISTS operational_patterns (
+            pattern_id          TEXT PRIMARY KEY,
+            symptom_signature   TEXT NOT NULL DEFAULT '',
+            incident_type       TEXT NOT NULL DEFAULT '',
+            services            TEXT NOT NULL DEFAULT '[]',
+            canonical_symptoms  TEXT NOT NULL DEFAULT '[]',
+            occurrence_count    INTEGER NOT NULL DEFAULT 1,
+            success_count       INTEGER NOT NULL DEFAULT 0,
+            first_seen          TEXT NOT NULL DEFAULT '',
+            last_seen           TEXT NOT NULL DEFAULT ''
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_op_type ON operational_patterns(incident_type)",
+        "CREATE INDEX IF NOT EXISTS idx_op_count ON operational_patterns(occurrence_count DESC)",
+        """CREATE TABLE IF NOT EXISTS incident_graph_nodes (
+            node_id      TEXT NOT NULL,
+            incident_id  TEXT NOT NULL,
+            node_type    TEXT NOT NULL DEFAULT '',
+            label        TEXT NOT NULL DEFAULT '',
+            service      TEXT NOT NULL DEFAULT '',
+            properties   TEXT NOT NULL DEFAULT '{}',
+            recorded_at  TEXT NOT NULL DEFAULT '',
+            PRIMARY KEY (node_id, incident_id)
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_ign_incident ON incident_graph_nodes(incident_id)",
+        "CREATE INDEX IF NOT EXISTS idx_ign_service ON incident_graph_nodes(service)",
+        """CREATE TABLE IF NOT EXISTS incident_graph_edges (
+            edge_id        TEXT PRIMARY KEY,
+            incident_id    TEXT NOT NULL DEFAULT '',
+            source_node_id TEXT NOT NULL DEFAULT '',
+            target_node_id TEXT NOT NULL DEFAULT '',
+            relationship   TEXT NOT NULL DEFAULT '',
+            weight         REAL NOT NULL DEFAULT 1.0,
+            properties     TEXT NOT NULL DEFAULT '{}',
+            recorded_at    TEXT NOT NULL DEFAULT ''
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_ige_incident ON incident_graph_edges(incident_id)",
+        "CREATE INDEX IF NOT EXISTS idx_ige_source ON incident_graph_edges(source_node_id)",
+        """CREATE TABLE IF NOT EXISTS service_dependencies (
+            dep_id         TEXT PRIMARY KEY,
+            source_service TEXT NOT NULL DEFAULT '',
+            target_service TEXT NOT NULL DEFAULT '',
+            dep_type       TEXT NOT NULL DEFAULT 'runtime',
+            strength       REAL NOT NULL DEFAULT 0.1,
+            observed_count INTEGER NOT NULL DEFAULT 1,
+            first_seen     TEXT NOT NULL DEFAULT '',
+            last_seen      TEXT NOT NULL DEFAULT ''
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_sd_source ON service_dependencies(source_service)",
+        "CREATE INDEX IF NOT EXISTS idx_sd_target ON service_dependencies(target_service)",
+        """CREATE TABLE IF NOT EXISTS changes (
+            change_id    TEXT PRIMARY KEY,
+            service      TEXT NOT NULL DEFAULT '',
+            change_type  TEXT NOT NULL DEFAULT '',
+            deployed_at  TEXT NOT NULL DEFAULT '',
+            description  TEXT NOT NULL DEFAULT '',
+            deployed_by  TEXT NOT NULL DEFAULT '',
+            metadata     TEXT NOT NULL DEFAULT '{}',
+            recorded_at  TEXT NOT NULL DEFAULT ''
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_ch_service ON changes(service)",
+        "CREATE INDEX IF NOT EXISTS idx_ch_deployed ON changes(deployed_at DESC)",
+        """CREATE TABLE IF NOT EXISTS change_incident_links (
+            link_id          TEXT PRIMARY KEY,
+            change_id        TEXT NOT NULL DEFAULT '',
+            incident_id      TEXT NOT NULL DEFAULT '',
+            investigation_id TEXT NOT NULL DEFAULT '',
+            impact_score     REAL NOT NULL DEFAULT 0,
+            link_reason      TEXT NOT NULL DEFAULT '',
+            linked_at        TEXT NOT NULL DEFAULT ''
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_cil_change ON change_incident_links(change_id)",
+        "CREATE INDEX IF NOT EXISTS idx_cil_incident ON change_incident_links(incident_id)",
+        "CREATE INDEX IF NOT EXISTS idx_cil_investigation ON change_incident_links(investigation_id)",
     ],
 }
 

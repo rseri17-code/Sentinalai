@@ -557,3 +557,208 @@ def get_neural_architecture() -> dict[str, Any]:
         result["confidence_calibrator"] = {"error": str(exc)}
 
     return result
+
+
+# ------------------------------------------------------------------
+# Phase 4: Resolution Memory
+# ------------------------------------------------------------------
+
+import os as _os
+_INTEL_DB = _os.environ.get("OPS_DB_PATH", "eval/ops_intelligence.db")
+
+
+class ConfirmMemoryRequest(BaseModel):
+    confirmed_resolution: str = ""
+    lesson_learned: str = ""
+    owner_team: str = ""
+
+
+@router.get("/memory/resolutions")
+def list_resolution_memories(
+    service: str = Query(""),
+    incident_type: str = Query(""),
+    confirmed_only: bool = Query(False),
+    limit: int = Query(50, ge=1, le=500),
+) -> dict[str, Any]:
+    from intelligence.resolution_memory import ResolutionMemoryStore
+    store = ResolutionMemoryStore(_INTEL_DB)
+    memories = store.query(
+        service=service or None,
+        incident_type=incident_type or None,
+        confirmed_only=confirmed_only,
+        limit=limit,
+    )
+    return {"memories": [m.to_dict() for m in memories], "total": len(memories)}
+
+
+@router.get("/memory/resolutions/{memory_id}")
+def get_resolution_memory(memory_id: str) -> dict[str, Any]:
+    from intelligence.resolution_memory import ResolutionMemoryStore
+    store = ResolutionMemoryStore(_INTEL_DB)
+    m = store.get(memory_id)
+    if not m:
+        raise HTTPException(404, f"Resolution memory {memory_id} not found")
+    return m.to_dict()
+
+
+@router.post("/memory/resolutions/{memory_id}/confirm")
+def confirm_resolution_memory(memory_id: str, body: ConfirmMemoryRequest) -> dict[str, Any]:
+    from intelligence.resolution_memory import ResolutionMemoryStore
+    store = ResolutionMemoryStore(_INTEL_DB)
+    ok = store.confirm(memory_id, body.confirmed_resolution, body.lesson_learned, body.owner_team)
+    if not ok:
+        raise HTTPException(404, f"Memory {memory_id} not found or already confirmed/rejected")
+    return {"success": True, "memory_id": memory_id}
+
+
+@router.post("/memory/resolutions/{memory_id}/reject")
+def reject_resolution_memory(memory_id: str) -> dict[str, Any]:
+    from intelligence.resolution_memory import ResolutionMemoryStore
+    store = ResolutionMemoryStore(_INTEL_DB)
+    ok = store.reject(memory_id)
+    if not ok:
+        raise HTTPException(404, f"Memory {memory_id} not found")
+    return {"success": True, "memory_id": memory_id}
+
+
+# ------------------------------------------------------------------
+# Phase 4: Pattern Intelligence
+# ------------------------------------------------------------------
+
+@router.get("/patterns")
+def list_patterns(
+    incident_type: str = Query(""),
+    service: str = Query(""),
+    min_occurrences: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=500),
+) -> dict[str, Any]:
+    from intelligence.pattern_intelligence import PatternIntelligenceStore
+    store = PatternIntelligenceStore(_INTEL_DB)
+    patterns = store.query(
+        incident_type=incident_type or None,
+        service=service or None,
+        min_occurrences=min_occurrences,
+        limit=limit,
+    )
+    return {"patterns": [p.to_dict() for p in patterns], "total": len(patterns)}
+
+
+@router.get("/patterns/{pattern_id}")
+def get_pattern(pattern_id: str) -> dict[str, Any]:
+    from intelligence.pattern_intelligence import PatternIntelligenceStore
+    store = PatternIntelligenceStore(_INTEL_DB)
+    p = store.get(pattern_id)
+    if not p:
+        raise HTTPException(404, f"Pattern {pattern_id} not found")
+    return p.to_dict()
+
+
+# ------------------------------------------------------------------
+# Phase 4: Incident Graph
+# ------------------------------------------------------------------
+
+@router.get("/graph/incident/{incident_id}")
+def get_incident_graph(incident_id: str) -> dict[str, Any]:
+    from intelligence.incident_graph import IncidentGraphStore
+    store = IncidentGraphStore(_INTEL_DB)
+    nodes = store.get_incident_nodes(incident_id)
+    edges = store.get_incident_edges(incident_id)
+    return {
+        "incident_id": incident_id,
+        "nodes": [n.to_dict() for n in nodes],
+        "edges": [e.to_dict() for e in edges],
+        "node_count": len(nodes),
+        "edge_count": len(edges),
+    }
+
+
+@router.get("/graph/service/{service}/related")
+def get_related_incidents(
+    service: str,
+    node_type: str = Query(""),
+    limit: int = Query(20, ge=1, le=200),
+) -> dict[str, Any]:
+    from intelligence.incident_graph import IncidentGraphStore
+    store = IncidentGraphStore(_INTEL_DB)
+    incident_ids = store.find_related_incidents(service, node_type=node_type or None, limit=limit)
+    return {"service": service, "related_incident_ids": incident_ids, "total": len(incident_ids)}
+
+
+# ------------------------------------------------------------------
+# Phase 4: Service Dependencies
+# ------------------------------------------------------------------
+
+@router.get("/dependencies/{service}/upstream")
+def get_upstream_deps(service: str) -> dict[str, Any]:
+    from intelligence.dependency_graph import DependencyGraphStore
+    store = DependencyGraphStore(_INTEL_DB)
+    deps = store.get_upstream(service)
+    return {"service": service, "upstream": [d.to_dict() for d in deps], "total": len(deps)}
+
+
+@router.get("/dependencies/{service}/downstream")
+def get_downstream_deps(service: str) -> dict[str, Any]:
+    from intelligence.dependency_graph import DependencyGraphStore
+    store = DependencyGraphStore(_INTEL_DB)
+    deps = store.get_downstream(service)
+    return {"service": service, "downstream": [d.to_dict() for d in deps], "total": len(deps)}
+
+
+@router.get("/dependencies/{service}/impact")
+def get_blast_radius(service: str) -> dict[str, Any]:
+    from intelligence.dependency_graph import DependencyGraphStore
+    store = DependencyGraphStore(_INTEL_DB)
+    affected = store.get_affected_services(service)
+    return {"service": service, "affected_services": affected, "total": len(affected)}
+
+
+# ------------------------------------------------------------------
+# Phase 4: Change Impact
+# ------------------------------------------------------------------
+
+class RecordChangeRequest(BaseModel):
+    service: str
+    change_type: str = "deployment"
+    deployed_at: str
+    description: str = ""
+    deployed_by: str = ""
+    metadata: dict[str, Any] = {}
+
+
+@router.post("/changes")
+def record_change(body: RecordChangeRequest) -> dict[str, Any]:
+    from intelligence.change_tracker import ChangeImpactStore
+    store = ChangeImpactStore(_INTEL_DB)
+    change = store.make_change(
+        service=body.service,
+        change_type=body.change_type,
+        deployed_at=body.deployed_at,
+        description=body.description,
+        deployed_by=body.deployed_by,
+        metadata=body.metadata,
+    )
+    store.record_change(change)
+    return {"success": True, "change_id": change.change_id}
+
+
+@router.get("/changes")
+def list_changes(
+    service: str = Query(""),
+    hours: float = Query(24.0, ge=0.1),
+    limit: int = Query(50, ge=1, le=500),
+) -> dict[str, Any]:
+    from intelligence.change_tracker import ChangeImpactStore
+    store = ChangeImpactStore(_INTEL_DB)
+    changes = store.recent_changes(service=service or None, hours=hours, limit=limit)
+    return {"changes": [c.to_dict() for c in changes], "total": len(changes)}
+
+
+@router.get("/investigations/{investigation_id}/changes")
+def get_investigation_changes(
+    investigation_id: str,
+    min_score: float = Query(0.0, ge=0.0, le=1.0),
+) -> dict[str, Any]:
+    from intelligence.change_tracker import ChangeImpactStore
+    store = ChangeImpactStore(_INTEL_DB)
+    changes = store.get_changes_for_investigation(investigation_id, min_score=min_score)
+    return {"investigation_id": investigation_id, "changes": changes, "total": len(changes)}

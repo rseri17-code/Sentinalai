@@ -201,7 +201,7 @@ class TestSchemaMigration:
         assert "source" in cols, f"Expected 'source' column; got: {cols}"
 
     def test_migration_applied_to_pre_existing_v1_db(self, tmp_path):
-        """DB created at v1 (no schema_meta, no source column) gets migrated to v2."""
+        """DB created at v1 (no schema_meta, no source column) gets migrated to CURRENT_SCHEMA_VERSION."""
         db_path = str(tmp_path / "v1_db.db")
 
         # Build a v1-level DB manually: base tables but no schema_meta and no source column
@@ -231,7 +231,7 @@ class TestSchemaMigration:
         # Verify precondition: no source column yet
         assert "source" not in _columns(db_path, "safety_events")
 
-        # Start OpsPersistence — must detect v1, run migration, reach v2
+        # Start OpsPersistence — must detect v1, run all migrations, reach CURRENT_SCHEMA_VERSION
         store = OpsPersistence(db_path=db_path)
         store.start()
         _flush(store)
@@ -239,7 +239,7 @@ class TestSchemaMigration:
         assert "source" in _columns(db_path, "safety_events"), (
             "Migration v2 did not add 'source' column to safety_events"
         )
-        assert _schema_version(db_path) == 2
+        assert _schema_version(db_path) == CURRENT_SCHEMA_VERSION
 
     def test_migration_is_idempotent_on_already_migrated_db(self, tmp_path):
         """Running start() twice on the same DB must not error or double-migrate."""

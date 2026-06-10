@@ -558,6 +558,21 @@ class InvestigationHarness:
         except Exception as exc:
             logger.debug("Post-flight: pattern outcome update failed: %s", exc)
 
+        # Phase 4 intelligence capture — resolution memory, patterns, graph, deps, changes.
+        try:
+            from intelligence.intel_writer import capture as _intel_capture
+            _intel_capture(
+                investigation_id=reflection.investigation_id,
+                incident_id=incident_id,
+                service=result.get("service", ""),
+                incident_type=result.get("incident_type", ""),
+                result=result,
+                evidence=result.get("_evidence_snapshot") or {},
+                mttr_minutes=reflection.elapsed_ms / 60_000,
+            )
+        except Exception as exc:
+            logger.debug("Post-flight: intel_writer failed: %s", exc)
+
         return updated
 
     # ------------------------------------------------------------------

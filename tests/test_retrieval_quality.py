@@ -61,14 +61,14 @@ def test_citation_coverage_gates_pass_when_citations_present():
 # ---------------------------------------------------------------------------
 
 def test_stale_runbook_has_lower_confidence_than_live_metrics():
-    """Old runbook (2025-09-01) must always score below golden_signals regardless of wall-clock age.
+    """Old runbook (2025-09-01) must always score below fresh golden_signals.
 
-    The core invariant: runbook freshness decays at 1/90d half-life; golden_signals at 1/24h.
-    A multi-month-old runbook must be MORE stale than golden_signals collected at the same time.
-    We verify this by scoring both sources at age=0 (same collection moment) and confirming
-    that the base_confidence × half_life ordering holds — then verify the 9-month-old runbook
-    is stale in absolute terms.
+    The core invariant: runbook has lower base_confidence (0.58) and decays faster
+    than a freshly-collected golden_signals source (base=1.0).
+    We score the ancient runbook against its real timestamp, and golden_signals
+    against "just now" to represent a live collection.
     """
+    from datetime import datetime, timezone
     from supervisor.retrieval.source_confidence import score_source
 
     runbook = _load("runbook.json")
@@ -78,9 +78,13 @@ def test_stale_runbook_has_lower_confidence_than_live_metrics():
         source_type=runbook["source_type"],
         collected_at=runbook["collected_at"],    # 2025-09-01 — always very old
     )
+    # Use current time to simulate a freshly-collected golden_signals source.
+    # The fixture may be days old; we want to test the staleness ordering invariant,
+    # not the fixture's absolute age.
+    fresh_now = datetime.now(timezone.utc).isoformat()
     obs_score = score_source(
         source_type=obs["source_type"],
-        collected_at=obs["collected_at"],        # 2026-06-03 — newer than runbook
+        collected_at=fresh_now,
     )
 
     # The runbook is from 2025-09-01 — it is always stale regardless of when tests run
@@ -88,12 +92,10 @@ def test_stale_runbook_has_lower_confidence_than_live_metrics():
         f"Runbook from 2025-09-01 should always be stale; "
         f"freshness={runbook_score.freshness_factor:.3f}"
     )
-    # Relative ordering: runbook confidence < golden_signals confidence
-    # (golden_signals has higher base_confidence AND shorter half-life, so even when older
-    # in absolute terms it starts from a higher base)
+    # Fresh golden_signals (base=1.0, age=~0h) must score above the ancient runbook
     assert runbook_score.final_confidence < obs_score.final_confidence, (
         f"9-month-old runbook ({runbook_score.final_confidence:.3f}) should be less confident "
-        f"than golden_signals ({obs_score.final_confidence:.3f})"
+        f"than fresh golden_signals ({obs_score.final_confidence:.3f})"
     )
 
 

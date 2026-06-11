@@ -5,7 +5,7 @@ services:
 - auth-service
 incident_types:
 - flapping
-observation_count: 10
+observation_count: 12
 confidence_avg: 81.5
 quality_avg: 0.7615
 evidence_signals:
@@ -22,10 +22,12 @@ receipt_ids:
 - INC12353_20260603
 - INC_H5_20260605
 - INC12353_20260609
+- INC_H5_20260611
 - INC_H5_20260609
 - INC_H5_20260531
 - INC12353_20260531
 - INC12353_20260610
+- INC12353_20260611
 - INC_H5_20260610
 first_seen: 2026-05-31 20:36:46.865205+00:00
-last_seen: 2026-06-10 00:48:41.238754+00:00
+last_seen: 2026-06-11 02:59:52.810026+00:00

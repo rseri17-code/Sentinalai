@@ -5,21 +5,22 @@ services:
 - api-gateway
 incident_types:
 - cascading
-observation_count: 5
+observation_count: 6
 confidence_avg: 45.0
 quality_avg: 0.648
 evidence_signals:
 - check_golden_signals
 - check_metrics
-- check_itsm_changes
 - search_error_logs
 - check_changes
+- check_itsm_changes
 - gap_get_change_data
 receipt_ids:
+- INC_C1_20260611
 - INC_C1_20260531
 - INC_C1_20260609
 - INC_C1_20260605
 - INC_C1_20260603
 - INC_C1_20260610
 first_seen: 2026-05-31 20:36:45.973262+00:00
-last_seen: 2026-06-10 00:46:16.356054+00:00
+last_seen: 2026-06-11 02:57:07.689724+00:00

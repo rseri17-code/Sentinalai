@@ -34,6 +34,7 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
     "timeout": [
         {"worker": "log_worker", "action": "search_logs", "query_hint": "timeout {service}", "label": "search_timeout_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
+        {"worker": "network_worker", "action": "get_network_alerts", "label": "get_network_alerts"},
         {"worker": "metrics_worker", "action": "query_metrics", "metric_hint": "response_time_ms", "label": "check_latency_metrics"},
         {"worker": "log_worker", "action": "get_change_data", "label": "check_changes"},
     ],
@@ -53,6 +54,7 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
     "latency": [
         {"worker": "log_worker", "action": "search_logs", "query_hint": "latency OR slow {service}", "label": "search_latency_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
+        {"worker": "network_worker", "action": "get_network_evidence", "label": "get_network_evidence"},
         {"worker": "metrics_worker", "action": "query_metrics", "metric_hint": "response_time_ms", "label": "check_latency_metrics"},
         {"worker": "log_worker", "action": "get_change_data", "label": "check_changes"},
     ],
@@ -66,6 +68,7 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
     "network": [
         {"worker": "log_worker", "action": "search_logs", "query_hint": "connection refused OR dns {service}", "label": "search_network_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
+        {"worker": "network_worker", "action": "get_network_evidence", "label": "get_network_evidence"},
         {"worker": "log_worker", "action": "search_logs", "query_hint": "dns {service}", "label": "search_dns_logs"},
         {"worker": "log_worker", "action": "get_change_data", "label": "check_changes"},
         {"worker": "itsm_worker", "action": "get_change_records", "label": "check_itsm_changes"},
@@ -417,6 +420,12 @@ MCP_TO_WORKER: dict[str, str] = {
     "github.get_pr_details": "devops_worker",
     "github.get_commit_diff": "devops_worker",
     "github.get_workflow_runs": "devops_worker",
+    # ThousandEyes (network evidence)
+    "thousandeyes.te_list_alerts": "network_worker",
+    "thousandeyes.te_get_test_results": "network_worker",
+    "thousandeyes.te_list_tests": "network_worker",
+    "thousandeyes.te_list_agents": "network_worker",
+    "thousandeyes.te_get_path_vis": "network_worker",
 }
 
 # Investigation phase budgets

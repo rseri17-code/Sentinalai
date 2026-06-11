@@ -5,9 +5,9 @@ services:
 - inventory-service
 incident_types:
 - network
-observation_count: 5
+observation_count: 6
 confidence_avg: 41.0
-quality_avg: 0.628
+quality_avg: 0.626
 evidence_signals:
 - check_golden_signals
 - check_itsm_changes
@@ -15,11 +15,13 @@ evidence_signals:
 - search_dns_logs
 - check_changes
 - gap_get_change_data
+- get_network_evidence
 receipt_ids:
+- INC_N2_20260611
 - INC_N2_20260603
 - INC_N2_20260605
 - INC_N2_20260531
 - INC_N2_20260609
 - INC_N2_20260610
 first_seen: 2026-05-31 20:36:45.882144+00:00
-last_seen: 2026-06-10 00:46:16.112106+00:00
+last_seen: 2026-06-11 02:57:07.389299+00:00

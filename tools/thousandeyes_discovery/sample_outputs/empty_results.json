@@ -1,0 +1,15 @@
+{
+  "_fixture_note": "Empty results response. No tests or alerts configured in account. Used to test graceful empty-state handling.",
+  "_scenario": "empty_results",
+  "tests": [],
+  "alerts": [],
+  "agents": [],
+  "_metadata": {
+    "accountId": "aid-REDACTED",
+    "accountName": "Example Organization",
+    "totalTests": 0,
+    "totalAgents": 0,
+    "totalAlerts": 0,
+    "message": "No tests configured. Add ThousandEyes tests for API endpoints, DNS, and network paths to enable RCA enrichment."
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "_fixture_note": "Sanitized fixture. IPs replaced with RFC 5737 ranges. IDs are sequential placeholders.",
+  "tests": [
+    {
+      "testId": 123456,
+      "testName": "API Gateway Health",
+      "type": "http-server",
+      "url": "https://api.example.com/health",
+      "interval": 60,
+      "enabled": true,
+      "createdDate": "2026-01-15T09:00:00Z",
+      "modifiedDate": "2026-05-01T14:30:00Z",
+      "agents": [
+        {"agentId": 10001, "agentName": "New York, NY"},
+        {"agentId": 10002, "agentName": "San Francisco, CA"},
+        {"agentId": 10003, "agentName": "London, UK"},
+        {"agentId": 10004, "agentName": "Frankfurt, DE"},
+        {"agentId": 10005, "agentName": "Singapore, SG"}
+      ]
+    },
+    {
+      "testId": 123457,
+      "testName": "DNS Resolution — api.example.com",
+      "type": "dns-server",
+      "domain": "api.example.com",
+      "dnsServer": "8.8.8.8",
+      "interval": 120,
+      "enabled": true,
+      "createdDate": "2026-01-15T09:05:00Z",
+      "modifiedDate": "2026-03-10T11:00:00Z",
+      "agents": [
+        {"agentId": 10001, "agentName": "New York, NY"},
+        {"agentId": 10003, "agentName": "London, UK"}
+      ]
+    },
+    {
+      "testId": 123458,
+      "testName": "Salesforce Availability",
+      "type": "http-server",
+      "url": "https://login.salesforce.com",
+      "interval": 120,
+      "enabled": true,
+      "createdDate": "2026-02-01T10:00:00Z",
+      "modifiedDate": "2026-02-01T10:00:00Z",
+      "agents": [
+        {"agentId": 10001, "agentName": "New York, NY"},
+        {"agentId": 10002, "agentName": "San Francisco, CA"}
+      ]
+    },
+    {
+      "testId": 123459,
+      "testName": "Network Path — API Gateway",
+      "type": "agent-to-server",
+      "server": "api.example.com",
+      "port": 443,
+      "protocol": "TCP",
+      "interval": 60,
+      "enabled": true,
+      "createdDate": "2026-01-20T08:00:00Z",
+      "modifiedDate": "2026-04-12T09:15:00Z",
+      "agents": [
+        {"agentId": 10001, "agentName": "New York, NY"},
+        {"agentId": 10006, "agentName": "Chicago, IL"},
+        {"agentId": 10007, "agentName": "Dallas, TX"}
+      ]
+    },
+    {
+      "testId": 123460,
+      "testName": "Page Load — Customer Portal",
+      "type": "page-load",
+      "url": "https://portal.example.com",
+      "interval": 300,
+      "enabled": true,
+      "createdDate": "2026-03-05T12:00:00Z",
+      "modifiedDate": "2026-03-05T12:00:00Z",
+      "agents": [
+        {"agentId": 10001, "agentName": "New York, NY"},
+        {"agentId": 10002, "agentName": "San Francisco, CA"},
+        {"agentId": 10003, "agentName": "London, UK"}
+      ]
+    }
+  ]
+}

@@ -918,3 +918,137 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-06-10T00:55:32.205Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 27c7d4d chore: update runtime-generated eval data and sentinel_wiki artifacts
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `27c7d4d chore: update runtime-generated eval data and sentinel_wiki artifacts`
+- `2784bcc chore: update hot memory (stop hook auto-commit)`
+- `3a3d550 feat: Phase 4 — Intelligence Layers (resolution memory, patterns, incident graph, deps, change impact)`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-10T04:49:54.503Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: b996dab chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `b996dab chore: update hot memory (stop hook auto-commit)`
+- `27c7d4d chore: update runtime-generated eval data and sentinel_wiki artifacts`
+- `2784bcc chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-10T05:07:54.471Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: b996dab chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `b996dab chore: update hot memory (stop hook auto-commit)`
+- `27c7d4d chore: update runtime-generated eval data and sentinel_wiki artifacts`
+- `2784bcc chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-10T10:49:53.929Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: b996dab chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `b996dab chore: update hot memory (stop hook auto-commit)`
+- `27c7d4d chore: update runtime-generated eval data and sentinel_wiki artifacts`
+- `2784bcc chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-10T15:50:19.040Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 3688ddf chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `3688ddf chore: update hot memory (stop hook auto-commit)`
+- `ced5a4d feat: ThousandEyes MCP discovery + RCA integration strategy (11 phases)`
+- `b996dab chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

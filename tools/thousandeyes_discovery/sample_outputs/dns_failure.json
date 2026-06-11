@@ -1,0 +1,61 @@
+{
+  "_fixture_note": "DNS failure scenario. All agents fail to resolve target domain. Maps to TE-CORR-004.",
+  "_scenario": "dns_failure",
+  "_expected_owner": "dns",
+  "_expected_confidence_delta": 0.40,
+  "testId": 123457,
+  "testName": "DNS Resolution — api.example.com",
+  "type": "dns-server",
+  "scenarioSummary": "Complete DNS resolution failure from all agents. Primary resolver (8.8.8.8) returning SERVFAIL.",
+  "results": [
+    {
+      "agentId": 10001,
+      "agentName": "New York, NY",
+      "roundId": 1749545700,
+      "startTime": "2026-06-10T09:55:00Z",
+      "domain": "api.example.com",
+      "dnsServer": "8.8.8.8",
+      "resolutionTime": 0,
+      "mappings": [],
+      "errorType": "SERVER_ERROR",
+      "errorDetails": "SERVFAIL from 8.8.8.8",
+      "availability": 0
+    },
+    {
+      "agentId": 10002,
+      "agentName": "San Francisco, CA",
+      "roundId": 1749545700,
+      "startTime": "2026-06-10T09:55:00Z",
+      "domain": "api.example.com",
+      "dnsServer": "8.8.8.8",
+      "resolutionTime": 0,
+      "mappings": [],
+      "errorType": "SERVER_ERROR",
+      "errorDetails": "SERVFAIL from 8.8.8.8",
+      "availability": 0
+    },
+    {
+      "agentId": 10003,
+      "agentName": "London, UK",
+      "roundId": 1749545700,
+      "startTime": "2026-06-10T09:55:00Z",
+      "domain": "api.example.com",
+      "dnsServer": "8.8.8.8",
+      "resolutionTime": 0,
+      "mappings": [],
+      "errorType": "SERVER_ERROR",
+      "errorDetails": "SERVFAIL from 8.8.8.8",
+      "availability": 0
+    }
+  ],
+  "normalizedEvidence": {
+    "test_type": "dns-server",
+    "availability": 0.0,
+    "dns_time_ms": 0,
+    "error_type": "SERVER_ERROR",
+    "error_details": "SERVFAIL from primary resolver 8.8.8.8",
+    "affected_scope": "global",
+    "recommended_owner": "dns",
+    "confidence": 0.858
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "_fixture_note": "Internal clean / external dirty scenario. Cloud agents healthy; enterprise endpoint agents degraded. Maps to TE-CORR-003 and TE-CORR-007.",
+  "_scenario": "endpoint_cloud_healthy",
+  "_expected_owner": "network",
+  "_expected_confidence_delta": 0.40,
+  "testId": 123456,
+  "testName": "API Gateway Health",
+  "type": "http-server",
+  "scenarioSummary": "Cloud agents report healthy response times. Enterprise endpoint agent from Chicago degraded. APM shows no issues. Indicates network path issue for enterprise office.",
+  "results": [
+    {
+      "agentId": 10001,
+      "agentName": "New York, NY",
+      "agentType": "Cloud",
+      "roundId": 1749546180,
+      "startTime": "2026-06-10T10:03:00Z",
+      "availability": 100,
+      "responseTime": 142,
+      "connectTime": 38,
+      "dnsTime": 32,
+      "sslTime": 78,
+      "waitTime": 95,
+      "responseCode": 200,
+      "errorType": null
+    },
+    {
+      "agentId": 10002,
+      "agentName": "San Francisco, CA",
+      "agentType": "Cloud",
+      "roundId": 1749546180,
+      "startTime": "2026-06-10T10:03:00Z",
+      "availability": 100,
+      "responseTime": 155,
+      "connectTime": 42,
+      "dnsTime": 35,
+      "sslTime": 82,
+      "waitTime": 98,
+      "responseCode": 200,
+      "errorType": null
+    },
+    {
+      "agentId": 10006,
+      "agentName": "Chicago Office",
+      "agentType": "Enterprise",
+      "roundId": 1749546180,
+      "startTime": "2026-06-10T10:03:00Z",
+      "availability": 40,
+      "responseTime": 8500,
+      "connectTime": 4200,
+      "dnsTime": 48,
+      "sslTime": 350,
+      "waitTime": 120,
+      "responseCode": 200,
+      "errorType": null,
+      "_note": "High connect_time indicates network congestion between office and service"
+    }
+  ],
+  "internalApmEvidence": {
+    "source": "dynatrace",
+    "service": "api-gateway",
+    "errorRate": 0.2,
+    "responseTimeP95": 145,
+    "status": "healthy"
+  },
+  "normalizedEvidence": {
+    "test_type": "http-server",
+    "availability": 40.0,
+    "connect_time_ms": 4200,
+    "response_time_ms": 8500,
+    "error_type": null,
+    "affected_scope": "regional",
+    "agent_type": "Enterprise",
+    "agent_location": "Chicago Office",
+    "recommended_owner": "network",
+    "confidence": 0.715,
+    "_correlation": "Cloud agents healthy + Enterprise agent degraded = office network path issue"
+  }
+}

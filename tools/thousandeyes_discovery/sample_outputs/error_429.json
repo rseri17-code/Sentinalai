@@ -1,0 +1,15 @@
+{
+  "_fixture_note": "429 Rate limit exceeded. Retry-After header indicates when to retry. Used to test exponential backoff.",
+  "_scenario": "error_429",
+  "httpStatus": 429,
+  "error": "Too Many Requests",
+  "message": "Rate limit exceeded. Maximum 240 requests per minute. Retry after the indicated delay.",
+  "code": "RATE_LIMIT_EXCEEDED",
+  "retryAfter": 15,
+  "retryAfterUnit": "seconds",
+  "currentUsage": 245,
+  "limit": 240,
+  "windowSeconds": 60,
+  "timestamp": "2026-06-10T10:00:00Z",
+  "requestId": "req-00000000-0000-0000-0000-000000000002"
+}

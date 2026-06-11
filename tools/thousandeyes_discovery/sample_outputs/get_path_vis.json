@@ -1,0 +1,143 @@
+{
+  "_fixture_note": "Sanitized path visualization. Simulates 2 changed hops in US-East path indicating ISP routing change.",
+  "testId": 123456,
+  "testName": "API Gateway Health",
+  "type": "http-server",
+  "pathVis": [
+    {
+      "agentId": 10001,
+      "agentName": "New York, NY",
+      "roundId": 1749546180,
+      "startTime": "2026-06-10T10:03:00Z",
+      "server": "api.example.com",
+      "serverIp": "192.0.2.50",
+      "pathComplete": false,
+      "hops": [
+        {
+          "hop": 1,
+          "ipAddress": "192.0.2.1",
+          "network": "Private/LAN",
+          "asn": null,
+          "rtt": 1,
+          "mpls": false,
+          "delay": 1,
+          "jitter": 0,
+          "loss": 0
+        },
+        {
+          "hop": 2,
+          "ipAddress": "192.0.2.5",
+          "network": "Cogent Communications (AS64496)",
+          "asn": "AS64496",
+          "rtt": 8,
+          "mpls": false,
+          "delay": 8,
+          "jitter": 1,
+          "loss": 0
+        },
+        {
+          "hop": 3,
+          "ipAddress": "192.0.2.15",
+          "network": "Cogent Communications (AS64496)",
+          "asn": "AS64496",
+          "rtt": 22,
+          "mpls": false,
+          "delay": 22,
+          "jitter": 3,
+          "loss": 5,
+          "_changed": true,
+          "_previous_ip": "192.0.2.16",
+          "_note": "Route change detected — this hop appeared in last 2 rounds"
+        },
+        {
+          "hop": 4,
+          "ipAddress": "198.51.100.100",
+          "network": "Cogent Communications (AS64496)",
+          "asn": "AS64496",
+          "rtt": 95,
+          "mpls": false,
+          "delay": 95,
+          "jitter": 45,
+          "loss": 23,
+          "_changed": true,
+          "_note": "New hop — not present in baseline path; high loss indicates congestion"
+        },
+        {
+          "hop": 5,
+          "ipAddress": null,
+          "network": null,
+          "asn": null,
+          "rtt": null,
+          "mpls": false,
+          "delay": null,
+          "jitter": null,
+          "loss": 100,
+          "_note": "No response — path terminates before reaching destination"
+        }
+      ],
+      "hopCount": 5,
+      "changedHops": 2,
+      "pathFingerprint": "a1b2c3d4e5f6",
+      "previousPathFingerprint": "x9y8z7w6v5u4"
+    },
+    {
+      "agentId": 10003,
+      "agentName": "London, UK",
+      "roundId": 1749546180,
+      "startTime": "2026-06-10T10:03:00Z",
+      "server": "api.example.com",
+      "serverIp": "198.51.100.50",
+      "pathComplete": true,
+      "hops": [
+        {
+          "hop": 1,
+          "ipAddress": "198.51.100.1",
+          "network": "BT (AS64498)",
+          "asn": "AS64498",
+          "rtt": 2,
+          "mpls": false,
+          "delay": 2,
+          "jitter": 0,
+          "loss": 0
+        },
+        {
+          "hop": 2,
+          "ipAddress": "198.51.100.10",
+          "network": "BT (AS64498)",
+          "asn": "AS64498",
+          "rtt": 12,
+          "mpls": false,
+          "delay": 12,
+          "jitter": 1,
+          "loss": 0
+        },
+        {
+          "hop": 3,
+          "ipAddress": "198.51.100.20",
+          "network": "Example CDN EU (AS64503)",
+          "asn": "AS64503",
+          "rtt": 35,
+          "mpls": false,
+          "delay": 35,
+          "jitter": 2,
+          "loss": 0
+        },
+        {
+          "hop": 4,
+          "ipAddress": "198.51.100.50",
+          "network": "Example CDN EU (AS64503)",
+          "asn": "AS64503",
+          "rtt": 42,
+          "mpls": false,
+          "delay": 42,
+          "jitter": 2,
+          "loss": 0
+        }
+      ],
+      "hopCount": 4,
+      "changedHops": 0,
+      "pathFingerprint": "m1n2o3p4q5r6",
+      "previousPathFingerprint": "m1n2o3p4q5r6"
+    }
+  ]
+}

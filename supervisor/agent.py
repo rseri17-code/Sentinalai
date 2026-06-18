@@ -109,6 +109,7 @@ from workers.devops_worker import DevopsWorker
 from workers.confluence_worker import ConfluenceWorker
 from workers.code_worker import CodeWorker
 from workers.git_worker import GitWorker
+from workers.network_worker import ThousandEyesWorker
 from supervisor.cmdb_traversal import CMDBTraversal, build_change_summary
 from supervisor.fix_engine import get_fix_engine, ProposedFix
 from supervisor.evidence_citation import annotate_citations
@@ -290,6 +291,7 @@ class SentinalAISupervisor:
         "signal_worker":    frozenset({"dynatrace", "signalfx"}),  # → ApmWorker
         "event_worker":     frozenset({"dynatrace", "signalfx"}),  # → ApmWorker (sysdig k8s events)
         "change_worker":    frozenset({"github"}),                  # → DevopsWorker
+        "network_worker":   frozenset(),  # always available; ENABLE_THOUSANDEYES_RCA gates internally
     }
 
     def __init__(
@@ -321,6 +323,7 @@ class SentinalAISupervisor:
             "signal_worker":    lambda: ApmWorker(gateway=gw),
             "event_worker":     lambda: ApmWorker(gateway=gw),
             "change_worker":    lambda: DevopsWorker(gateway=gw),
+            "network_worker":   lambda: ThousandEyesWorker(),
         }
 
         self.workers: dict[str, Any] = {}

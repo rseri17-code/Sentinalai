@@ -5,7 +5,7 @@ services:
 - api-gateway
 incident_types:
 - cascading
-observation_count: 5
+observation_count: 6
 confidence_avg: 96.0
 quality_avg: 0.775
 evidence_signals:
@@ -22,6 +22,7 @@ receipt_ids:
 - INC12351_20260609
 - INC12351_20260603
 - INC12351_20260610
+- INC12351_20260611
 - INC12351_20260605
 first_seen: 2026-05-31 20:37:52.866869+00:00
-last_seen: 2026-06-10 00:48:40.643773+00:00
+last_seen: 2026-06-11 02:59:52.161932+00:00

@@ -2747,6 +2747,15 @@ class SentinalAISupervisor:
             except Exception as exc:
                 logger.warning("Knowledge retrieval failed (non-critical): %s", exc)
 
+        # Network evidence contribution (ThousandEyes — additive only)
+        network_ctx = self._extract_network_evidence(evidence)
+        if network_ctx["total_confidence_delta"] > 0:
+            confidence = min(95, int(confidence + network_ctx["total_confidence_delta"] * 100))
+        if network_ctx["top_owner"] not in ("unknown", ""):
+            reasoning = reasoning + f" Network analysis suggests responsible party: {network_ctx['top_owner']}."
+        if network_ctx["summary"]:
+            reasoning = reasoning + f" {network_ctx['summary']}"
+
         # G-5: Fail-closed — qualify root_cause string when confidence is insufficient
         # so callers never act on an unqualified guess
         _MINIMUM_ACTIONABLE_CONFIDENCE = 30
@@ -3686,6 +3695,45 @@ class SentinalAISupervisor:
         if not isinstance(devops, dict):
             return {}
         return devops
+
+    def _extract_network_evidence(self, evidence: dict) -> dict:
+        """Extract ThousandEyes network evidence and correlation data from evidence."""
+        evidence_list = evidence.get("network_evidence", [])
+        if not isinstance(evidence_list, list):
+            evidence_list = []
+
+        correlation_list = evidence.get("network_correlation", [])
+        if not isinstance(correlation_list, list):
+            correlation_list = []
+
+        summary = evidence.get("network_summary", "")
+        if not isinstance(summary, str):
+            summary = ""
+
+        # Sum confidence deltas from correlations, capped at 0.40
+        total_confidence_delta = 0.0
+        for corr in correlation_list:
+            if isinstance(corr, dict):
+                total_confidence_delta += float(corr.get("confidence_delta", 0.0))
+        total_confidence_delta = min(0.40, total_confidence_delta)
+
+        # Most frequent recommended_owner across correlation results
+        owner_counts: dict[str, int] = {}
+        for corr in correlation_list:
+            if isinstance(corr, dict):
+                owner = corr.get("owner", "")
+                if owner:
+                    owner_counts[owner] = owner_counts.get(owner, 0) + 1
+        top_owner = max(owner_counts, key=lambda o: owner_counts[o]) if owner_counts else "unknown"
+
+        return {
+            "evidence_list": evidence_list,
+            "correlation_list": correlation_list,
+            "summary": summary,
+            "top_owner": top_owner,
+            "total_confidence_delta": total_confidence_delta,
+            "has_network_evidence": bool(evidence_list),
+        }
 
     # ------------------------------------------------------------------ #
     # Timeline builder

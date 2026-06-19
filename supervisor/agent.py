@@ -1485,6 +1485,27 @@ class SentinalAISupervisor:
             except Exception as exc:
                 logger.debug("Recurrence recording failed (non-critical): %s", exc)
 
+        # Causal graph: record co-failures between affected services
+        if confidence > 50:
+            affected_services = []
+            for key in ("cmdb_blast_radius", "itsm_context"):
+                val = result.get(key) or {}
+                for svc in val.get("affected_services", []):
+                    if isinstance(svc, dict):
+                        sid = svc.get("service_id") or svc.get("ci_name", "")
+                    else:
+                        sid = str(svc)
+                    if sid and sid != service:
+                        affected_services.append(sid)
+            if affected_services:
+                try:
+                    from intelligence.causal_graph import CausalGraph
+                    _cg = CausalGraph()
+                    for target_svc in affected_services:
+                        _cg.record_co_failure(service, target_svc, 0)
+                except Exception as exc:
+                    logger.debug("Causal graph co-failure record failed (non-critical): %s", exc)
+
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
     # ------------------------------------------------------------------ #

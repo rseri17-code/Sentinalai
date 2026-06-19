@@ -220,6 +220,7 @@ class TestGetPlaybook:
         valid_workers = {
             "ops_worker", "log_worker", "metrics_worker",
             "apm_worker", "knowledge_worker", "itsm_worker", "devops_worker",
+            "network_worker",
         }
         playbook = get_playbook(incident_type)
         for step in playbook:

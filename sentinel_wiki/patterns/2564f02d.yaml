@@ -5,7 +5,7 @@ services:
 - recommendation-service
 incident_types:
 - silent_failure
-observation_count: 6
+observation_count: 7
 confidence_avg: 92.0
 quality_avg: 0.772
 evidence_signals:
@@ -21,8 +21,9 @@ receipt_ids:
 - INC12354_20260610
 - INC12354_20260605
 - INC12354_20260609
+- INC12354_20260619
 - INC12354_20260611
 - INC12354_20260531
 - INC12354_20260603
 first_seen: 2026-05-31 20:37:53.137721+00:00
-last_seen: 2026-06-11 02:59:53.137425+00:00
+last_seen: 2026-06-19 18:13:51.090127+00:00

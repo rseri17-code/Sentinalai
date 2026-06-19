@@ -1648,6 +1648,24 @@ class SentinalAISupervisor:
             except Exception as exc:
                 logger.debug("Wiki receipt write failed (non-critical): %s", exc)
 
+        # Causal graph: record co-failures between affected services
+        if confidence > 50:
+            _cg_affected: list[str] = []
+            for _key in ("cmdb_blast_radius", "itsm_context"):
+                _val = result.get(_key) or {}
+                for _svc in _val.get("affected_services", []):
+                    _sid = _svc.get("service_id") or _svc.get("ci_name", "") if isinstance(_svc, dict) else str(_svc)
+                    if _sid and _sid != service:
+                        _cg_affected.append(_sid)
+            if _cg_affected:
+                try:
+                    from intelligence.causal_graph import CausalGraph
+                    _cg = CausalGraph()
+                    for _target in _cg_affected:
+                        _cg.record_co_failure(service, _target, 0)
+                except Exception as exc:
+                    logger.debug("Causal graph co-failure record failed (non-critical): %s", exc)
+
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
     # ------------------------------------------------------------------ #

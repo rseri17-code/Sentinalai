@@ -660,6 +660,19 @@ class McpGateway:
         # G3.2: Store user identity for header propagation
         self._current_user_identity = user_identity
 
+        # Policy gate pre-check (POLICY_GATE_ENABLED=false by default — no-op in normal operation)
+        try:
+            from supervisor.policy_gate import evaluate as _policy_evaluate
+            _policy_result = _policy_evaluate(mcp_tool_name, params)
+            if not _policy_result.allowed:
+                logger.warning(
+                    "Policy gate REJECTED tool=%s reason=%s",
+                    mcp_tool_name, _policy_result.reason,
+                )
+                return {"error": "policy_rejected", "reason": _policy_result.reason, "tool": mcp_tool_name}
+        except ImportError:
+            pass  # policy_gate not available — allow
+
         # Rate-limit check (per-server token bucket)
         server = _TOOL_TO_SERVER.get(mcp_tool_name, "")
         if server and not self._rate_limiter.acquire(server):

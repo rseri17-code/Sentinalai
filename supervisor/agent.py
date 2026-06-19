@@ -500,9 +500,15 @@ class SentinalAISupervisor:
             )
 
             _stream.emit_phase(incident_id, "collect", incident_type=incident_type)
-            evidence = self._execute_playbook(
-                incident_type, incident_id, service, receipts, budget, circuits,
-            )
+            _use_planner = os.environ.get("AGENTIC_PLANNER", "false").lower() in ("1", "true", "yes")
+            if _use_planner and _llm_enabled():
+                evidence = self._execute_planner_loop(
+                    incident_type, incident_id, service, incident, receipts, budget, circuits,
+                )
+            else:
+                evidence = self._execute_playbook(
+                    incident_type, incident_id, service, receipts, budget, circuits,
+                )
             _stream.emit_phase_done(
                 incident_id, "collect",
                 evidence_keys=list(evidence.keys()),
@@ -2263,6 +2269,35 @@ class SentinalAISupervisor:
             context["workflow_runs"] = result["workflow_runs"]
 
         return context or None
+
+    # ------------------------------------------------------------------ #
+    # Internal: agentic planner (AGENTIC_PLANNER=true)
+    # ------------------------------------------------------------------ #
+
+    def _execute_planner_loop(
+        self,
+        incident_type: str,
+        incident_id: str,
+        service: str,
+        incident: dict,
+        receipts,
+        budget,
+        circuits,
+    ) -> dict:
+        """Agentic Think→Act→Observe loop (AGENTIC_PLANNER=true)."""
+        from supervisor.planner import AgenticPlanner
+        from supervisor.llm import converse as _llm_converse
+        from supervisor.tool_selector import get_playbook
+
+        fallback = get_playbook(incident_type)
+        planner = AgenticPlanner(
+            workers=self.workers,
+            llm_fn=_llm_converse,
+            budget=budget,
+            fallback_playbook=fallback,
+        )
+        evidence, _ = planner.run(incident_id, incident, incident_type)
+        return evidence
 
     # ------------------------------------------------------------------ #
     # Internal: execute playbook (W1 isolated circuits, W4 timeout, W5 retry)

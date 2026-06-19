@@ -41,6 +41,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from supervisor.working_memory import WorkingMemory
+
 logger = logging.getLogger("sentinalai.agent_harness")
 
 HARNESS_ENABLED       = os.environ.get("HARNESS_ENABLED", "true").lower() in ("1", "true", "yes")
@@ -95,6 +97,9 @@ class HarnessReflection:
     # Narrative
     narrative: str = ""
 
+    # Working memory snapshot at completion
+    working_memory_final: dict = field(default_factory=dict)
+
     # Timing
     elapsed_ms: float = 0.0
 
@@ -126,6 +131,7 @@ class HarnessReflection:
             "learning_updated": self.learning_updated,
             "experience_stored": self.experience_stored,
             "narrative": self.narrative,
+            "working_memory_final": self.working_memory_final,
             "elapsed_ms": round(self.elapsed_ms, 1),
         }
 
@@ -186,6 +192,10 @@ class InvestigationHarness:
             reflection.initial_quality = initial_score
             prev_score = initial_score
 
+            # --- Working memory: track investigation state across rounds ---
+            wm = WorkingMemory(incident_id=incident_id)
+            wm.update_from_result(result)
+
             # --- Layer 2: Evidence-cached self-correction loop ---
             # Correction rounds call supervisor.reanalyze(enriched_evidence) instead
             # of supervisor.investigate() — skipping the expensive playbook re-run
@@ -237,9 +247,10 @@ class InvestigationHarness:
                     supervisor, gap_queries, incident_id
                 )
 
+                wm.round_num += 1
                 score_after = score
                 if evidence_patch and cached_evidence:
-                    enriched = {**cached_evidence, **evidence_patch}
+                    enriched = {**cached_evidence, **evidence_patch, "_working_memory": wm.to_context_dict()}
                     try:
                         # reanalyze() skips incident fetch + playbook entirely:
                         # analyze → calibrate → cite → online-eval only.
@@ -250,6 +261,7 @@ class InvestigationHarness:
                             orig_conf = result.get("confidence", 0)
                             if new_conf >= orig_conf:
                                 result = re_result
+                                wm.update_from_result(result)
                                 cached_evidence = enriched  # next round uses richer evidence
                                 score_after = new_score
                                 logger.info(
@@ -278,6 +290,9 @@ class InvestigationHarness:
                 reflection.corrections.append(correction)
                 reflection.rounds_run = round_num + 1
                 prev_score = score_after
+
+            # --- Store final working memory snapshot ---
+            reflection.working_memory_final = wm.to_context_dict()
 
             # --- Confidence calibration ---
             reflection.confidence_raw = result.get("confidence", 0)

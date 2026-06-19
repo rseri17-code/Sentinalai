@@ -101,7 +101,7 @@ function IntelligenceEventCard({ event }: { event: AGUIEvent }) {
           <Zap size={11} />
           SLO Burn Alert
         </div>
-        {p.slo_name && <div className="text-slate-300">{p.slo_name as string}</div>}
+        {typeof p.slo_name === 'string' && <div className="text-slate-300">{p.slo_name}</div>}
         {typeof p.burn_rate === 'number' && (
           <div className="text-slate-400">
             burn rate: <span className="text-red-300 font-mono">{(p.burn_rate as number).toFixed(2)}×</span>
@@ -118,7 +118,7 @@ function IntelligenceEventCard({ event }: { event: AGUIEvent }) {
           <TrendingUp size={11} />
           Prediction
         </div>
-        {p.prediction && <div className="text-slate-300">{p.prediction as string}</div>}
+        {typeof p.prediction === 'string' && <div className="text-slate-300">{p.prediction}</div>}
         {typeof p.confidence === 'number' && (
           <div className="text-slate-500">
             confidence: <span className="font-mono">{(p.confidence as number * 100).toFixed(0)}%</span>

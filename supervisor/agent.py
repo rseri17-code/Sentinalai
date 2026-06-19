@@ -1485,6 +1485,47 @@ class SentinalAISupervisor:
             except Exception as exc:
                 logger.debug("Recurrence recording failed (non-critical): %s", exc)
 
+        # Episodic memory: record a compressed episode for cross-investigation retrieval
+        try:
+            import uuid as _uuid
+            from datetime import datetime as _datetime, timezone as _tz
+            from intelligence.episodic_memory import Episode as _Episode, EpisodicMemory as _EpisodicMemory
+            _rec_action = (
+                result.get("remediation", {}).get("immediate_action", "")
+                or result.get("remediation", {}).get("action", "")
+                or result.get("recommended_action", "investigate")
+            )
+            _conf_float = confidence / 100.0 if isinstance(confidence, int) else float(confidence)
+            _outcome = (
+                "auto-remediated" if _conf_float > 0.8 and result.get("proposed_fix")
+                else ("resolved" if _conf_float > 0.5 else "escalated")
+            )
+            _episode = _Episode(
+                episode_id=str(_uuid.uuid4()),
+                incident_id=incident_id,
+                service=service,
+                incident_type=incident_type,
+                failure_signature=result.get("root_cause", "")[:120],
+                root_cause=result.get("root_cause", ""),
+                confidence=_conf_float,
+                resolution_action=_rec_action or "investigate",
+                resolved_by=(
+                    "auto" if _conf_float > 0.8 and result.get("proposed_fix")
+                    else "SRE-on-call"
+                ),
+                time_to_resolve_ms=int(elapsed),
+                evidence_keys=[
+                    k for k in (evidence or {}).keys()
+                    if not k.startswith("_")
+                ],
+                outcome=_outcome,
+                tags=[incident_type, service],
+                recorded_at=_datetime.now(_tz.utc).isoformat(),
+            )
+            _EpisodicMemory().record(_episode)
+        except Exception as exc:
+            logger.debug("Episodic memory recording failed (non-critical): %s", exc)
+
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
     # ------------------------------------------------------------------ #

@@ -50,6 +50,7 @@ from agui.api.harness import router as harness_router
 from agui.api.transparency import router as transparency_router
 from agui.api.postmortem import router as postmortem_router
 from agui.api.graph import router as graph_router
+from agui.api.memory_api import router as memory_api_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -109,6 +110,7 @@ def create_app() -> FastAPI:
     app.include_router(transparency_router)
     app.include_router(postmortem_router)
     app.include_router(graph_router)
+    app.include_router(memory_api_router)
 
     # ── Tenant management endpoints ───────────────────────────────────────
     @app.get("/api/v1/tenants", tags=["tenants"])

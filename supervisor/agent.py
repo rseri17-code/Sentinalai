@@ -1707,6 +1707,17 @@ class SentinalAISupervisor:
         except Exception as exc:
             logger.debug("Episodic memory recording failed (non-critical): %s", exc)
 
+        # ITSM write-back: acknowledge/resolve if high confidence
+        if confidence > 70 and incident_id and service:
+            try:
+                from intelligence.itsm_writebacks import get_engine as _get_wb_engine
+                _wb = _get_wb_engine()
+                _wb_root_cause = result.get("root_cause", "")
+                _wb_action = result.get("recommended_action", "investigate")
+                _wb.resolve(incident_id, service, _wb_root_cause, _wb_action, confidence / 100.0)
+            except Exception as exc:
+                logger.debug("ITSM write-back failed (non-critical): %s", exc)
+
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
     # ------------------------------------------------------------------ #

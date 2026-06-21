@@ -1,0 +1,21 @@
+{
+  "alert_id": "MSG-20240621-004421",
+  "source": "moogsoft",
+  "severity": "critical",
+  "service": "payment-service",
+  "environment": "production",
+  "timestamp": "2024-06-21T03:44:21Z",
+  "description": "payment-service P99 latency exceeded 5000ms threshold",
+  "metric": "http_response_time_p99",
+  "value": 8234,
+  "threshold": 5000,
+  "unit": "ms",
+  "affected_endpoints": [
+    "/api/v2/payments/process",
+    "/api/v2/payments/authorize"
+  ],
+  "error_rate": 0.42,
+  "pod_count": 8,
+  "region": "us-east-1",
+  "team": "payments-platform"
+}

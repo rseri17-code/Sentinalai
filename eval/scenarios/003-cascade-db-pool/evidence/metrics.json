@@ -1,0 +1,30 @@
+{
+  "source": "prometheus",
+  "time_window": "2024-06-21T06:00:00Z/2024-06-21T06:30:00Z",
+  "metrics": {
+    "postgres_primary_disk_usage_percent": {
+      "values": [
+        {"timestamp": "2024-06-21T05:30:00Z", "value": 88},
+        {"timestamp": "2024-06-21T06:00:00Z", "value": 96},
+        {"timestamp": "2024-06-21T06:10:00Z", "value": 99.8},
+        {"timestamp": "2024-06-21T06:12:00Z", "value": 100}
+      ],
+      "note": "disk full caused WAL write failure"
+    },
+    "order_service_db_connection_pool_active": {
+      "values": [
+        {"timestamp": "2024-06-21T06:12:00Z", "value": 8},
+        {"timestamp": "2024-06-21T06:12:30Z", "value": 30},
+        {"timestamp": "2024-06-21T06:13:00Z", "value": 30}
+      ],
+      "pool_max": 30
+    },
+    "order_service_error_rate": {
+      "values": [
+        {"timestamp": "2024-06-21T06:11:00Z", "value": 0.01},
+        {"timestamp": "2024-06-21T06:12:30Z", "value": 0.45},
+        {"timestamp": "2024-06-21T06:13:00Z", "value": 0.89}
+      ]
+    }
+  }
+}

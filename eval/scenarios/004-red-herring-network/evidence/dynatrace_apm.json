@@ -1,0 +1,21 @@
+{
+  "service": "payment-service",
+  "time_window": "2024-06-21T09:20:00Z/2024-06-21T09:50:00Z",
+  "response_time_ms": {
+    "p99": 9100,
+    "baseline_p99": 210
+  },
+  "error_rate_percent": 38.4,
+  "db_connection_pool": {
+    "pool_name": "HikariPool-1",
+    "max_pool_size": 20,
+    "active": 20,
+    "idle": 0,
+    "pending": 200,
+    "wait_time_avg_ms": 30000,
+    "note": "pool fully saturated — root cause is here, not network"
+  },
+  "network_hotspot_false_positive": {
+    "note": "elevated network latency (12ms vs baseline 2ms) is within normal range and NOT causing the timeout; connection pool is the bottleneck"
+  }
+}

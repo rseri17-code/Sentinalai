@@ -1,0 +1,17 @@
+schema_version: "1.0"
+scenario_id: "004-red-herring-network"
+title: "Payment Service Timeout — Network Looks Alarming but Connection Pool is Root Cause"
+failure_mode: "timeout"
+severity: "p1"
+affected_service: "payment-service"
+difficulty: "medium"
+available_evidence:
+  - splunk_logs
+  - dynatrace_apm
+  - network_metrics
+  - moogsoft_alert
+tags:
+  - adversarial
+  - red-herring
+  - connection-pool
+  - network

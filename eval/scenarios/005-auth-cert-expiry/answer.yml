@@ -1,0 +1,20 @@
+schema_version: "1.0"
+root_cause_category: "tls_certificate_expired"
+required_keywords:
+  - "certificate"
+  - "expired"
+  - "TLS"
+  - "x509"
+forbidden_keywords:
+  - "memory"
+  - "CPU"
+  - "connection pool"
+required_evidence_sources:
+  - splunk_logs
+  - dynatrace_apm
+optimal_trajectory:
+  - fetch_moogsoft_alert
+  - fetch_splunk_logs
+  - fetch_dynatrace_apm
+max_investigation_loops: 10
+confidence_floor: 0.75

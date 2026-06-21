@@ -1,0 +1,18 @@
+{
+  "alert_id": "MSG-20240621-120001",
+  "source": "moogsoft",
+  "severity": "high",
+  "service": "auth-service",
+  "environment": "production",
+  "timestamp": "2024-06-21T12:00:01Z",
+  "description": "auth-service login failure rate 95% — TLS handshake failures detected",
+  "error_rate_percent": 95.1,
+  "affected_endpoints": [
+    "/auth/login",
+    "/auth/token/refresh",
+    "/auth/oauth/callback"
+  ],
+  "error_type": "TLS_HANDSHAKE_FAILURE",
+  "region": "us-east-1",
+  "team": "identity-platform"
+}

@@ -1,0 +1,20 @@
+schema_version: "1.0"
+root_cause_category: "memory_exhaustion"
+required_keywords:
+  - "OOM"
+  - "evicted"
+  - "maxmemory"
+  - "redis"
+forbidden_keywords:
+  - "network"
+  - "timeout"
+  - "CPU"
+required_evidence_sources:
+  - splunk_logs
+  - metrics
+optimal_trajectory:
+  - fetch_moogsoft_alert
+  - fetch_metrics
+  - fetch_splunk_logs
+max_investigation_loops: 10
+confidence_floor: 0.65

@@ -1,0 +1,16 @@
+schema_version: "1.0"
+scenario_id: "001-payment-timeout"
+title: "Payment Service Timeout Spike"
+failure_mode: "timeout"
+severity: "p1"
+affected_service: "payment-service"
+difficulty: "medium"
+available_evidence:
+  - splunk_logs
+  - dynatrace_apm
+  - servicenow_cmdb
+  - moogsoft_alert
+tags:
+  - database
+  - connection-pool
+  - payment

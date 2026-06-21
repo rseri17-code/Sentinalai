@@ -1,0 +1,41 @@
+{
+  "query": "index=production service=auth-service level=ERROR earliest=-1h",
+  "result_count": 8921,
+  "logs": [
+    {
+      "timestamp": "2024-06-21T12:00:00.001Z",
+      "level": "ERROR",
+      "service": "auth-service",
+      "message": "TLS handshake failed: x509: certificate has expired — certificate expired at 2024-06-21T11:59:59Z",
+      "error_type": "x509.CertificateInvalid",
+      "cert_subject": "CN=auth.internal.company.com",
+      "cert_expiry": "2024-06-21T11:59:59Z",
+      "tls_version": "TLS1.3"
+    },
+    {
+      "timestamp": "2024-06-21T12:00:00.445Z",
+      "level": "ERROR",
+      "service": "api-gateway",
+      "message": "upstream TLS error: certificate expired for auth-service — x509 validation failed",
+      "upstream": "auth-service",
+      "error": "tls: certificate expired"
+    },
+    {
+      "timestamp": "2024-06-21T12:00:01.002Z",
+      "level": "ERROR",
+      "service": "auth-service",
+      "message": "SSL_CTX_use_certificate failed: TLS certificate expired — renewal required immediately",
+      "cert_cn": "auth.internal.company.com",
+      "renewal_url": "https://cert-manager.internal/renew"
+    },
+    {
+      "timestamp": "2024-06-21T11:30:00.001Z",
+      "level": "WARN",
+      "service": "cert-monitor",
+      "message": "WARNING: TLS certificate for auth-service expires in 30 minutes — auto-renewal failed: cert-manager pod not running",
+      "cert_subject": "auth.internal.company.com",
+      "expires_in_minutes": 30
+    }
+  ],
+  "summary": "TLS certificate for auth-service expired at 12:00:00 UTC; cert-manager auto-renewal failed; all TLS handshakes rejected"
+}

@@ -1,0 +1,16 @@
+{
+  "source": "thousandeyes",
+  "time_window": "2024-06-21T09:20:00Z/2024-06-21T09:50:00Z",
+  "red_herring_data": {
+    "network_latency_ms": {
+      "current": 12,
+      "baseline": 2,
+      "note": "elevated but NOT causative — 10ms increase cannot explain 9100ms P99 latency"
+    },
+    "packet_loss_percent": 0.3,
+    "cdn_latency_ms": 8,
+    "dns_resolution_ms": 3,
+    "warning": "network metrics look alarming but are within acceptable SLO bounds (threshold: 50ms latency, 1% packet loss)"
+  },
+  "conclusion": "network is NOT the root cause — appears correlated due to timing coincidence; DB connection pool exhaustion explains observed latency"
+}

@@ -1,0 +1,39 @@
+{
+  "service": "payment-service",
+  "time_window": "2024-06-21T03:15:00Z/2024-06-21T03:45:00Z",
+  "response_time_ms": {
+    "p50": 4521,
+    "p90": 7834,
+    "p99": 8234,
+    "baseline_p50": 45,
+    "baseline_p99": 210
+  },
+  "error_rate_percent": 42.1,
+  "throughput_rps": 12.3,
+  "baseline_throughput_rps": 340,
+  "hotspots": [
+    {
+      "method": "PaymentService.processPayment",
+      "avg_duration_ms": 6821,
+      "self_time_ms": 6790,
+      "call_count": 1203,
+      "top_db_call": "PostgreSQL SELECT payment_transactions"
+    }
+  ],
+  "db_connection_pool": {
+    "pool_name": "HikariPool-1",
+    "max_pool_size": 20,
+    "active": 20,
+    "idle": 0,
+    "pending": 134,
+    "wait_time_avg_ms": 29800
+  },
+  "downstream_dependencies": {
+    "postgres-primary": {
+      "avg_latency_ms": 6750,
+      "error_rate": 0.0,
+      "slow_query_count": 89
+    }
+  },
+  "root_cause_hint": "connection pool wait time spiked from 2ms to 29800ms; max_connections limit reached"
+}

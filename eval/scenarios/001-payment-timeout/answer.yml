@@ -1,0 +1,19 @@
+schema_version: "1.0"
+root_cause_category: "connection_pool_exhaustion"
+required_keywords:
+  - "connection pool"
+  - "max_connections"
+  - "postgres"
+forbidden_keywords:
+  - "network partition"
+  - "DNS failure"
+  - "TLS"
+required_evidence_sources:
+  - splunk_logs
+  - dynatrace_apm
+optimal_trajectory:
+  - fetch_moogsoft_alert
+  - fetch_splunk_logs
+  - fetch_dynatrace_apm
+max_investigation_loops: 15
+confidence_floor: 0.60

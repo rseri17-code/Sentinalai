@@ -34,6 +34,7 @@ class PlannerTrace:
     steps: list[dict] = field(default_factory=list)
     iterations: int = 0
     fallback_used: bool = False
+    stagnation_detected: bool = False
 
     def record(self, step: PlannerStep, result_summary: str) -> None:
         self.steps.append({
@@ -63,6 +64,7 @@ class AgenticPlanner:
         self._fallback_playbook = fallback_playbook or []
         self._max_iterations = max_iterations
         self._trace = PlannerTrace()
+        self._duplicate_round_count: int = 0
 
     def run(
         self,
@@ -76,6 +78,8 @@ class AgenticPlanner:
         Returns (accumulated_evidence, trace).
         """
         evidence: dict[str, Any] = dict(seed_evidence or {})
+        _stagnation_enabled = os.environ.get("PLANNER_STAGNATION_DETECTION", "false").lower() in ("1", "true", "yes")
+        _prev_round_calls: set[tuple[str, str]] = set()
 
         for iteration in range(self._max_iterations):
             self._trace.iterations = iteration + 1
@@ -99,6 +103,24 @@ class AgenticPlanner:
             # Act
             result = self._act(step)
 
+            # Stagnation detection (feature-flagged — default off)
+            if _stagnation_enabled:
+                _this_round_calls: set[tuple[str, str]] = {(step.worker, step.action)}
+                if _this_round_calls == _prev_round_calls:
+                    self._duplicate_round_count += 1
+                else:
+                    self._duplicate_round_count = 0
+                _prev_round_calls = _this_round_calls
+                if self._duplicate_round_count >= 2:
+                    logger.warning(
+                        "Planner stagnation detected after %d duplicate rounds — forcing conclusion",
+                        self._duplicate_round_count,
+                    )
+                    self._trace.stagnation_detected = True
+                    self._trace.record(step, self._summarize_result(result))
+                    evidence = self._observe(step, result, evidence)
+                    break
+
             # Observe
             evidence = self._observe(step, result, evidence)
             self._trace.record(step, self._summarize_result(result))
@@ -108,6 +130,7 @@ class AgenticPlanner:
             "iterations": self._trace.iterations,
             "steps": self._trace.steps,
             "fallback_used": self._trace.fallback_used,
+            "stagnation_detected": self._trace.stagnation_detected,
         }
         return evidence, self._trace
 

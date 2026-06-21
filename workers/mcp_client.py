@@ -615,6 +615,8 @@ class McpGateway:
         self._rate_limiter = rate_limiter or RateLimiterRegistry(
             unlimited=stub_mode,
         )
+        # Duplicate-call suppression (MCP_DEDUP_ENABLED=true to activate)
+        self._call_signatures: set[str] = set()
 
     @classmethod
     def get_instance(cls) -> McpGateway:
@@ -672,6 +674,24 @@ class McpGateway:
                 return {"error": "policy_rejected", "reason": _policy_result.reason, "tool": mcp_tool_name}
         except ImportError:
             pass  # policy_gate not available — allow
+
+        # Duplicate-call suppression (feature-flagged — default off)
+        if os.environ.get("MCP_DEDUP_ENABLED", "false").lower() in ("1", "true", "yes"):
+            try:
+                _sig_params = json.dumps(params, sort_keys=True) if isinstance(params, dict) else str(params)
+            except Exception:
+                _sig_params = str(params)
+            _sig = f"{mcp_tool_name}:{tool_action}:{_sig_params}"
+            if _sig in self._call_signatures:
+                logger.debug("Dedup: skipping identical call %s:%s", mcp_tool_name, tool_action)
+                return {
+                    "status": "skipped",
+                    "result": "duplicate_call",
+                    "note": "identical call already executed in this session",
+                    "worker": mcp_tool_name,
+                    "action": tool_action,
+                }
+            self._call_signatures.add(_sig)
 
         # Rate-limit check (per-server token bucket)
         server = _TOOL_TO_SERVER.get(mcp_tool_name, "")
@@ -1028,6 +1048,10 @@ class McpGateway:
     # ------------------------------------------------------------------ #
     # Client lifecycle
     # ------------------------------------------------------------------ #
+
+    def clear_call_signatures(self) -> None:
+        """Clear the duplicate-call suppression set (for testing)."""
+        self._call_signatures.clear()
 
     def dispose(self) -> None:
         """Release clients, tokens, and cached state."""

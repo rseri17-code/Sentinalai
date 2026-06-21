@@ -14,6 +14,8 @@ from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from typing import Optional
 
+from intelligence.semantic_search import SemanticIndex
+
 logger = logging.getLogger("sentinalai.intelligence.resolution_knowledge")
 
 _DEFAULT_STORAGE_PATH = os.path.join(
@@ -116,6 +118,20 @@ class ResolutionKnowledge:
         except Exception as exc:
             logger.warning("ResolutionKnowledge.record failed: %s", exc)
 
+    def _semantic_candidates(self, failure_mode: str) -> list:
+        """Return top-3 records whose failure_mode is semantically similar to the query."""
+        if not self._records:
+            return []
+        idx = SemanticIndex()
+        seen: dict[str, int] = {}  # failure_mode -> first record index
+        for i, r in enumerate(self._records):
+            if r.failure_mode not in seen:
+                seen[r.failure_mode] = i
+                idx.add(r.failure_mode, r.failure_mode)
+        hits = idx.search(failure_mode, top_k=3)
+        matched_modes = {fm for fm, _ in hits if fm != failure_mode}
+        return [r for r in self._records if r.failure_mode in matched_modes]
+
     def recommend(
         self,
         failure_mode: str,
@@ -124,11 +140,14 @@ class ResolutionKnowledge:
     ) -> list:
         """Return top 3 recommendations ranked by success_rate * recency_weight."""
         try:
-            # Filter relevant records
+            # Filter relevant records — exact match first, semantic fallback if none
             candidates = [
                 r for r in self._records
                 if r.failure_mode == failure_mode or r.incident_type == incident_type
             ]
+
+            if not candidates:
+                candidates = self._semantic_candidates(failure_mode)
 
             if not candidates:
                 return []

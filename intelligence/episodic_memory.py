@@ -15,6 +15,8 @@ from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from typing import Optional
 
+from intelligence.semantic_search import SemanticIndex
+
 logger = logging.getLogger("sentinalai.intelligence.episodic_memory")
 
 _DEFAULT_STORAGE_PATH = os.path.join(
@@ -62,21 +64,13 @@ class Episode:
         )
 
 
-def _jaccard(a: str, b: str) -> float:
-    """Token-overlap Jaccard similarity between two strings."""
-    tokens_a = set(a.lower().split())
-    tokens_b = set(b.lower().split())
-    if not tokens_a or not tokens_b:
-        return 0.0
-    return len(tokens_a & tokens_b) / len(tokens_a | tokens_b)
-
-
 class EpisodicMemory:
     """JSONL-backed episodic memory for past incident investigations."""
 
     def __init__(self, storage_path: str = _DEFAULT_STORAGE_PATH) -> None:
         self._path = storage_path
         self._episodes: list = []
+        self._index: Optional[SemanticIndex] = None
         self._load()
         if not self._episodes:
             self.seed_demo_episodes()
@@ -96,6 +90,13 @@ class EpisodicMemory:
         except Exception as exc:
             logger.warning("EpisodicMemory load failed: %s", exc)
 
+    def _build_index(self) -> SemanticIndex:
+        idx = SemanticIndex()
+        for ep in self._episodes:
+            idx.add(ep.episode_id, ep.failure_signature)
+        self._index = idx
+        return idx
+
     def record(self, episode: Episode) -> None:
         """Append an episode to the JSONL store."""
         try:
@@ -103,6 +104,7 @@ class EpisodicMemory:
             with open(self._path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(episode.to_dict()) + "\n")
             self._episodes.append(episode)
+            self._index = None  # invalidate so next search rebuilds
         except Exception as exc:
             logger.warning("EpisodicMemory.record failed: %s", exc)
 
@@ -115,8 +117,8 @@ class EpisodicMemory:
     ) -> list:
         """Filter episodes by any combination of fields.
 
-        If failure_signature is provided, score by token overlap Jaccard
-        similarity and return top-limit results.
+        If failure_signature is provided, score by TF-IDF cosine similarity
+        and return top-limit results.
         """
         try:
             candidates = list(self._episodes)
@@ -127,12 +129,14 @@ class EpisodicMemory:
                 candidates = [e for e in candidates if e.incident_type == incident_type]
 
             if failure_signature:
-                scored = [
-                    (e, _jaccard(failure_signature, e.failure_signature))
-                    for e in candidates
-                ]
-                scored.sort(key=lambda x: -x[1])
-                return [e for e, _ in scored[:limit]]
+                if not candidates:
+                    return []
+                idx = SemanticIndex()
+                for ep in candidates:
+                    idx.add(ep.episode_id, ep.failure_signature)
+                ep_by_id = {ep.episode_id: ep for ep in candidates}
+                hits = idx.search(failure_signature, top_k=limit)
+                return [ep_by_id[id] for id, _ in hits if id in ep_by_id]
 
             return candidates[:limit]
         except Exception as exc:
@@ -147,17 +151,20 @@ class EpisodicMemory:
     ) -> list:
         """Return episodes most similar to the given failure signature."""
         try:
-            candidates = list(self._episodes)
             if service:
-                candidates = [e for e in candidates if e.service == service]
+                candidates = [e for e in self._episodes if e.service == service]
+                idx = SemanticIndex()
+                for ep in candidates:
+                    idx.add(ep.episode_id, ep.failure_signature)
+                ep_by_id = {ep.episode_id: ep for ep in candidates}
+            else:
+                if self._index is None:
+                    self._build_index()
+                idx = self._index
+                ep_by_id = {ep.episode_id: ep for ep in self._episodes}
 
-            scored = [
-                (e, _jaccard(failure_signature, e.failure_signature))
-                for e in candidates
-            ]
-            scored = [(e, s) for e, s in scored if s > 0]
-            scored.sort(key=lambda x: -x[1])
-            return [e for e, _ in scored[:limit]]
+            hits = idx.search(failure_signature, top_k=limit)
+            return [ep_by_id[id] for id, score in hits if score > 0 and id in ep_by_id]
         except Exception as exc:
             logger.warning("EpisodicMemory.get_similar failed: %s", exc)
             return []
@@ -576,6 +583,7 @@ class EpisodicMemory:
                 with open(self._path, "a", encoding="utf-8") as f:
                     f.write(json.dumps(ep.to_dict()) + "\n")
             self._episodes = demos
+            self._index = None
             logger.info("EpisodicMemory: seeded %d demo episodes", len(demos))
         except Exception as exc:
             logger.warning("EpisodicMemory.seed_demo_episodes failed: %s", exc)

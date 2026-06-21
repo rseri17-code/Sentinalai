@@ -55,3 +55,29 @@ def get_health_summary():
         }
         for n in topology["nodes"]
     ]
+
+
+@router.get("/learned-edges")
+def get_learned_edges():
+    """Return edges split into learned (observed_count > 0) vs seeded (observed_count == 0)."""
+    try:
+        topology = _graph.get_topology()
+        edges = topology.get("edges", [])
+        learned = [e for e in edges if e.get("observed_count", 0) > 0]
+        seeded = [e for e in edges if e.get("observed_count", 0) == 0]
+        total = len(edges)
+        learning_rate = round(len(learned) / total, 4) if total > 0 else 0.0
+        return {
+            "total_edges": total,
+            "learned_edges": learned,
+            "seeded_edges": seeded,
+            "learning_rate": learning_rate,
+        }
+    except Exception as exc:
+        logger.warning("get_learned_edges failed: %s", exc)
+        return {
+            "total_edges": 0,
+            "learned_edges": [],
+            "seeded_edges": [],
+            "learning_rate": 0.0,
+        }

@@ -1,0 +1,17 @@
+schema_version: "1.0"
+scenario_id: "005-auth-cert-expiry"
+title: "Auth Service TLS Certificate Expired"
+failure_mode: "certificate_expiry"
+severity: "p2"
+affected_service: "auth-service"
+difficulty: "easy"
+available_evidence:
+  - splunk_logs
+  - dynatrace_apm
+  - servicenow_cmdb
+  - moogsoft_alert
+tags:
+  - tls
+  - certificate
+  - auth
+  - security

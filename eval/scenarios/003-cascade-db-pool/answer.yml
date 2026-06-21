@@ -1,0 +1,21 @@
+schema_version: "1.0"
+root_cause_category: "upstream_dependency_failure"
+required_keywords:
+  - "postgres-primary"
+  - "connection refused"
+  - "order-service"
+forbidden_keywords:
+  - "application bug"
+  - "memory leak"
+required_evidence_sources:
+  - splunk_logs
+  - dynatrace_apm
+  - metrics
+optimal_trajectory:
+  - fetch_moogsoft_alert
+  - fetch_splunk_logs
+  - fetch_dynatrace_apm
+  - fetch_metrics
+  - fetch_servicenow_cmdb
+max_investigation_loops: 20
+confidence_floor: 0.70

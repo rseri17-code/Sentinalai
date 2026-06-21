@@ -1,0 +1,21 @@
+{
+  "alert_id": "MSG-20240621-061522",
+  "source": "moogsoft",
+  "severity": "critical",
+  "service": "order-service",
+  "environment": "production",
+  "timestamp": "2024-06-21T06:15:22Z",
+  "description": "order-service error rate 89% — cascading failure detected across order processing pipeline",
+  "error_rate_percent": 89.2,
+  "affected_endpoints": [
+    "/api/v1/orders",
+    "/api/v1/orders/{id}/status",
+    "/api/v1/orders/batch"
+  ],
+  "downstream_alerts": [
+    "postgres-primary health check failing",
+    "order-service connection pool saturated"
+  ],
+  "region": "us-east-1",
+  "team": "order-platform"
+}

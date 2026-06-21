@@ -1,0 +1,28 @@
+{
+  "service": "order-service",
+  "time_window": "2024-06-21T06:00:00Z/2024-06-21T06:30:00Z",
+  "response_time_ms": {
+    "p50": 30012,
+    "p99": 30031,
+    "baseline_p50": 89
+  },
+  "error_rate_percent": 89.2,
+  "service_flow": {
+    "order-service": {
+      "calls_to_postgres-primary": {
+        "status": "connection_refused",
+        "error_count": 4821,
+        "avg_latency_ms": 30000,
+        "note": "all calls timing out — postgres-primary not accepting connections"
+      }
+    }
+  },
+  "anomaly_start": "2024-06-21T06:12:01Z",
+  "cascade_timeline": [
+    {"t": "06:12:01", "event": "postgres-primary WAL write failure"},
+    {"t": "06:12:03", "event": "postgres-primary enters recovery; refuses connections"},
+    {"t": "06:12:15", "event": "order-service first connection refused error"},
+    {"t": "06:12:45", "event": "order-service connection pool fully exhausted"},
+    {"t": "06:15:22", "event": "moogsoft alert triggered: 89% error rate"}
+  ]
+}

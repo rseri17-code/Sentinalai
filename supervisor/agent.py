@@ -1665,6 +1665,17 @@ class SentinalAISupervisor:
                         _cg.record_co_failure(service, _target, 0)
                 except Exception as exc:
                     logger.debug("Causal graph co-failure record failed (non-critical): %s", exc)
+            # Auto-topology: learn edges from full evidence dict
+            try:
+                from intelligence.topology_learner import learn as _topo_learn
+                _topo_learn(
+                    primary_service=service,
+                    incident_type=incident_type,
+                    evidence=result,
+                    elapsed_ms=int(elapsed),
+                )
+            except Exception as exc:
+                logger.debug("Topology learner failed (non-critical): %s", exc)
 
         # Episodic memory: record a compressed episode for cross-investigation retrieval
         try:
@@ -1706,6 +1717,17 @@ class SentinalAISupervisor:
             _EpisodicMemory().record(_episode)
         except Exception as exc:
             logger.debug("Episodic memory recording failed (non-critical): %s", exc)
+
+        # ITSM write-back: acknowledge/resolve if high confidence
+        if confidence > 70 and incident_id and service:
+            try:
+                from intelligence.itsm_writebacks import get_engine as _get_wb_engine
+                _wb = _get_wb_engine()
+                _wb_root_cause = result.get("root_cause", "")
+                _wb_action = result.get("recommended_action", "investigate")
+                _wb.resolve(incident_id, service, _wb_root_cause, _wb_action, confidence / 100.0)
+            except Exception as exc:
+                logger.debug("ITSM write-back failed (non-critical): %s", exc)
 
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
@@ -2891,6 +2913,26 @@ class SentinalAISupervisor:
             if llm_reasoning_failed:
                 reasons.append(f"llm_reasoning_failed:{llm_metrics.get('llm_reasoning_error', 'unknown')}")
             result["confidence_degraded_reason"] = "; ".join(reasons)
+
+        # Extract grounded vs ungrounded claims (non-critical — never raises)
+        if result.get("root_cause"):
+            result["validated_claims"] = []
+            result["non_validated_claims"] = []
+            try:
+                _rca_text = result.get("root_cause", "") + " " + result.get("summary", "")
+                _evidence_text = " ".join(str(v) for v in evidence.values() if v)[:4000]
+                for _sentence in _rca_text.split("."):
+                    _sentence = _sentence.strip()
+                    if not _sentence:
+                        continue
+                    _words = [w for w in _sentence.split() if len(w) >= 6]
+                    _grounded = any(w.lower() in _evidence_text.lower() for w in _words)
+                    if _grounded:
+                        result["validated_claims"].append(_sentence)
+                    else:
+                        result["non_validated_claims"].append(_sentence)
+            except Exception:
+                pass
 
         # Attach LLM usage metrics for OTEL emission
         if llm_metrics:

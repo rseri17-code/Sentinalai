@@ -25,7 +25,7 @@
     "permanent_fix_applied": true,
     "permanent_fix_at": "2026-05-22T21:30:00.862210+00:00",
     "last_occurrence": "2026-05-22T21:30:00.861889+00:00",
-    "days_since_last": 29.16425703688657,
+    "days_since_last": 29.164552287291666,
     "last_fix_successful": false,
     "similar_remediation_count": 2,
     "entity_continuity_risk": 0.587
@@ -33,12 +33,8 @@
   "payment-service::error_spike": {
     "service": "payment-service",
     "incident_type": "error_spike",
-    "recurrence_count": 56,
+    "recurrence_count": 60,
     "occurrences": [
-      "2026-06-21T01:24:49.436867+00:00",
-      "2026-06-21T01:24:54.326325+00:00",
-      "2026-06-21T01:24:59.225323+00:00",
-      "2026-06-21T01:25:04.494358+00:00",
       "2026-06-21T01:25:09.448869+00:00",
       "2026-06-21T01:25:14.437824+00:00",
       "2026-06-21T01:25:19.380576+00:00",
@@ -54,7 +50,11 @@
       "2026-06-21T01:26:24.479035+00:00",
       "2026-06-21T01:26:27.062462+00:00",
       "2026-06-21T01:26:29.600152+00:00",
-      "2026-06-21T01:26:32.155936+00:00"
+      "2026-06-21T01:26:32.155936+00:00",
+      "2026-06-21T01:26:39.637512+00:00",
+      "2026-06-21T01:26:40.151144+00:00",
+      "2026-06-21T01:26:49.395945+00:00",
+      "2026-06-21T01:26:54.537094+00:00"
     ],
     "root_causes": [
       "deployment v3.1.0 introduced NullPointerException in payment-service [UNVERIFIED]",
@@ -65,8 +65,8 @@
     "remediation_outcomes": [],
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
-    "last_occurrence": "2026-06-21T01:26:32.155936+00:00",
-    "days_since_last": 5.948622685185185e-06,
+    "last_occurrence": "2026-06-21T01:26:54.537094+00:00",
+    "days_since_last": 4.215784722222222e-05,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.795
@@ -74,15 +74,8 @@
   "api-gateway::timeout": {
     "service": "api-gateway",
     "incident_type": "timeout",
-    "recurrence_count": 92,
+    "recurrence_count": 99,
     "occurrences": [
-      "2026-06-21T01:25:54.573550+00:00",
-      "2026-06-21T01:25:55.174680+00:00",
-      "2026-06-21T01:25:55.761885+00:00",
-      "2026-06-21T01:25:56.285566+00:00",
-      "2026-06-21T01:25:57.789418+00:00",
-      "2026-06-21T01:25:58.287450+00:00",
-      "2026-06-21T01:25:58.786377+00:00",
       "2026-06-21T01:26:03.847173+00:00",
       "2026-06-21T01:26:04.350109+00:00",
       "2026-06-21T01:26:04.850589+00:00",
@@ -95,7 +88,14 @@
       "2026-06-21T01:26:23.443307+00:00",
       "2026-06-21T01:26:26.026140+00:00",
       "2026-06-21T01:26:28.597890+00:00",
-      "2026-06-21T01:26:31.157214+00:00"
+      "2026-06-21T01:26:31.157214+00:00",
+      "2026-06-21T01:26:35.809583+00:00",
+      "2026-06-21T01:26:36.417671+00:00",
+      "2026-06-21T01:26:37.077973+00:00",
+      "2026-06-21T01:26:37.581382+00:00",
+      "2026-06-21T01:26:38.101280+00:00",
+      "2026-06-21T01:26:48.375430+00:00",
+      "2026-06-21T01:26:53.504216+00:00"
     ],
     "root_causes": [
       "payment-service database slow queries causing upstream timeouts [UNVERIFIED]",
@@ -108,8 +108,8 @@
     "remediation_outcomes": [],
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
-    "last_occurrence": "2026-06-21T01:26:31.157214+00:00",
-    "days_since_last": 1.7508020833333335e-05,
+    "last_occurrence": "2026-06-21T01:26:53.504216+00:00",
+    "days_since_last": 5.411254629629629e-05,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.795
@@ -149,7 +149,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:26:19.527893+00:00",
-    "days_since_last": 0.0001521067361111111,
+    "days_since_last": 0.00044735710648148146,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.786
@@ -157,13 +157,8 @@
   "search-service::latency": {
     "service": "search-service",
     "incident_type": "latency",
-    "recurrence_count": 46,
+    "recurrence_count": 51,
     "occurrences": [
-      "2026-06-21T01:24:17.246798+00:00",
-      "2026-06-21T01:24:22.126160+00:00",
-      "2026-06-21T01:24:28.997236+00:00",
-      "2026-06-21T01:24:34.038426+00:00",
-      "2026-06-21T01:24:38.927215+00:00",
       "2026-06-21T01:24:45.009183+00:00",
       "2026-06-21T01:24:49.922822+00:00",
       "2026-06-21T01:24:54.814320+00:00",
@@ -178,7 +173,12 @@
       "2026-06-21T01:25:43.509685+00:00",
       "2026-06-21T01:25:44.016475+00:00",
       "2026-06-21T01:25:44.513692+00:00",
-      "2026-06-21T01:26:00.291912+00:00"
+      "2026-06-21T01:26:00.291912+00:00",
+      "2026-06-21T01:26:33.677026+00:00",
+      "2026-06-21T01:26:40.677997+00:00",
+      "2026-06-21T01:26:41.196384+00:00",
+      "2026-06-21T01:26:49.898908+00:00",
+      "2026-06-21T01:26:55.068388+00:00"
     ],
     "root_causes": [
       "search-service latency degradation [UNVERIFIED]",
@@ -189,8 +189,8 @@
     "remediation_outcomes": [],
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
-    "last_occurrence": "2026-06-21T01:26:00.291912+00:00",
-    "days_since_last": 0.00037474548611111117,
+    "last_occurrence": "2026-06-21T01:26:55.068388+00:00",
+    "days_since_last": 3.600886574074074e-05,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.795
@@ -198,12 +198,8 @@
   "order-service::saturation": {
     "service": "order-service",
     "incident_type": "saturation",
-    "recurrence_count": 50,
+    "recurrence_count": 54,
     "occurrences": [
-      "2026-06-21T01:24:45.504901+00:00",
-      "2026-06-21T01:24:50.420967+00:00",
-      "2026-06-21T01:24:55.327393+00:00",
-      "2026-06-21T01:25:00.214220+00:00",
       "2026-06-21T01:25:05.495855+00:00",
       "2026-06-21T01:25:10.457367+00:00",
       "2026-06-21T01:25:15.412259+00:00",
@@ -219,7 +215,11 @@
       "2026-06-21T01:26:24.997652+00:00",
       "2026-06-21T01:26:27.580807+00:00",
       "2026-06-21T01:26:30.106781+00:00",
-      "2026-06-21T01:26:32.667569+00:00"
+      "2026-06-21T01:26:32.667569+00:00",
+      "2026-06-21T01:26:41.717729+00:00",
+      "2026-06-21T01:26:42.222921+00:00",
+      "2026-06-21T01:26:50.412466+00:00",
+      "2026-06-21T01:26:55.604038+00:00"
     ],
     "root_causes": [
       "order-service cpu exhaustion [UNVERIFIED]",
@@ -229,8 +229,8 @@
     "remediation_outcomes": [],
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
-    "last_occurrence": "2026-06-21T01:26:32.667569+00:00",
-    "days_since_last": 2.7291666666666665e-08,
+    "last_occurrence": "2026-06-21T01:26:55.604038+00:00",
+    "days_since_last": 2.9809282407407405e-05,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.786
@@ -238,13 +238,8 @@
   "inventory-service::network": {
     "service": "inventory-service",
     "incident_type": "network",
-    "recurrence_count": 51,
+    "recurrence_count": 56,
     "occurrences": [
-      "2026-06-21T01:24:46.016654+00:00",
-      "2026-06-21T01:24:50.922314+00:00",
-      "2026-06-21T01:24:55.810196+00:00",
-      "2026-06-21T01:25:00.699235+00:00",
-      "2026-06-21T01:25:05.984942+00:00",
       "2026-06-21T01:25:10.972699+00:00",
       "2026-06-21T01:25:15.909054+00:00",
       "2026-06-21T01:25:20.923607+00:00",
@@ -259,7 +254,12 @@
       "2026-06-21T01:26:22.927135+00:00",
       "2026-06-21T01:26:25.502046+00:00",
       "2026-06-21T01:26:28.093081+00:00",
-      "2026-06-21T01:26:30.635401+00:00"
+      "2026-06-21T01:26:30.635401+00:00",
+      "2026-06-21T01:26:33.178019+00:00",
+      "2026-06-21T01:26:42.764136+00:00",
+      "2026-06-21T01:26:43.274558+00:00",
+      "2026-06-21T01:26:50.924732+00:00",
+      "2026-06-21T01:26:56.121308+00:00"
     ],
     "root_causes": [
       "dns resolution failure affecting inventory-service [UNVERIFIED]",
@@ -269,8 +269,8 @@
     "remediation_outcomes": [],
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
-    "last_occurrence": "2026-06-21T01:26:30.635401+00:00",
-    "days_since_last": 2.354783564814815e-05,
+    "last_occurrence": "2026-06-21T01:26:56.121308+00:00",
+    "days_since_last": 2.382244212962963e-05,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.786
@@ -278,13 +278,8 @@
   "api-gateway::cascading": {
     "service": "api-gateway",
     "incident_type": "cascading",
-    "recurrence_count": 47,
+    "recurrence_count": 52,
     "occurrences": [
-      "2026-06-21T01:24:30.548582+00:00",
-      "2026-06-21T01:24:35.520987+00:00",
-      "2026-06-21T01:24:40.905543+00:00",
-      "2026-06-21T01:24:46.516815+00:00",
-      "2026-06-21T01:24:51.413062+00:00",
       "2026-06-21T01:24:56.310903+00:00",
       "2026-06-21T01:25:01.206578+00:00",
       "2026-06-21T01:25:06.482175+00:00",
@@ -299,7 +294,12 @@
       "2026-06-21T01:25:49.113078+00:00",
       "2026-06-21T01:26:01.804197+00:00",
       "2026-06-21T01:26:07.378545+00:00",
-      "2026-06-21T01:26:09.917365+00:00"
+      "2026-06-21T01:26:09.917365+00:00",
+      "2026-06-21T01:26:34.186567+00:00",
+      "2026-06-21T01:26:43.800324+00:00",
+      "2026-06-21T01:26:44.334696+00:00",
+      "2026-06-21T01:26:51.426814+00:00",
+      "2026-06-21T01:26:56.642219+00:00"
     ],
     "root_causes": [
       "LOW CONFIDENCE: cascading failure from api-gateway [UNVERIFIED]",
@@ -309,8 +309,8 @@
     "remediation_outcomes": [],
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
-    "last_occurrence": "2026-06-21T01:26:09.917365+00:00",
-    "days_since_last": 0.0002633399884259259,
+    "last_occurrence": "2026-06-21T01:26:56.642219+00:00",
+    "days_since_last": 1.7793449074074077e-05,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.786
@@ -318,14 +318,8 @@
   "notification-service::missing_data": {
     "service": "notification-service",
     "incident_type": "missing_data",
-    "recurrence_count": 46,
+    "recurrence_count": 52,
     "occurrences": [
-      "2026-06-21T01:24:19.192837+00:00",
-      "2026-06-21T01:24:24.093686+00:00",
-      "2026-06-21T01:24:31.036360+00:00",
-      "2026-06-21T01:24:35.997360+00:00",
-      "2026-06-21T01:24:42.075164+00:00",
-      "2026-06-21T01:24:47.024170+00:00",
       "2026-06-21T01:24:51.904832+00:00",
       "2026-06-21T01:24:56.789875+00:00",
       "2026-06-21T01:25:01.747258+00:00",
@@ -339,7 +333,13 @@
       "2026-06-21T01:25:49.618048+00:00",
       "2026-06-21T01:25:50.114678+00:00",
       "2026-06-21T01:25:50.631329+00:00",
-      "2026-06-21T01:26:02.352851+00:00"
+      "2026-06-21T01:26:02.352851+00:00",
+      "2026-06-21T01:26:34.698212+00:00",
+      "2026-06-21T01:26:35.200175+00:00",
+      "2026-06-21T01:26:44.925340+00:00",
+      "2026-06-21T01:26:45.441983+00:00",
+      "2026-06-21T01:26:51.949727+00:00",
+      "2026-06-21T01:26:57.160021+00:00"
     ],
     "root_causes": [
       "INSUFFICIENT EVIDENCE: notification-service \u2014 confidence 28/100. Manual investigation required.",
@@ -350,8 +350,8 @@
     "remediation_outcomes": [],
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
-    "last_occurrence": "2026-06-21T01:26:02.352851+00:00",
-    "days_since_last": 0.0003508922916666667,
+    "last_occurrence": "2026-06-21T01:26:57.160021+00:00",
+    "days_since_last": 1.1800474537037036e-05,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.795
@@ -359,12 +359,8 @@
   "auth-service::flapping": {
     "service": "auth-service",
     "incident_type": "flapping",
-    "recurrence_count": 46,
+    "recurrence_count": 50,
     "occurrences": [
-      "2026-06-21T01:24:24.601474+00:00",
-      "2026-06-21T01:24:31.576700+00:00",
-      "2026-06-21T01:24:36.484489+00:00",
-      "2026-06-21T01:24:42.577762+00:00",
       "2026-06-21T01:24:47.507692+00:00",
       "2026-06-21T01:24:52.410162+00:00",
       "2026-06-21T01:24:57.271726+00:00",
@@ -380,7 +376,11 @@
       "2026-06-21T01:25:51.638551+00:00",
       "2026-06-21T01:25:52.137621+00:00",
       "2026-06-21T01:26:02.857850+00:00",
-      "2026-06-21T01:26:10.428357+00:00"
+      "2026-06-21T01:26:10.428357+00:00",
+      "2026-06-21T01:26:45.967805+00:00",
+      "2026-06-21T01:26:46.850374+00:00",
+      "2026-06-21T01:26:52.463303+00:00",
+      "2026-06-21T01:26:57.671525+00:00"
     ],
     "root_causes": [
       "LOW CONFIDENCE: intermittent failures in auth-service [UNVERIFIED]",
@@ -389,8 +389,8 @@
     "remediation_outcomes": [],
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
-    "last_occurrence": "2026-06-21T01:26:10.428357+00:00",
-    "days_since_last": 0.0002574258564814815,
+    "last_occurrence": "2026-06-21T01:26:57.671525+00:00",
+    "days_since_last": 5.88037037037037e-06,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.774
@@ -398,12 +398,8 @@
   "recommendation-service::silent_failure": {
     "service": "recommendation-service",
     "incident_type": "silent_failure",
-    "recurrence_count": 46,
+    "recurrence_count": 50,
     "occurrences": [
-      "2026-06-21T01:24:25.069938+00:00",
-      "2026-06-21T01:24:32.073204+00:00",
-      "2026-06-21T01:24:36.976234+00:00",
-      "2026-06-21T01:24:43.072135+00:00",
       "2026-06-21T01:24:47.992167+00:00",
       "2026-06-21T01:24:52.889946+00:00",
       "2026-06-21T01:24:57.750413+00:00",
@@ -419,7 +415,11 @@
       "2026-06-21T01:25:53.135445+00:00",
       "2026-06-21T01:25:53.627575+00:00",
       "2026-06-21T01:26:03.345106+00:00",
-      "2026-06-21T01:26:06.852095+00:00"
+      "2026-06-21T01:26:06.852095+00:00",
+      "2026-06-21T01:26:47.361831+00:00",
+      "2026-06-21T01:26:47.861851+00:00",
+      "2026-06-21T01:26:52.980241+00:00",
+      "2026-06-21T01:26:58.173303+00:00"
     ],
     "root_causes": [
       "data pipeline failure affecting recommendation-service [UNVERIFIED]",
@@ -429,8 +429,8 @@
     "remediation_outcomes": [],
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
-    "last_occurrence": "2026-06-21T01:26:06.852095+00:00",
-    "days_since_last": 0.00029881783564814817,
+    "last_occurrence": "2026-06-21T01:26:58.173303+00:00",
+    "days_since_last": 7.281249999999999e-08,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.786
@@ -438,12 +438,8 @@
   "user-service::oomkill": {
     "service": "user-service",
     "incident_type": "oomkill",
-    "recurrence_count": 54,
+    "recurrence_count": 58,
     "occurrences": [
-      "2026-06-21T01:24:58.729441+00:00",
-      "2026-06-21T01:25:03.755623+00:00",
-      "2026-06-21T01:25:08.943965+00:00",
-      "2026-06-21T01:25:13.925604+00:00",
       "2026-06-21T01:25:18.886870+00:00",
       "2026-06-21T01:25:23.976628+00:00",
       "2026-06-21T01:25:29.232011+00:00",
@@ -459,7 +455,11 @@
       "2026-06-21T01:26:23.968368+00:00",
       "2026-06-21T01:26:26.548648+00:00",
       "2026-06-21T01:26:29.097335+00:00",
-      "2026-06-21T01:26:31.654730+00:00"
+      "2026-06-21T01:26:31.654730+00:00",
+      "2026-06-21T01:26:38.637062+00:00",
+      "2026-06-21T01:26:39.134742+00:00",
+      "2026-06-21T01:26:48.882851+00:00",
+      "2026-06-21T01:26:54.015022+00:00"
     ],
     "root_causes": [
       "user-service OOMKilled - memory saturation [UNVERIFIED]",
@@ -468,8 +468,8 @@
     "remediation_outcomes": [],
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
-    "last_occurrence": "2026-06-21T01:26:31.654730+00:00",
-    "days_since_last": 1.1750358796296296e-05,
+    "last_occurrence": "2026-06-21T01:26:54.015022+00:00",
+    "days_since_last": 4.820112268518519e-05,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.774
@@ -488,7 +488,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-19T18:01:37.806310+00:00",
-    "days_since_last": 1.308968329351852,
+    "days_since_last": 1.3092635797916667,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.447
@@ -510,7 +510,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:25:56.784931+00:00",
-    "days_since_last": 0.000415336099537037,
+    "days_since_last": 0.0007105865393518518,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.552
@@ -532,7 +532,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:25:57.289143+00:00",
-    "days_since_last": 0.0004095003587962963,
+    "days_since_last": 0.0007047507986111111,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.552
@@ -559,7 +559,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:23:40.212966+00:00",
-    "days_since_last": 0.0019960302430555555,
+    "days_since_last": 0.0022912806944444444,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.727

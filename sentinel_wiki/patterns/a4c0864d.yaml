@@ -3,26 +3,37 @@ root_cause_hash: a4c0864d
 root_cause_template: unknown
 services:
 - api-gateway
+- unknown
 incident_types:
+- error_spike
 - saturation
-observation_count: 7
+observation_count: 13
 confidence_avg: 49.0
-quality_avg: 0.375
+quality_avg: 0.5154
 evidence_signals:
 - check_golden_signals
-- check_cpu_metrics
 - check_itsm_changes
-- search_cpu_logs
 - check_changes
 - _kg_similar_incidents
 - _suggested_root_causes
+- check_cpu_metrics
+- search_cpu_logs
+- check_events
+- search_error_logs
+- gap_get_change_data
 receipt_ids:
 - INC_TEST001_20260603
 - INC_TEST001_20260609
+- INC12353_20260621
+- INC12351_20260621
+- INC_TEST001_20260621
 - INC_TEST001_20260610
 - INC_TEST001_20260619
+- INC12348_20260621
+- INC12352_20260621
 - INC_TEST001_20260531
 - INC_TEST001_20260611
+- INC12354_20260621
 - INC_TEST001_20260605
 first_seen: 2026-05-31 20:24:35.291247+00:00
-last_seen: 2026-06-19 18:11:39.294361+00:00
+last_seen: 2026-06-21 01:26:19.039560+00:00

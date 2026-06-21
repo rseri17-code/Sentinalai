@@ -2552,6 +2552,27 @@ class SentinalAISupervisor:
             "_winner_hypothesis": winner.name if winner else "none",
         }
 
+        # Extract grounded vs ungrounded claims (non-critical — never raises)
+        if result.get("root_cause"):
+            result["validated_claims"] = []
+            result["non_validated_claims"] = []
+            try:
+                _rca_text = result.get("root_cause", "") + " " + result.get("summary", "")
+                _evidence_text = " ".join(str(v) for v in evidence.values() if v)[:4000]
+                for _sentence in _rca_text.split("."):
+                    _sentence = _sentence.strip()
+                    if not _sentence:
+                        continue
+                    # A claim is "validated" if at least one 6+ char word from it appears in evidence
+                    _words = [w for w in _sentence.split() if len(w) >= 6]
+                    _grounded = any(w.lower() in _evidence_text.lower() for w in _words)
+                    if _grounded:
+                        result["validated_claims"].append(_sentence)
+                    else:
+                        result["non_validated_claims"].append(_sentence)
+            except Exception:
+                pass  # non-critical
+
         # Attach LLM usage metrics for OTEL emission
         if llm_metrics:
             result["_llm_metrics"] = llm_metrics

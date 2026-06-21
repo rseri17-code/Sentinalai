@@ -1,0 +1,33 @@
+{
+  "query": "index=production service=payment-service level=ERROR earliest=-30m",
+  "result_count": 2103,
+  "logs": [
+    {
+      "timestamp": "2024-06-21T09:47:55.001Z",
+      "level": "ERROR",
+      "service": "payment-service",
+      "message": "HikariPool-1 — connection pool exhausted: all 20 connections held by long-running postgres queries",
+      "pool_active": 20,
+      "pool_max": 20,
+      "max_connections": 20,
+      "pool_wait_ms": 30000
+    },
+    {
+      "timestamp": "2024-06-21T09:47:57.334Z",
+      "level": "ERROR",
+      "service": "payment-service",
+      "message": "postgres query exceeded 25s: UPDATE payment_transactions SET status='PROCESSING' — table lock contention detected",
+      "db_host": "postgres-primary.internal:5432",
+      "lock_wait_ms": 24800
+    },
+    {
+      "timestamp": "2024-06-21T09:48:01.112Z",
+      "level": "ERROR",
+      "service": "payment-service",
+      "message": "connection pool wait queue at capacity: 200 threads waiting for DB connection from HikariPool-1",
+      "pending": 200,
+      "connection_pool": "HikariPool-1"
+    }
+  ],
+  "summary": "Connection pool exhausted — postgres lock contention holding all 20 connections; network metrics are misleading red herrings"
+}

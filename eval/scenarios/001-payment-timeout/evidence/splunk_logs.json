@@ -1,0 +1,51 @@
+{
+  "query": "index=production service=payment-service level=ERROR earliest=-30m",
+  "result_count": 1842,
+  "logs": [
+    {
+      "timestamp": "2024-06-21T03:44:18.231Z",
+      "level": "ERROR",
+      "service": "payment-service",
+      "message": "Unable to acquire connection from pool: connection pool exhausted after 30000ms",
+      "thread": "http-nio-8080-exec-47",
+      "pool_size": 20,
+      "active_connections": 20,
+      "pending_requests": 134
+    },
+    {
+      "timestamp": "2024-06-21T03:44:19.002Z",
+      "level": "ERROR",
+      "service": "payment-service",
+      "message": "HikariPool-1 - Connection is not available, request timed out after 30000ms",
+      "thread": "http-nio-8080-exec-12",
+      "max_connections": 20,
+      "pool_name": "HikariPool-1"
+    },
+    {
+      "timestamp": "2024-06-21T03:44:19.445Z",
+      "level": "WARN",
+      "service": "payment-service",
+      "message": "postgres query slow: SELECT * FROM payment_transactions WHERE status='PENDING' took 28450ms",
+      "query_id": "pg-slow-001",
+      "db_host": "postgres-primary.internal:5432"
+    },
+    {
+      "timestamp": "2024-06-21T03:44:20.112Z",
+      "level": "ERROR",
+      "service": "payment-service",
+      "message": "connection pool wait queue overflow: 150 requests waiting for connection",
+      "pool_wait_queue_size": 150,
+      "pool_max_wait_ms": 30000
+    },
+    {
+      "timestamp": "2024-06-21T03:43:55.001Z",
+      "level": "INFO",
+      "service": "payment-service",
+      "message": "DB connection pool stats: active=20/20 idle=0 pending=89",
+      "db_pool_active": 20,
+      "db_pool_max": 20,
+      "db_pool_idle": 0
+    }
+  ],
+  "summary": "High error rate due to connection pool exhaustion — all 20 connections to postgres held by slow queries"
+}

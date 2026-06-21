@@ -1,0 +1,43 @@
+{
+  "query": "index=production service=cart-service OR pod=redis-cart-* level=ERROR earliest=-1h",
+  "result_count": 3421,
+  "logs": [
+    {
+      "timestamp": "2024-06-21T02:09:12.001Z",
+      "level": "WARN",
+      "source": "redis-cart-0",
+      "message": "redis memory usage at 98% of maxmemory limit (504MB/512MB) — evicted 14200 keys using allkeys-lru policy",
+      "evicted_keys": 14200,
+      "memory_used_mb": 504,
+      "maxmemory_mb": 512,
+      "eviction_policy": "allkeys-lru"
+    },
+    {
+      "timestamp": "2024-06-21T02:10:45.334Z",
+      "level": "ERROR",
+      "source": "redis-cart-0",
+      "message": "OOM command not allowed when used memory > maxmemory: used=511MB maxmemory=512MB",
+      "used_memory_mb": 511,
+      "maxmemory_mb": 512
+    },
+    {
+      "timestamp": "2024-06-21T02:11:02.891Z",
+      "level": "ERROR",
+      "source": "cart-service",
+      "message": "redis SETEX failed: OOM command not allowed when redis memory exhausted",
+      "redis_host": "redis-cart-0.redis.svc:6379",
+      "operation": "SETEX",
+      "key_pattern": "cart:session:*"
+    },
+    {
+      "timestamp": "2024-06-21T02:11:31.002Z",
+      "level": "FATAL",
+      "source": "k8s/kubelet",
+      "message": "OOMKilled: container redis-cart-0 exceeded memory limit 512Mi",
+      "pod": "redis-cart-0",
+      "namespace": "production",
+      "exit_code": 137
+    }
+  ],
+  "summary": "Redis OOM kill — memory exhaustion due to unbounded key growth; evicted 14200 keys before container killed"
+}

@@ -1,0 +1,48 @@
+{
+  "query": "index=production service=order-service OR host=postgres-primary* earliest=-1h",
+  "result_count": 5821,
+  "logs": [
+    {
+      "timestamp": "2024-06-21T06:12:01.001Z",
+      "level": "FATAL",
+      "source": "postgres-primary",
+      "host": "postgres-primary.db.internal",
+      "message": "PANIC: could not write to file 'pg_wal/000000010000000A': No space left on device",
+      "error_code": "XX000"
+    },
+    {
+      "timestamp": "2024-06-21T06:12:03.445Z",
+      "level": "ERROR",
+      "source": "postgres-primary",
+      "message": "postgres-primary: accepting connection refused — database in recovery mode after WAL write failure",
+      "state": "recovery"
+    },
+    {
+      "timestamp": "2024-06-21T06:12:15.112Z",
+      "level": "ERROR",
+      "source": "order-service",
+      "message": "FATAL: connection refused to postgres-primary.db.internal:5432 — postgres-primary unreachable",
+      "db_host": "postgres-primary.db.internal",
+      "retry_count": 3,
+      "next_retry_ms": 1000
+    },
+    {
+      "timestamp": "2024-06-21T06:12:45.009Z",
+      "level": "ERROR",
+      "source": "order-service",
+      "message": "HikariPool-orders: connection pool exhausted — all 30 connections attempting reconnect to postgres-primary",
+      "pool_active": 30,
+      "pool_max": 30,
+      "pending_requests": 892
+    },
+    {
+      "timestamp": "2024-06-21T06:13:10.221Z",
+      "level": "ERROR",
+      "source": "order-service",
+      "message": "order-service request timeout: upstream dependency failure cascade — postgres-primary down for 68s",
+      "downstream_failure": "postgres-primary",
+      "duration_down_seconds": 68
+    }
+  ],
+  "summary": "postgres-primary crashed due to WAL write failure (disk full); order-service connection refused cascaded to full service outage"
+}

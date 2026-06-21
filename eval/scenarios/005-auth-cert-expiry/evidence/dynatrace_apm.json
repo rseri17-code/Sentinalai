@@ -1,0 +1,34 @@
+{
+  "service": "auth-service",
+  "time_window": "2024-06-21T11:45:00Z/2024-06-21T12:15:00Z",
+  "error_rate_percent": 95.1,
+  "response_time_ms": {
+    "p50": 45,
+    "p99": 112,
+    "note": "latency normal — failures are instant rejections, not slow requests"
+  },
+  "error_breakdown": {
+    "TLS_HANDSHAKE_FAILURE": {
+      "count": 42821,
+      "percent": 95.1,
+      "error_message": "x509: certificate has expired",
+      "first_occurrence": "2024-06-21T12:00:00Z"
+    },
+    "SUCCESS": {
+      "count": 2210,
+      "percent": 4.9,
+      "note": "clients with cached auth tokens still succeeding"
+    }
+  },
+  "certificate_details": {
+    "subject": "CN=auth.internal.company.com",
+    "issuer": "CN=Internal-CA",
+    "not_before": "2023-06-21T00:00:00Z",
+    "not_after": "2024-06-21T11:59:59Z",
+    "status": "EXPIRED",
+    "days_overdue": 0,
+    "tls_version": "TLS1.3"
+  },
+  "anomaly_start": "2024-06-21T12:00:00Z",
+  "root_cause": "TLS certificate expired — x509 validation rejecting all new connections"
+}

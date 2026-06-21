@@ -1,0 +1,16 @@
+schema_version: "1.0"
+scenario_id: "002-redis-oom"
+title: "Cart Service Redis OOM Kill"
+failure_mode: "oomkill"
+severity: "p1"
+affected_service: "cart-service"
+difficulty: "easy"
+available_evidence:
+  - splunk_logs
+  - metrics
+  - servicenow_cmdb
+  - moogsoft_alert
+tags:
+  - redis
+  - memory
+  - cart

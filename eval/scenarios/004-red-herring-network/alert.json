@@ -1,0 +1,19 @@
+{
+  "alert_id": "MSG-20240621-094812",
+  "source": "moogsoft",
+  "severity": "critical",
+  "service": "payment-service",
+  "environment": "production",
+  "timestamp": "2024-06-21T09:48:12Z",
+  "description": "payment-service P99 latency 9100ms — multiple potential causes detected",
+  "metric": "http_response_time_p99",
+  "value": 9100,
+  "threshold": 5000,
+  "unit": "ms",
+  "correlated_alerts": [
+    "network latency elevated in us-east-1 AZ-2",
+    "payment-service DB connection wait time spike"
+  ],
+  "region": "us-east-1",
+  "team": "payments-platform"
+}

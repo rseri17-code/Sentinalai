@@ -1,0 +1,16 @@
+{
+  "alert_id": "MSG-20240621-021133",
+  "source": "moogsoft",
+  "severity": "critical",
+  "service": "cart-service",
+  "environment": "production",
+  "timestamp": "2024-06-21T02:11:33Z",
+  "description": "cart-service redis pod OOMKilled — redis-cart-0 restarted 3 times in 10 minutes",
+  "pod": "redis-cart-0",
+  "namespace": "production",
+  "restart_count": 3,
+  "exit_reason": "OOMKilled",
+  "memory_limit_mb": 512,
+  "region": "us-east-1",
+  "team": "cart-platform"
+}

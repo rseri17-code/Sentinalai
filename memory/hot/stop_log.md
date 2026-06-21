@@ -1476,3 +1476,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-06-21T02:22:35.698Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 0412b3b fix: rebuild ui/dist with playbook.join crash fix and latest source
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `0412b3b fix: rebuild ui/dist with playbook.join crash fix and latest source`
+- `153cb8b chore: update hot memory (session resume)`
+- `7f05ba7 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

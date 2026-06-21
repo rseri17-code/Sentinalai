@@ -1665,6 +1665,17 @@ class SentinalAISupervisor:
                         _cg.record_co_failure(service, _target, 0)
                 except Exception as exc:
                     logger.debug("Causal graph co-failure record failed (non-critical): %s", exc)
+            # Auto-topology: learn edges from full evidence dict
+            try:
+                from intelligence.topology_learner import learn as _topo_learn
+                _topo_learn(
+                    primary_service=service,
+                    incident_type=incident_type,
+                    evidence=result,
+                    elapsed_ms=int(elapsed),
+                )
+            except Exception as exc:
+                logger.debug("Topology learner failed (non-critical): %s", exc)
 
         # Episodic memory: record a compressed episode for cross-investigation retrieval
         try:

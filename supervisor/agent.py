@@ -1648,6 +1648,65 @@ class SentinalAISupervisor:
             except Exception as exc:
                 logger.debug("Wiki receipt write failed (non-critical): %s", exc)
 
+        # Causal graph: record co-failures between affected services
+        if confidence > 50:
+            _cg_affected: list[str] = []
+            for _key in ("cmdb_blast_radius", "itsm_context"):
+                _val = result.get(_key) or {}
+                for _svc in _val.get("affected_services", []):
+                    _sid = _svc.get("service_id") or _svc.get("ci_name", "") if isinstance(_svc, dict) else str(_svc)
+                    if _sid and _sid != service:
+                        _cg_affected.append(_sid)
+            if _cg_affected:
+                try:
+                    from intelligence.causal_graph import CausalGraph
+                    _cg = CausalGraph()
+                    for _target in _cg_affected:
+                        _cg.record_co_failure(service, _target, 0)
+                except Exception as exc:
+                    logger.debug("Causal graph co-failure record failed (non-critical): %s", exc)
+
+        # Episodic memory: record a compressed episode for cross-investigation retrieval
+        try:
+            import uuid as _uuid
+            from datetime import datetime as _datetime, timezone as _tz
+            from intelligence.episodic_memory import Episode as _Episode, EpisodicMemory as _EpisodicMemory
+            _rec_action = (
+                result.get("remediation", {}).get("immediate_action", "")
+                or result.get("remediation", {}).get("action", "")
+                or result.get("recommended_action", "investigate")
+            )
+            _conf_float = confidence / 100.0 if isinstance(confidence, int) else float(confidence)
+            _outcome = (
+                "auto-remediated" if _conf_float > 0.8 and result.get("proposed_fix")
+                else ("resolved" if _conf_float > 0.5 else "escalated")
+            )
+            _episode = _Episode(
+                episode_id=str(_uuid.uuid4()),
+                incident_id=incident_id,
+                service=service,
+                incident_type=incident_type,
+                failure_signature=result.get("root_cause", "")[:120],
+                root_cause=result.get("root_cause", ""),
+                confidence=_conf_float,
+                resolution_action=_rec_action or "investigate",
+                resolved_by=(
+                    "auto" if _conf_float > 0.8 and result.get("proposed_fix")
+                    else "SRE-on-call"
+                ),
+                time_to_resolve_ms=int(elapsed),
+                evidence_keys=[
+                    k for k in (evidence or {}).keys()
+                    if not k.startswith("_")
+                ],
+                outcome=_outcome,
+                tags=[incident_type, service],
+                recorded_at=_datetime.now(_tz.utc).isoformat(),
+            )
+            _EpisodicMemory().record(_episode)
+        except Exception as exc:
+            logger.debug("Episodic memory recording failed (non-critical): %s", exc)
+
     # ------------------------------------------------------------------ #
     # Internal: call worker with timeout (W4) and retry (W5)
     # ------------------------------------------------------------------ #

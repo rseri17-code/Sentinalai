@@ -266,7 +266,7 @@ export function IncidentCommandCenter() {
               {investigation.duration_ms && (
                 <Row label="Duration" value={`${(investigation.duration_ms / 1000).toFixed(1)}s`} />
               )}
-              <Row label="Playbook" value={investigation.playbook.join(', ')} />
+              <Row label="Playbook" value={(investigation.playbook ?? []).join(', ')} />
             </div>
           </div>
         )}

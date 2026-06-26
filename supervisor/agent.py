@@ -501,7 +501,10 @@ class SentinalAISupervisor:
 
             _stream.emit_phase(incident_id, "collect", incident_type=incident_type)
             _use_planner = os.environ.get("AGENTIC_PLANNER", "false").lower() in ("1", "true", "yes")
-            if _use_planner and _llm_enabled():
+            _use_lc = os.environ.get("LOOP_CONTROLLER_ENABLED", "false").lower() in ("1", "true", "yes")
+            # LoopController degrades to fallback playbook when LLM is off — allow it regardless.
+            # Raw AgenticPlanner still requires LLM (its Think step has no utility without it).
+            if _use_planner and (_use_lc or _llm_enabled()):
                 evidence = self._execute_planner_loop(
                     incident_type, incident_id, service, incident, receipts, budget, circuits,
                 )

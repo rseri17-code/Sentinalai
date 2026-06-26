@@ -28,8 +28,8 @@ import os
 import time
 from typing import Any
 
-from agui.schemas.dev_task import DevTask, DevTaskStatus, CIRun
-from agui.schemas.events import AGUIEvent, EventType
+from sentinel_core.models.dev_task import DevTask, DevTaskStatus, CIRun
+from sentinel_core.models.events import AGUIEvent, EventType
 
 logger = logging.getLogger("sentinalai.ci_shepherd")
 

@@ -46,10 +46,10 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-from agui.schemas.dev_task import (
+from sentinel_core.models.dev_task import (
     DevTask, DevTaskStatus, DevTaskType, ValidationResult, CIRun,
 )
-from agui.schemas.events import AGUIEvent, EventType
+from sentinel_core.models.events import AGUIEvent, EventType
 
 logger = logging.getLogger("sentinalai.dev_loop_agent")
 

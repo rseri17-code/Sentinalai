@@ -1,0 +1,20 @@
+name: timeout
+description: "Request timeout / upstream service not responding"
+steps:
+  - worker: log_worker
+    action: search_logs
+    label: search_timeout_logs
+    query_hint: "timeout {service}"
+  - worker: apm_worker
+    action: get_golden_signals
+    label: check_golden_signals
+  - worker: network_worker
+    action: get_network_alerts
+    label: get_network_alerts
+  - worker: metrics_worker
+    action: query_metrics
+    label: check_latency_metrics
+    metric_hint: response_time_ms
+  - worker: log_worker
+    action: get_change_data
+    label: check_changes

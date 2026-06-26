@@ -1,0 +1,19 @@
+name: cascading
+description: "Cascading failure across multiple services"
+steps:
+  - worker: log_worker
+    action: search_logs
+    label: search_error_logs
+    query_hint: "error cascade {service}"
+  - worker: apm_worker
+    action: get_golden_signals
+    label: check_golden_signals
+  - worker: metrics_worker
+    action: query_metrics
+    label: check_metrics
+  - worker: log_worker
+    action: get_change_data
+    label: check_changes
+  - worker: itsm_worker
+    action: get_change_records
+    label: check_itsm_changes

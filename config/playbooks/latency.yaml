@@ -1,0 +1,20 @@
+name: latency
+description: "Response time degradation / slow service"
+steps:
+  - worker: log_worker
+    action: search_logs
+    label: search_latency_logs
+    query_hint: "latency OR slow {service}"
+  - worker: apm_worker
+    action: get_golden_signals
+    label: check_golden_signals
+  - worker: network_worker
+    action: get_network_evidence
+    label: get_network_evidence
+  - worker: metrics_worker
+    action: query_metrics
+    label: check_latency_metrics
+    metric_hint: response_time_ms
+  - worker: log_worker
+    action: get_change_data
+    label: check_changes

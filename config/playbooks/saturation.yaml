@@ -1,0 +1,20 @@
+name: saturation
+description: "CPU / thread / connection pool saturation"
+steps:
+  - worker: apm_worker
+    action: get_golden_signals
+    label: check_golden_signals
+  - worker: metrics_worker
+    action: query_metrics
+    label: check_cpu_metrics
+    metric_hint: cpu_usage_percent
+  - worker: log_worker
+    action: search_logs
+    label: search_cpu_logs
+    query_hint: "cpu OR thread {service}"
+  - worker: log_worker
+    action: get_change_data
+    label: check_changes
+  - worker: itsm_worker
+    action: get_change_records
+    label: check_itsm_changes

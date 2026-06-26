@@ -1,0 +1,17 @@
+name: silent_failure
+description: "Silent failure / throughput drop without visible errors"
+steps:
+  - worker: log_worker
+    action: search_logs
+    label: search_service_logs
+    query_hint: "{service}"
+  - worker: apm_worker
+    action: get_golden_signals
+    label: check_golden_signals
+  - worker: log_worker
+    action: search_logs
+    label: search_pipeline_logs
+    query_hint: "pipeline {service}"
+  - worker: metrics_worker
+    action: query_metrics
+    label: check_traffic_metrics

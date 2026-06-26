@@ -1,0 +1,19 @@
+name: error_spike
+description: "Sudden increase in error rate (default playbook)"
+steps:
+  - worker: log_worker
+    action: search_logs
+    label: search_error_logs
+    query_hint: "error {service}"
+  - worker: apm_worker
+    action: get_golden_signals
+    label: check_golden_signals
+  - worker: log_worker
+    action: get_change_data
+    label: check_changes
+  - worker: itsm_worker
+    action: get_change_records
+    label: check_itsm_changes
+  - worker: metrics_worker
+    action: get_events
+    label: check_events

@@ -324,6 +324,38 @@ def classify_incident_llm(summary: str) -> str | None:
         return None
 
 
+def _get_active_playbooks() -> dict[str, list[dict]]:
+    """Return the active playbook registry.
+
+    When YAML_PLAYBOOKS_ENABLED=true, loads from config/playbooks/*.yaml on first
+    call and caches the result. Falls back to the hardcoded INCIDENT_PLAYBOOKS on
+    any error. Set YAML_PLAYBOOKS_ENABLED=false (default) to use hardcoded playbooks.
+    """
+    if not os.environ.get("YAML_PLAYBOOKS_ENABLED", "false").lower() in ("1", "true", "yes"):
+        return INCIDENT_PLAYBOOKS
+
+    # Module-level cache — populated once, reset if env changes between tests
+    cache = _get_active_playbooks.__dict__
+    if cache.get("_loaded") is True:
+        return cache.get("_playbooks", INCIDENT_PLAYBOOKS)
+
+    try:
+        from supervisor.playbook_loader import load_yaml_playbooks
+        loaded = load_yaml_playbooks()
+        # Merge: hardcoded types not in YAML fall back to hardcoded definitions
+        merged = dict(INCIDENT_PLAYBOOKS)
+        merged.update(loaded)
+        cache["_playbooks"] = merged
+        cache["_loaded"] = True
+        logger.info("YAML_PLAYBOOKS_ENABLED: using YAML playbooks (%d types)", len(merged))
+        return merged
+    except Exception as exc:
+        logger.warning("YAML playbook load failed, using hardcoded: %s", exc)
+        cache["_loaded"] = True
+        cache["_playbooks"] = INCIDENT_PLAYBOOKS
+        return INCIDENT_PLAYBOOKS
+
+
 def get_playbook(incident_type: str) -> list[dict]:
     """Return the investigation playbook for *incident_type*.
 
@@ -331,13 +363,18 @@ def get_playbook(incident_type: str) -> list[dict]:
     than silently defaulting. The default to error_spike is preserved for
     backward compatibility, but the warning enables audit trail detection
     of unexpected classification values.
+
+    When YAML_PLAYBOOKS_ENABLED=true, playbooks are loaded from
+    config/playbooks/*.yaml instead of the hardcoded INCIDENT_PLAYBOOKS dict.
+    Rollback: set YAML_PLAYBOOKS_ENABLED=false.
     """
-    if incident_type not in INCIDENT_PLAYBOOKS:
+    playbooks = _get_active_playbooks()
+    if incident_type not in playbooks:
         logger.warning(
             "Unknown incident_type %r — defaulting to error_spike playbook",
             incident_type,
         )
-    return INCIDENT_PLAYBOOKS.get(incident_type, INCIDENT_PLAYBOOKS["error_spike"])
+    return playbooks.get(incident_type, playbooks["error_spike"])
 
 
 def get_evolved_playbook(incident_type: str) -> list[dict]:

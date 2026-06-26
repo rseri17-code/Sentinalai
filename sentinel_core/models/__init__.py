@@ -54,6 +54,14 @@ from sentinel_core.models.graph import (
     NodeStatus,
     CURRENT_GRAPH_SCHEMA_VERSION,
 )
+from sentinel_core.models.inference import (
+    InferenceError,
+    InferenceUsage,
+    InferenceRequest,
+    InferenceResponse,
+    StructuredResult,
+    InferencePort,
+)
 
 __all__ = [
     # incident
@@ -73,4 +81,7 @@ __all__ = [
     # graph
     "GraphNode", "GraphEdge", "ExecutionGraph", "NodeType", "NodeStatus",
     "CURRENT_GRAPH_SCHEMA_VERSION",
+    # inference
+    "InferenceError", "InferenceUsage", "InferenceRequest",
+    "InferenceResponse", "StructuredResult", "InferencePort",
 ]

@@ -325,11 +325,9 @@ def refine_hypothesis(
         }
 
     # Parse LLM response
-    try:
-        parsed = json.loads(result["text"])
-        refined = parsed.get("hypotheses", hypotheses)
-    except (json.JSONDecodeError, TypeError):
-        refined = hypotheses
+    from supervisor.inference_helpers import parse_llm_json
+    _parsed = parse_llm_json(result["text"])
+    refined = _parsed.data.get("hypotheses", hypotheses) if _parsed.ok else hypotheses
 
     return {
         "refined_hypotheses": refined,
@@ -401,6 +399,25 @@ def _disabled_response() -> dict[str, Any]:
         "latency_ms": 0,
         "stop_reason": "disabled",
     }
+
+
+def converse_typed(
+    system_prompt: str,
+    user_message: str,
+    model_id: str | None = None,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
+) -> "Any":
+    """Like converse() but returns a typed InferenceResponse.
+
+    Existing callers that use converse() are unaffected.  New code can use
+    this function for typed access to token usage, stop_reason, and the ok
+    property without manually unpacking the dict.
+    """
+    from sentinel_core.models.inference import InferenceResponse
+    return InferenceResponse.from_dict(
+        converse(system_prompt, user_message, model_id, temperature, max_tokens)
+    )
 
 
 def dispose() -> None:

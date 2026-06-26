@@ -62,6 +62,16 @@ from sentinel_core.models.inference import (
     StructuredResult,
     InferencePort,
 )
+from sentinel_core.models.workflow import (
+    WorkflowPhase,
+    WorkflowStatus,
+    PhaseStatus,
+    ExecutionMetadata,
+    PhaseResult,
+    WorkflowCheckpoint,
+    WorkflowState,
+    WorkflowPort,
+)
 
 __all__ = [
     # incident
@@ -84,4 +94,7 @@ __all__ = [
     # inference
     "InferenceError", "InferenceUsage", "InferenceRequest",
     "InferenceResponse", "StructuredResult", "InferencePort",
+    # workflow
+    "WorkflowPhase", "WorkflowStatus", "PhaseStatus", "ExecutionMetadata",
+    "PhaseResult", "WorkflowCheckpoint", "WorkflowState", "WorkflowPort",
 ]

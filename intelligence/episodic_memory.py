@@ -71,6 +71,8 @@ class EpisodicMemory:
         self._path = storage_path
         self._episodes: list = []
         self._index: Optional[SemanticIndex] = None
+        # Cache for filtered-candidate indexes: key=(service, incident_type, n)
+        self._filtered_cache: dict = {}
         self._load()
         if not self._episodes:
             self.seed_demo_episodes()
@@ -105,6 +107,7 @@ class EpisodicMemory:
                 f.write(json.dumps(episode.to_dict()) + "\n")
             self._episodes.append(episode)
             self._index = None  # invalidate so next search rebuilds
+            self._filtered_cache.clear()
         except Exception as exc:
             logger.warning("EpisodicMemory.record failed: %s", exc)
 
@@ -131,9 +134,13 @@ class EpisodicMemory:
             if failure_signature:
                 if not candidates:
                     return []
-                idx = SemanticIndex()
-                for ep in candidates:
-                    idx.add(ep.episode_id, ep.failure_signature)
+                cache_key = (service or "", incident_type or "", len(candidates))
+                idx = self._filtered_cache.get(cache_key)
+                if idx is None:
+                    idx = SemanticIndex()
+                    for ep in candidates:
+                        idx.add(ep.episode_id, ep.failure_signature)
+                    self._filtered_cache[cache_key] = idx
                 ep_by_id = {ep.episode_id: ep for ep in candidates}
                 hits = idx.search(failure_signature, top_k=limit)
                 return [ep_by_id[id] for id, _ in hits if id in ep_by_id]
@@ -153,9 +160,13 @@ class EpisodicMemory:
         try:
             if service:
                 candidates = [e for e in self._episodes if e.service == service]
-                idx = SemanticIndex()
-                for ep in candidates:
-                    idx.add(ep.episode_id, ep.failure_signature)
+                cache_key = (service, "", len(candidates))
+                idx = self._filtered_cache.get(cache_key)
+                if idx is None:
+                    idx = SemanticIndex()
+                    for ep in candidates:
+                        idx.add(ep.episode_id, ep.failure_signature)
+                    self._filtered_cache[cache_key] = idx
                 ep_by_id = {ep.episode_id: ep for ep in candidates}
             else:
                 if self._index is None:

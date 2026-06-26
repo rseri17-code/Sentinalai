@@ -89,6 +89,9 @@ class ResolutionKnowledge:
     def __init__(self, storage_path: str = _DEFAULT_STORAGE_PATH) -> None:
         self._path = storage_path
         self._records: list = []
+        # Cached semantic index over unique failure_mode strings
+        self._sem_index: Optional[SemanticIndex] = None
+        self._sem_index_len: int = 0
         self._load()
         if not self._records:
             self.seed_demo_records()
@@ -115,6 +118,7 @@ class ResolutionKnowledge:
             with open(self._path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(rec.to_dict()) + "\n")
             self._records.append(rec)
+            self._sem_index = None  # invalidate so next semantic search rebuilds
         except Exception as exc:
             logger.warning("ResolutionKnowledge.record failed: %s", exc)
 
@@ -122,13 +126,16 @@ class ResolutionKnowledge:
         """Return top-3 records whose failure_mode is semantically similar to the query."""
         if not self._records:
             return []
-        idx = SemanticIndex()
-        seen: dict[str, int] = {}  # failure_mode -> first record index
-        for i, r in enumerate(self._records):
-            if r.failure_mode not in seen:
-                seen[r.failure_mode] = i
-                idx.add(r.failure_mode, r.failure_mode)
-        hits = idx.search(failure_mode, top_k=3)
+        if self._sem_index is None:
+            idx = SemanticIndex()
+            seen: dict[str, int] = {}
+            for i, r in enumerate(self._records):
+                if r.failure_mode not in seen:
+                    seen[r.failure_mode] = i
+                    idx.add(r.failure_mode, r.failure_mode)
+            self._sem_index = idx
+            self._sem_index_len = len(self._records)
+        hits = self._sem_index.search(failure_mode, top_k=3)
         matched_modes = {fm for fm, _ in hits if fm != failure_mode}
         return [r for r in self._records if r.failure_mode in matched_modes]
 

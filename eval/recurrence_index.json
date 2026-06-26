@@ -25,7 +25,7 @@
     "permanent_fix_applied": true,
     "permanent_fix_at": "2026-05-22T21:30:00.862210+00:00",
     "last_occurrence": "2026-05-22T21:30:00.861889+00:00",
-    "days_since_last": 29.164552287291666,
+    "days_since_last": 34.225629645729164,
     "last_fix_successful": false,
     "similar_remediation_count": 2,
     "entity_continuity_risk": 0.587
@@ -33,7 +33,7 @@
   "payment-service::error_spike": {
     "service": "payment-service",
     "incident_type": "error_spike",
-    "recurrence_count": 60,
+    "recurrence_count": 20,
     "occurrences": [
       "2026-06-21T01:25:09.448869+00:00",
       "2026-06-21T01:25:14.437824+00:00",
@@ -66,7 +66,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:26:54.537094+00:00",
-    "days_since_last": 4.215784722222222e-05,
+    "days_since_last": 5.061119516388889,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.795
@@ -74,7 +74,7 @@
   "api-gateway::timeout": {
     "service": "api-gateway",
     "incident_type": "timeout",
-    "recurrence_count": 99,
+    "recurrence_count": 20,
     "occurrences": [
       "2026-06-21T01:26:03.847173+00:00",
       "2026-06-21T01:26:04.350109+00:00",
@@ -109,7 +109,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:26:53.504216+00:00",
-    "days_since_last": 5.411254629629629e-05,
+    "days_since_last": 5.061131471076388,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.795
@@ -117,10 +117,8 @@
   "unknown::error_spike": {
     "service": "unknown",
     "incident_type": "error_spike",
-    "recurrence_count": 86,
+    "recurrence_count": 21,
     "occurrences": [
-      "2026-06-21T01:23:51.109261+00:00",
-      "2026-06-21T01:23:51.589512+00:00",
       "2026-06-21T01:23:52.054290+00:00",
       "2026-06-21T01:23:52.534731+00:00",
       "2026-06-21T01:23:53.013567+00:00",
@@ -138,7 +136,9 @@
       "2026-06-21T01:26:18.044879+00:00",
       "2026-06-21T01:26:18.534292+00:00",
       "2026-06-21T01:26:19.038847+00:00",
-      "2026-06-21T01:26:19.527893+00:00"
+      "2026-06-21T01:26:19.527893+00:00",
+      "2026-06-26T02:54:01.265269+00:00",
+      "2026-06-26T02:54:55.257690+00:00"
     ],
     "root_causes": [
       "LOW CONFIDENCE: error spike in unknown [UNVERIFIED]",
@@ -148,8 +148,8 @@
     "remediation_outcomes": [],
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
-    "last_occurrence": "2026-06-21T01:26:19.527893+00:00",
-    "days_since_last": 0.00044735710648148146,
+    "last_occurrence": "2026-06-26T02:54:55.257690+00:00",
+    "days_since_last": 6.518518518518518e-08,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.786
@@ -157,7 +157,7 @@
   "search-service::latency": {
     "service": "search-service",
     "incident_type": "latency",
-    "recurrence_count": 51,
+    "recurrence_count": 20,
     "occurrences": [
       "2026-06-21T01:24:45.009183+00:00",
       "2026-06-21T01:24:49.922822+00:00",
@@ -190,7 +190,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:26:55.068388+00:00",
-    "days_since_last": 3.600886574074074e-05,
+    "days_since_last": 5.061113367361111,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.795
@@ -198,7 +198,7 @@
   "order-service::saturation": {
     "service": "order-service",
     "incident_type": "saturation",
-    "recurrence_count": 54,
+    "recurrence_count": 20,
     "occurrences": [
       "2026-06-21T01:25:05.495855+00:00",
       "2026-06-21T01:25:10.457367+00:00",
@@ -230,7 +230,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:26:55.604038+00:00",
-    "days_since_last": 2.9809282407407405e-05,
+    "days_since_last": 5.061107167789352,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.786
@@ -238,7 +238,7 @@
   "inventory-service::network": {
     "service": "inventory-service",
     "incident_type": "network",
-    "recurrence_count": 56,
+    "recurrence_count": 20,
     "occurrences": [
       "2026-06-21T01:25:10.972699+00:00",
       "2026-06-21T01:25:15.909054+00:00",
@@ -270,7 +270,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:26:56.121308+00:00",
-    "days_since_last": 2.382244212962963e-05,
+    "days_since_last": 5.0611011809375,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.786
@@ -278,7 +278,7 @@
   "api-gateway::cascading": {
     "service": "api-gateway",
     "incident_type": "cascading",
-    "recurrence_count": 52,
+    "recurrence_count": 20,
     "occurrences": [
       "2026-06-21T01:24:56.310903+00:00",
       "2026-06-21T01:25:01.206578+00:00",
@@ -310,7 +310,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:26:56.642219+00:00",
-    "days_since_last": 1.7793449074074077e-05,
+    "days_since_last": 5.061095151967592,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.786
@@ -318,7 +318,7 @@
   "notification-service::missing_data": {
     "service": "notification-service",
     "incident_type": "missing_data",
-    "recurrence_count": 52,
+    "recurrence_count": 20,
     "occurrences": [
       "2026-06-21T01:24:51.904832+00:00",
       "2026-06-21T01:24:56.789875+00:00",
@@ -351,7 +351,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:26:57.160021+00:00",
-    "days_since_last": 1.1800474537037036e-05,
+    "days_since_last": 5.061089158935186,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.795
@@ -359,7 +359,7 @@
   "auth-service::flapping": {
     "service": "auth-service",
     "incident_type": "flapping",
-    "recurrence_count": 50,
+    "recurrence_count": 20,
     "occurrences": [
       "2026-06-21T01:24:47.507692+00:00",
       "2026-06-21T01:24:52.410162+00:00",
@@ -390,7 +390,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:26:57.671525+00:00",
-    "days_since_last": 5.88037037037037e-06,
+    "days_since_last": 5.06108323880787,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.774
@@ -398,7 +398,7 @@
   "recommendation-service::silent_failure": {
     "service": "recommendation-service",
     "incident_type": "silent_failure",
-    "recurrence_count": 50,
+    "recurrence_count": 20,
     "occurrences": [
       "2026-06-21T01:24:47.992167+00:00",
       "2026-06-21T01:24:52.889946+00:00",
@@ -430,7 +430,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:26:58.173303+00:00",
-    "days_since_last": 7.281249999999999e-08,
+    "days_since_last": 5.061077431238426,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.786
@@ -438,7 +438,7 @@
   "user-service::oomkill": {
     "service": "user-service",
     "incident_type": "oomkill",
-    "recurrence_count": 58,
+    "recurrence_count": 20,
     "occurrences": [
       "2026-06-21T01:25:18.886870+00:00",
       "2026-06-21T01:25:23.976628+00:00",
@@ -469,7 +469,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:26:54.015022+00:00",
-    "days_since_last": 4.820112268518519e-05,
+    "days_since_last": 5.0611255595486115,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.774
@@ -488,7 +488,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-19T18:01:37.806310+00:00",
-    "days_since_last": 1.3092635797916667,
+    "days_since_last": 6.370340938194445,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.447
@@ -510,7 +510,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:25:56.784931+00:00",
-    "days_since_last": 0.0007105865393518518,
+    "days_since_last": 5.06178794494213,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.552
@@ -532,7 +532,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:25:57.289143+00:00",
-    "days_since_last": 0.0007047507986111111,
+    "days_since_last": 5.061782109189815,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.552
@@ -559,7 +559,7 @@
     "permanent_fix_applied": false,
     "permanent_fix_at": null,
     "last_occurrence": "2026-06-21T01:23:40.212966+00:00",
-    "days_since_last": 0.0022912806944444444,
+    "days_since_last": 5.063368639050926,
     "last_fix_successful": null,
     "similar_remediation_count": 0,
     "entity_continuity_risk": 0.727

@@ -52,6 +52,7 @@ from agui.api.postmortem import router as postmortem_router
 from agui.api.graph import router as graph_router
 from agui.api.memory_api import router as memory_api_router
 from agui.api.itsm_api import router as itsm_router
+from agui.api.loop_api import router as loop_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -113,6 +114,7 @@ def create_app() -> FastAPI:
     app.include_router(graph_router)
     app.include_router(memory_api_router)
     app.include_router(itsm_router)
+    app.include_router(loop_router)
 
     # ── Tenant management endpoints ───────────────────────────────────────
     @app.get("/api/v1/tenants", tags=["tenants"])

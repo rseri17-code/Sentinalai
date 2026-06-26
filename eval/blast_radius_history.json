@@ -1,21 +1,5 @@
 [
   {
-    "incident_id": "INC12348",
-    "target_service": "search-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-06-19T18:13:14.311419+00:00"
-  },
-  {
-    "incident_id": "INC12349",
-    "target_service": "order-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-06-19T18:13:14.629263+00:00"
-  },
-  {
     "incident_id": "INC12350",
     "target_service": "inventory-service",
     "predicted_services": [],
@@ -8900,5 +8884,21 @@
     ],
     "accuracy": 0.0,
     "timestamp": "2026-06-21T01:26:58.178718+00:00"
+  },
+  {
+    "incident_id": "INC-2026-001",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-06-26T02:54:01.281923+00:00"
+  },
+  {
+    "incident_id": "INC-2026-001",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-06-26T02:54:55.272538+00:00"
   }
 ]

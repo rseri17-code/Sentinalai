@@ -1012,9 +1012,9 @@
       "get_k8s_events",
       "query_metrics"
     ],
-    "match_count": 20,
+    "match_count": 21,
     "hypothesis_outcomes": {},
-    "last_seen": "2026-06-21T01:22:47.455570+00:00",
+    "last_seen": "2026-06-26T02:54:55.257263+00:00",
     "features": [
       0.0,
       0.0,

@@ -501,7 +501,10 @@ class SentinalAISupervisor:
 
             _stream.emit_phase(incident_id, "collect", incident_type=incident_type)
             _use_planner = os.environ.get("AGENTIC_PLANNER", "false").lower() in ("1", "true", "yes")
-            if _use_planner and _llm_enabled():
+            _use_lc = os.environ.get("LOOP_CONTROLLER_ENABLED", "false").lower() in ("1", "true", "yes")
+            # LoopController degrades to fallback playbook when LLM is off — allow it regardless.
+            # Raw AgenticPlanner still requires LLM (its Think step has no utility without it).
+            if _use_planner and (_use_lc or _llm_enabled()):
                 evidence = self._execute_planner_loop(
                     incident_type, incident_id, service, incident, receipts, budget, circuits,
                 )
@@ -2364,20 +2367,41 @@ class SentinalAISupervisor:
         receipts,
         budget,
         circuits,
+        investigation_id: str = "",
     ) -> dict:
-        """Agentic Think→Act→Observe loop (AGENTIC_PLANNER=true)."""
-        from supervisor.planner import AgenticPlanner
+        """Agentic Think→Act→Observe loop (AGENTIC_PLANNER=true).
+
+        When LOOP_CONTROLLER_ENABLED=true, wraps AgenticPlanner with quality-gated
+        convergence, nudge-before-break stagnation handling, and telemetry recording.
+        Falls back to plain AgenticPlanner otherwise.
+        """
         from supervisor.llm import converse as _llm_converse
         from supervisor.tool_selector import get_playbook
 
         fallback = get_playbook(incident_type)
-        planner = AgenticPlanner(
-            workers=self.workers,
-            llm_fn=_llm_converse,
-            budget=budget,
-            fallback_playbook=fallback,
-        )
-        evidence, _ = planner.run(incident_id, incident, incident_type)
+        _use_lc = os.environ.get("LOOP_CONTROLLER_ENABLED", "false").lower() in ("1", "true", "yes")
+
+        if _use_lc:
+            from supervisor.loop_controller import LoopController
+            controller = LoopController(
+                workers=self.workers,
+                llm_fn=_llm_converse,
+                budget=budget,
+                fallback_playbook=fallback,
+            )
+            evidence, _ = controller.run(
+                incident_id, incident, incident_type,
+                investigation_id=investigation_id,
+            )
+        else:
+            from supervisor.planner import AgenticPlanner
+            planner = AgenticPlanner(
+                workers=self.workers,
+                llm_fn=_llm_converse,
+                budget=budget,
+                fallback_playbook=fallback,
+            )
+            evidence, _ = planner.run(incident_id, incident, incident_type)
         return evidence
 
     # ------------------------------------------------------------------ #

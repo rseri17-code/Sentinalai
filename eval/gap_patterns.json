@@ -24,7 +24,7 @@
     }
   },
   "_meta": {
-    "last_updated": "2026-05-12T02:03:24.119537+00:00",
+    "last_updated": "2026-06-26T02:54:55.248237+00:00",
     "total_records": 34
   },
   "timeout:api-gateway": {
@@ -53,26 +53,32 @@
   },
   "error_spike:unknown": {
     "_total": {
-      "total_seen": 135,
-      "last_seen": "2026-05-12T02:03:24.117640+00:00"
+      "total_seen": 137,
+      "last_seen": "2026-06-26T02:54:55.240416+00:00"
     },
     "apm_data": {
-      "count": 135,
-      "total_seen": 135,
+      "count": 137,
+      "total_seen": 137,
       "frequency": 1.0,
-      "last_seen": "2026-05-12T02:03:24.117640+00:00"
+      "last_seen": "2026-06-26T02:54:55.240416+00:00"
     },
     "logs": {
-      "count": 135,
-      "total_seen": 135,
+      "count": 137,
+      "total_seen": 137,
       "frequency": 1.0,
-      "last_seen": "2026-05-12T02:03:24.117640+00:00"
+      "last_seen": "2026-06-26T02:54:55.240416+00:00"
     },
     "metrics": {
-      "count": 135,
-      "total_seen": 135,
+      "count": 137,
+      "total_seen": 137,
       "frequency": 1.0,
-      "last_seen": "2026-05-12T02:03:24.117640+00:00"
+      "last_seen": "2026-06-26T02:54:55.240416+00:00"
+    },
+    "golden_signals": {
+      "count": 1,
+      "total_seen": 137,
+      "frequency": 0.0073,
+      "last_seen": "2026-06-26T02:54:55.240416+00:00"
     }
   },
   "latency:search-service": {

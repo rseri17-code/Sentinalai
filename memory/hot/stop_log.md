@@ -1450,3 +1450,133 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-06-21T02:00:23.672Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 153cb8b chore: update hot memory (session resume)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `153cb8b chore: update hot memory (session resume)`
+- `7f05ba7 chore: update hot memory (stop hook auto-commit)`
+- `c910653 chore: update runtime state from second test suite run`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-21T02:22:35.698Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 0412b3b fix: rebuild ui/dist with playbook.join crash fix and latest source
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `0412b3b fix: rebuild ui/dist with playbook.join crash fix and latest source`
+- `153cb8b chore: update hot memory (session resume)`
+- `7f05ba7 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-21T02:40:57.439Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 9929f24 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `9929f24 chore: update hot memory (stop hook auto-commit)`
+- `0412b3b fix: rebuild ui/dist with playbook.join crash fix and latest source`
+- `153cb8b chore: update hot memory (session resume)`
+
+### Tests Run
+yes (cache mtime: 2026-05-23T17:31:42.934Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-25T22:06:26.412Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d230de7 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `d230de7 chore: update hot memory (stop hook auto-commit)`
+- `6e08d4b feat: add loop engineering — quality-gated convergence, nudge-stagnation, telemetry`
+- `0dd59d1 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-26T02:15:58.245Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 684c05d chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `684c05d chore: update hot memory (stop hook auto-commit)`
+- `d230de7 chore: update hot memory (stop hook auto-commit)`
+- `6e08d4b feat: add loop engineering — quality-gated convergence, nudge-stagnation, telemetry`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

@@ -1,0 +1,18 @@
+name: oomkill
+description: "Container OOMKilled / out-of-memory"
+steps:
+  - worker: log_worker
+    action: search_logs
+    label: search_oom_logs
+    query_hint: "OOMKilled {service}"
+  - worker: metrics_worker
+    action: query_metrics
+    label: check_memory_metrics
+    metric_hint: memory_usage_bytes
+  - worker: metrics_worker
+    action: get_events
+    label: check_events
+  - worker: log_worker
+    action: search_logs
+    label: search_memory_logs
+    query_hint: "{service} heap OR memory"

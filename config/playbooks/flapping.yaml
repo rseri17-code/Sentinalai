@@ -1,0 +1,17 @@
+name: flapping
+description: "Intermittent failures / connection pool flapping"
+steps:
+  - worker: log_worker
+    action: search_logs
+    label: search_error_logs
+    query_hint: "error {service}"
+  - worker: apm_worker
+    action: get_golden_signals
+    label: check_golden_signals
+  - worker: metrics_worker
+    action: query_metrics
+    label: check_pool_metrics
+    metric_hint: db_connection_pool_active
+  - worker: log_worker
+    action: get_change_data
+    label: check_changes

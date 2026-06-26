@@ -1580,3 +1580,109 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-06-26T03:00:08.108Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 2e8cb14 chore: update eval state and wiki receipt from INC-2026-001 investigation run
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `2e8cb14 chore: update eval state and wiki receipt from INC-2026-001 investigation run`
+- `d609ce4 fix: allow LoopController to run when LLM_ENABLED=false`
+- `684c05d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-26T05:24:22.748Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 08d68ee chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `08d68ee chore: update hot memory (stop hook auto-commit)`
+- `2e8cb14 chore: update eval state and wiki receipt from INC-2026-001 investigation run`
+- `d609ce4 fix: allow LoopController to run when LLM_ENABLED=false`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-26T06:46:15.508Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 08d68ee chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `08d68ee chore: update hot memory (stop hook auto-commit)`
+- `2e8cb14 chore: update eval state and wiki receipt from INC-2026-001 investigation run`
+- `d609ce4 fix: allow LoopController to run when LLM_ENABLED=false`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-26T07:11:38.064Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 9998add chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `9998add chore: update hot memory (stop hook auto-commit)`
+- `08d68ee chore: update hot memory (stop hook auto-commit)`
+- `2e8cb14 chore: update eval state and wiki receipt from INC-2026-001 investigation run`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

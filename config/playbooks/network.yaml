@@ -1,0 +1,23 @@
+name: network
+description: "Network connectivity / DNS / inter-service communication failure"
+steps:
+  - worker: log_worker
+    action: search_logs
+    label: search_network_logs
+    query_hint: "connection refused OR dns {service}"
+  - worker: apm_worker
+    action: get_golden_signals
+    label: check_golden_signals
+  - worker: network_worker
+    action: get_network_evidence
+    label: get_network_evidence
+  - worker: log_worker
+    action: search_logs
+    label: search_dns_logs
+    query_hint: "dns {service}"
+  - worker: log_worker
+    action: get_change_data
+    label: check_changes
+  - worker: itsm_worker
+    action: get_change_records
+    label: check_itsm_changes

@@ -1,0 +1,16 @@
+name: missing_data
+description: "Data pipeline failure / missing data / connection errors"
+steps:
+  - worker: log_worker
+    action: search_logs
+    label: search_error_logs
+    query_hint: "error connection {service}"
+  - worker: apm_worker
+    action: get_golden_signals
+    label: check_golden_signals
+  - worker: metrics_worker
+    action: get_events
+    label: check_events
+  - worker: log_worker
+    action: get_change_data
+    label: check_changes

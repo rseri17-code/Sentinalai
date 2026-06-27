@@ -5,7 +5,7 @@ services:
 - user-service
 incident_types:
 - oomkill
-observation_count: 9
+observation_count: 10
 confidence_avg: 65.0
 quality_avg: 0.556
 evidence_signals:
@@ -23,5 +23,6 @@ receipt_ids:
 - INC_H4_20260531
 - INC_H4_20260603
 - INC_H4_20260605
+- INC_H4_20260627
 first_seen: 2026-05-31 20:36:46.784293+00:00
-last_seen: 2026-06-26 10:53:35.003968+00:00
+last_seen: 2026-06-27 17:13:23.736962+00:00

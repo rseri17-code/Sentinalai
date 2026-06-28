@@ -32,6 +32,7 @@ from typing import Any, Optional
 
 from supervisor.workflow_engine import WorkflowEngine, get_engine
 from sentinel_core.models.workflow import WorkflowStatus
+from sentinel_core.context import InvestigationContext
 
 logger = logging.getLogger("sentinalai.workflow_middleware")
 
@@ -103,6 +104,25 @@ class WorkflowAwareInvestigator:
         except Exception as exc:
             self._engine.fail(investigation_id, str(exc))
             raise
+
+    # ------------------------------------------------------------------
+    # Context-aware adoption (Phase 6 — additive)
+    # ------------------------------------------------------------------
+
+    def investigate_with_context(
+        self,
+        ctx: InvestigationContext,
+        replay: bool = False,
+    ) -> dict[str, Any]:
+        """Run a durable investigation driven by an InvestigationContext.
+
+        Thin convenience wrapper: forwards ``ctx.incident_id`` to the existing
+        ``investigate()`` path so semantics are identical. The context's
+        ``investigation_id`` and ``to_workflow_metadata()`` are NOT consulted
+        here — the existing path derives ``inv-{incident_id}`` itself — which
+        keeps this method behavior-equivalent to ``investigate(incident_id)``.
+        """
+        return self.investigate(ctx.incident_id, replay=replay)
 
     # ------------------------------------------------------------------
     # Helpers

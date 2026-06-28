@@ -99,6 +99,15 @@ class WorkflowEngine:
         finally:
             conn.close()
 
+    def start_from_context(self, ctx: Any) -> bool:
+        """Phase 6 — additive: start a run from an InvestigationContext.
+
+        Forwards to ``start(ctx.investigation_id, ctx.to_workflow_metadata())``.
+        ``ctx`` is typed as Any so this module stays free of a hard import on
+        ``sentinel_core.context`` — callers pass the dataclass instance.
+        """
+        return self.start(ctx.investigation_id, ctx.to_workflow_metadata())
+
     def checkpoint(
         self,
         investigation_id: str,

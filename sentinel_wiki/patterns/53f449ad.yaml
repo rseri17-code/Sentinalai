@@ -5,7 +5,7 @@ services:
 - api-gateway
 incident_types:
 - cascading
-observation_count: 10
+observation_count: 11
 confidence_avg: 79.0
 quality_avg: 0.804
 evidence_signals:
@@ -18,6 +18,7 @@ evidence_signals:
 - gap_search_logs
 receipt_ids:
 - INC_H9_20260603
+- INC_H9_20260628
 - INC_H9_20260605
 - INC_H9_20260609
 - INC_H9_20260621
@@ -28,4 +29,4 @@ receipt_ids:
 - INC_H9_20260619
 - INC_H9_20260610
 first_seen: 2026-05-31 20:36:47.299266+00:00
-last_seen: 2026-06-27 17:13:26.896738+00:00
+last_seen: 2026-06-28 00:32:18.922715+00:00

@@ -5,7 +5,7 @@ services:
 - order-service
 incident_types:
 - saturation
-observation_count: 9
+observation_count: 10
 confidence_avg: 63.0
 quality_avg: 0.634
 evidence_signals:
@@ -18,6 +18,7 @@ evidence_signals:
 receipt_ids:
 - INC_S1_20260621
 - INC_S1_20260610
+- INC_S1_20260627
 - INC_S1_20260611
 - INC_S1_20260626
 - INC_S1_20260531
@@ -26,4 +27,4 @@ receipt_ids:
 - INC_S1_20260605
 - INC_S1_20260619
 first_seen: 2026-05-31 20:36:45.614115+00:00
-last_seen: 2026-06-26 10:53:29.117541+00:00
+last_seen: 2026-06-27 17:13:15.798850+00:00

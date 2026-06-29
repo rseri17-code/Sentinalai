@@ -35,9 +35,9 @@ class TestPackageImports:
 
     @pytest.mark.parametrize(
         "modname",
-        # fetch was promoted in Phase 10, classify in Phase 11.
-        # See tests/test_fetch_phase.py and tests/test_classify_phase.py.
-        ["collect", "analyze", "persist"],
+        # fetch was promoted in Phase 10, classify in Phase 11, collect in Phase 12.
+        # See tests/test_{fetch,classify,collect}_phase.py.
+        ["analyze", "persist"],
     )
     def test_phase_module_importable(self, modname: str):
         mod = importlib.import_module(f"supervisor.phases.{modname}")
@@ -52,6 +52,11 @@ class TestPackageImports:
         from supervisor.phases.classify import ClassificationPhase, ClassificationResult
         assert ClassificationPhase is not None
         assert ClassificationResult is not None
+
+    def test_collect_module_now_live(self):
+        from supervisor.phases.collect import CollectPhase, CollectResult
+        assert CollectPhase is not None
+        assert CollectResult is not None
 
 
 # ---------------------------------------------------------------------------

@@ -35,12 +35,18 @@ class TestPackageImports:
 
     @pytest.mark.parametrize(
         "modname",
-        ["fetch", "classify", "collect", "analyze", "persist"],
+        # fetch was promoted from scaffold to live module in Phase 10
+        # (see tests/test_fetch_phase.py for its behavior tests).
+        ["classify", "collect", "analyze", "persist"],
     )
     def test_phase_module_importable(self, modname: str):
         mod = importlib.import_module(f"supervisor.phases.{modname}")
-        # Scaffold modules must export nothing live.
+        # Remaining scaffold modules must export nothing live.
         assert mod.__all__ == []
+
+    def test_fetch_module_now_live(self):
+        from supervisor.phases.fetch import FetchPhase
+        assert FetchPhase is not None
 
 
 # ---------------------------------------------------------------------------

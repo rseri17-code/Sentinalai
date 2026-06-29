@@ -333,64 +333,33 @@ class SentinalAISupervisor:
             span.set_attribute(GENAI_SYSTEM, "sentinalai")
             span.set_attribute(GENAI_OPERATION_NAME, "investigate")
 
-            # G6.1: Per-investigation wall-clock deadline (thread-local — safe for concurrent calls)
-            # Reset all TLS state before each investigation to prevent leakage from prior runs
-            # on the same thread.
-            self._tls.investigation_deadline = time.monotonic() + self.INVESTIGATION_DEADLINE_SECONDS
-            self._tls.current_incident = None
-            self._tls.itsm_evidence = None
-            self._tls.devops_evidence = None
-            self._tls.current_investigation_id = incident_id
-            self._tls.current_phase = "collect"
+            # === FETCH PHASE (extracted to supervisor.phases.fetch.FetchPhase) ===
+            # Owns: TLS reset, call-graph init, per-investigation handle
+            # construction, incident load + normalization, validation,
+            # summary/service extraction, meta-query short-circuit.
+            #
+            # Bypass ContextBuilder here — the existing contract is that
+            # investigate("") returns a graceful empty result, but the builder
+            # rejects empty ids (it's the public entry point that should validate).
+            from supervisor.phases.fetch import FetchPhase
+            from sentinel_core.context import InvestigationContext
+            _ctx = InvestigationContext(incident_id=incident_id)
+            _fetch_result = FetchPhase(self).execute(_ctx)
+            _fout = _fetch_result.output.result
+            if _fout["early_return"] is not None:
+                return _fout["early_return"]
 
-            # LLM call graph — thread-local DAG for this investigation
-            call_graph = CallGraph(investigation_id=incident_id)
-            set_current_graph(call_graph)
-
-            # Start with default budget; will be replaced after severity detection
-            receipts = ReceiptCollector(case_id=incident_id)
-            budget = ExecutionBudget(case_id=incident_id)
-
-            # Stable investigation ID for fix engine traceability
-            investigation_id = f"inv-{incident_id}"
-
-            # W1: Per-investigation circuit breaker registry (isolated)
-            circuits = CircuitBreakerRegistry()
-
-            logger.info("Starting investigation for %s", incident_id)
+            incident   = _fout["incident"]
+            summary    = _fout["summary"]
+            service    = _fout["service"]
+            receipts   = _fout["receipts"]
+            budget     = _fout["budget"]
+            circuits   = _fout["circuits"]
+            # Stable investigation ID for fix engine traceability (matches
+            # the value FetchPhase derives via ContextBuilder).
+            investigation_id = _ctx.investigation_id
+            # _stream is referenced throughout investigate() after this point.
             _stream = get_stream()
-            _stream.emit(
-                incident_id, EventType.INVESTIGATION_STARTED,
-                {"incident_id": incident_id}, phase="start",
-            )
-
-            # Step 1: Fetch incident
-            incident = self._fetch_incident(incident_id, receipts, budget, circuits)
-            if not incident:
-                logger.warning("No incident data for %s", incident_id)
-                return self._empty_result(incident_id, "No incident data available")
-
-            summary = incident.get("summary", "")
-            service = incident.get("affected_service", "unknown")
-
-            # Step 2: Classify — cache incident in thread-local so _build_params can time-anchor queries
-            self._tls.current_incident = incident
-
-            # G-10: Detect meta-queries (questions / lookup requests) before classification
-            if is_meta_query(summary):
-                logger.info("Meta-query detected for %s, skipping investigation", incident_id)
-                return {
-                    "incident_id": incident_id,
-                    "root_cause": "META_QUERY_NOT_INCIDENT",
-                    "confidence": 0,
-                    "evidence_timeline": [],
-                    "reasoning": (
-                        f"Input appears to be a question rather than an active incident: "
-                        f"'{summary[:200]}'. "
-                        "Please provide an incident summary describing a failure condition "
-                        "(e.g., 'payments-api returning 5xx errors', 'checkout OOMKilled in prod')."
-                    ),
-                }
 
             incident_type = classify_incident(summary)
             span.set_attribute(EVAL_INCIDENT_TYPE, incident_type)

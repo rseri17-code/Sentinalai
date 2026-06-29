@@ -1848,3 +1848,113 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-06-28T01:30:29.061Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ab96bab chore: commit runtime-generated eval and wiki data files
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `ab96bab chore: commit runtime-generated eval and wiki data files`
+- `f91ba51 phase7: prepare safe agent phase decomposition`
+- `9b7a963 chore: commit runtime-generated eval and wiki data files`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-28T01:57:32.697Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ab96bab chore: commit runtime-generated eval and wiki data files
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ab96bab chore: commit runtime-generated eval and wiki data files`
+- `f91ba51 phase7: prepare safe agent phase decomposition`
+- `9b7a963 chore: commit runtime-generated eval and wiki data files`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-28T02:10:13.730Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ab96bab chore: commit runtime-generated eval and wiki data files
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ab96bab chore: commit runtime-generated eval and wiki data files`
+- `f91ba51 phase7: prepare safe agent phase decomposition`
+- `9b7a963 chore: commit runtime-generated eval and wiki data files`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-06-28T02:32:15.270Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ab96bab chore: commit runtime-generated eval and wiki data files
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ab96bab chore: commit runtime-generated eval and wiki data files`
+- `f91ba51 phase7: prepare safe agent phase decomposition`
+- `9b7a963 chore: commit runtime-generated eval and wiki data files`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

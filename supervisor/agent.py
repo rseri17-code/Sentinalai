@@ -2402,6 +2402,10 @@ class SentinalAISupervisor:
             worker_groups.setdefault(wn, []).append(step)
 
         evidence: dict[str, Any] = {}
+        # Phase 9 shadow ledger: None when EVIDENCE_LEDGER_SHADOW_ENABLED is off.
+        # When on, mirrors evidence[k] = v writes for parity validation only.
+        from supervisor.evidence_shadow import ShadowMirror
+        _shadow = ShadowMirror.create()
 
         # Capture investigation-local TLS values now (main thread) so pool threads
         # can seed their own TLS before calling any downstream method that reads them.
@@ -2470,6 +2474,8 @@ class SentinalAISupervisor:
                 results = future.result(timeout=self._call_timeout * 2)
                 for label, result in results:
                     evidence[label] = result
+                    if _shadow is not None:
+                        _shadow.set(label, result)
             except Exception as exc:
                 wn = futures[future]
                 logger.warning("Parallel worker group %s failed: %s", wn, exc)
@@ -2483,11 +2489,15 @@ class SentinalAISupervisor:
                         incident_id, escalation["escalation_trigger"],
                     )
                     evidence["_loop_escalation"] = escalation
+                    if _shadow is not None:
+                        _shadow.set("_loop_escalation", escalation)
                     # Cancel remaining futures (best-effort)
                     for f in futures:
                         f.cancel()
                     break
 
+        if _shadow is not None:
+            _shadow.parity_log(evidence, context="_execute_playbook")
         return evidence
 
     def _execute_playbook_sequential(
@@ -2503,6 +2513,9 @@ class SentinalAISupervisor:
         every LOOP_CHECKPOINT_INTERVAL calls and breaks early if stalled.
         """
         evidence: dict[str, Any] = {}
+        # Phase 9 shadow ledger: None when EVIDENCE_LEDGER_SHADOW_ENABLED is off.
+        from supervisor.evidence_shadow import ShadowMirror
+        _shadow = ShadowMirror.create()
         for step in playbook:
             worker_name = step["worker"]
             action = step["action"]
@@ -2517,6 +2530,8 @@ class SentinalAISupervisor:
                 circuits=circuits,
             )
             evidence[label] = result
+            if _shadow is not None:
+                _shadow.set(label, result)
             # _call_worker returns a budget-exhausted signal when try_record() fails
             if result and result.get("error") in ("budget_exhausted",):
                 logger.warning("Budget exhausted at step %s for %s", label, incident_id)
@@ -2534,8 +2549,12 @@ class SentinalAISupervisor:
                             incident_id, escalation["escalation_trigger"],
                         )
                         evidence["_loop_escalation"] = escalation
+                        if _shadow is not None:
+                            _shadow.set("_loop_escalation", escalation)
                         break
 
+        if _shadow is not None:
+            _shadow.parity_log(evidence, context="_execute_playbook_sequential")
         return evidence
 
     def _get_change_time_window(self) -> int:

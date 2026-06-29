@@ -35,9 +35,9 @@ class TestPackageImports:
 
     @pytest.mark.parametrize(
         "modname",
-        # fetch was promoted from scaffold to live module in Phase 10
-        # (see tests/test_fetch_phase.py for its behavior tests).
-        ["classify", "collect", "analyze", "persist"],
+        # fetch was promoted in Phase 10, classify in Phase 11.
+        # See tests/test_fetch_phase.py and tests/test_classify_phase.py.
+        ["collect", "analyze", "persist"],
     )
     def test_phase_module_importable(self, modname: str):
         mod = importlib.import_module(f"supervisor.phases.{modname}")
@@ -47,6 +47,11 @@ class TestPackageImports:
     def test_fetch_module_now_live(self):
         from supervisor.phases.fetch import FetchPhase
         assert FetchPhase is not None
+
+    def test_classify_module_now_live(self):
+        from supervisor.phases.classify import ClassificationPhase, ClassificationResult
+        assert ClassificationPhase is not None
+        assert ClassificationResult is not None
 
 
 # ---------------------------------------------------------------------------

@@ -20,10 +20,20 @@ def _no_hypothesis_priming():
     investigations (experience_store.json, knowledge_graph.json, etc.)
     would inject additional candidate root causes that change the winner,
     defeating the branch under test.
+
+    Patches both the supervisor.agent aliases (used by the inline call
+    sites) AND the source-module functions (used by phase modules that
+    lazy-import directly from supervisor.knowledge_graph /
+    supervisor.experience_store).  Both are required because Python's
+    ``from M import f`` creates a separate binding per importing module
+    that mock.patch on the agent namespace does not reach.
     """
     with patch("supervisor.agent._retrieve_experiences", return_value=[]), \
          patch("supervisor.agent._get_tool_recommendations", return_value={}), \
-         patch("supervisor.agent._kg_query_similar", return_value=[]):
+         patch("supervisor.agent._kg_query_similar", return_value=[]), \
+         patch("supervisor.experience_store.retrieve_similar", return_value=[]), \
+         patch("supervisor.experience_store.get_tool_recommendations", return_value={}), \
+         patch("supervisor.knowledge_graph.query_similar", return_value=[]):
         yield
 
 

@@ -361,52 +361,23 @@ class SentinalAISupervisor:
             # _stream is referenced throughout investigate() after this point.
             _stream = get_stream()
 
-            incident_type = classify_incident(summary)
-            span.set_attribute(EVAL_INCIDENT_TYPE, incident_type)
-            span.set_attribute(EVAL_SERVICE, service)
-            logger.info("Classified %s as %s (service=%s)", incident_id, incident_type, service)
-            _stream.emit_phase(
-                incident_id, "classify",
-                incident_type=incident_type, service=service,
-            )
-
-            # Step 2b: ITSM context enrichment (Phase 1 — CI, known errors, similar incidents)
-            itsm_context = self._fetch_itsm_context(service, summary, receipts, budget, circuits)
-
-            # Step 2b2: Confluence enrichment (Phase 1 — runbooks + post-mortems)
-            confluence_context = self._fetch_confluence_context(
-                service, summary, incident_type, receipts, budget, circuits,
-            )
-
-            # Step 2c: Severity detection + budget scaling
-            severity = detect_severity(incident, itsm_context)
-            budget = get_budget_for_severity(severity)
-            budget.case_id = incident_id
-            # Carry forward calls already made during fetch + ITSM enrichment
-            budget.calls_made = receipts.summary()["total_calls"]
-            span.set_attribute("sentinalai.severity_level", severity.level)
-            span.set_attribute("sentinalai.severity_label", severity.label)
-            span.set_attribute("sentinalai.severity_source", severity.source)
-            logger.info(
-                "Severity: level=%d label=%s source=%s budget=%d",
-                severity.level, severity.label, severity.source, severity.budget,
-            )
-
-            # Step 2d: Retrieve similar past experiences + knowledge graph context
-            # to prime hypothesis generation. Runs concurrently with the playbook.
-            experience_future = self._parallel_executor.submit(
-                _retrieve_experiences, incident_type, service,
-            )
-            kg_future = self._parallel_executor.submit(
-                _kg_query_similar, service, incident_type,
-            )
-
-            # Step 3: Execute playbook + historical context in parallel
-            # Historical context targets knowledge_worker (independent of playbook workers)
-            # so we can overlap them to cut wall-clock time.
-            historical_future = self._parallel_executor.submit(
-                self._fetch_historical_context, service, summary, incident_type, receipts, budget, circuits,
-            )
+            # === CLASSIFY PHASE (extracted to supervisor.phases.classify.ClassificationPhase) ===
+            # Owns: classify_incident, ITSM + Confluence enrichment, severity detection +
+            # budget rescaling, the three deferred futures (experience, KG, historical),
+            # AND the corresponding observability calls — span attrs + classify stream
+            # event are emitted INSIDE the phase at the exact moments the legacy code
+            # emitted them, so byte-equivalence with the previous behavior is preserved.
+            from supervisor.phases.classify import ClassificationPhase
+            _classify_result = ClassificationPhase(self).execute(_ctx, _fout, span=span)
+            _cres = _classify_result.output.result["classification"]
+            incident_type      = _cres.incident_type
+            severity           = _cres.severity
+            budget             = _cres.budget                      # severity-scaled, replaces fetch budget
+            itsm_context       = _cres.itsm_context
+            confluence_context = _cres.confluence_context
+            experience_future  = _cres.experience_future
+            kg_future          = _cres.kg_future
+            historical_future  = _cres.historical_future
 
             _stream.emit_phase(incident_id, "collect", incident_type=incident_type)
             _use_planner = os.environ.get("AGENTIC_PLANNER", "false").lower() in ("1", "true", "yes")

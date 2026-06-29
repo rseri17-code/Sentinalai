@@ -5,9 +5,9 @@ services:
 - api-gateway
 incident_types:
 - timeout
-observation_count: 22
+observation_count: 24
 confidence_avg: 92.0
-quality_avg: 0.7543
+quality_avg: 0.7538
 evidence_signals:
 - check_golden_signals
 - check_latency_metrics
@@ -19,8 +19,6 @@ evidence_signals:
 - gap_get_change_data
 - gap_query_metrics
 receipt_ids:
-- INC_H7_20260610
-- INC_H7_20260609
 - INC_H7_20260531
 - INC_H7_20260605
 - INC_H7_20260619
@@ -30,6 +28,8 @@ receipt_ids:
 - INC12345_20260609
 - INC12345_20260626
 - INC_H7_20260627
+- INC12345_20260629
+- INC_H7_20260629
 - INC12345_20260627
 - INC12345_20260605
 - INC12345_20260611
@@ -40,4 +40,4 @@ receipt_ids:
 - INC12345_20260603
 - INC12345_20260531
 first_seen: 2026-05-31 20:36:47.113876+00:00
-last_seen: 2026-06-28 01:24:10.700648+00:00
+last_seen: 2026-06-29 03:02:05.755120+00:00

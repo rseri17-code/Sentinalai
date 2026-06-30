@@ -394,140 +394,23 @@ class SentinalAISupervisor:
             evidence = _cout.evidence
             _gate_post_collection = _cout.gate_post_collection
 
-            # Step 4: Analyze — guard with deadline before expensive LLM calls
-            _deadline = getattr(self._tls, 'investigation_deadline', None)
-            if _deadline is not None and time.monotonic() > _deadline:
-                logger.warning(
-                    "Investigation deadline exceeded before analysis for %s; returning timeout result",
-                    incident_id,
-                )
-                return self._empty_result(
-                    incident_id,
-                    "investigation_deadline_exceeded",
-                    degraded=True,
-                    degraded_reason="deadline_exceeded_before_analysis",
-                )
-            _stream.emit_phase(incident_id, "analyze", incident_type=incident_type)
-            # Cache evidence + context in TLS so the harness can call reanalyze()
-            # on enriched evidence without repeating the expensive playbook.
-            self._tls.last_evidence = dict(evidence)
-            self._tls.last_incident_type = incident_type
-            with trace_span("analyze_evidence", case_id=incident_id) as _ae_span:
-                _ae_span.set_attribute("incident_type", incident_type)
-                _ae_span.set_attribute("evidence_keys", len(evidence))
-                result = self._analyze_evidence(incident_id, incident, incident_type, evidence)
-                _ae_span.set_attribute("confidence", result.get("confidence", 0))
-                _ae_span.set_attribute("confidence_degraded", result.get("confidence_degraded", False))
-            # Attach collection-gate result now that result dict exists
-            result["_gate_post_collection"] = _gate_post_collection.to_dict()
-
-            confidence = result.get("confidence", 0)
-            # Apply calibration — pass evidence for neural context (source_count
-            # is extracted from evidence keys; online_eval not yet available here)
-            raw_confidence = confidence
-            confidence = get_calibrator().calibrate(confidence, evidence_context=evidence)
-            if confidence != raw_confidence:
-                result["confidence"] = confidence
-                result["raw_confidence"] = raw_confidence
-            _stream.emit_confidence(
-                incident_id, confidence, source="calibrator", previous=raw_confidence,
-            )
-            hypothesis_count = result.pop("_hypothesis_count", 0)
-            winner_hypothesis = result.pop("_winner_hypothesis", "none")
-            llm_metrics = result.pop("_llm_metrics", {})
-
-            # Step 4a-i: Multi-dimensional grounding confidence scoring (v2 when enabled)
-            _recurrence_info = None
-            if _RECURRENCE_AVAILABLE:
-                try:
-                    _recurrence_info = _recurrence_check(service, incident_type)
-                except Exception:
-                    pass
-
-            if _GROUNDING_AVAILABLE:
-                try:
-                    _grounding = _grounding_score(
-                        result=result,
-                        evidence=evidence,
-                        incident_type=incident_type,
-                        recurrence_info=_recurrence_info,
-                    )
-                    result["_grounding"] = _grounding.to_dict()
-                    # Emit grounding state for observability
-                    _stream.emit_confidence(
-                        incident_id,
-                        int(_grounding.score * 100),
-                        source="grounding_v2" if _grounding.model_version == "v2" else "grounding_v1",
-                        previous=confidence,
-                    )
-                except Exception as exc:
-                    logger.debug("Grounding confidence scoring skipped: %s", exc)
-
-            # Step 4b: Self-critique — evaluate the RCA quality before returning.
-            # If the critique identifies gaps and budget allows, gather targeted
-            # follow-up evidence and re-analyze (at most once per investigation).
-            result, evidence = self._apply_self_critique(
-                result, evidence, incident_id, incident_type, service,
-                receipts, budget, circuits,
-            )
-            confidence = result.get("confidence", confidence)
-
-            # Phase: Cite — ground every claim in source evidence (before gate checks
-            # so G5 has mechanically-matched citations, not just LLM-produced ones)
-            annotate_citations(result, evidence)
-
-            # Evidence Gate G2 + G3 + G5: check analysis quality (anti-hallucination)
-            gate_post_analysis = check_post_analysis(result, evidence, budget.remaining())
-            result["_gate_post_analysis"] = gate_post_analysis.to_dict()
-            if not gate_post_analysis.passed and gate_post_analysis.verdict.value == "block":
-                logger.warning(
-                    "Evidence gate BLOCK post-analysis: %s",
-                    gate_post_analysis.blocking_gate.reason if gate_post_analysis.blocking_gate else "unknown",
-                )
-                reason = (
-                    gate_post_analysis.blocking_gate.reason
-                    if gate_post_analysis.blocking_gate else "Evidence quality gate failed"
-                )
-                result["root_cause"] = f"BLOCKED: {reason}"
-                result["confidence"] = 0
-                result["hallucination_risk"] = True
-
-            # Step 4c: Online quality evaluation — scores every investigation
-            # without requiring ground truth labels.
-            online_score = _online_evaluate(result, evidence, budget.calls_made, hypothesis_count)
-            _annotate_online(result, online_score)
-            # Store evidence snapshot for experience_store (avoids holding full evidence in result)
-            result["_evidence_snapshot"] = {
-                k: bool(v) for k, v in evidence.items() if not k.startswith("_")
-            }
-
-            # Expose git blame pinpoint in result (available to external consumers + RCA report)
-            if evidence.get("git_blame"):
-                blame = evidence["git_blame"]
-                result["git_blame_pinpoint"] = {
-                    "file":   blame.get("culprit_file", ""),
-                    "line":   blame.get("culprit_line"),
-                    "sha":    blame.get("sha", "")[:12],
-                    "author": blame.get("author", ""),
-                    "date":   blame.get("date", ""),
-                    "commit_message": blame.get("message", "")[:120],
-                    "repo":   blame.get("repo", ""),
-                }
-
-            # Expose top ITSM causal change in result for bridge call / runbook
-            if evidence.get("_itsm_change_correlations"):
-                top = evidence["_itsm_change_correlations"][0]
-                if top.get("correlation_score", 0) >= 0.45:
-                    result["causal_change"] = {
-                        "id":           top.get("id", top.get("number", "")),
-                        "title":        top.get("title", top.get("summary", "")),
-                        "change_type":  top.get("change_type", ""),
-                        "risk_level":   top.get("risk_level", ""),
-                        "minutes_before_incident": top.get("minutes_before_incident"),
-                        "correlation_score": top.get("correlation_score"),
-                        "correlation_reason": top.get("correlation_reason", ""),
-                        "commit_sha":   (top.get("matched_commit") or {}).get("sha", ""),
-                    }
+            # === ANALYZE PHASE (extracted to supervisor.phases.analyze.AnalyzePhase) ===
+            # Owns: deadline guard, _analyze_evidence call inside child trace span,
+            # calibration + emit_confidence, recurrence + grounding (best-effort),
+            # _apply_self_critique, citation annotation, gates G2/G3/G5 with BLOCK
+            # rewrite path, online evaluation, _evidence_snapshot build,
+            # git_blame_pinpoint extraction, causal_change extraction.
+            from supervisor.phases.analyze import AnalyzePhase
+            _analyze_result = AnalyzePhase(self).execute(_ctx, _fout, _cres, _cout)
+            _aout = _analyze_result.output.result["analyze"]
+            if _aout.early_return is not None:
+                return _aout.early_return
+            result            = _aout.result
+            evidence          = _aout.evidence
+            confidence        = _aout.confidence
+            hypothesis_count  = _aout.hypothesis_count
+            winner_hypothesis = _aout.winner_hypothesis
+            llm_metrics       = _aout.llm_metrics
 
             # Phase: Observe — span attributes + deep-eval metrics
             self._record_observability(

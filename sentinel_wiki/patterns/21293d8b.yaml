@@ -5,7 +5,7 @@ services:
 - notification-service
 incident_types:
 - missing_data
-observation_count: 12
+observation_count: 13
 confidence_avg: 72.0
 quality_avg: 0.812
 evidence_signals:
@@ -26,8 +26,9 @@ receipt_ids:
 - INC12352_20260605
 - INC12352_20260621
 - INC12352_20260626
+- INC12352_20260630
 - INC12352_20260610
 - INC12352_20260611
 - INC12352_20260629
 first_seen: 2026-05-31 20:37:52.958706+00:00
-last_seen: 2026-06-29 16:08:43.561166+00:00
+last_seen: 2026-06-30 10:00:33.088360+00:00

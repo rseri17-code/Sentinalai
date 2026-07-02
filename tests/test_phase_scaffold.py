@@ -33,16 +33,9 @@ class TestPackageImports:
         import supervisor.helpers  # must not raise
         from supervisor.helpers.confidence import compute_confidence  # noqa: F401
 
-    @pytest.mark.parametrize(
-        "modname",
-        # fetch promoted in Phase 10, classify in Phase 11, collect in Phase 12,
-        # analyze in Phase 13. See tests/test_{fetch,classify,collect,analyze}_phase.py.
-        ["persist"],
-    )
-    def test_phase_module_importable(self, modname: str):
-        mod = importlib.import_module(f"supervisor.phases.{modname}")
-        # Remaining scaffold modules must export nothing live.
-        assert mod.__all__ == []
+    # All five phase modules are now live — no scaffolds remain.
+    # Phase 10: fetch, Phase 11: classify, Phase 12: collect,
+    # Phase 13: analyze, Phase 14: persist.
 
     def test_fetch_module_now_live(self):
         from supervisor.phases.fetch import FetchPhase
@@ -62,6 +55,11 @@ class TestPackageImports:
         from supervisor.phases.analyze import AnalyzePhase, AnalyzeResult
         assert AnalyzePhase is not None
         assert AnalyzeResult is not None
+
+    def test_persist_module_now_live(self):
+        from supervisor.phases.persist import PersistPhase, PersistResult
+        assert PersistPhase is not None
+        assert PersistResult is not None
 
 
 # ---------------------------------------------------------------------------

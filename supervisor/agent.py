@@ -333,11 +333,18 @@ class SentinalAISupervisor:
         # modules whose transitive imports can reach back into supervisor.*.
         # Deferring keeps the bootstrap graph unambiguous.
         from sentinel_core.context import InvestigationContext
+        from supervisor.phase_receipts import (
+            PhaseReceiptCollector, attach_receipts, status_from_result,
+        )
         from supervisor.phases.analyze import AnalyzePhase
         from supervisor.phases.classify import ClassificationPhase
         from supervisor.phases.collect import CollectPhase
         from supervisor.phases.fetch import FetchPhase
         from supervisor.phases.persist import PersistPhase
+
+        # Per-investigation phase-execution receipts (audit-only; attached to
+        # the returned result under the internal "_phase_receipts" key).
+        _phase_receipts = PhaseReceiptCollector()
 
         with trace_span("investigate", case_id=incident_id) as span:
             # GenAI semantic conventions for agent observability
@@ -350,27 +357,40 @@ class SentinalAISupervisor:
             # would raise ValueError first.
             ctx = InvestigationContext(incident_id=incident_id)
 
-            fout = FetchPhase(self).execute(ctx).output.result
+            with _phase_receipts.record("fetch") as _r:
+                _fetch_res = FetchPhase(self).execute(ctx)
+                _r.status = status_from_result(_fetch_res)
+            fout = _fetch_res.output.result
             if fout["early_return"] is not None:
-                return fout["early_return"]
+                return attach_receipts(fout["early_return"], _phase_receipts)
 
-            cres = ClassificationPhase(self).execute(
-                ctx, fout, span=span,
-            ).output.result["classification"]
+            with _phase_receipts.record("classify") as _r:
+                _classify_res = ClassificationPhase(self).execute(ctx, fout, span=span)
+                _r.status = status_from_result(_classify_res)
+            cres = _classify_res.output.result["classification"]
 
-            cout = CollectPhase(self).execute(ctx, fout, cres).output.result["collect"]
+            with _phase_receipts.record("collect") as _r:
+                _collect_res = CollectPhase(self).execute(ctx, fout, cres)
+                _r.status = status_from_result(_collect_res)
+                _r.evidence_after = len(_collect_res.output.result["collect"].evidence)
+            cout = _collect_res.output.result["collect"]
             if cout.early_return is not None:
-                return cout.early_return
+                return attach_receipts(cout.early_return, _phase_receipts)
 
-            aout = AnalyzePhase(self).execute(
-                ctx, fout, cres, cout,
-            ).output.result["analyze"]
+            with _phase_receipts.record("analyze", evidence_before=len(cout.evidence)) as _r:
+                _analyze_res = AnalyzePhase(self).execute(ctx, fout, cres, cout)
+                _r.status = status_from_result(_analyze_res)
+                _r.evidence_after = len(_analyze_res.output.result["analyze"].evidence)
+            aout = _analyze_res.output.result["analyze"]
             if aout.early_return is not None:
-                return aout.early_return
+                return attach_receipts(aout.early_return, _phase_receipts)
 
-            return PersistPhase(self).execute(
-                ctx, fout, cres, aout, span=span,
-            ).output.result["persist"].result
+            with _phase_receipts.record("persist", evidence_before=len(aout.evidence)) as _r:
+                _persist_res = PersistPhase(self).execute(ctx, fout, cres, aout, span=span)
+                _r.status = status_from_result(_persist_res)
+            return attach_receipts(
+                _persist_res.output.result["persist"].result, _phase_receipts,
+            )
 
     # ------------------------------------------------------------------ #
     # Internal: self-critique refinement

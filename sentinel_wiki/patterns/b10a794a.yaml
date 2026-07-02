@@ -5,9 +5,9 @@ services:
 - api-gateway
 incident_types:
 - timeout
-observation_count: 13
+observation_count: 14
 confidence_avg: 37.0
-quality_avg: 0.58
+quality_avg: 0.5796
 evidence_signals:
 - check_golden_signals
 - check_latency_metrics
@@ -25,8 +25,9 @@ receipt_ids:
 - INC_T1_20260629
 - INC_T1_20260627
 - INC_T1_20260611
+- INC_T1_20260702
 - INC_T1_20260603
 - INC_T1_20260619
 - INC_T1_20260630
 first_seen: 2026-05-31 20:36:45.180575+00:00
-last_seen: 2026-06-30 09:54:37.462632+00:00
+last_seen: 2026-07-02 05:01:02.984834+00:00

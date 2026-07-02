@@ -5,9 +5,9 @@ services:
 - inventory-service
 incident_types:
 - network
-observation_count: 24
+observation_count: 26
 confidence_avg: 64.0
-quality_avg: 0.8176
+quality_avg: 0.8172
 evidence_signals:
 - check_golden_signals
 - check_itsm_changes
@@ -18,8 +18,6 @@ evidence_signals:
 - gap_search_logs
 - get_network_evidence
 receipt_ids:
-- INC_H8_20260621
-- INC_H8_20260628
 - INC_N1_20260629
 - INC_H8_20260629
 - INC_H8_20260610
@@ -36,7 +34,9 @@ receipt_ids:
 - INC_H8_20260609
 - INC_H8_20260603
 - INC_N1_20260603
+- INC_H8_20260630
+- INC_N1_20260630
 - INC_H8_20260531
 - INC_N1_20260611
 first_seen: 2026-05-31 20:36:45.790929+00:00
-last_seen: 2026-06-29 16:03:34.064872+00:00
+last_seen: 2026-06-30 09:54:52.239115+00:00

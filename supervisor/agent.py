@@ -328,101 +328,49 @@ class SentinalAISupervisor:
                 if stored.get("result"):
                     return stored["result"]
 
+        # Phase modules are imported lazily (not at agent.py module top)
+        # because they pull in worker / trace-correlation / visual-evidence
+        # modules whose transitive imports can reach back into supervisor.*.
+        # Deferring keeps the bootstrap graph unambiguous.
+        from sentinel_core.context import InvestigationContext
+        from supervisor.phases.analyze import AnalyzePhase
+        from supervisor.phases.classify import ClassificationPhase
+        from supervisor.phases.collect import CollectPhase
+        from supervisor.phases.fetch import FetchPhase
+        from supervisor.phases.persist import PersistPhase
+
         with trace_span("investigate", case_id=incident_id) as span:
             # GenAI semantic conventions for agent observability
             span.set_attribute(GENAI_SYSTEM, "sentinalai")
             span.set_attribute(GENAI_OPERATION_NAME, "investigate")
 
-            # === FETCH PHASE (extracted to supervisor.phases.fetch.FetchPhase) ===
-            # Owns: TLS reset, call-graph init, per-investigation handle
-            # construction, incident load + normalization, validation,
-            # summary/service extraction, meta-query short-circuit.
-            #
-            # Bypass ContextBuilder here — the existing contract is that
-            # investigate("") returns a graceful empty result, but the builder
-            # rejects empty ids (it's the public entry point that should validate).
-            from supervisor.phases.fetch import FetchPhase
-            from sentinel_core.context import InvestigationContext
-            _ctx = InvestigationContext(incident_id=incident_id)
-            _fetch_result = FetchPhase(self).execute(_ctx)
-            _fout = _fetch_result.output.result
-            if _fout["early_return"] is not None:
-                return _fout["early_return"]
+            # Direct InvestigationContext construction (not ContextBuilder) —
+            # the existing contract is that investigate("") returns a graceful
+            # empty result via FetchPhase, but the builder's non-empty guard
+            # would raise ValueError first.
+            ctx = InvestigationContext(incident_id=incident_id)
 
-            incident   = _fout["incident"]
-            summary    = _fout["summary"]
-            service    = _fout["service"]
-            receipts   = _fout["receipts"]
-            budget     = _fout["budget"]
-            circuits   = _fout["circuits"]
-            # Stable investigation ID for fix engine traceability (matches
-            # the value FetchPhase derives via ContextBuilder).
-            investigation_id = _ctx.investigation_id
-            # _stream is referenced throughout investigate() after this point.
-            _stream = get_stream()
+            fout = FetchPhase(self).execute(ctx).output.result
+            if fout["early_return"] is not None:
+                return fout["early_return"]
 
-            # === CLASSIFY PHASE (extracted to supervisor.phases.classify.ClassificationPhase) ===
-            # Owns: classify_incident, ITSM + Confluence enrichment, severity detection +
-            # budget rescaling, the three deferred futures (experience, KG, historical),
-            # AND the corresponding observability calls — span attrs + classify stream
-            # event are emitted INSIDE the phase at the exact moments the legacy code
-            # emitted them, so byte-equivalence with the previous behavior is preserved.
-            from supervisor.phases.classify import ClassificationPhase
-            _classify_result = ClassificationPhase(self).execute(_ctx, _fout, span=span)
-            _cres = _classify_result.output.result["classification"]
-            incident_type      = _cres.incident_type
-            severity           = _cres.severity
-            budget             = _cres.budget                      # severity-scaled, replaces fetch budget
-            itsm_context       = _cres.itsm_context
-            confluence_context = _cres.confluence_context
-            experience_future  = _cres.experience_future
-            kg_future          = _cres.kg_future
-            historical_future  = _cres.historical_future
+            cres = ClassificationPhase(self).execute(
+                ctx, fout, span=span,
+            ).output.result["classification"]
 
-            # === COLLECT PHASE (extracted to supervisor.phases.collect.CollectPhase) ===
-            # Owns: playbook dispatch, future awaits (historical / experience /
-            # kg / tool_recs), evidence merges, evidence-gate G1+G4 check,
-            # DevOps + CMDB + diff + git-blame enrichment chain, trace + visual
-            # correlation. Returns the accumulated evidence dict, the
-            # gate_post_collection result, and an optional early_return when
-            # the gate blocks.
-            from supervisor.phases.collect import CollectPhase
-            _collect_result = CollectPhase(self).execute(_ctx, _fout, _cres)
-            _cout = _collect_result.output.result["collect"]
-            if _cout.early_return is not None:
-                return _cout.early_return
-            evidence = _cout.evidence
-            _gate_post_collection = _cout.gate_post_collection
+            cout = CollectPhase(self).execute(ctx, fout, cres).output.result["collect"]
+            if cout.early_return is not None:
+                return cout.early_return
 
-            # === ANALYZE PHASE (extracted to supervisor.phases.analyze.AnalyzePhase) ===
-            # Owns: deadline guard, _analyze_evidence call inside child trace span,
-            # calibration + emit_confidence, recurrence + grounding (best-effort),
-            # _apply_self_critique, citation annotation, gates G2/G3/G5 with BLOCK
-            # rewrite path, online evaluation, _evidence_snapshot build,
-            # git_blame_pinpoint extraction, causal_change extraction.
-            from supervisor.phases.analyze import AnalyzePhase
-            _analyze_result = AnalyzePhase(self).execute(_ctx, _fout, _cres, _cout)
-            _aout = _analyze_result.output.result["analyze"]
-            if _aout.early_return is not None:
-                return _aout.early_return
-            result            = _aout.result
-            evidence          = _aout.evidence
-            confidence        = _aout.confidence
-            hypothesis_count  = _aout.hypothesis_count
-            winner_hypothesis = _aout.winner_hypothesis
-            llm_metrics       = _aout.llm_metrics
+            aout = AnalyzePhase(self).execute(
+                ctx, fout, cres, cout,
+            ).output.result["analyze"]
+            if aout.early_return is not None:
+                return aout.early_return
 
-            # === PERSIST PHASE (extracted to supervisor.phases.persist.PersistPhase) ===
-            # Owns: observability + span.elapsed_ms read, judge scoring,
-            # remediation, proposed fix + git-incident link + verification-loop
-            # dispatch, complete log, dashboard metrics, persist-deadline guard,
-            # _persist_results (inside trace_span("persist_results") child),
-            # emit_complete, pattern-intelligence feedback loop.
-            from supervisor.phases.persist import PersistPhase
-            _persist_result = PersistPhase(self).execute(
-                _ctx, _fout, _cres, _aout, span=span,
-            )
-            return _persist_result.output.result["persist"].result
+            return PersistPhase(self).execute(
+                ctx, fout, cres, aout, span=span,
+            ).output.result["persist"].result
 
     # ------------------------------------------------------------------ #
     # Internal: self-critique refinement

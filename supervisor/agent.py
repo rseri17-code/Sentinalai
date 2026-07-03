@@ -333,6 +333,8 @@ class SentinalAISupervisor:
         # modules whose transitive imports can reach back into supervisor.*.
         # Deferring keeps the bootstrap graph unambiguous.
         from sentinel_core.context import InvestigationContext
+        from sentinel_core.intelligence import IntelligenceStage, RuntimeContext
+        from supervisor.intelligence_runtime import build_default_runtime
         from supervisor.phase_receipts import (
             PhaseReceiptCollector, attach_receipts, status_from_result,
         )
@@ -345,6 +347,24 @@ class SentinalAISupervisor:
         # Per-investigation phase-execution receipts (audit-only; attached to
         # the returned result under the internal "_phase_receipts" key).
         _phase_receipts = PhaseReceiptCollector()
+        # IntelligenceRuntime — zero-cost no-op when ENABLE_INTELLIGENCE_RUNTIME
+        # is off (default). No default module registrations in Phase 19.
+        _intel = build_default_runtime()
+
+        def _intel_hook(_r_local, _stage, **fields):
+            """Run all registered intelligence modules at _stage and lift
+            their structured results onto the current phase receipt's
+            metadata bag under the key "intelligence". No-op when the
+            runtime is disabled or no modules are registered for _stage."""
+            if not _intel.is_enabled():
+                return
+            _im_results = _intel.run_stage(
+                _stage, RuntimeContext(
+                    investigation_id=ctx.investigation_id, stage=_stage, **fields,
+                ),
+            )
+            if _im_results:
+                _r_local.metadata["intelligence"] = [r.to_dict() for r in _im_results]
 
         with trace_span("investigate", case_id=incident_id) as span:
             # GenAI semantic conventions for agent observability
@@ -360,6 +380,8 @@ class SentinalAISupervisor:
             with _phase_receipts.record("fetch") as _r:
                 _fetch_res = FetchPhase(self).execute(ctx)
                 _r.status = status_from_result(_fetch_res)
+                _intel_hook(_r, IntelligenceStage.POST_FETCH,
+                            fetch_out=_fetch_res.output.result)
             fout = _fetch_res.output.result
             if fout["early_return"] is not None:
                 return attach_receipts(fout["early_return"], _phase_receipts)
@@ -367,12 +389,18 @@ class SentinalAISupervisor:
             with _phase_receipts.record("classify") as _r:
                 _classify_res = ClassificationPhase(self).execute(ctx, fout, span=span)
                 _r.status = status_from_result(_classify_res)
+                _intel_hook(_r, IntelligenceStage.POST_CLASSIFY,
+                            fetch_out=fout,
+                            cres=_classify_res.output.result["classification"])
             cres = _classify_res.output.result["classification"]
 
             with _phase_receipts.record("collect") as _r:
                 _collect_res = CollectPhase(self).execute(ctx, fout, cres)
                 _r.status = status_from_result(_collect_res)
                 _r.evidence_after = len(_collect_res.output.result["collect"].evidence)
+                _intel_hook(_r, IntelligenceStage.POST_COLLECT,
+                            fetch_out=fout, cres=cres,
+                            cout=_collect_res.output.result["collect"])
             cout = _collect_res.output.result["collect"]
             if cout.early_return is not None:
                 return attach_receipts(cout.early_return, _phase_receipts)
@@ -388,6 +416,8 @@ class SentinalAISupervisor:
                 # ENABLE_DECISION_TRACE is off.
                 if _aout_tmp.decision_trace_meta:
                     _r.metadata["decision_trace"] = _aout_tmp.decision_trace_meta
+                _intel_hook(_r, IntelligenceStage.POST_ANALYZE,
+                            fetch_out=fout, cres=cres, cout=cout, aout=_aout_tmp)
             aout = _analyze_res.output.result["analyze"]
             if aout.early_return is not None:
                 return attach_receipts(aout.early_return, _phase_receipts)
@@ -395,6 +425,9 @@ class SentinalAISupervisor:
             with _phase_receipts.record("persist", evidence_before=len(aout.evidence)) as _r:
                 _persist_res = PersistPhase(self).execute(ctx, fout, cres, aout, span=span)
                 _r.status = status_from_result(_persist_res)
+                _intel_hook(_r, IntelligenceStage.POST_PERSIST,
+                            fetch_out=fout, cres=cres, cout=cout, aout=aout,
+                            result=_persist_res.output.result["persist"].result)
             return attach_receipts(
                 _persist_res.output.result["persist"].result, _phase_receipts,
             )

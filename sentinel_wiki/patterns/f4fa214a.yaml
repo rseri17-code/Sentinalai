@@ -10,9 +10,9 @@ confidence_avg: 86.0
 quality_avg: 0.5996
 evidence_signals:
 - check_golden_signals
+- check_latency_metrics
 - search_latency_logs
 - check_changes
-- check_latency_metrics
 - get_network_evidence
 receipt_ids:
 - INC_H3_20260702
@@ -30,4 +30,4 @@ receipt_ids:
 - INC_H3_20260619
 - INC_H3_20260629
 first_seen: 2026-05-31 20:36:46.700898+00:00
-last_seen: 2026-07-02 05:01:18.596216+00:00
+last_seen: 2026-07-02 13:29:09.322094+00:00

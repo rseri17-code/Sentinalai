@@ -82,6 +82,12 @@ class AnalyzeResult:
     winner_hypothesis: str = "none"
     llm_metrics: dict[str, Any] = field(default_factory=dict)
     early_return: Optional[dict[str, Any]] = None
+    # Compact ref for the DecisionTrace this phase recorded (or empty when the
+    # ENABLE_DECISION_TRACE feature flag is off). The full trace is durably
+    # persisted via intelligence.decision_trace.DecisionTraceLog; this dict
+    # holds only a lightweight summary suitable for lifting onto the analyze
+    # phase-receipt's metadata bag.
+    decision_trace_meta: dict[str, Any] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -323,6 +329,18 @@ class AnalyzePhase:
                     "commit_sha":   (top.get("matched_commit") or {}).get("sha", ""),
                 }
 
+        # --- Decision-trace activation (dormant intelligence.decision_trace) ---
+        # Feature-flagged; when off, this block is skipped entirely (no import,
+        # no NDJSON write, no metadata). Best-effort — never raises.
+        decision_trace_meta = self._record_decision_trace(
+            ctx=ctx,
+            winner_hypothesis=str(winner_hypothesis),
+            hypothesis_count=int(hypothesis_count),
+            confidence=int(confidence),
+            result=result,
+            evidence=evidence,
+        )
+
         return self._wrap(AnalyzeResult(
             result=result,
             evidence=evidence,
@@ -331,6 +349,7 @@ class AnalyzePhase:
             winner_hypothesis=str(winner_hypothesis),
             llm_metrics=dict(llm_metrics) if isinstance(llm_metrics, dict) else {},
             early_return=None,
+            decision_trace_meta=decision_trace_meta,
         ))
 
     # ------------------------------------------------------------------
@@ -343,6 +362,94 @@ class AnalyzePhase:
             status=PhaseStatus.COMPLETED,
             output=PhaseOutput(result={"analyze": ares}),
         )
+
+    @staticmethod
+    def _decision_trace_enabled() -> bool:
+        """Read the ENABLE_DECISION_TRACE flag on every call so tests can
+        toggle it via monkeypatch. Off by default."""
+        import os as _os
+        return _os.environ.get("ENABLE_DECISION_TRACE", "").strip().lower() in (
+            "1", "true", "yes", "on",
+        )
+
+    def _record_decision_trace(
+        self,
+        ctx: InvestigationContext,
+        winner_hypothesis: str,
+        hypothesis_count: int,
+        confidence: int,
+        result: dict[str, Any],
+        evidence: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Optionally record one DecisionTrace for the hypothesis selection.
+
+        Feature-flag-gated by ``ENABLE_DECISION_TRACE``. When off, returns an
+        empty dict and does no other work (no import, no file I/O). When on,
+        constructs the trace, appends to the durable NDJSON log via
+        ``intelligence.decision_trace.DecisionTraceLog`` (whose ``.append``
+        already swallows OSError internally), and returns a compact summary
+        dict that ``investigate()`` mixes into the analyze phase-receipt's
+        metadata bag.
+
+        NEVER raises. Any exception during construction or logging is
+        swallowed at DEBUG so an investigation continues normally.
+        """
+        if not self._decision_trace_enabled():
+            return {}
+        try:
+            # Lazy import — zero cost when flag is off.
+            from intelligence.decision_trace import (
+                DecisionTrace, DecisionTraceLog,
+            )
+            evidence_keys = sorted(
+                k for k in (evidence or {}).keys() if not k.startswith("_")
+            )
+            supporting = [
+                {"node_id": k, "source_type": "evidence_key",
+                 "content_excerpt": "", "confidence": 1.0}
+                for k in evidence_keys[:24]
+            ]
+            root_cause = str(result.get("root_cause", ""))
+            reasoning_path = [
+                f"analyzer produced {hypothesis_count} hypothes"
+                + ("is" if hypothesis_count == 1 else "es"),
+                f"winner: {winner_hypothesis}",
+            ]
+            if result.get("_gate_post_analysis"):
+                reasoning_path.append("gate: post-analysis applied")
+            if result.get("_grounding"):
+                reasoning_path.append("grounding: scored")
+            trace = DecisionTrace.make(
+                investigation_id=ctx.investigation_id,
+                decision_type="hypothesis_selection",
+                decision=winner_hypothesis,
+                why=(
+                    f"selected {winner_hypothesis} from {hypothesis_count} "
+                    f"candidate(s); root_cause={root_cause[:200]}; "
+                    f"confidence={confidence}"
+                ),
+                confidence=float(confidence) / 100.0,
+                supporting_evidence=supporting,
+                reasoning_path=reasoning_path,
+            )
+            # Re-read INVESTIGATIONS_DIR at call time — the module-level
+            # _DEFAULT_DIR in intelligence.decision_trace is captured at
+            # import time and tests need to override it via env var.
+            import os as _os
+            _log_dir = _os.environ.get("INVESTIGATIONS_DIR", "eval/investigations")
+            DecisionTraceLog(_log_dir).append(trace)
+            return {
+                "trace_id":              trace.trace_id,
+                "decision":              trace.decision,
+                "decision_type":         trace.decision_type,
+                "confidence":            trace.confidence,
+                "candidates_evaluated":  hypothesis_count,
+                "supporting_evidence_count": len(supporting),
+                "created_at":            trace.created_at,
+            }
+        except Exception as exc:
+            logger.debug("decision_trace record failed (non-critical): %s", exc)
+            return {}
 
 
 __all__ = ["AnalyzePhase", "AnalyzeResult"]

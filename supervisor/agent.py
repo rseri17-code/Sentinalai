@@ -379,8 +379,15 @@ class SentinalAISupervisor:
 
             with _phase_receipts.record("analyze", evidence_before=len(cout.evidence)) as _r:
                 _analyze_res = AnalyzePhase(self).execute(ctx, fout, cres, cout)
+                _aout_tmp = _analyze_res.output.result["analyze"]
                 _r.status = status_from_result(_analyze_res)
-                _r.evidence_after = len(_analyze_res.output.result["analyze"].evidence)
+                _r.evidence_after = len(_aout_tmp.evidence)
+                # Decision trace (dormant intelligence.decision_trace module),
+                # feature-gated inside AnalyzePhase. Lift its compact summary
+                # onto the receipt metadata bag when populated — no-op when
+                # ENABLE_DECISION_TRACE is off.
+                if _aout_tmp.decision_trace_meta:
+                    _r.metadata["decision_trace"] = _aout_tmp.decision_trace_meta
             aout = _analyze_res.output.result["analyze"]
             if aout.early_return is not None:
                 return attach_receipts(aout.early_return, _phase_receipts)

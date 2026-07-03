@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from sentinel_core.intelligence import (
+from sentinel_core.runtime import (
     IntelligenceRuntime,
     IntelligenceStage,
     ModuleResult,
@@ -323,7 +323,7 @@ class TestAgentWiring:
     def test_agent_imports_runtime(self):
         import supervisor.agent as m
         src = open(m.__file__).read()
-        assert "from sentinel_core.intelligence import IntelligenceStage, RuntimeContext" in src
+        assert "from sentinel_core.runtime import IntelligenceStage, RuntimeContext" in src
         assert "from supervisor.intelligence_runtime import build_default_runtime" in src
 
     def test_agent_has_hook_helper(self):

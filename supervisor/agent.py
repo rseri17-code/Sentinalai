@@ -333,7 +333,7 @@ class SentinalAISupervisor:
         # modules whose transitive imports can reach back into supervisor.*.
         # Deferring keeps the bootstrap graph unambiguous.
         from sentinel_core.context import InvestigationContext
-        from sentinel_core.intelligence import IntelligenceStage, RuntimeContext
+        from sentinel_core.runtime import IntelligenceStage, RuntimeContext
         from supervisor.intelligence_runtime import build_default_runtime
         from supervisor.phase_receipts import (
             PhaseReceiptCollector, attach_receipts, status_from_result,
@@ -348,8 +348,14 @@ class SentinalAISupervisor:
         # the returned result under the internal "_phase_receipts" key).
         _phase_receipts = PhaseReceiptCollector()
         # IntelligenceRuntime — zero-cost no-op when ENABLE_INTELLIGENCE_RUNTIME
-        # is off (default). No default module registrations in Phase 19.
+        # is off (default). When enabled, install_default_modules() registers
+        # the default intelligence modules (ResolutionMemory at POST_PERSIST
+        # since Phase 20; more to come). Each module has its own per-flag so
+        # individual modules stay opt-in.
         _intel = build_default_runtime()
+        if _intel.is_enabled():
+            from supervisor.intelligence_modules import install_default_modules
+            install_default_modules(_intel)
 
         def _intel_hook(_r_local, _stage, **fields):
             """Run all registered intelligence modules at _stage and lift

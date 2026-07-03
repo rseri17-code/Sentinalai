@@ -1,365 +1,5 @@
 [
   {
-    "incident_id": "INC12350",
-    "target_service": "inventory-service",
-    "predicted_services": [],
-    "actual_services": [
-      "kube-dns"
-    ],
-    "accuracy": 0.0,
-    "timestamp": "2026-07-03T07:08:53.864997+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "target_service": "api-gateway",
-    "predicted_services": [],
-    "actual_services": [
-      "checkout-service",
-      "payment-db",
-      "payment-service"
-    ],
-    "accuracy": 0.0,
-    "timestamp": "2026-07-03T07:08:54.849302+00:00"
-  },
-  {
-    "incident_id": "INC12352",
-    "target_service": "notification-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:08:55.805265+00:00"
-  },
-  {
-    "incident_id": "INC12353",
-    "target_service": "auth-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:08:56.903370+00:00"
-  },
-  {
-    "incident_id": "INC12354",
-    "target_service": "recommendation-service",
-    "predicted_services": [],
-    "actual_services": [
-      "data-pipeline"
-    ],
-    "accuracy": 0.0,
-    "timestamp": "2026-07-03T07:08:57.875550+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "target_service": "api-gateway",
-    "predicted_services": [],
-    "actual_services": [
-      "payment-service"
-    ],
-    "accuracy": 0.0,
-    "timestamp": "2026-07-03T07:08:58.908859+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "target_service": "api-gateway",
-    "predicted_services": [],
-    "actual_services": [
-      "payment-service"
-    ],
-    "accuracy": 0.0,
-    "timestamp": "2026-07-03T07:09:00.062060+00:00"
-  },
-  {
-    "incident_id": "INC12346",
-    "target_service": "user-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:01.050008+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "target_service": "api-gateway",
-    "predicted_services": [],
-    "actual_services": [
-      "payment-service"
-    ],
-    "accuracy": 0.0,
-    "timestamp": "2026-07-03T07:09:02.229963+00:00"
-  },
-  {
-    "incident_id": "INC12346",
-    "target_service": "user-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:03.166681+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "target_service": "payment-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:04.125803+00:00"
-  },
-  {
-    "incident_id": "INC12348",
-    "target_service": "search-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:05.241324+00:00"
-  },
-  {
-    "incident_id": "INC12349",
-    "target_service": "order-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:06.179371+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "target_service": "inventory-service",
-    "predicted_services": [],
-    "actual_services": [
-      "kube-dns"
-    ],
-    "accuracy": 0.0,
-    "timestamp": "2026-07-03T07:09:07.299193+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "target_service": "api-gateway",
-    "predicted_services": [],
-    "actual_services": [
-      "checkout-service",
-      "payment-db",
-      "payment-service"
-    ],
-    "accuracy": 0.0,
-    "timestamp": "2026-07-03T07:09:08.263544+00:00"
-  },
-  {
-    "incident_id": "INC12352",
-    "target_service": "notification-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:09.218192+00:00"
-  },
-  {
-    "incident_id": "INC12353",
-    "target_service": "auth-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:10.377689+00:00"
-  },
-  {
-    "incident_id": "INC12354",
-    "target_service": "recommendation-service",
-    "predicted_services": [],
-    "actual_services": [
-      "data-pipeline"
-    ],
-    "accuracy": 0.0,
-    "timestamp": "2026-07-03T07:09:11.323008+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "target_service": "api-gateway",
-    "predicted_services": [],
-    "actual_services": [
-      "payment-service"
-    ],
-    "accuracy": 0.0,
-    "timestamp": "2026-07-03T07:09:12.434904+00:00"
-  },
-  {
-    "incident_id": "INC12346",
-    "target_service": "user-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:13.383214+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "target_service": "payment-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:14.466113+00:00"
-  },
-  {
-    "incident_id": "INC12348",
-    "target_service": "search-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:15.408750+00:00"
-  },
-  {
-    "incident_id": "INC12349",
-    "target_service": "order-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:16.352378+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "target_service": "inventory-service",
-    "predicted_services": [],
-    "actual_services": [
-      "kube-dns"
-    ],
-    "accuracy": 0.0,
-    "timestamp": "2026-07-03T07:09:17.515437+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "target_service": "api-gateway",
-    "predicted_services": [],
-    "actual_services": [
-      "checkout-service",
-      "payment-db",
-      "payment-service"
-    ],
-    "accuracy": 0.0,
-    "timestamp": "2026-07-03T07:09:18.458856+00:00"
-  },
-  {
-    "incident_id": "INC12352",
-    "target_service": "notification-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:19.428617+00:00"
-  },
-  {
-    "incident_id": "INC12353",
-    "target_service": "auth-service",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:20.532437+00:00"
-  },
-  {
-    "incident_id": "INC12354",
-    "target_service": "recommendation-service",
-    "predicted_services": [],
-    "actual_services": [
-      "data-pipeline"
-    ],
-    "accuracy": 0.0,
-    "timestamp": "2026-07-03T07:09:21.496115+00:00"
-  },
-  {
-    "incident_id": "INC_TEST001",
-    "target_service": "api-gateway",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:23.285967+00:00"
-  },
-  {
-    "incident_id": "INC_TEST001",
-    "target_service": "api-gateway",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:24.236913+00:00"
-  },
-  {
-    "incident_id": "INC_TEST001",
-    "target_service": "api-gateway",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:25.382972+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "target_service": "unknown",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:26.743660+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "target_service": "unknown",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:27.716049+00:00"
-  },
-  {
-    "incident_id": "INC12345",
-    "target_service": "unknown",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:28.898347+00:00"
-  },
-  {
-    "incident_id": "INC12346",
-    "target_service": "unknown",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:29.847045+00:00"
-  },
-  {
-    "incident_id": "INC12347",
-    "target_service": "unknown",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:30.791447+00:00"
-  },
-  {
-    "incident_id": "INC12348",
-    "target_service": "unknown",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:31.971981+00:00"
-  },
-  {
-    "incident_id": "INC12349",
-    "target_service": "unknown",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:32.912169+00:00"
-  },
-  {
-    "incident_id": "INC12350",
-    "target_service": "unknown",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:34.069327+00:00"
-  },
-  {
-    "incident_id": "INC12351",
-    "target_service": "unknown",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:35.024160+00:00"
-  },
-  {
-    "incident_id": "INC12352",
-    "target_service": "unknown",
-    "predicted_services": [],
-    "actual_services": [],
-    "accuracy": 1.0,
-    "timestamp": "2026-07-03T07:09:35.992384+00:00"
-  },
-  {
     "incident_id": "INC12353",
     "target_service": "unknown",
     "predicted_services": [],
@@ -8889,5 +8529,351 @@
     "actual_services": [],
     "accuracy": 1.0,
     "timestamp": "2026-07-03T07:28:16.615803+00:00"
+  },
+  {
+    "incident_id": "INC12350",
+    "target_service": "inventory-service",
+    "predicted_services": [],
+    "actual_services": [
+      "kube-dns"
+    ],
+    "accuracy": 0.0,
+    "timestamp": "2026-07-03T07:28:17.628371+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "target_service": "api-gateway",
+    "predicted_services": [],
+    "actual_services": [
+      "checkout-service",
+      "payment-db",
+      "payment-service"
+    ],
+    "accuracy": 0.0,
+    "timestamp": "2026-07-03T07:28:18.867326+00:00"
+  },
+  {
+    "incident_id": "INC12352",
+    "target_service": "notification-service",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:19.859979+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "target_service": "auth-service",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:21.017460+00:00"
+  },
+  {
+    "incident_id": "INC12354",
+    "target_service": "recommendation-service",
+    "predicted_services": [],
+    "actual_services": [
+      "data-pipeline"
+    ],
+    "accuracy": 0.0,
+    "timestamp": "2026-07-03T07:28:21.997693+00:00"
+  },
+  {
+    "incident_id": "INC12345",
+    "target_service": "api-gateway",
+    "predicted_services": [],
+    "actual_services": [
+      "payment-service"
+    ],
+    "accuracy": 0.0,
+    "timestamp": "2026-07-03T07:28:23.120283+00:00"
+  },
+  {
+    "incident_id": "INC12346",
+    "target_service": "user-service",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:24.075647+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "target_service": "payment-service",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:25.211553+00:00"
+  },
+  {
+    "incident_id": "INC12348",
+    "target_service": "search-service",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:26.175943+00:00"
+  },
+  {
+    "incident_id": "INC12349",
+    "target_service": "order-service",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:27.292253+00:00"
+  },
+  {
+    "incident_id": "INC12350",
+    "target_service": "inventory-service",
+    "predicted_services": [],
+    "actual_services": [
+      "kube-dns"
+    ],
+    "accuracy": 0.0,
+    "timestamp": "2026-07-03T07:28:28.269052+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "target_service": "api-gateway",
+    "predicted_services": [],
+    "actual_services": [
+      "checkout-service",
+      "payment-db",
+      "payment-service"
+    ],
+    "accuracy": 0.0,
+    "timestamp": "2026-07-03T07:28:29.401251+00:00"
+  },
+  {
+    "incident_id": "INC12352",
+    "target_service": "notification-service",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:30.386705+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "target_service": "auth-service",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:31.514752+00:00"
+  },
+  {
+    "incident_id": "INC12354",
+    "target_service": "recommendation-service",
+    "predicted_services": [],
+    "actual_services": [
+      "data-pipeline"
+    ],
+    "accuracy": 0.0,
+    "timestamp": "2026-07-03T07:28:32.484063+00:00"
+  },
+  {
+    "incident_id": "INC_TEST001",
+    "target_service": "api-gateway",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:34.203163+00:00"
+  },
+  {
+    "incident_id": "INC_TEST001",
+    "target_service": "api-gateway",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:35.207302+00:00"
+  },
+  {
+    "incident_id": "INC_TEST001",
+    "target_service": "api-gateway",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:36.377455+00:00"
+  },
+  {
+    "incident_id": "INC12345",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:37.684422+00:00"
+  },
+  {
+    "incident_id": "INC12345",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:38.893958+00:00"
+  },
+  {
+    "incident_id": "INC12345",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:39.874542+00:00"
+  },
+  {
+    "incident_id": "INC12346",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:40.842074+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:41.990444+00:00"
+  },
+  {
+    "incident_id": "INC12348",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:42.975571+00:00"
+  },
+  {
+    "incident_id": "INC12349",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:44.144727+00:00"
+  },
+  {
+    "incident_id": "INC12350",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:45.136260+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:46.309857+00:00"
+  },
+  {
+    "incident_id": "INC12352",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:47.316778+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:48.331490+00:00"
+  },
+  {
+    "incident_id": "INC12354",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:49.502967+00:00"
+  },
+  {
+    "incident_id": "INC12345",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:51.929487+00:00"
+  },
+  {
+    "incident_id": "INC12345",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:53.106065+00:00"
+  },
+  {
+    "incident_id": "INC12346",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:54.076894+00:00"
+  },
+  {
+    "incident_id": "INC12347",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:55.234770+00:00"
+  },
+  {
+    "incident_id": "INC12348",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:56.268894+00:00"
+  },
+  {
+    "incident_id": "INC12349",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:57.471989+00:00"
+  },
+  {
+    "incident_id": "INC12350",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:58.441348+00:00"
+  },
+  {
+    "incident_id": "INC12351",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:28:59.602061+00:00"
+  },
+  {
+    "incident_id": "INC12352",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:29:00.603738+00:00"
+  },
+  {
+    "incident_id": "INC12353",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:29:01.579768+00:00"
+  },
+  {
+    "incident_id": "INC12354",
+    "target_service": "unknown",
+    "predicted_services": [],
+    "actual_services": [],
+    "accuracy": 1.0,
+    "timestamp": "2026-07-03T07:29:02.743634+00:00"
   }
 ]

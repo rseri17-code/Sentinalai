@@ -3,8 +3,8 @@
     {
       "service_a": "api-gateway",
       "service_b": "payment-service",
-      "co_failure_count": 4593,
-      "total_incidents_a": 4461,
+      "co_failure_count": 4977,
+      "total_incidents_a": 4830,
       "avg_delay_seconds": 0.0,
       "min_delay_seconds": 0.0,
       "max_delay_seconds": 0.0
@@ -12,8 +12,8 @@
     {
       "service_a": "api-gateway",
       "service_b": "unknown",
-      "co_failure_count": 42,
-      "total_incidents_a": 4461,
+      "co_failure_count": 45,
+      "total_incidents_a": 4830,
       "avg_delay_seconds": 0.0,
       "min_delay_seconds": 0.0,
       "max_delay_seconds": 0.0
@@ -21,8 +21,8 @@
     {
       "service_a": "payment-service",
       "service_b": "unknown",
-      "co_failure_count": 42,
-      "total_incidents_a": 42,
+      "co_failure_count": 45,
+      "total_incidents_a": 147,
       "avg_delay_seconds": 0.0,
       "min_delay_seconds": 0.0,
       "max_delay_seconds": 0.0
@@ -30,8 +30,8 @@
     {
       "service_a": "inventory-service",
       "service_b": "kube-dns",
-      "co_failure_count": 1370,
-      "total_incidents_a": 1478,
+      "co_failure_count": 1470,
+      "total_incidents_a": 1590,
       "avg_delay_seconds": 0.0,
       "min_delay_seconds": 0.0,
       "max_delay_seconds": 0.0
@@ -39,8 +39,8 @@
     {
       "service_a": "api-gateway",
       "service_b": "checkout-service",
-      "co_failure_count": 1251,
-      "total_incidents_a": 4461,
+      "co_failure_count": 1342,
+      "total_incidents_a": 4830,
       "avg_delay_seconds": 0.0,
       "min_delay_seconds": 0.0,
       "max_delay_seconds": 0.0
@@ -48,8 +48,8 @@
     {
       "service_a": "api-gateway",
       "service_b": "payment-db",
-      "co_failure_count": 1305,
-      "total_incidents_a": 4461,
+      "co_failure_count": 1402,
+      "total_incidents_a": 4830,
       "avg_delay_seconds": 0.0,
       "min_delay_seconds": 0.0,
       "max_delay_seconds": 0.0
@@ -57,8 +57,8 @@
     {
       "service_a": "data-pipeline",
       "service_b": "recommendation-service",
-      "co_failure_count": 1222,
-      "total_incidents_a": 1222,
+      "co_failure_count": 1313,
+      "total_incidents_a": 1313,
       "avg_delay_seconds": 0.0,
       "min_delay_seconds": 0.0,
       "max_delay_seconds": 0.0
@@ -66,18 +66,18 @@
     {
       "service_a": "inv",
       "service_b": "inventory-service",
-      "co_failure_count": 108,
-      "total_incidents_a": 1478,
+      "co_failure_count": 120,
+      "total_incidents_a": 1590,
       "avg_delay_seconds": 0.0,
       "min_delay_seconds": 0.0,
       "max_delay_seconds": 0.0
     }
   ],
   "incident_counts": {
-    "api-gateway": 4461,
-    "unknown": 42,
-    "inventory-service": 1478,
-    "recommendation-service": 1222,
-    "payment-service": 132
+    "api-gateway": 4830,
+    "unknown": 45,
+    "inventory-service": 1590,
+    "recommendation-service": 1313,
+    "payment-service": 147
   }
 }

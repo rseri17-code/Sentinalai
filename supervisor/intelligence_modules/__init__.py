@@ -49,6 +49,10 @@ POST_PERSIST (write-path):
                                   entity+relationship graph from the same
                                   intelligence corpus. Pure runtime; no
                                   persistence.
+- planner                        (ENABLE_PLANNER) — deterministic
+                                  investigation planner. Produces an
+                                  InvestigationPlan (goal + capability
+                                  intents). No LLM, no execution.
 """
 from supervisor.intelligence_modules.causal_graph_lookup import (
     CAUSAL_GRAPH_LOOKUP_FEATURE_FLAG,
@@ -69,6 +73,11 @@ from supervisor.intelligence_modules.dependency_graph_lookup import (
     DEPENDENCY_GRAPH_LOOKUP_FEATURE_FLAG,
     DEPENDENCY_GRAPH_LOOKUP_SPEC,
     dependency_graph_lookup_runner,
+)
+from supervisor.deterministic_planner import (
+    PLANNER_FEATURE_FLAG,
+    PLANNER_SPEC,
+    planner_runner,
 )
 from supervisor.intelligence_modules.enterprise_knowledge_graph import (
     ENTERPRISE_KNOWLEDGE_GRAPH_FEATURE_FLAG,
@@ -126,6 +135,7 @@ def install_default_modules(runtime) -> None:
     runtime.register(INVESTIGATION_STORE_SPEC, investigation_store_runner)
     runtime.register(INTELLIGENCE_CONTEXT_PERSIST_SPEC, intelligence_context_persister_runner)
     runtime.register(ENTERPRISE_KNOWLEDGE_GRAPH_SPEC, enterprise_knowledge_graph_runner)
+    runtime.register(PLANNER_SPEC, planner_runner)
 
 
 __all__ = [
@@ -163,4 +173,7 @@ __all__ = [
     "ENTERPRISE_KNOWLEDGE_GRAPH_SPEC",
     "ENTERPRISE_KNOWLEDGE_GRAPH_FEATURE_FLAG",
     "enterprise_knowledge_graph_runner",
+    "PLANNER_SPEC",
+    "PLANNER_FEATURE_FLAG",
+    "planner_runner",
 ]

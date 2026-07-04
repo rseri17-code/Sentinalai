@@ -1,0 +1,54 @@
+{
+  "scenario_id": "k8s_pod_crashloop",
+  "title": "Kubernetes pod crash loop after OOMKilled",
+  "incident_input": {
+    "incident_id": "SB-K8S-001",
+    "service": "checkout",
+    "incident_type": "kubernetes",
+    "summary": "checkout pods entering CrashLoopBackOff every ~30s in prod-east cluster"
+  },
+  "mocked_evidence_sources": {
+    "kubectl_pods": [
+      {"name": "checkout-7f9b8-abcde", "status": "CrashLoopBackOff", "restart_count": 42},
+      {"name": "checkout-7f9b8-vwxyz", "status": "CrashLoopBackOff", "restart_count": 39}
+    ],
+    "kubectl_events": [
+      {"reason": "OOMKilled", "container": "checkout", "count": 41},
+      {"reason": "BackOff", "container": "checkout", "count": 42}
+    ],
+    "prometheus_metrics": {"container_memory_working_set_bytes": "8.1Gi (limit 8Gi)"},
+    "logs": ["ENOMEM: unable to allocate 128 MiB", "shutting down due to OOM"]
+  },
+  "expected_root_cause": "checkout container OOMKilled by kubelet — memory limit 8Gi is below live working set 8.1Gi",
+  "required_evidence": [
+    "pod_lifecycle",
+    "restart_events",
+    "oom_events",
+    "logs"
+  ],
+  "red_herrings": [
+    "certificate",
+    "network partition",
+    "dns"
+  ],
+  "expected_confidence_range": [70, 90],
+  "expected_decision_signals": [
+    "recurring_pattern_seen",
+    "high_historical_success_rate"
+  ],
+  "expected_mtti_budget_ms": 90000,
+  "expected_runtime_cost_budget": 25,
+  "tags": ["kubernetes", "oom", "memory"],
+  "mock_investigation_output": {
+    "root_cause": "checkout container OOMKilled by kubelet — memory limit 8Gi is below live working set 8.1Gi",
+    "confidence": 82,
+    "evidence_keys": ["pod_lifecycle", "restart_events", "oom_events", "logs", "metrics_red"],
+    "decision_signals": [
+      "recurring_pattern_seen",
+      "high_historical_success_rate",
+      "have_prior_resolution_memory"
+    ],
+    "mtti_ms": 78000,
+    "runtime_cost": 22
+  }
+}

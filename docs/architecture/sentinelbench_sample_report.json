@@ -1,0 +1,140 @@
+{
+  "aggregates": {
+    "overall_max": 1.0,
+    "overall_mean": 1.0,
+    "overall_min": 1.0,
+    "per_dimension_mean": {
+      "confidence_calibration": 1.0,
+      "decision_trace_quality": 1.0,
+      "evidence_completeness": 1.0,
+      "mtti_score": 1.0,
+      "red_herring_resistance": 1.0,
+      "root_cause_match": 1.0,
+      "runtime_cost_score": 1.0
+    }
+  },
+  "schema_version": 1,
+  "scorecard_count": 5,
+  "scorecards": [
+    {
+      "confidence_calibration": 1.0,
+      "decision_trace_quality": 1.0,
+      "evidence_completeness": 1.0,
+      "mtti_score": 1.0,
+      "notes": [
+        "scored_against_mock_output"
+      ],
+      "overall_score": 1.0,
+      "red_herring_resistance": 1.0,
+      "root_cause_match": 1.0,
+      "runtime_cost_score": 1.0,
+      "scenario_id": "auth_token_validation_failure",
+      "schema_version": 1,
+      "weights": {
+        "confidence_calibration": 0.1,
+        "decision_trace_quality": 0.15,
+        "evidence_completeness": 0.15,
+        "mtti_score": 0.1,
+        "red_herring_resistance": 0.1,
+        "root_cause_match": 0.3,
+        "runtime_cost_score": 0.1
+      }
+    },
+    {
+      "confidence_calibration": 1.0,
+      "decision_trace_quality": 1.0,
+      "evidence_completeness": 1.0,
+      "mtti_score": 1.0,
+      "notes": [
+        "scored_against_mock_output"
+      ],
+      "overall_score": 1.0,
+      "red_herring_resistance": 1.0,
+      "root_cause_match": 1.0,
+      "runtime_cost_score": 1.0,
+      "scenario_id": "bad_deployment_5xx",
+      "schema_version": 1,
+      "weights": {
+        "confidence_calibration": 0.1,
+        "decision_trace_quality": 0.15,
+        "evidence_completeness": 0.15,
+        "mtti_score": 0.1,
+        "red_herring_resistance": 0.1,
+        "root_cause_match": 0.3,
+        "runtime_cost_score": 0.1
+      }
+    },
+    {
+      "confidence_calibration": 1.0,
+      "decision_trace_quality": 1.0,
+      "evidence_completeness": 1.0,
+      "mtti_score": 1.0,
+      "notes": [
+        "scored_against_mock_output"
+      ],
+      "overall_score": 1.0,
+      "red_herring_resistance": 1.0,
+      "root_cause_match": 1.0,
+      "runtime_cost_score": 1.0,
+      "scenario_id": "database_latency_saturation",
+      "schema_version": 1,
+      "weights": {
+        "confidence_calibration": 0.1,
+        "decision_trace_quality": 0.15,
+        "evidence_completeness": 0.15,
+        "mtti_score": 0.1,
+        "red_herring_resistance": 0.1,
+        "root_cause_match": 0.3,
+        "runtime_cost_score": 0.1
+      }
+    },
+    {
+      "confidence_calibration": 1.0,
+      "decision_trace_quality": 1.0,
+      "evidence_completeness": 1.0,
+      "mtti_score": 1.0,
+      "notes": [
+        "scored_against_mock_output"
+      ],
+      "overall_score": 1.0,
+      "red_herring_resistance": 1.0,
+      "root_cause_match": 1.0,
+      "runtime_cost_score": 1.0,
+      "scenario_id": "dns_resolution_failure",
+      "schema_version": 1,
+      "weights": {
+        "confidence_calibration": 0.1,
+        "decision_trace_quality": 0.15,
+        "evidence_completeness": 0.15,
+        "mtti_score": 0.1,
+        "red_herring_resistance": 0.1,
+        "root_cause_match": 0.3,
+        "runtime_cost_score": 0.1
+      }
+    },
+    {
+      "confidence_calibration": 1.0,
+      "decision_trace_quality": 1.0,
+      "evidence_completeness": 1.0,
+      "mtti_score": 1.0,
+      "notes": [
+        "scored_against_mock_output"
+      ],
+      "overall_score": 1.0,
+      "red_herring_resistance": 1.0,
+      "root_cause_match": 1.0,
+      "runtime_cost_score": 1.0,
+      "scenario_id": "k8s_pod_crashloop",
+      "schema_version": 1,
+      "weights": {
+        "confidence_calibration": 0.1,
+        "decision_trace_quality": 0.15,
+        "evidence_completeness": 0.15,
+        "mtti_score": 0.1,
+        "red_herring_resistance": 0.1,
+        "root_cause_match": 0.3,
+        "runtime_cost_score": 0.1
+      }
+    }
+  ]
+}

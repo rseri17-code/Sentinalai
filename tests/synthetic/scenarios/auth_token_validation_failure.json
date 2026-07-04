@@ -1,0 +1,52 @@
+{
+  "scenario_id": "auth_token_validation_failure",
+  "title": "Auth token validation failing due to rotated JWKS key",
+  "incident_input": {
+    "incident_id": "SB-AUTH-001",
+    "service": "api-gateway",
+    "incident_type": "authentication",
+    "summary": "401 Unauthorized rate on /v2/* jumped to 62% starting 15:01 UTC"
+  },
+  "mocked_evidence_sources": {
+    "elastic_auth": [
+      {"time": "2026-07-04T15:01:03Z", "code": 401, "reason": "invalid signature: kid mismatch"}
+    ],
+    "cloudtrail_auth": [
+      {"time": "2026-07-04T15:00:47Z", "action": "IdP:RotateSigningKey", "actor": "iam-svc"}
+    ],
+    "prometheus_metrics": {"http_401_rate_5m": "62%"},
+    "logs": ["JWT verification failed: no matching kid in JWKS"]
+  },
+  "expected_root_cause": "IdP rotated the JWT signing key (JWKS) but api-gateway has not refreshed its JWKS cache; token validation fails with kid mismatch",
+  "required_evidence": [
+    "auth_failures",
+    "authz_denials",
+    "logs",
+    "metrics_red"
+  ],
+  "red_herrings": [
+    "oom",
+    "dns",
+    "pool exhausted"
+  ],
+  "expected_confidence_range": [78, 94],
+  "expected_decision_signals": [
+    "have_prior_resolution_memory",
+    "have_related_incidents"
+  ],
+  "expected_mtti_budget_ms": 45000,
+  "expected_runtime_cost_budget": 18,
+  "tags": ["auth", "jwt", "jwks"],
+  "mock_investigation_output": {
+    "root_cause": "IdP rotated the JWT signing key (JWKS) but api-gateway has not refreshed its JWKS cache; token validation fails with kid mismatch",
+    "confidence": 88,
+    "evidence_keys": ["auth_failures", "authz_denials", "logs", "metrics_red"],
+    "decision_signals": [
+      "have_prior_resolution_memory",
+      "have_related_incidents",
+      "have_prior_investigations"
+    ],
+    "mtti_ms": 39000,
+    "runtime_cost": 14
+  }
+}

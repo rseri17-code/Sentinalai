@@ -1,0 +1,51 @@
+{
+  "scenario_id": "dns_resolution_failure",
+  "title": "Cluster DNS resolution failing for payments endpoint",
+  "incident_input": {
+    "incident_id": "SB-DNS-001",
+    "service": "checkout",
+    "incident_type": "network",
+    "summary": "checkout unable to reach payments.internal — NXDOMAIN spikes"
+  },
+  "mocked_evidence_sources": {
+    "coredns_metrics": {
+      "coredns_dns_responses_total{rcode=\"NXDOMAIN\"}": "spiking",
+      "coredns_forward_request_duration_seconds_p99": "0.9"
+    },
+    "logs": [
+      "connection refused: dial tcp: lookup payments.internal on 10.96.0.10:53: no such host"
+    ],
+    "kubectl_dns": {"corefile_last_reload": "2026-07-04T13:59:12Z"}
+  },
+  "expected_root_cause": "cluster DNS failing to resolve payments.internal — CoreDNS Corefile reloaded 4 minutes before incident dropped the internal zone",
+  "required_evidence": [
+    "dns_records",
+    "coredns_health",
+    "logs"
+  ],
+  "red_herrings": [
+    "oom",
+    "deployment",
+    "pool exhausted"
+  ],
+  "expected_confidence_range": [72, 90],
+  "expected_decision_signals": [
+    "have_prior_resolution_memory",
+    "have_related_incidents"
+  ],
+  "expected_mtti_budget_ms": 60000,
+  "expected_runtime_cost_budget": 18,
+  "tags": ["network", "dns", "coredns"],
+  "mock_investigation_output": {
+    "root_cause": "cluster DNS failing to resolve payments.internal — CoreDNS Corefile reloaded 4 minutes before incident dropped the internal zone",
+    "confidence": 81,
+    "evidence_keys": ["dns_records", "coredns_health", "logs", "latency_p99"],
+    "decision_signals": [
+      "have_prior_resolution_memory",
+      "have_related_incidents",
+      "have_prior_episodes"
+    ],
+    "mtti_ms": 52000,
+    "runtime_cost": 15
+  }
+}

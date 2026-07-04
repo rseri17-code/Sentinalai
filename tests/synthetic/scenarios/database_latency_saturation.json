@@ -1,0 +1,56 @@
+{
+  "scenario_id": "database_latency_saturation",
+  "title": "Database latency saturation from connection pool exhaustion",
+  "incident_input": {
+    "incident_id": "SB-DB-001",
+    "service": "checkout",
+    "incident_type": "saturation",
+    "summary": "checkout p99 latency 3.2s (baseline 180ms); DB pool at max capacity"
+  },
+  "mocked_evidence_sources": {
+    "prometheus_metrics": {
+      "db_pool_active": "100/100",
+      "db_pool_wait_ms_p99": "2800",
+      "http_p99_latency_ms": "3200"
+    },
+    "logs": [
+      "waiting for connection from pool (0 available)",
+      "connection acquisition timeout after 5s"
+    ],
+    "traces": [
+      {"span": "db.query", "duration_ms": 2900, "wait_ms": 2700}
+    ]
+  },
+  "expected_root_cause": "database pool exhausted — 100/100 in use with p99 wait time 2.8s driving service-level p99 latency",
+  "required_evidence": [
+    "metrics_red",
+    "iops",
+    "logs",
+    "trace_spans"
+  ],
+  "red_herrings": [
+    "deployment",
+    "certificate",
+    "kubernetes"
+  ],
+  "expected_confidence_range": [70, 88],
+  "expected_decision_signals": [
+    "recurring_pattern_seen",
+    "critical_blast_radius_hint"
+  ],
+  "expected_mtti_budget_ms": 75000,
+  "expected_runtime_cost_budget": 22,
+  "tags": ["database", "saturation", "latency"],
+  "mock_investigation_output": {
+    "root_cause": "database pool exhausted — 100/100 in use with p99 wait time 2.8s driving service-level p99 latency",
+    "confidence": 79,
+    "evidence_keys": ["metrics_red", "iops", "logs", "trace_spans", "pvc_state"],
+    "decision_signals": [
+      "recurring_pattern_seen",
+      "critical_blast_radius_hint",
+      "have_prior_resolution_memory"
+    ],
+    "mtti_ms": 66000,
+    "runtime_cost": 20
+  }
+}

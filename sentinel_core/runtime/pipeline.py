@@ -75,6 +75,13 @@ class RuntimeContext:
     cout: Any = None                          # CollectResult
     aout: Any = None                          # AnalyzeResult
     result: Optional[dict[str, Any]] = None   # persisted result (POST_PERSIST only)
+    # Snapshot of already-finalized phase receipts (JSON-safe dicts) at the
+    # moment this context was constructed. Empty for stages that run before
+    # any receipt exists. Populated by the ``_intel_hook`` helper at
+    # POST_PERSIST so downstream modules can build a canonical
+    # cross-stage summary (see sentinel_core.models.intel_context) without
+    # a runtime-primitive change per iteration.
+    phase_receipts: tuple[dict[str, Any], ...] = ()
 
 
 # ---------------------------------------------------------------------------

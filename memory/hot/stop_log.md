@@ -3261,3 +3261,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-04T16:22:58.129Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 3b233dd chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `3b233dd chore: commit runtime-generated eval, wiki, and memory data`
+- `c943ad4 enterprise_knowledge_graph: canonical runtime knowledge graph`
+- `5ed5ec9 chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

@@ -44,6 +44,11 @@ POST_PERSIST (write-path):
                                   canonical IntelligenceContext and
                                   persist it as
                                   ``{investigation_id}_intelligence.json``.
+- enterprise_knowledge_graph     (ENABLE_ENTERPRISE_KNOWLEDGE_GRAPH) —
+                                  builds a per-investigation typed
+                                  entity+relationship graph from the same
+                                  intelligence corpus. Pure runtime; no
+                                  persistence.
 """
 from supervisor.intelligence_modules.causal_graph_lookup import (
     CAUSAL_GRAPH_LOOKUP_FEATURE_FLAG,
@@ -64,6 +69,11 @@ from supervisor.intelligence_modules.dependency_graph_lookup import (
     DEPENDENCY_GRAPH_LOOKUP_FEATURE_FLAG,
     DEPENDENCY_GRAPH_LOOKUP_SPEC,
     dependency_graph_lookup_runner,
+)
+from supervisor.intelligence_modules.enterprise_knowledge_graph import (
+    ENTERPRISE_KNOWLEDGE_GRAPH_FEATURE_FLAG,
+    ENTERPRISE_KNOWLEDGE_GRAPH_SPEC,
+    enterprise_knowledge_graph_runner,
 )
 from supervisor.intelligence_modules.episodic_memory_lookup import (
     EPISODIC_MEMORY_LOOKUP_FEATURE_FLAG,
@@ -115,6 +125,7 @@ def install_default_modules(runtime) -> None:
     runtime.register(RESOLUTION_MEMORY_SPEC, resolution_memory_runner)
     runtime.register(INVESTIGATION_STORE_SPEC, investigation_store_runner)
     runtime.register(INTELLIGENCE_CONTEXT_PERSIST_SPEC, intelligence_context_persister_runner)
+    runtime.register(ENTERPRISE_KNOWLEDGE_GRAPH_SPEC, enterprise_knowledge_graph_runner)
 
 
 __all__ = [
@@ -149,4 +160,7 @@ __all__ = [
     "INTELLIGENCE_CONTEXT_PERSIST_SPEC",
     "INTELLIGENCE_CONTEXT_PERSIST_FEATURE_FLAG",
     "intelligence_context_persister_runner",
+    "ENTERPRISE_KNOWLEDGE_GRAPH_SPEC",
+    "ENTERPRISE_KNOWLEDGE_GRAPH_FEATURE_FLAG",
+    "enterprise_knowledge_graph_runner",
 ]

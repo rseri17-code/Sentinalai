@@ -10,9 +10,9 @@ confidence_avg: 72.0
 quality_avg: 0.812
 evidence_signals:
 - check_golden_signals
+- check_events
 - search_error_logs
 - check_changes
-- check_events
 - _kg_similar_incidents
 - _suggested_root_causes
 - gap_get_change_data
@@ -34,4 +34,4 @@ receipt_ids:
 - INC12352_20260611
 - INC12352_20260629
 first_seen: 2026-05-31 20:37:52.958706+00:00
-last_seen: 2026-07-04 16:16:05.572149+00:00
+last_seen: 2026-07-04 16:57:10.647535+00:00

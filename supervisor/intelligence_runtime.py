@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 
-from sentinel_core.intelligence import IntelligenceRuntime
+from sentinel_core.runtime import IntelligenceRuntime
 
 RUNTIME_ENV_FLAG = "ENABLE_INTELLIGENCE_RUNTIME"
 

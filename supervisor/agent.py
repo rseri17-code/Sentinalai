@@ -363,16 +363,17 @@ class SentinalAISupervisor:
             metadata bag under the key "intelligence". No-op when the
             runtime is disabled or no modules are registered for _stage.
 
-            At POST_PERSIST the current already-finalized receipts (fetch,
-            classify, collect, analyze) are passed as ``phase_receipts`` so
-            downstream modules can build cross-stage summaries without
-            re-querying stores. The persist receipt itself is not yet
-            finalized at this call site.
+            The current already-finalized receipts are always passed as
+            ``phase_receipts`` — POST_FETCH sees `()`; POST_CLASSIFY sees
+            the fetch receipt; POST_COLLECT sees fetch + classify (with
+            their intelligence entries) which is the earliest stage at
+            which Decision Intelligence can consume the read fan-out;
+            POST_PERSIST sees fetch + classify + collect + analyze. The
+            current stage's own receipt is in-flight and not included.
             """
             if not _intel.is_enabled():
                 return
-            if _stage is IntelligenceStage.POST_PERSIST:
-                fields.setdefault("phase_receipts", tuple(_phase_receipts.to_list()))
+            fields.setdefault("phase_receipts", tuple(_phase_receipts.to_list()))
             _im_results = _intel.run_stage(
                 _stage, RuntimeContext(
                     investigation_id=ctx.investigation_id, stage=_stage, **fields,

@@ -1,4 +1,4 @@
-"""Tests for sentinel_core.models.intelligence_context.IntelligenceContext.
+"""Tests for sentinel_core.models.intel_context.IntelligenceContext.
 
 Pure-library tests — no runtime, no store, no fixtures with side effects.
 Every case exercises the receipt-list → canonical-shape factory.
@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import pytest
 
-from sentinel_core.models.intelligence_context import (
+from sentinel_core.models.intel_context import (
     AffectedService,
     DependencyEdge,
     EpisodeMatch,

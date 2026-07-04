@@ -216,9 +216,9 @@ class TestFeatureFlags:
         rt = IntelligenceRuntime(enabled=True)
         install_default_modules(rt)
         results = rt.run_stage(IntelligenceStage.POST_PERSIST, _ctx())
-        assert len(results) == 1
-        assert results[0].name == "resolution_memory"
-        assert results[0].status == "skipped"
+        # install_default_modules registers multiple modules; verify RM's slot.
+        rm_result = next(r for r in results if r.name == "resolution_memory")
+        assert rm_result.status == "skipped"
 
     def test_both_flags_on_runs(self, monkeypatch):
         monkeypatch.setenv("ENABLE_INTELLIGENCE_RUNTIME", "true")
@@ -282,9 +282,10 @@ class TestReceiptMetadata:
         receipt = col.to_list()[0]
         assert "intelligence" in receipt["metadata"]
         arr = receipt["metadata"]["intelligence"]
-        assert len(arr) == 1
-        assert arr[0]["name"] == "resolution_memory"
-        assert arr[0]["status"] == "success"
+        # install_default_modules registers multiple modules; find ours by name.
+        rm_entry = next((e for e in arr if e["name"] == "resolution_memory"), None)
+        assert rm_entry is not None
+        assert rm_entry["status"] == "success"
 
 
 # ---------------------------------------------------------------------------
@@ -305,8 +306,9 @@ class TestFailureIsolation:
                            side_effect=RuntimeError("db offline")):
             results = rt.run_stage(IntelligenceStage.POST_PERSIST,
                                      _ctx(investigation_id="inv-fail-1"))
-        assert results[0].status == "failed"
-        assert results[0].error_type == "RuntimeError"
+        rm_result = next(r for r in results if r.name == "resolution_memory")
+        assert rm_result.status == "failed"
+        assert rm_result.error_type == "RuntimeError"
 
     def test_runner_failure_does_not_break_other_modules(self, monkeypatch):
         """A failing resolution_memory doesn't stop other modules from
@@ -314,10 +316,10 @@ class TestFailureIsolation:
         monkeypatch.setenv(RESOLUTION_MEMORY_FEATURE_FLAG, "true")
         rt = IntelligenceRuntime(enabled=True)
         install_default_modules(rt)
-        # Register a second module at POST_PERSIST that always succeeds
+        # Register an ad-hoc third module at POST_PERSIST that always succeeds
         rt.register(
             ModuleSpec(name="second-mod", stage=IntelligenceStage.POST_PERSIST,
-                        priority=200),
+                        priority=300),
             lambda ctx: {"ok": True},
         )
         from intelligence import resolution_memory as _rm
@@ -325,12 +327,10 @@ class TestFailureIsolation:
                            side_effect=ValueError("boom")):
             results = rt.run_stage(IntelligenceStage.POST_PERSIST,
                                      _ctx(investigation_id="inv-iso"))
-        # Both ran; failure isolated
-        assert len(results) == 2
-        assert {r.name: r.status for r in results} == {
-            "resolution_memory": "failed",
-            "second-mod": "success",
-        }
+        by_name = {r.name: r.status for r in results}
+        # RM failed; second-mod (later, no dep) still ran successfully
+        assert by_name["resolution_memory"] == "failed"
+        assert by_name["second-mod"] == "success"
 
 
 # ---------------------------------------------------------------------------

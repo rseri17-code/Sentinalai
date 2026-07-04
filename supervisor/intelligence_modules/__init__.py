@@ -27,16 +27,38 @@ POST_CLASSIFY (read-path):
                            radius (probability + propagation + severity)
                            for the current service from CausalGraph.
 
+POST_COLLECT (decision layer):
+- decision_intelligence   (ENABLE_DECISION_INTELLIGENCE) — pure
+                           deterministic transform IntelligenceContext →
+                           DecisionContext. No LLM. First Decision
+                           Intelligence layer.
+
 POST_PERSIST (write-path):
-- resolution_memory       (Phase 20, ENABLE_RESOLUTION_MEMORY_WRITE)
-- investigation_store     (Phase 21, ENABLE_INVESTIGATION_STORE_WRITE)
-                           — depends on resolution_memory so it can reference
-                             the RM record_id in its envelope
+- resolution_memory              (Phase 20, ENABLE_RESOLUTION_MEMORY_WRITE)
+- investigation_store            (Phase 21, ENABLE_INVESTIGATION_STORE_WRITE)
+                                  — depends on resolution_memory so it
+                                    can reference the RM record_id in
+                                    its envelope
+- intelligence_context_persister (ENABLE_INTELLIGENCE_CONTEXT_PERSIST) —
+                                  consumes ctx.phase_receipts to build a
+                                  canonical IntelligenceContext and
+                                  persist it as
+                                  ``{investigation_id}_intelligence.json``.
 """
 from supervisor.intelligence_modules.causal_graph_lookup import (
     CAUSAL_GRAPH_LOOKUP_FEATURE_FLAG,
     CAUSAL_GRAPH_LOOKUP_SPEC,
     causal_graph_lookup_runner,
+)
+from supervisor.intelligence_modules.context_persister import (
+    INTELLIGENCE_CONTEXT_PERSIST_FEATURE_FLAG,
+    INTELLIGENCE_CONTEXT_PERSIST_SPEC,
+    intelligence_context_persister_runner,
+)
+from supervisor.intelligence_modules.decision_intelligence import (
+    DECISION_INTELLIGENCE_FEATURE_FLAG,
+    DECISION_INTELLIGENCE_SPEC,
+    decision_intelligence_runner,
 )
 from supervisor.intelligence_modules.dependency_graph_lookup import (
     DEPENDENCY_GRAPH_LOOKUP_FEATURE_FLAG,
@@ -89,8 +111,10 @@ def install_default_modules(runtime) -> None:
     runtime.register(DEPENDENCY_GRAPH_LOOKUP_SPEC, dependency_graph_lookup_runner)
     runtime.register(EPISODIC_MEMORY_LOOKUP_SPEC, episodic_memory_lookup_runner)
     runtime.register(CAUSAL_GRAPH_LOOKUP_SPEC, causal_graph_lookup_runner)
+    runtime.register(DECISION_INTELLIGENCE_SPEC, decision_intelligence_runner)
     runtime.register(RESOLUTION_MEMORY_SPEC, resolution_memory_runner)
     runtime.register(INVESTIGATION_STORE_SPEC, investigation_store_runner)
+    runtime.register(INTELLIGENCE_CONTEXT_PERSIST_SPEC, intelligence_context_persister_runner)
 
 
 __all__ = [
@@ -113,10 +137,16 @@ __all__ = [
     "CAUSAL_GRAPH_LOOKUP_SPEC",
     "CAUSAL_GRAPH_LOOKUP_FEATURE_FLAG",
     "causal_graph_lookup_runner",
+    "DECISION_INTELLIGENCE_SPEC",
+    "DECISION_INTELLIGENCE_FEATURE_FLAG",
+    "decision_intelligence_runner",
     "RESOLUTION_MEMORY_SPEC",
     "RESOLUTION_MEMORY_FEATURE_FLAG",
     "resolution_memory_runner",
     "INVESTIGATION_STORE_SPEC",
     "INVESTIGATION_STORE_FEATURE_FLAG",
     "investigation_store_runner",
+    "INTELLIGENCE_CONTEXT_PERSIST_SPEC",
+    "INTELLIGENCE_CONTEXT_PERSIST_FEATURE_FLAG",
+    "intelligence_context_persister_runner",
 ]

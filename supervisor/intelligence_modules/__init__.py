@@ -8,9 +8,17 @@ registers every default module in one call — the single seam that
 Future intelligence activations register themselves here, requiring zero
 changes to ``investigate()``.
 
-Currently registered:
-- resolution_memory  (Phase 20, POST_PERSIST, ENABLE_RESOLUTION_MEMORY_WRITE)
+Currently registered (POST_PERSIST):
+- resolution_memory   (Phase 20, ENABLE_RESOLUTION_MEMORY_WRITE)
+- investigation_store (Phase 21, ENABLE_INVESTIGATION_STORE_WRITE)
+                       — depends on resolution_memory so it can reference
+                         the RM record_id in its envelope
 """
+from supervisor.intelligence_modules.investigation_store import (
+    INVESTIGATION_STORE_FEATURE_FLAG,
+    INVESTIGATION_STORE_SPEC,
+    investigation_store_runner,
+)
 from supervisor.intelligence_modules.resolution_memory import (
     RESOLUTION_MEMORY_FEATURE_FLAG,
     RESOLUTION_MEMORY_SPEC,
@@ -27,6 +35,7 @@ def install_default_modules(runtime) -> None:
     second call would raise); callers must guard.
     """
     runtime.register(RESOLUTION_MEMORY_SPEC, resolution_memory_runner)
+    runtime.register(INVESTIGATION_STORE_SPEC, investigation_store_runner)
 
 
 __all__ = [
@@ -34,4 +43,7 @@ __all__ = [
     "RESOLUTION_MEMORY_SPEC",
     "RESOLUTION_MEMORY_FEATURE_FLAG",
     "resolution_memory_runner",
+    "INVESTIGATION_STORE_SPEC",
+    "INVESTIGATION_STORE_FEATURE_FLAG",
+    "investigation_store_runner",
 ]

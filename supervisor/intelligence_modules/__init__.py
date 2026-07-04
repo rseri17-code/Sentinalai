@@ -13,6 +13,8 @@ Currently registered:
 POST_CLASSIFY (read-path):
 - historical_lookup    (ENABLE_HISTORICAL_LOOKUP) — first read consumer of
                         the persisted intelligence corpus (RM + IS).
+- pattern_recognition  (ENABLE_PATTERN_RECOGNITION) — surfaces recurring
+                        operational patterns from PatternIntelligenceStore.
 
 POST_PERSIST (write-path):
 - resolution_memory    (Phase 20, ENABLE_RESOLUTION_MEMORY_WRITE)
@@ -30,6 +32,11 @@ from supervisor.intelligence_modules.investigation_store import (
     INVESTIGATION_STORE_SPEC,
     investigation_store_runner,
 )
+from supervisor.intelligence_modules.pattern_recognition import (
+    PATTERN_RECOGNITION_FEATURE_FLAG,
+    PATTERN_RECOGNITION_SPEC,
+    pattern_recognition_runner,
+)
 from supervisor.intelligence_modules.resolution_memory import (
     RESOLUTION_MEMORY_FEATURE_FLAG,
     RESOLUTION_MEMORY_SPEC,
@@ -46,6 +53,7 @@ def install_default_modules(runtime) -> None:
     second call would raise); callers must guard.
     """
     runtime.register(HISTORICAL_LOOKUP_SPEC, historical_lookup_runner)
+    runtime.register(PATTERN_RECOGNITION_SPEC, pattern_recognition_runner)
     runtime.register(RESOLUTION_MEMORY_SPEC, resolution_memory_runner)
     runtime.register(INVESTIGATION_STORE_SPEC, investigation_store_runner)
 
@@ -55,6 +63,9 @@ __all__ = [
     "HISTORICAL_LOOKUP_SPEC",
     "HISTORICAL_LOOKUP_FEATURE_FLAG",
     "historical_lookup_runner",
+    "PATTERN_RECOGNITION_SPEC",
+    "PATTERN_RECOGNITION_FEATURE_FLAG",
+    "pattern_recognition_runner",
     "RESOLUTION_MEMORY_SPEC",
     "RESOLUTION_MEMORY_FEATURE_FLAG",
     "resolution_memory_runner",

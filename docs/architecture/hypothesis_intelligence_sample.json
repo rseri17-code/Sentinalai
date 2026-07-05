@@ -1,0 +1,145 @@
+{
+  "hypothesis_report": {
+    "graph": {
+      "completed_at": "2026-07-04T14:01:15Z",
+      "count": 2,
+      "hypotheses": [
+        {
+          "confidence": 0,
+          "confirmed_reason": "",
+          "description": "payments.internal unresolved",
+          "hypothesis_id": "hyp:5776810a5771",
+          "mtti_contribution_ms": 0,
+          "name": "cluster DNS failure",
+          "refuting_evidence": [
+            {
+              "added_at": "2026-07-04T14:00:45Z",
+              "key": "coredns_healthy",
+              "reason": "NoError responses steady",
+              "supports": false,
+              "weight": 0.9
+            }
+          ],
+          "root_cause": "",
+          "ruled_out_reason": "CoreDNS metrics show no NXDOMAIN spike",
+          "schema_version": 1,
+          "status": "ruled_out",
+          "supporting_evidence": [],
+          "transitions": [
+            {
+              "at": "2026-07-04T14:00:50Z",
+              "confidence_after": 0,
+              "confidence_before": 30,
+              "from_status": "proposed",
+              "reason": "CoreDNS metrics show no NXDOMAIN spike",
+              "to_status": "ruled_out"
+            }
+          ]
+        },
+        {
+          "confidence": 88,
+          "confirmed_reason": "trace + metrics + events triangulate",
+          "description": "memory limit below live working set",
+          "hypothesis_id": "hyp:b77902c36cbe",
+          "mtti_contribution_ms": 78000,
+          "name": "checkout container OOMKilled",
+          "refuting_evidence": [],
+          "root_cause": "checkout container OOMKilled \u2014 memory limit 8Gi below live working set 8.1Gi",
+          "ruled_out_reason": "",
+          "schema_version": 1,
+          "status": "confirmed",
+          "supporting_evidence": [
+            {
+              "added_at": "2026-07-04T14:00:20Z",
+              "key": "oom_events",
+              "reason": "kubectl events shows 41 OOMKilled",
+              "supports": true,
+              "weight": 0.9
+            },
+            {
+              "added_at": "2026-07-04T14:00:35Z",
+              "key": "container_memory_working_set_bytes",
+              "reason": "8.1Gi > limit 8Gi",
+              "supports": true,
+              "weight": 0.8
+            }
+          ],
+          "transitions": [
+            {
+              "at": "2026-07-04T14:00:40Z",
+              "confidence_after": 78,
+              "confidence_before": 45,
+              "from_status": "proposed",
+              "reason": "oom + working set both point to memory limit",
+              "to_status": "supported"
+            },
+            {
+              "at": "2026-07-04T14:01:15Z",
+              "confidence_after": 88,
+              "confidence_before": 78,
+              "from_status": "supported",
+              "reason": "trace + metrics + events triangulate",
+              "to_status": "confirmed"
+            }
+          ]
+        }
+      ],
+      "investigation_id": "inv-SB-K8S-001",
+      "schema_version": 1,
+      "started_at": "2026-07-04T14:00:00Z"
+    },
+    "schema_version": 1
+  },
+  "ruled_out_report": {
+    "ruled_out": [
+      {
+        "hypothesis_id": "hyp:5776810a5771",
+        "name": "cluster DNS failure",
+        "refuting_evidence_keys": [
+          "coredns_healthy"
+        ],
+        "ruled_out_reason": "CoreDNS metrics show no NXDOMAIN spike"
+      }
+    ],
+    "schema_version": 1
+  },
+  "schema_version": 1,
+  "scored_report": {
+    "schema_version": 1,
+    "scores": [
+      {
+        "confidence_delta": -30,
+        "hypothesis_id": "hyp:5776810a5771",
+        "net_score": -0.9,
+        "refute_score": 0.9,
+        "schema_version": 1,
+        "status": "ruled_out",
+        "support_score": 0.0
+      },
+      {
+        "confidence_delta": 43,
+        "hypothesis_id": "hyp:b77902c36cbe",
+        "net_score": 1.7,
+        "refute_score": 0.0,
+        "schema_version": 1,
+        "status": "confirmed",
+        "support_score": 1.7
+      }
+    ]
+  },
+  "summary_report": {
+    "confirmed_count": 1,
+    "confirmed_root_causes": [
+      "checkout container OOMKilled \u2014 memory limit 8Gi below live working set 8.1Gi"
+    ],
+    "hypothesis_count": 2,
+    "investigation_id": "inv-SB-K8S-001",
+    "ruled_out_count": 1,
+    "schema_version": 1,
+    "status_counts": {
+      "confirmed": 1,
+      "ruled_out": 1
+    },
+    "total_mtti_contribution_ms": 78000
+  }
+}

@@ -3339,3 +3339,449 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-04T17:30:59.087Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T17:36:45.793Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T17:50:13.652Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T17:59:01.571Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T18:12:58.932Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T18:22:23.977Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T18:32:04.589Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T18:38:42.242Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T18:49:51.661Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T19:38:14.367Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T19:56:09.502Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T20:19:51.842Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T20:29:25.329Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T20:41:33.880Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T20:57:29.475Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-04T21:05:17.276Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f1f8f12 chore: commit runtime-generated eval, wiki, and memory data
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f1f8f12 chore: commit runtime-generated eval, wiki, and memory data`
+- `93a53f9 sentinelbench: offline synthetic incident evaluation harness`
+- `6ede0df chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

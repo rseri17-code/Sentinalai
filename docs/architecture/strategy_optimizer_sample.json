@@ -1,0 +1,1044 @@
+{
+  "evidence_value_report": {
+    "per_evidence": [
+      {
+        "evidence_key": "logs",
+        "usage_rate": 0.6667,
+        "uses": 2
+      },
+      {
+        "evidence_key": "oom_events",
+        "usage_rate": 0.6667,
+        "uses": 2
+      },
+      {
+        "evidence_key": "dns_records",
+        "usage_rate": 0.3333,
+        "uses": 1
+      }
+    ],
+    "records_seen": 3,
+    "schema_version": 1
+  },
+  "investigation_efficiency": {
+    "per_record": [
+      {
+        "confidence": 85,
+        "efficiency": 0.047813,
+        "memory_id": "m1",
+        "runtime_cost": 15,
+        "score": 0.9
+      },
+      {
+        "confidence": 80,
+        "efficiency": 0.037778,
+        "memory_id": "m2",
+        "runtime_cost": 17,
+        "score": 0.85
+      },
+      {
+        "confidence": 60,
+        "efficiency": 0.007826,
+        "memory_id": "m3",
+        "runtime_cost": 22,
+        "score": 0.3
+      }
+    ],
+    "schema_version": 1
+  },
+  "mtti_estimation": {
+    "estimation": {
+      "confidence_interval": [
+        46292,
+        83708
+      ],
+      "current_mtti_ms": 70000,
+      "expected_mtti_ms": 65000,
+      "historical_mtti_ms": 65000,
+      "potential_improvement_ms": 5000,
+      "potential_improvement_pct": 7.1429,
+      "sample_size": 3,
+      "schema_version": 1
+    },
+    "schema_version": 1
+  },
+  "planner_effectiveness": {
+    "per_capability": [
+      {
+        "capability_id": "cap:collect_logs",
+        "success_rate": 1.0,
+        "uses": 2
+      },
+      {
+        "capability_id": "cap:collect_pod_lifecycle",
+        "success_rate": 1.0,
+        "uses": 2
+      },
+      {
+        "capability_id": "cap:collect_dns_state",
+        "success_rate": 0.0,
+        "uses": 1
+      }
+    ],
+    "records_seen": 3,
+    "records_success": 2,
+    "schema_version": 1
+  },
+  "recommendations": [
+    {
+      "evidence": [
+        "success_rate=1.0",
+        "usage_rate=0.6667",
+        "capability=cap:collect_logs"
+      ],
+      "kind": "prefer_capability",
+      "message": "'cap:collect_logs' is a high-value first step: 100.0% success in 66.7% of investigations.",
+      "priority": 400,
+      "related_capabilities": [
+        "cap:collect_logs"
+      ],
+      "schema_version": 1
+    },
+    {
+      "evidence": [
+        "success_rate=1.0",
+        "usage_rate=0.6667",
+        "capability=cap:collect_pod_lifecycle"
+      ],
+      "kind": "prefer_capability",
+      "message": "'cap:collect_pod_lifecycle' is a high-value first step: 100.0% success in 66.7% of investigations.",
+      "priority": 400,
+      "related_capabilities": [
+        "cap:collect_pod_lifecycle"
+      ],
+      "schema_version": 1
+    },
+    {
+      "evidence": [
+        "sequence_count=2",
+        "first=cap:collect_pod_lifecycle",
+        "second=cap:collect_logs"
+      ],
+      "kind": "prefer_tool",
+      "message": "Investigate 'cap:collect_pod_lifecycle' before 'cap:collect_logs' \u2014 this sequence appeared in 2 investigations.",
+      "priority": 220,
+      "related_capabilities": [
+        "cap:collect_logs",
+        "cap:collect_pod_lifecycle"
+      ],
+      "schema_version": 1
+    },
+    {
+      "evidence": [
+        "transition_count=2",
+        "before=oom_events",
+        "after=logs"
+      ],
+      "kind": "recommended_order",
+      "message": "Collect 'oom_events' before 'logs' (seen 2 times).",
+      "priority": 220,
+      "related_capabilities": [],
+      "schema_version": 1
+    }
+  ],
+  "recommended_strategy": {
+    "alternatives": [
+      {
+        "name": "Best Strategy",
+        "overall_value": 0.3578,
+        "reason": "Ordered by best",
+        "schema_version": 1,
+        "step_count": 3,
+        "steps": [
+          {
+            "capability_id": "cap:collect_pod_lifecycle",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=1000",
+              "switching_cost=0"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1000,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.6167,
+            "reason": "cap uses=2, success_rate=1.00, skills=['kubectl_pods']",
+            "schema_version": 1,
+            "step_order": 1,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_logs",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=4000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 4200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.4567,
+            "reason": "cap uses=2, success_rate=1.00, skills=['elastic_logs']",
+            "schema_version": 1,
+            "step_order": 2,
+            "tool_cost": 4000
+          },
+          {
+            "capability_id": "cap:collect_dns_state",
+            "evidence": [
+              "cap_uses=1",
+              "success_rate=0.00",
+              "tool_cost=1000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.3333,
+            "expected_mtti_reduction_ms": 0,
+            "historical_success_rate": 0.0,
+            "overall_expected_value": 0.0,
+            "reason": "cap uses=1, success_rate=0.00, skills=['dig_dns']",
+            "schema_version": 1,
+            "step_order": 3,
+            "tool_cost": 1000
+          }
+        ],
+        "strategy_class": "best",
+        "strategy_id": "6e6a54d3f82a04e9",
+        "total_expected_confidence": 100,
+        "total_expected_cost": 6400,
+        "total_expected_mtti_ms": 60000
+      },
+      {
+        "name": "Fastest Strategy",
+        "overall_value": 0.3578,
+        "reason": "Ordered by fastest",
+        "schema_version": 1,
+        "step_count": 3,
+        "steps": [
+          {
+            "capability_id": "cap:collect_pod_lifecycle",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=1000",
+              "switching_cost=0"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1000,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.6167,
+            "reason": "cap uses=2, success_rate=1.00, skills=['kubectl_pods']",
+            "schema_version": 1,
+            "step_order": 1,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_dns_state",
+            "evidence": [
+              "cap_uses=1",
+              "success_rate=0.00",
+              "tool_cost=1000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.3333,
+            "expected_mtti_reduction_ms": 0,
+            "historical_success_rate": 0.0,
+            "overall_expected_value": 0.0,
+            "reason": "cap uses=1, success_rate=0.00, skills=['dig_dns']",
+            "schema_version": 1,
+            "step_order": 2,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_logs",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=4000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 4200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.4567,
+            "reason": "cap uses=2, success_rate=1.00, skills=['elastic_logs']",
+            "schema_version": 1,
+            "step_order": 3,
+            "tool_cost": 4000
+          }
+        ],
+        "strategy_class": "fastest",
+        "strategy_id": "93d65c372d13f094",
+        "total_expected_confidence": 100,
+        "total_expected_cost": 6400,
+        "total_expected_mtti_ms": 60000
+      },
+      {
+        "name": "Highest Confidence Strategy",
+        "overall_value": 0.3578,
+        "reason": "Ordered by highest_confidence",
+        "schema_version": 1,
+        "step_count": 3,
+        "steps": [
+          {
+            "capability_id": "cap:collect_logs",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=4000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 4200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.4567,
+            "reason": "cap uses=2, success_rate=1.00, skills=['elastic_logs']",
+            "schema_version": 1,
+            "step_order": 1,
+            "tool_cost": 4000
+          },
+          {
+            "capability_id": "cap:collect_pod_lifecycle",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=1000",
+              "switching_cost=0"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1000,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.6167,
+            "reason": "cap uses=2, success_rate=1.00, skills=['kubectl_pods']",
+            "schema_version": 1,
+            "step_order": 2,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_dns_state",
+            "evidence": [
+              "cap_uses=1",
+              "success_rate=0.00",
+              "tool_cost=1000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.3333,
+            "expected_mtti_reduction_ms": 0,
+            "historical_success_rate": 0.0,
+            "overall_expected_value": 0.0,
+            "reason": "cap uses=1, success_rate=0.00, skills=['dig_dns']",
+            "schema_version": 1,
+            "step_order": 3,
+            "tool_cost": 1000
+          }
+        ],
+        "strategy_class": "highest_confidence",
+        "strategy_id": "6aaba4da0c7d73e1",
+        "total_expected_confidence": 100,
+        "total_expected_cost": 6400,
+        "total_expected_mtti_ms": 60000
+      },
+      {
+        "name": "Highest Success Strategy",
+        "overall_value": 0.3578,
+        "reason": "Ordered by highest_success",
+        "schema_version": 1,
+        "step_count": 3,
+        "steps": [
+          {
+            "capability_id": "cap:collect_pod_lifecycle",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=1000",
+              "switching_cost=0"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1000,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.6167,
+            "reason": "cap uses=2, success_rate=1.00, skills=['kubectl_pods']",
+            "schema_version": 1,
+            "step_order": 1,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_logs",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=4000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 4200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.4567,
+            "reason": "cap uses=2, success_rate=1.00, skills=['elastic_logs']",
+            "schema_version": 1,
+            "step_order": 2,
+            "tool_cost": 4000
+          },
+          {
+            "capability_id": "cap:collect_dns_state",
+            "evidence": [
+              "cap_uses=1",
+              "success_rate=0.00",
+              "tool_cost=1000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.3333,
+            "expected_mtti_reduction_ms": 0,
+            "historical_success_rate": 0.0,
+            "overall_expected_value": 0.0,
+            "reason": "cap uses=1, success_rate=0.00, skills=['dig_dns']",
+            "schema_version": 1,
+            "step_order": 3,
+            "tool_cost": 1000
+          }
+        ],
+        "strategy_class": "highest_success",
+        "strategy_id": "952942e17d8738ad",
+        "total_expected_confidence": 100,
+        "total_expected_cost": 6400,
+        "total_expected_mtti_ms": 60000
+      },
+      {
+        "name": "Lowest Cost Strategy",
+        "overall_value": 0.3578,
+        "reason": "Ordered by lowest_cost",
+        "schema_version": 1,
+        "step_count": 3,
+        "steps": [
+          {
+            "capability_id": "cap:collect_pod_lifecycle",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=1000",
+              "switching_cost=0"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1000,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.6167,
+            "reason": "cap uses=2, success_rate=1.00, skills=['kubectl_pods']",
+            "schema_version": 1,
+            "step_order": 1,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_dns_state",
+            "evidence": [
+              "cap_uses=1",
+              "success_rate=0.00",
+              "tool_cost=1000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.3333,
+            "expected_mtti_reduction_ms": 0,
+            "historical_success_rate": 0.0,
+            "overall_expected_value": 0.0,
+            "reason": "cap uses=1, success_rate=0.00, skills=['dig_dns']",
+            "schema_version": 1,
+            "step_order": 2,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_logs",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=4000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 4200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.4567,
+            "reason": "cap uses=2, success_rate=1.00, skills=['elastic_logs']",
+            "schema_version": 1,
+            "step_order": 3,
+            "tool_cost": 4000
+          }
+        ],
+        "strategy_class": "lowest_cost",
+        "strategy_id": "59791844ebfbe54b",
+        "total_expected_confidence": 100,
+        "total_expected_cost": 6400,
+        "total_expected_mtti_ms": 60000
+      }
+    ],
+    "recommended": {
+      "name": "Balanced Strategy",
+      "overall_value": 0.3578,
+      "reason": "Ordered by balanced",
+      "schema_version": 1,
+      "step_count": 3,
+      "steps": [
+        {
+          "capability_id": "cap:collect_pod_lifecycle",
+          "evidence": [
+            "cap_uses=2",
+            "success_rate=1.00",
+            "tool_cost=1000",
+            "switching_cost=0"
+          ],
+          "evidence_cost": 0,
+          "execution_cost": 1000,
+          "expected_confidence_gain": 100,
+          "expected_information_gain": 0.6667,
+          "expected_mtti_reduction_ms": 30000,
+          "historical_success_rate": 1.0,
+          "overall_expected_value": 0.6167,
+          "reason": "cap uses=2, success_rate=1.00, skills=['kubectl_pods']",
+          "schema_version": 1,
+          "step_order": 1,
+          "tool_cost": 1000
+        },
+        {
+          "capability_id": "cap:collect_logs",
+          "evidence": [
+            "cap_uses=2",
+            "success_rate=1.00",
+            "tool_cost=4000",
+            "switching_cost=200"
+          ],
+          "evidence_cost": 0,
+          "execution_cost": 4200,
+          "expected_confidence_gain": 100,
+          "expected_information_gain": 0.6667,
+          "expected_mtti_reduction_ms": 30000,
+          "historical_success_rate": 1.0,
+          "overall_expected_value": 0.4567,
+          "reason": "cap uses=2, success_rate=1.00, skills=['elastic_logs']",
+          "schema_version": 1,
+          "step_order": 2,
+          "tool_cost": 4000
+        },
+        {
+          "capability_id": "cap:collect_dns_state",
+          "evidence": [
+            "cap_uses=1",
+            "success_rate=0.00",
+            "tool_cost=1000",
+            "switching_cost=200"
+          ],
+          "evidence_cost": 0,
+          "execution_cost": 1200,
+          "expected_confidence_gain": 100,
+          "expected_information_gain": 0.3333,
+          "expected_mtti_reduction_ms": 0,
+          "historical_success_rate": 0.0,
+          "overall_expected_value": 0.0,
+          "reason": "cap uses=1, success_rate=0.00, skills=['dig_dns']",
+          "schema_version": 1,
+          "step_order": 3,
+          "tool_cost": 1000
+        }
+      ],
+      "strategy_class": "balanced",
+      "strategy_id": "d8aa1abad815ec5b",
+      "total_expected_confidence": 100,
+      "total_expected_cost": 6400,
+      "total_expected_mtti_ms": 60000
+    },
+    "schema_version": 1
+  },
+  "schema_version": 1,
+  "strategy_report": {
+    "schema_version": 1,
+    "strategies": [
+      {
+        "name": "Balanced Strategy",
+        "overall_value": 0.3578,
+        "reason": "Ordered by balanced",
+        "schema_version": 1,
+        "step_count": 3,
+        "steps": [
+          {
+            "capability_id": "cap:collect_pod_lifecycle",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=1000",
+              "switching_cost=0"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1000,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.6167,
+            "reason": "cap uses=2, success_rate=1.00, skills=['kubectl_pods']",
+            "schema_version": 1,
+            "step_order": 1,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_logs",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=4000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 4200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.4567,
+            "reason": "cap uses=2, success_rate=1.00, skills=['elastic_logs']",
+            "schema_version": 1,
+            "step_order": 2,
+            "tool_cost": 4000
+          },
+          {
+            "capability_id": "cap:collect_dns_state",
+            "evidence": [
+              "cap_uses=1",
+              "success_rate=0.00",
+              "tool_cost=1000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.3333,
+            "expected_mtti_reduction_ms": 0,
+            "historical_success_rate": 0.0,
+            "overall_expected_value": 0.0,
+            "reason": "cap uses=1, success_rate=0.00, skills=['dig_dns']",
+            "schema_version": 1,
+            "step_order": 3,
+            "tool_cost": 1000
+          }
+        ],
+        "strategy_class": "balanced",
+        "strategy_id": "d8aa1abad815ec5b",
+        "total_expected_confidence": 100,
+        "total_expected_cost": 6400,
+        "total_expected_mtti_ms": 60000
+      },
+      {
+        "name": "Best Strategy",
+        "overall_value": 0.3578,
+        "reason": "Ordered by best",
+        "schema_version": 1,
+        "step_count": 3,
+        "steps": [
+          {
+            "capability_id": "cap:collect_pod_lifecycle",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=1000",
+              "switching_cost=0"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1000,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.6167,
+            "reason": "cap uses=2, success_rate=1.00, skills=['kubectl_pods']",
+            "schema_version": 1,
+            "step_order": 1,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_logs",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=4000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 4200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.4567,
+            "reason": "cap uses=2, success_rate=1.00, skills=['elastic_logs']",
+            "schema_version": 1,
+            "step_order": 2,
+            "tool_cost": 4000
+          },
+          {
+            "capability_id": "cap:collect_dns_state",
+            "evidence": [
+              "cap_uses=1",
+              "success_rate=0.00",
+              "tool_cost=1000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.3333,
+            "expected_mtti_reduction_ms": 0,
+            "historical_success_rate": 0.0,
+            "overall_expected_value": 0.0,
+            "reason": "cap uses=1, success_rate=0.00, skills=['dig_dns']",
+            "schema_version": 1,
+            "step_order": 3,
+            "tool_cost": 1000
+          }
+        ],
+        "strategy_class": "best",
+        "strategy_id": "6e6a54d3f82a04e9",
+        "total_expected_confidence": 100,
+        "total_expected_cost": 6400,
+        "total_expected_mtti_ms": 60000
+      },
+      {
+        "name": "Fastest Strategy",
+        "overall_value": 0.3578,
+        "reason": "Ordered by fastest",
+        "schema_version": 1,
+        "step_count": 3,
+        "steps": [
+          {
+            "capability_id": "cap:collect_pod_lifecycle",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=1000",
+              "switching_cost=0"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1000,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.6167,
+            "reason": "cap uses=2, success_rate=1.00, skills=['kubectl_pods']",
+            "schema_version": 1,
+            "step_order": 1,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_dns_state",
+            "evidence": [
+              "cap_uses=1",
+              "success_rate=0.00",
+              "tool_cost=1000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.3333,
+            "expected_mtti_reduction_ms": 0,
+            "historical_success_rate": 0.0,
+            "overall_expected_value": 0.0,
+            "reason": "cap uses=1, success_rate=0.00, skills=['dig_dns']",
+            "schema_version": 1,
+            "step_order": 2,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_logs",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=4000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 4200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.4567,
+            "reason": "cap uses=2, success_rate=1.00, skills=['elastic_logs']",
+            "schema_version": 1,
+            "step_order": 3,
+            "tool_cost": 4000
+          }
+        ],
+        "strategy_class": "fastest",
+        "strategy_id": "93d65c372d13f094",
+        "total_expected_confidence": 100,
+        "total_expected_cost": 6400,
+        "total_expected_mtti_ms": 60000
+      },
+      {
+        "name": "Highest Confidence Strategy",
+        "overall_value": 0.3578,
+        "reason": "Ordered by highest_confidence",
+        "schema_version": 1,
+        "step_count": 3,
+        "steps": [
+          {
+            "capability_id": "cap:collect_logs",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=4000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 4200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.4567,
+            "reason": "cap uses=2, success_rate=1.00, skills=['elastic_logs']",
+            "schema_version": 1,
+            "step_order": 1,
+            "tool_cost": 4000
+          },
+          {
+            "capability_id": "cap:collect_pod_lifecycle",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=1000",
+              "switching_cost=0"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1000,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.6167,
+            "reason": "cap uses=2, success_rate=1.00, skills=['kubectl_pods']",
+            "schema_version": 1,
+            "step_order": 2,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_dns_state",
+            "evidence": [
+              "cap_uses=1",
+              "success_rate=0.00",
+              "tool_cost=1000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.3333,
+            "expected_mtti_reduction_ms": 0,
+            "historical_success_rate": 0.0,
+            "overall_expected_value": 0.0,
+            "reason": "cap uses=1, success_rate=0.00, skills=['dig_dns']",
+            "schema_version": 1,
+            "step_order": 3,
+            "tool_cost": 1000
+          }
+        ],
+        "strategy_class": "highest_confidence",
+        "strategy_id": "6aaba4da0c7d73e1",
+        "total_expected_confidence": 100,
+        "total_expected_cost": 6400,
+        "total_expected_mtti_ms": 60000
+      },
+      {
+        "name": "Highest Success Strategy",
+        "overall_value": 0.3578,
+        "reason": "Ordered by highest_success",
+        "schema_version": 1,
+        "step_count": 3,
+        "steps": [
+          {
+            "capability_id": "cap:collect_pod_lifecycle",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=1000",
+              "switching_cost=0"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1000,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.6167,
+            "reason": "cap uses=2, success_rate=1.00, skills=['kubectl_pods']",
+            "schema_version": 1,
+            "step_order": 1,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_logs",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=4000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 4200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.4567,
+            "reason": "cap uses=2, success_rate=1.00, skills=['elastic_logs']",
+            "schema_version": 1,
+            "step_order": 2,
+            "tool_cost": 4000
+          },
+          {
+            "capability_id": "cap:collect_dns_state",
+            "evidence": [
+              "cap_uses=1",
+              "success_rate=0.00",
+              "tool_cost=1000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.3333,
+            "expected_mtti_reduction_ms": 0,
+            "historical_success_rate": 0.0,
+            "overall_expected_value": 0.0,
+            "reason": "cap uses=1, success_rate=0.00, skills=['dig_dns']",
+            "schema_version": 1,
+            "step_order": 3,
+            "tool_cost": 1000
+          }
+        ],
+        "strategy_class": "highest_success",
+        "strategy_id": "952942e17d8738ad",
+        "total_expected_confidence": 100,
+        "total_expected_cost": 6400,
+        "total_expected_mtti_ms": 60000
+      },
+      {
+        "name": "Lowest Cost Strategy",
+        "overall_value": 0.3578,
+        "reason": "Ordered by lowest_cost",
+        "schema_version": 1,
+        "step_count": 3,
+        "steps": [
+          {
+            "capability_id": "cap:collect_pod_lifecycle",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=1000",
+              "switching_cost=0"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1000,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.6167,
+            "reason": "cap uses=2, success_rate=1.00, skills=['kubectl_pods']",
+            "schema_version": 1,
+            "step_order": 1,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_dns_state",
+            "evidence": [
+              "cap_uses=1",
+              "success_rate=0.00",
+              "tool_cost=1000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 1200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.3333,
+            "expected_mtti_reduction_ms": 0,
+            "historical_success_rate": 0.0,
+            "overall_expected_value": 0.0,
+            "reason": "cap uses=1, success_rate=0.00, skills=['dig_dns']",
+            "schema_version": 1,
+            "step_order": 2,
+            "tool_cost": 1000
+          },
+          {
+            "capability_id": "cap:collect_logs",
+            "evidence": [
+              "cap_uses=2",
+              "success_rate=1.00",
+              "tool_cost=4000",
+              "switching_cost=200"
+            ],
+            "evidence_cost": 0,
+            "execution_cost": 4200,
+            "expected_confidence_gain": 100,
+            "expected_information_gain": 0.6667,
+            "expected_mtti_reduction_ms": 30000,
+            "historical_success_rate": 1.0,
+            "overall_expected_value": 0.4567,
+            "reason": "cap uses=2, success_rate=1.00, skills=['elastic_logs']",
+            "schema_version": 1,
+            "step_order": 3,
+            "tool_cost": 4000
+          }
+        ],
+        "strategy_class": "lowest_cost",
+        "strategy_id": "59791844ebfbe54b",
+        "total_expected_confidence": 100,
+        "total_expected_cost": 6400,
+        "total_expected_mtti_ms": 60000
+      }
+    ],
+    "strategy_count": 6
+  }
+}

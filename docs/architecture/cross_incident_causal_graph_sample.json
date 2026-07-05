@@ -1,0 +1,658 @@
+{
+  "causal_chains": {
+    "chain_count": 1,
+    "chains": [
+      {
+        "average_mtti_ms": 48500,
+        "chain_id": "7fdc42099da0bb4e",
+        "confidence": 0.85,
+        "count": 2,
+        "memory_ids": [
+          "m1",
+          "m2"
+        ],
+        "node_ids": [
+          "checkout",
+          "saturation",
+          "database pool exhausted",
+          "scale pool"
+        ],
+        "schema_version": 1
+      }
+    ],
+    "schema_version": 1
+  },
+  "causal_graph": {
+    "graph": {
+      "edge_count": 28,
+      "edges": [
+        {
+          "edge_id": "0bf081765cd4fe1c",
+          "edge_type": "observed_in",
+          "properties": {},
+          "source_id": "f1b2cf3c58380ade",
+          "target_id": "1433d49643f2c5c8",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "20aaabac06328180",
+          "edge_type": "observed_in",
+          "properties": {},
+          "source_id": "fcd035bb6dc9b0e0",
+          "target_id": "c2f73e4efd1dc92c",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "227cbb2e98158a2e",
+          "edge_type": "resolved_by",
+          "properties": {},
+          "source_id": "c2f73e4efd1dc92c",
+          "target_id": "0d07367690c3c78f",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "2cf18173561b6e3a",
+          "edge_type": "observed_in",
+          "properties": {},
+          "source_id": "f1b2cf3c58380ade",
+          "target_id": "c2f73e4efd1dc92c",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "2d6e21f7963fd6b2",
+          "edge_type": "disproves",
+          "properties": {},
+          "source_id": "f6c2918e19937202",
+          "target_id": "9be42cb13c227379",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "2e5f12aa923d4d38",
+          "edge_type": "supports",
+          "properties": {},
+          "source_id": "f1b2cf3c58380ade",
+          "target_id": "9be42cb13c227379",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "4a1e792ecf356934",
+          "edge_type": "resolved_by",
+          "properties": {},
+          "source_id": "b0a80c0d5de1230a",
+          "target_id": "434a4c65c5dc5cd5",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "5004b4cd3624b25f",
+          "edge_type": "correlates_with",
+          "properties": {},
+          "source_id": "1433d49643f2c5c8",
+          "target_id": "c5f5eb688a1499ec",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "554d8a88aa1b545b",
+          "edge_type": "caused_by",
+          "properties": {},
+          "source_id": "b0a80c0d5de1230a",
+          "target_id": "98169482648b35da",
+          "weight": 0.6
+        },
+        {
+          "edge_id": "57bf60b1823fe584",
+          "edge_type": "resolved_by",
+          "properties": {},
+          "source_id": "1433d49643f2c5c8",
+          "target_id": "0d07367690c3c78f",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "67b6848a6433a340",
+          "edge_type": "caused_by",
+          "properties": {},
+          "source_id": "c2f73e4efd1dc92c",
+          "target_id": "9be42cb13c227379",
+          "weight": 0.88
+        },
+        {
+          "edge_id": "6f93fab87c47afa4",
+          "edge_type": "supports",
+          "properties": {},
+          "source_id": "659d28b89af56452",
+          "target_id": "9be42cb13c227379",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "7a51460f8e6dca47",
+          "edge_type": "affects",
+          "properties": {},
+          "source_id": "b0a80c0d5de1230a",
+          "target_id": "807ca26206a98a1a",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "8547a21b8d2960d4",
+          "edge_type": "depends_on",
+          "properties": {},
+          "source_id": "bb88d0602bcda70b",
+          "target_id": "860a12dee6e6bdfd",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "8d2aa05de7c93b1a",
+          "edge_type": "affects",
+          "properties": {},
+          "source_id": "1433d49643f2c5c8",
+          "target_id": "bb88d0602bcda70b",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "9cb7588bbf21352a",
+          "edge_type": "supports",
+          "properties": {},
+          "source_id": "501f90ef2585f49d",
+          "target_id": "98169482648b35da",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "aa7c6751bd360ec8",
+          "edge_type": "correlates_with",
+          "properties": {},
+          "source_id": "b0a80c0d5de1230a",
+          "target_id": "a2f4db877cae4d79",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "ac46c03ab73d1db4",
+          "edge_type": "correlates_with",
+          "properties": {},
+          "source_id": "860a12dee6e6bdfd",
+          "target_id": "c2f73e4efd1dc92c",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "ad6b2aa529aaffea",
+          "edge_type": "correlates_with",
+          "properties": {},
+          "source_id": "c2f73e4efd1dc92c",
+          "target_id": "c5f5eb688a1499ec",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "b8476e26078acd07",
+          "edge_type": "observed_in",
+          "properties": {},
+          "source_id": "659d28b89af56452",
+          "target_id": "c2f73e4efd1dc92c",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "c26bd814dd2da884",
+          "edge_type": "recurs_with",
+          "properties": {},
+          "source_id": "c2f73e4efd1dc92c",
+          "target_id": "1433d49643f2c5c8",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "c9b66d9153b3d832",
+          "edge_type": "observed_in",
+          "properties": {},
+          "source_id": "501f90ef2585f49d",
+          "target_id": "b0a80c0d5de1230a",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "cae3be1742bc7667",
+          "edge_type": "resolved_by",
+          "properties": {},
+          "source_id": "98169482648b35da",
+          "target_id": "434a4c65c5dc5cd5",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "cfa4d7e433ae7414",
+          "edge_type": "resolved_by",
+          "properties": {},
+          "source_id": "9be42cb13c227379",
+          "target_id": "0d07367690c3c78f",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "df39b0a4dad0319d",
+          "edge_type": "supports",
+          "properties": {},
+          "source_id": "fcd035bb6dc9b0e0",
+          "target_id": "9be42cb13c227379",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "ec46ec753e6ad1c6",
+          "edge_type": "affects",
+          "properties": {},
+          "source_id": "c2f73e4efd1dc92c",
+          "target_id": "bb88d0602bcda70b",
+          "weight": 1.0
+        },
+        {
+          "edge_id": "fed93e544aa59ac5",
+          "edge_type": "caused_by",
+          "properties": {},
+          "source_id": "1433d49643f2c5c8",
+          "target_id": "9be42cb13c227379",
+          "weight": 0.82
+        },
+        {
+          "edge_id": "ffe531ff7f7a5013",
+          "edge_type": "observed_in",
+          "properties": {},
+          "source_id": "659d28b89af56452",
+          "target_id": "1433d49643f2c5c8",
+          "weight": 1.0
+        }
+      ],
+      "node_count": 17,
+      "nodes": [
+        {
+          "label": "scale pool",
+          "node_id": "0d07367690c3c78f",
+          "node_type": "remediation",
+          "properties": {}
+        },
+        {
+          "label": "INC2",
+          "node_id": "1433d49643f2c5c8",
+          "node_type": "incident",
+          "properties": {
+            "incident_type": "saturation",
+            "memory_id": "m2"
+          }
+        },
+        {
+          "label": "reload coredns",
+          "node_id": "434a4c65c5dc5cd5",
+          "node_type": "remediation",
+          "properties": {}
+        },
+        {
+          "label": "dns_records",
+          "node_id": "501f90ef2585f49d",
+          "node_type": "evidence",
+          "properties": {}
+        },
+        {
+          "label": "oom_events",
+          "node_id": "659d28b89af56452",
+          "node_type": "evidence",
+          "properties": {}
+        },
+        {
+          "label": "payments",
+          "node_id": "807ca26206a98a1a",
+          "node_type": "service",
+          "properties": {
+            "application": "fintech"
+          }
+        },
+        {
+          "label": "checkout->db",
+          "node_id": "860a12dee6e6bdfd",
+          "node_type": "dependency",
+          "properties": {}
+        },
+        {
+          "label": "dns nxdomain",
+          "node_id": "98169482648b35da",
+          "node_type": "root_cause",
+          "properties": {
+            "confidence": 60
+          }
+        },
+        {
+          "label": "database pool exhausted",
+          "node_id": "9be42cb13c227379",
+          "node_type": "root_cause",
+          "properties": {
+            "confidence": 88
+          }
+        },
+        {
+          "label": "network",
+          "node_id": "a2f4db877cae4d79",
+          "node_type": "failure_mode",
+          "properties": {}
+        },
+        {
+          "label": "INC3",
+          "node_id": "b0a80c0d5de1230a",
+          "node_type": "incident",
+          "properties": {
+            "incident_type": "network",
+            "memory_id": "m3"
+          }
+        },
+        {
+          "label": "checkout",
+          "node_id": "bb88d0602bcda70b",
+          "node_type": "service",
+          "properties": {
+            "application": "ecom"
+          }
+        },
+        {
+          "label": "INC1",
+          "node_id": "c2f73e4efd1dc92c",
+          "node_type": "incident",
+          "properties": {
+            "incident_type": "saturation",
+            "memory_id": "m1"
+          }
+        },
+        {
+          "label": "saturation",
+          "node_id": "c5f5eb688a1499ec",
+          "node_type": "failure_mode",
+          "properties": {}
+        },
+        {
+          "label": "logs",
+          "node_id": "f1b2cf3c58380ade",
+          "node_type": "evidence",
+          "properties": {}
+        },
+        {
+          "label": "certificate",
+          "node_id": "f6c2918e19937202",
+          "node_type": "signal",
+          "properties": {}
+        },
+        {
+          "label": "metrics_red",
+          "node_id": "fcd035bb6dc9b0e0",
+          "node_type": "evidence",
+          "properties": {}
+        }
+      ],
+      "schema_version": 1
+    },
+    "schema_version": 1
+  },
+  "causal_recommendations": {
+    "recommendation_count": 6,
+    "recommendations": [
+      {
+        "evidence": [
+          "average_mtti_ms=45000",
+          "best_mtti_ms=45000",
+          "evidence_ordering=['oom_events', 'logs', 'metrics_red']"
+        ],
+        "kind": "fastest_rca_path",
+        "message": "For 'checkout', fastest path to RCA 'database pool exhausted' averages 45000 ms.",
+        "priority": 300,
+        "related_root_causes": [
+          "database pool exhausted"
+        ],
+        "related_services": [
+          "checkout"
+        ],
+        "schema_version": 1
+      },
+      {
+        "evidence": [
+          "average_mtti_ms=52000",
+          "best_mtti_ms=52000",
+          "evidence_ordering=['oom_events', 'logs']"
+        ],
+        "kind": "fastest_rca_path",
+        "message": "For 'checkout', fastest path to RCA 'database pool exhausted' averages 52000 ms.",
+        "priority": 300,
+        "related_root_causes": [
+          "database pool exhausted"
+        ],
+        "related_services": [
+          "checkout"
+        ],
+        "schema_version": 1
+      },
+      {
+        "evidence": [
+          "average_mtti_ms=90000",
+          "best_mtti_ms=90000",
+          "evidence_ordering=[]"
+        ],
+        "kind": "fastest_rca_path",
+        "message": "For 'payments', fastest path to RCA 'dns nxdomain' averages 90000 ms.",
+        "priority": 300,
+        "related_root_causes": [
+          "dns nxdomain"
+        ],
+        "related_services": [
+          "payments"
+        ],
+        "schema_version": 1
+      },
+      {
+        "evidence": [
+          "count=2",
+          "average_mtti_ms=48500",
+          "average_confidence=85"
+        ],
+        "kind": "recurring_root_cause",
+        "message": "Root cause 'database pool exhausted' has recurred 2 times.",
+        "priority": 240,
+        "related_root_causes": [
+          "database pool exhausted"
+        ],
+        "related_services": [],
+        "schema_version": 1
+      },
+      {
+        "evidence": [
+          "count=2"
+        ],
+        "kind": "reliable_remediation",
+        "message": "Remediation 'scale pool' has resolved 2 similar incidents.",
+        "priority": 200,
+        "related_root_causes": [],
+        "related_services": [],
+        "schema_version": 1
+      },
+      {
+        "evidence": [
+          "false_lead_count=2",
+          "lead=certificate"
+        ],
+        "kind": "false_lead_to_skip",
+        "message": "'certificate' has been a false lead 2 times \u2014 skip.",
+        "priority": 130,
+        "related_root_causes": [],
+        "related_services": [],
+        "schema_version": 1
+      }
+    ],
+    "schema_version": 1
+  },
+  "mtti_paths": {
+    "path_count": 3,
+    "paths": [
+      {
+        "average_mtti_ms": 45000,
+        "best_mtti_ms": 45000,
+        "evidence_ordering": [
+          "oom_events",
+          "logs",
+          "metrics_red"
+        ],
+        "memory_ids": [
+          "m1"
+        ],
+        "path_id": "c768af3f45a186cb",
+        "remediation": "scale pool",
+        "root_cause": "database pool exhausted",
+        "schema_version": 1,
+        "service": "checkout"
+      },
+      {
+        "average_mtti_ms": 52000,
+        "best_mtti_ms": 52000,
+        "evidence_ordering": [
+          "oom_events",
+          "logs"
+        ],
+        "memory_ids": [
+          "m2"
+        ],
+        "path_id": "567803de9d4b7652",
+        "remediation": "scale pool",
+        "root_cause": "database pool exhausted",
+        "schema_version": 1,
+        "service": "checkout"
+      },
+      {
+        "average_mtti_ms": 90000,
+        "best_mtti_ms": 90000,
+        "evidence_ordering": [],
+        "memory_ids": [
+          "m3"
+        ],
+        "path_id": "bbd1b46db475b1c3",
+        "remediation": "reload coredns",
+        "root_cause": "dns nxdomain",
+        "schema_version": 1,
+        "service": "payments"
+      }
+    ],
+    "schema_version": 1
+  },
+  "rca_paths": {
+    "path_count": 2,
+    "paths": [
+      {
+        "confidence": 0.85,
+        "evidence_keys": [
+          "logs",
+          "metrics_red",
+          "oom_events"
+        ],
+        "memory_ids": [
+          "m1",
+          "m2"
+        ],
+        "path_id": "234706eca1a84b93",
+        "recurrence": 2,
+        "root_cause": "database pool exhausted",
+        "schema_version": 1,
+        "service": "checkout",
+        "symptom": "saturation"
+      },
+      {
+        "confidence": 0.6,
+        "evidence_keys": [
+          "dns_records"
+        ],
+        "memory_ids": [
+          "m3"
+        ],
+        "path_id": "845140a931c6c63c",
+        "recurrence": 1,
+        "root_cause": "dns nxdomain",
+        "schema_version": 1,
+        "service": "payments",
+        "symptom": "network"
+      }
+    ],
+    "schema_version": 1
+  },
+  "recurrence_report": {
+    "recurrence_count": 4,
+    "recurrences": [
+      {
+        "average_confidence": 85,
+        "average_mtti_ms": 48500,
+        "count": 2,
+        "kind": "remediation",
+        "memory_ids": [
+          "m1",
+          "m2"
+        ],
+        "schema_version": 1,
+        "signature": "scale pool"
+      },
+      {
+        "average_confidence": 85,
+        "average_mtti_ms": 48500,
+        "count": 2,
+        "kind": "root_cause",
+        "memory_ids": [
+          "m1",
+          "m2"
+        ],
+        "schema_version": 1,
+        "signature": "database pool exhausted"
+      },
+      {
+        "average_confidence": 85,
+        "average_mtti_ms": 48500,
+        "count": 2,
+        "kind": "service",
+        "memory_ids": [
+          "m1",
+          "m2"
+        ],
+        "schema_version": 1,
+        "signature": "checkout"
+      },
+      {
+        "average_confidence": 85,
+        "average_mtti_ms": 48500,
+        "count": 2,
+        "kind": "symptom",
+        "memory_ids": [
+          "m1",
+          "m2"
+        ],
+        "schema_version": 1,
+        "signature": "saturation"
+      }
+    ],
+    "schema_version": 1
+  },
+  "schema_version": 1,
+  "service_causal_profile": {
+    "profile_count": 2,
+    "profiles": [
+      {
+        "average_confidence": 85,
+        "average_mtti_ms": 48500,
+        "incident_count": 2,
+        "memory_ids": [
+          "m1",
+          "m2"
+        ],
+        "service": "checkout",
+        "top_root_causes": [
+          {
+            "count": 2,
+            "root_cause": "database pool exhausted"
+          }
+        ]
+      },
+      {
+        "average_confidence": 60,
+        "average_mtti_ms": 90000,
+        "incident_count": 1,
+        "memory_ids": [
+          "m3"
+        ],
+        "service": "payments",
+        "top_root_causes": [
+          {
+            "count": 1,
+            "root_cause": "dns nxdomain"
+          }
+        ]
+      }
+    ],
+    "schema_version": 1
+  }
+}

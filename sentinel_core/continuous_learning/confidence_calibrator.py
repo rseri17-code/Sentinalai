@@ -39,7 +39,11 @@ class ConfidenceCalibrator:
         edges = ((0, 20), (20, 40), (40, 60), (60, 80), (80, 101))
         buckets: dict[tuple[int, int], list[MemoryRecord]] = {e: [] for e in edges}
         for r in records or ():
-            c = int(r.confidence or 0)
+            # RC-C: clamp to valid confidence range before binning so every
+            # record lands in exactly one bin. Previously values >100 or <0
+            # fell through every bin and were silently dropped, making
+            # sum(predicted_count) < len(records) — an invisible loss.
+            c = max(0, min(100, int(r.confidence or 0)))
             for lo, hi in edges:
                 if lo <= c < hi:
                     buckets[(lo, hi)].append(r)

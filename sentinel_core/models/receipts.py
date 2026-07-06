@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import uuid
 from typing import Any, Optional
 
@@ -24,6 +25,70 @@ from pydantic import BaseModel, Field
 
 
 CURRENT_RECEIPT_SCHEMA_VERSION = "1.0"
+
+
+# Sensitive key-name substrings (case-insensitive) that always redact the value.
+# Ordered for deterministic doc-listing only; membership test is a set.
+_SENSITIVE_KEY_SUBSTRINGS: tuple[str, ...] = (
+    "password", "passwd", "secret", "token", "api_key", "apikey",
+    "authorization", "auth", "bearer", "credential", "private_key",
+    "privatekey", "session", "cookie", "ssn", "dob",
+)
+
+# Value patterns that look like a secret regardless of key name.
+_SECRET_VALUE_PATTERNS: tuple[re.Pattern, ...] = (
+    re.compile(r"sk-[A-Za-z0-9_\-]{16,}"),          # OpenAI-style / generic sk-
+    re.compile(r"AKIA[0-9A-Z]{16}"),                 # AWS access key
+    re.compile(r"aws_(?:secret|access)_?key", re.I), # named AWS secret markers
+    re.compile(r"Bearer\s+[A-Za-z0-9_\-\.]{16,}"),  # Bearer <jwt>
+    re.compile(r"ey[JI][A-Za-z0-9_\-]{16,}\.[A-Za-z0-9_\-]{16,}\.[A-Za-z0-9_\-]+"),  # JWT
+    re.compile(r"ghp_[A-Za-z0-9]{20,}"),             # GitHub PAT
+    re.compile(r"xox[bpoas]-[A-Za-z0-9\-]{10,}"),   # Slack tokens
+)
+
+_REDACTED_PLACEHOLDER = "***REDACTED***"
+
+
+def _redact_value(value: Any) -> Any:
+    """Return the value unchanged, or the redaction placeholder if it looks
+    like a secret. Recurses one level into dicts/lists so a nested credentials
+    map does not escape.
+
+    Deterministic: same input → same output. No state, no I/O.
+    """
+    if isinstance(value, str):
+        for pat in _SECRET_VALUE_PATTERNS:
+            if pat.search(value):
+                return _REDACTED_PLACEHOLDER
+        return value
+    if isinstance(value, dict):
+        return _redact_params(value)
+    if isinstance(value, list):
+        return [_redact_value(v) for v in value]
+    return value
+
+
+def _redact_params(params: Any) -> dict[str, Any]:
+    """Return a redacted copy of a params dict.
+
+    A key is redacted whole (value replaced with the placeholder) when its
+    lowercased name contains any sensitive substring. Otherwise the value
+    is passed through :func:`_redact_value` which pattern-matches string
+    values against known secret shapes.
+
+    Non-dict inputs return an empty dict (defensive: the receipt field's
+    contract is dict[str, Any]).
+    """
+    if not isinstance(params, dict):
+        return {}
+    out: dict[str, Any] = {}
+    for k, v in params.items():
+        k_str = str(k)
+        if any(s in k_str.lower() for s in _SENSITIVE_KEY_SUBSTRINGS):
+            out[k_str] = _REDACTED_PLACEHOLDER
+        else:
+            out[k_str] = _redact_value(v)
+    return out
 
 
 class UIReceipt(BaseModel):
@@ -126,7 +191,7 @@ class UIReceipt(BaseModel):
             status=getattr(receipt, "status", "unknown"),
             error=getattr(receipt, "error", None),
             result_count=getattr(receipt, "result_count", 0),
-            params_redacted=getattr(receipt, "params", {}),
+            params_redacted=_redact_params(getattr(receipt, "params", {})),
         )
 
 

@@ -98,10 +98,15 @@ class LearningEngine:
                         if float(r.investigation_score or 0.0) >= 0.5)
         total = len(records)
         false_negative_rate = round(1.0 - success / total, 4) if total else 0.0
-        # False positive rate: sum of |false_leads| / total_evidence_seen
+        # False positive rate: sum of |false_leads| / total_evidence_seen.
+        # RC-C: clamp to [0, 1] at the point of computation. A record with
+        # many false_leads and zero evidence_collected must not produce an
+        # unbounded ratio that silently zeros operational_confidence.
         fp_leads = sum(len(r.false_leads) for r in records)
         total_ev = sum(max(1, len(r.evidence_collected)) for r in records)
-        false_positive_rate = round(fp_leads / total_ev, 4) if total_ev else 0.0
+        false_positive_rate = (
+            round(min(1.0, fp_leads / total_ev), 4) if total_ev else 0.0
+        )
 
         # Service reliability
         svc_rows = ServiceLearning().score(records)
@@ -112,16 +117,23 @@ class LearningEngine:
         rc_confs = [int(r.confidence or 0) for r in records if r.detected_root_cause]
         root_cause_confidence = round(mean(rc_confs) / 100.0, 4) if rc_confs else 0.0
 
-        # Replay + benchmark agreement — read from feedback signals when present
-        replay_agreement = _agreement_from_signals(feedback, "replay") \
-            if feedback else 0.0
-        benchmark_agreement = _agreement_from_signals(feedback, "benchmark") \
-            if feedback else 0.0
-        # Fall back to averaged investigation_score when no feedback
-        if not replay_agreement:
+        # Replay + benchmark agreement — read from feedback signals when
+        # present. RC-B: the fallback to the average investigation_score
+        # must trigger ONLY when no signals of that source exist.
+        # Previously `if not replay_agreement` treated a legitimate 0.0
+        # (signals present, all rejecting) as "no data" and overwrote the
+        # truth with the mean investigation_score. Now the fallback checks
+        # signal presence, not the resulting value.
+        replay_signals = feedback.by_source("replay") if feedback else ()
+        benchmark_signals = feedback.by_source("benchmark") if feedback else ()
+        if replay_signals:
+            replay_agreement = _agreement_from_signals(feedback, "replay")
+        else:
             replay_agreement = round(mean(float(r.investigation_score or 0.0)
                                             for r in records), 4)
-        if not benchmark_agreement:
+        if benchmark_signals:
+            benchmark_agreement = _agreement_from_signals(feedback, "benchmark")
+        else:
             benchmark_agreement = round(mean(float(r.sentinelbench_score or 0.0)
                                                 for r in records), 4)
 

@@ -1,38 +1,26 @@
 # Active Task — Compaction Handoff
-<!-- Written by PreCompact hook at 2026-07-04T02:29:45.320Z -->
+<!-- Written by PreCompact hook at 2026-07-05T18:24:52.358Z -->
 <!-- Restored by SessionStart hook — also shown if .claude/session-state.json is present -->
 
 ## Objective
 [DECISION] <what was decided> — <why>
 
 ## Branch
-claude/code-review-analysis-MelXd | b1dd13a phase21: activate InvestigationStore behind feature flag
+claude/code-review-analysis-MelXd | df64e21 chore: commit runtime-generated eval, wiki, and memory data
 
 ## Git Status at Compaction
-- `M eval/blast_radius_history.json`
-- ` M eval/cascade_tracker.json`
-- ` M eval/causal_graph.jsonl`
-- ` M eval/co_failure_index.json`
-- ` M eval/episodic_memory.jsonl`
-- ` M eval/investigations/inv-INC-DT_decisions.jsonl`
-- ` M eval/neural_confidence_calibrator.json`
-- ` M eval/pattern_registry.json`
-- ` M eval/recurrence_index.json`
-- ` M eval/retrieval_telemetry.jsonl`
-- ` M sentinel_wiki/patterns/099952ef.yaml`
-- ` M sentinel_wiki/patterns/0b2320f2.yaml`
-- ` M sentinel_wiki/patterns/21293d8b.yaml`
-- ` M sentinel_wiki/patterns/2564f02d.yaml`
-- ` M sentinel_wiki/patterns/2b138bfb.yaml`
+- `M  memory/hot/session_state.md`
+- `M  memory/hot/stop_log.md`
 
 ## Changed Python Files (vs HEAD)
 _(none)_
 
 ## Staged for Commit
-_(none)_
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
 
 ## Open Risks
-_(none detected)_
+- ⚠ 2 file(s) staged but not committed
 
 ## Next Recommended Action
 - Continue on branch `claude/code-review-analysis-MelXd`

@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from sentinel_core.models._immutable import freeze_dict
+
 
 class CausalEdgeType(str, Enum):
     OBSERVED_IN            = "observed_in"
@@ -35,6 +37,10 @@ class CausalEdge:
     edge_type:  str
     weight:     float = 1.0
     properties: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # RC-D: prevent mutation of properties dict via attribute access.
+        object.__setattr__(self, "properties", freeze_dict(self.properties))
 
     @classmethod
     def make(

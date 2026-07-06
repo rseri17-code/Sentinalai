@@ -19,6 +19,8 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any
 
+from sentinel_core.models._immutable import freeze_dict
+
 
 MEMORY_SCHEMA_VERSION = 1
 
@@ -62,6 +64,11 @@ class SimilarityScore:
     breakdown:       dict[str, float] = field(default_factory=dict)
     exact_match:     bool = False
     schema_version:  int = MEMORY_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        # RC-D: prevent mutation of the dict field through the attribute.
+        # Uses object.__setattr__ because the dataclass is frozen.
+        object.__setattr__(self, "breakdown", freeze_dict(self.breakdown))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -162,6 +169,14 @@ class MemoryRecord:
     replay_history:      tuple[str, ...]      = ()
     # --- versioning ---------------------------------------------------
     schema_version:      int                  = MEMORY_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        # RC-D: prevent mutation of dict fields via attribute access.
+        # Uses object.__setattr__ because the dataclass is frozen.
+        object.__setattr__(self, "decision_trace",
+                             freeze_dict(self.decision_trace))
+        object.__setattr__(self, "knowledge_graph_snapshot",
+                             freeze_dict(self.knowledge_graph_snapshot))
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)

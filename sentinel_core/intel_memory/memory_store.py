@@ -61,9 +61,63 @@ class MemoryStore:
         return self._path_for(memory_id).exists()
 
     def delete(self, memory_id: str) -> None:
+        """Remove ``memory_id`` from the primary namespace, archiving the
+        underlying record for auditability.
+
+        RC-E: previously ``delete`` unlinked the JSON file, destroying
+        audit history. The public contract is unchanged — after this
+        call, ``has(memory_id)`` returns False, ``load(memory_id)``
+        raises, and ``list_ids()`` no longer enumerates the id — but
+        the record is preserved under ``{root}/.deleted/`` and can be
+        recovered via :meth:`list_deleted` / :meth:`load_deleted`.
+        """
         p = self._path_for(memory_id)
-        if p.exists():
-            p.unlink()
+        if not p.exists():
+            return
+        trash = self._root / ".deleted"
+        trash.mkdir(parents=True, exist_ok=True)
+        dst = trash / f"{memory_id}.json"
+        # If a prior tombstone exists for the same id, append a counter
+        # so no historical version is ever lost.
+        if dst.exists():
+            i = 1
+            while (trash / f"{memory_id}.{i}.json").exists():
+                i += 1
+            dst = trash / f"{memory_id}.{i}.json"
+        p.rename(dst)
+
+    def list_deleted(self) -> tuple[str, ...]:
+        """Return the file stems currently in ``.deleted/`` (audit trail).
+
+        Additive companion to :meth:`delete`. Deterministic (sorted)
+        just like :meth:`list_ids`. Returns an empty tuple when no
+        record has ever been deleted.
+        """
+        trash = self._root / ".deleted"
+        if not trash.exists():
+            return ()
+        return tuple(sorted(p.stem for p in trash.glob("*.json")))
+
+    def load_deleted(self, stem: str) -> MemoryRecord:
+        """Load a previously-deleted record by its ``.deleted/`` stem.
+
+        The stem is the filename without the ``.json`` extension —
+        typically the ``memory_id`` for the first deletion or
+        ``{memory_id}.{N}`` for subsequent ones.
+        """
+        trash = self._root / ".deleted"
+        path = trash / f"{stem}.json"
+        if not path.exists():
+            raise MemoryStoreError(
+                f"deleted record '{stem}' not found at {path}"
+            )
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise MemoryStoreError(
+                f"deleted record '{stem}' invalid JSON: {exc}"
+            ) from exc
+        return MemoryRecord.from_dict(raw)
 
     # ------------------------------------------------------------------
     # Internal

@@ -10,10 +10,10 @@ confidence_avg: 96.0
 quality_avg: 0.8001
 evidence_signals:
 - check_golden_signals
-- check_itsm_changes
 - search_network_logs
 - search_dns_logs
 - check_changes
+- check_itsm_changes
 - _kg_similar_incidents
 - _suggested_root_causes
 - gap_get_change_data
@@ -38,4 +38,4 @@ receipt_ids:
 - INC12350_20260610
 - INC12350_20260703
 first_seen: 2026-05-31 20:37:52.777215+00:00
-last_seen: 2026-07-05 18:08:03.241562+00:00
+last_seen: 2026-07-05 18:48:36.939372+00:00

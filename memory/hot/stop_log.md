@@ -6375,3 +6375,273 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-06T17:05:06.055Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 7a66b63 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `7a66b63 chore: update hot memory (stop hook auto-commit)`
+- `7b943b1 chore: update hot memory (stop hook auto-commit)`
+- `2b1f49f chore: commit runtime-generated eval, wiki, and memory data`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-06T17:16:28.615Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: b67ed74 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `b67ed74 chore: update hot memory (stop hook auto-commit)`
+- `7a66b63 chore: update hot memory (stop hook auto-commit)`
+- `7b943b1 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-06T17:39:03.857Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f7a01a9 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `f7a01a9 chore: update hot memory (stop hook auto-commit)`
+- `b67ed74 chore: update hot memory (stop hook auto-commit)`
+- `7a66b63 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-06T18:03:35.696Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f45ca0e chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `f45ca0e chore: update hot memory (stop hook auto-commit)`
+- `f7a01a9 chore: update hot memory (stop hook auto-commit)`
+- `b67ed74 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-06T21:06:25.728Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f45ca0e chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f45ca0e chore: update hot memory (stop hook auto-commit)`
+- `f7a01a9 chore: update hot memory (stop hook auto-commit)`
+- `b67ed74 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-06T22:38:47.406Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f45ca0e chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f45ca0e chore: update hot memory (stop hook auto-commit)`
+- `f7a01a9 chore: update hot memory (stop hook auto-commit)`
+- `b67ed74 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-07T00:09:42.021Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f45ca0e chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f45ca0e chore: update hot memory (stop hook auto-commit)`
+- `f7a01a9 chore: update hot memory (stop hook auto-commit)`
+- `b67ed74 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-07T01:11:23.411Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f45ca0e chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f45ca0e chore: update hot memory (stop hook auto-commit)`
+- `f7a01a9 chore: update hot memory (stop hook auto-commit)`
+- `b67ed74 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-07T02:12:02.029Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f45ca0e chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `f45ca0e chore: update hot memory (stop hook auto-commit)`
+- `f7a01a9 chore: update hot memory (stop hook auto-commit)`
+- `b67ed74 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-07T03:09:32.310Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 34d2b02 sprint3: RC-F deterministic aggregation & selection
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `34d2b02 sprint3: RC-F deterministic aggregation & selection`
+- `4e291df chore: commit runtime-generated eval, wiki, and memory data`
+- `260c3d4 sprint2: RC-D frozen-dataclass immutability + RC-E append-only ledgers`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

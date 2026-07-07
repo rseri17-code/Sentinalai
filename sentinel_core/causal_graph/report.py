@@ -15,6 +15,7 @@ from sentinel_core.causal_graph.recommendation_engine import (
 )
 from sentinel_core.causal_graph.recurrence import RecurrenceDetector
 from sentinel_core.intel_memory import MemoryRecord
+from sentinel_core.models._deterministic import canonical_top
 
 
 REPORT_SCHEMA_VERSION = 1
@@ -89,8 +90,10 @@ def render_service_causal_profile(records: tuple[MemoryRecord, ...]) -> dict[str
             "service":                svc,
             "incident_count":         len(group),
             "top_root_causes":        [
+                # RC-F: canonical_top applies (-count, key) tiebreak so
+                # tied root causes always emit in the same order.
                 {"root_cause": rc, "count": n}
-                for rc, n in rc_counts.most_common(5)
+                for rc, n in canonical_top(rc_counts, 5)
             ],
             "average_mtti_ms":        avg_mtti,
             "average_confidence":     avg_conf,

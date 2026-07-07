@@ -16,6 +16,10 @@ class CausalGraphBuilder:
     """
 
     def build(self, records: Iterable[MemoryRecord]) -> CausalGraph:
+        # RC-F: iterate records in canonical memory_id order so first-write
+        # -wins on node/edge properties always resolves to the same record
+        # regardless of caller-supplied tuple order.
+        records = tuple(sorted(records or (), key=lambda r: str(r.memory_id)))
         nodes: dict[str, CausalNode] = {}
         edges: dict[str, CausalEdge] = {}
 
@@ -28,7 +32,7 @@ class CausalGraphBuilder:
             if e.edge_id not in edges:
                 edges[e.edge_id] = e
 
-        for r in records or ():
+        for r in records:
             svc_id = None
             if r.service:
                 svc_id = add_node(CausalNode.make(

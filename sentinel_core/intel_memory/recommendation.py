@@ -12,6 +12,7 @@ from typing import Any
 
 from sentinel_core.intel_memory.ranking import Ranker
 from sentinel_core.intel_memory.schemas import MemoryRecord
+from sentinel_core.models._deterministic import canonical_top
 
 
 GUIDED_SCHEMA_VERSION = 1
@@ -94,7 +95,9 @@ class GuidedInvestigation:
             if r.evidence_ordering:
                 seq_counts[r.evidence_ordering] += 1
         if seq_counts:
-            most, _ = seq_counts.most_common(1)[0]
+            # RC-F: canonical tie-break so tied evidence_ordering tuples
+            # always pick the same one regardless of caller order.
+            most, _ = canonical_top(seq_counts, 1)[0]
             return list(most)
         # Fallback: flatten & dedupe preserving first-seen order
         seen: list[str] = []
@@ -136,7 +139,9 @@ class GuidedInvestigation:
         if not top:
             return {"severity": "low", "average_affected": 0}
         severity_counts: Counter = Counter(r.blast_radius.severity for r in top)
-        most_severity, _ = severity_counts.most_common(1)[0]
+        # RC-F: canonical tie-break so equally-common severities always
+        # resolve to the same one regardless of iteration order.
+        most_severity, _ = canonical_top(severity_counts, 1)[0]
         avg_affected = int(mean(r.blast_radius.total_affected for r in top))
         return {"severity": most_severity, "average_affected": avg_affected}
 

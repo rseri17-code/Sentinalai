@@ -15,6 +15,7 @@ from sentinel_core.continuous_learning.learning_engine import (
     LearningScores,
 )
 from sentinel_core.intel_memory import MemoryRecord
+from sentinel_core.models._immutable import freeze_dict
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,10 @@ class LearningSnapshot:
     scores:           LearningScores = field(default_factory=LearningScores)
     metadata:         dict[str, Any] = field(default_factory=dict)
     schema_version:   int = LEARNING_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        # RC-D: prevent mutation of the metadata dict via attribute access.
+        object.__setattr__(self, "metadata", freeze_dict(self.metadata))
 
     def to_dict(self) -> dict[str, Any]:
         return {

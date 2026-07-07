@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any, Mapping
 
+from sentinel_core.models._coerce import coerce_seq
 from tests.synthetic.schemas import Scenario
 
 
@@ -91,9 +92,18 @@ def score_evidence_completeness(
     required: tuple[str, ...] | list[str],
     reported_keys: tuple[str, ...] | list[str],
 ) -> float:
-    """Fraction of required evidence keys present in the reported set."""
-    req = tuple(str(x) for x in (required or ()))
-    got = set(str(x) for x in (reported_keys or ()))
+    """Fraction of required evidence keys present in the reported set.
+
+    RC-H: ``required`` and ``reported_keys`` are pushed through
+    :func:`coerce_seq` before being iterated. If a caller (or a
+    malformed scenario JSON) passes a ``str`` where a sequence was
+    expected, it is treated as a single scalar — not iterated as
+    characters. This closes the string-iteration hole where
+    ``reported_keys="abc"`` scored a required set of ``("a", "b")`` as
+    perfect.
+    """
+    req = tuple(str(x) for x in coerce_seq(required))
+    got = set(str(x) for x in coerce_seq(reported_keys))
     if not req:
         return 1.0
     hits = sum(1 for r in req if r in got)
@@ -139,9 +149,14 @@ def score_decision_trace_quality(
     expected_signals: tuple[str, ...] | list[str],
     reported_signals: tuple[str, ...] | list[str],
 ) -> float:
-    """Fraction of expected decision signals present in the reported set."""
-    exp = tuple(str(x) for x in (expected_signals or ()))
-    got = set(str(x) for x in (reported_signals or ()))
+    """Fraction of expected decision signals present in the reported set.
+
+    RC-H: ``coerce_seq`` applied to both inputs — a string reported as
+    the signals field is now treated as a single scalar, not iterated
+    as characters.
+    """
+    exp = tuple(str(x) for x in coerce_seq(expected_signals))
+    got = set(str(x) for x in coerce_seq(reported_signals))
     if not exp:
         return 1.0
     hits = sum(1 for e in exp if e in got)

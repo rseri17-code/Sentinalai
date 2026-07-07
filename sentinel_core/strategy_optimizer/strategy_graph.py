@@ -5,6 +5,7 @@ from collections import Counter
 from typing import Iterable
 
 from sentinel_core.intel_memory import MemoryRecord
+from sentinel_core.models._deterministic import canonical_top
 
 
 class StrategyGraph:
@@ -66,16 +67,21 @@ class StrategyGraph:
         return self._evidence_counts.get(key, 0)
 
     def top_capabilities(self, limit: int = 10) -> list[tuple[str, int]]:
-        return self._capability_counts.most_common(int(limit))
+        # RC-F: canonical tie-break by capability_id.
+        return canonical_top(self._capability_counts, int(limit))
 
     def top_evidence(self, limit: int = 10) -> list[tuple[str, int]]:
-        return self._evidence_counts.most_common(int(limit))
+        # RC-F: canonical tie-break by evidence key.
+        return canonical_top(self._evidence_counts, int(limit))
 
     def most_common_transitions(self, limit: int = 10) -> list[tuple[tuple[str, str], int]]:
-        return self._cap_transitions.most_common(int(limit))
+        # RC-F: canonical tie-break by transition tuple (lex on the
+        # (from, to) pair — well-defined for string tuples).
+        return canonical_top(self._cap_transitions, int(limit))
 
     def evidence_transitions(self, limit: int = 10) -> list[tuple[tuple[str, str], int]]:
-        return self._evidence_transitions.most_common(int(limit))
+        # RC-F: same policy — canonical tie-break by (from, to) tuple.
+        return canonical_top(self._evidence_transitions, int(limit))
 
     def records_seen(self) -> int:
         return self._records_seen

@@ -13,6 +13,7 @@ Public surface:
 """
 from __future__ import annotations
 
+import re
 from typing import Iterable
 
 from sentinel_core.models.capability import (
@@ -168,24 +169,71 @@ def select_capabilities_for_goal(goal_type: str) -> tuple[Capability, ...]:
 # Goal derivation — pure function of PlanContext
 # ---------------------------------------------------------------------------
 
-# Rough keyword heuristics — deterministic (case-folded string check).
-# The rules are additive: multiple keywords may fire multiple goals.
-_STORAGE_KEYWORDS   = ("storage", "disk", "iops", "pvc", "volume", "pool",
-                        "saturation", "database", "db")
-_NETWORK_KEYWORDS   = ("network", "timeout", "latency", "connection",
-                        "dns", "tcp", "packet")
-_AUTH_KEYWORDS      = ("auth", "authn", "authz", "unauthorized", "forbidden",
-                        "certificate", "cert", "credential")
-_K8S_KEYWORDS       = ("kubernetes", "k8s", "pod", "container", "oom",
-                        "restart", "eviction", "crashloop")
-_DEPLOY_KEYWORDS    = ("deployment", "deploy", "release", "rollout",
-                        "change", "commit")
+# Deterministic (case-folded), token-based keyword sets.
+#
+# RC-K: previously used substring ``k in h``, which incorrectly matched
+# ``"auth"`` inside ``"authoritative_dns_failure"`` and triggered auth
+# capabilities on a DNS incident. Now every haystack is tokenized on
+# non-alphanumeric boundaries and each keyword must equal a whole
+# token — so ``authoritative`` no longer matches ``auth``, but
+# ``authentication_failure`` matches ``authentication``, and
+# ``token_validation`` matches ``token``.
+#
+# Keyword sets are enumerated as concrete word forms (verb + noun +
+# plural + abbreviation) so real incidents still match without the
+# substring false-positive risk.
+_STORAGE_KEYWORDS = frozenset({
+    "storage", "disk", "disks", "iops", "pvc", "volume", "volumes",
+    "pool", "pools", "saturation", "database", "db",
+})
+_NETWORK_KEYWORDS = frozenset({
+    "network", "networking", "timeout", "timeouts", "latency",
+    "connection", "connections", "dns", "tcp", "packet", "packets",
+})
+_AUTH_KEYWORDS = frozenset({
+    "auth",                                            # bare token (auth_events)
+    "authn", "authz",
+    "authentication", "authenticate", "authenticated", "authenticating",
+    "authorization", "authorize", "authorized", "authorizing",
+    "unauthorized", "forbidden",
+    "certificate", "certificates", "cert", "certs",
+    "credential", "credentials",
+    "token", "tokens",
+})
+_K8S_KEYWORDS = frozenset({
+    "kubernetes", "k8s", "pod", "pods", "container", "containers",
+    "oom", "restart", "restarts", "eviction", "evictions",
+    "crashloop", "crashlooping",
+})
+_DEPLOY_KEYWORDS = frozenset({
+    "deployment", "deployments", "deploy", "release", "releases",
+    "rollout", "rollouts", "change", "changes", "commit", "commits",
+})
+
+
+_TOKEN_SPLIT = re.compile(r"[^a-z0-9]+")
+
+
+def _tokenize(text: str) -> tuple[str, ...]:
+    """Return case-folded alphanumeric tokens from ``text``.
+
+    Splits on any run of non-alphanumeric characters. Empty tokens
+    (adjacent delimiters, leading/trailing delimiter) are dropped.
+    Deterministic — same string → same tuple.
+    """
+    return tuple(t for t in _TOKEN_SPLIT.split(str(text or "").lower()) if t)
 
 
 def _matches_any(haystack: str, keywords: Iterable[str]) -> bool:
-    h = haystack.lower()
+    """Return True iff any keyword equals a whole token in ``haystack``.
+
+    RC-K token-boundary match: replaces the old substring check that
+    incorrectly triggered on words like ``"authoritative"`` matching
+    ``"auth"``. Callers pass a frozen set / tuple of allowed tokens.
+    """
+    tokens = set(_tokenize(haystack))
     for k in keywords:
-        if k in h:
+        if k in tokens:
             return True
     return False
 

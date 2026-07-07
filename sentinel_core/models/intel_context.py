@@ -29,8 +29,15 @@ here is designed to hold every source's payload without loss.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, dataclass, field
 from typing import Any, Iterable
+
+from sentinel_core.models._coerce import (
+    coerce_float,
+    coerce_int,
+    coerce_str,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -167,11 +174,21 @@ class IntelligenceContext:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        """JSON-safe dict rendering. Tuples become lists."""
-        d = asdict(self)
-        # asdict already converts tuples → lists at the top level; nested
-        # dataclass tuples become lists of dicts. No further conversion needed.
-        return d
+        """JSON-safe dict rendering — every tuple becomes a list.
+
+        RC-I: the previous implementation relied on ``dataclasses.asdict``
+        to perform the tuple→list normalization, but ``asdict`` in fact
+        preserves the tuple type on tuple fields. Callers doing strict
+        Python-level equality against a JSON round-trip therefore saw a
+        mismatch. The walker below now enforces the documented contract
+        by recursively converting every tuple to a list at every depth.
+
+        The final dict shape and JSON serialization are byte-identical
+        to what ``json.dumps(...)`` would emit — ``json.dumps`` treats
+        tuples and lists identically as arrays, so any caller already
+        going through ``json.dumps`` sees no change.
+        """
+        return _tuples_to_lists(asdict(self))
 
     # ------------------------------------------------------------------
     # Factory
@@ -190,7 +207,11 @@ class IntelligenceContext:
         Unknown module names are ignored — so future modules do not break
         old callers.
         """
-        by_name: dict[str, dict[str, Any]] = {}
+        # RC-F: flatten receipts into (name, payload) tuples first, then
+        # sort canonically before de-duping. Same set of receipts arrives
+        # at the last-write-wins step in the same order regardless of
+        # the caller's input list order.
+        _entries: list[tuple[str, dict[str, Any], str]] = []
         for r in receipts or []:
             if not isinstance(r, dict):
                 continue
@@ -207,33 +228,47 @@ class IntelligenceContext:
                 # entry["metadata"].
                 payload = entry.get("metadata") if isinstance(entry.get("metadata"), dict) else {}
                 if name:
-                    by_name[name] = payload
+                    # Serialize payload deterministically for tie-break.
+                    try:
+                        payload_key = json.dumps(payload, sort_keys=True,
+                                                  default=str)
+                    except (TypeError, ValueError):
+                        payload_key = repr(payload)
+                    _entries.append((str(name), payload, payload_key))
+        # Canonical order: name ascending, then payload_key ascending. The
+        # dedup loop below stays "last-write-wins" but now the "last"
+        # entry is a deterministic function of content, not caller order.
+        _entries.sort(key=lambda t: (t[0], t[2]))
+        by_name: dict[str, dict[str, Any]] = {}
+        for name, payload, _ in _entries:
+            by_name[name] = payload
 
         service = ""
         incident_type = ""
 
-        # historical_lookup
+        # historical_lookup — RC-H: coerce_* prevents "None" contamination
+        # from JSON nulls and prevents ValueError on adversarial strings.
         hl = by_name.get("historical_lookup") or {}
-        service = service or str(hl.get("service", ""))
-        incident_type = incident_type or str(hl.get("incident_type", ""))
+        service = service or coerce_str(hl.get("service"))
+        incident_type = incident_type or coerce_str(hl.get("incident_type"))
         rm_matches = tuple(
             ResolutionMemoryMatch(
-                memory_id=str(m.get("memory_id", "")),
-                root_cause_head=str(m.get("root_cause_head", "")),
-                confidence=int(m.get("confidence", 0) or 0),
-                recorded_at=str(m.get("recorded_at", "")),
-                service=str(m.get("service", "")),
-                incident_type=str(m.get("incident_type", "")),
+                memory_id=coerce_str(m.get("memory_id")),
+                root_cause_head=coerce_str(m.get("root_cause_head")),
+                confidence=coerce_int(m.get("confidence")),
+                recorded_at=coerce_str(m.get("recorded_at")),
+                service=coerce_str(m.get("service")),
+                incident_type=coerce_str(m.get("incident_type")),
             )
             for m in hl.get("resolution_memory_matches", []) or []
             if isinstance(m, dict)
         )
         inv_matches = tuple(
             InvestigationMatch(
-                investigation_id=str(m.get("investigation_id", "")),
-                created_at=str(m.get("created_at", "")),
-                incident_type=str(m.get("incident_type", "")),
-                service=str(m.get("service", "")),
+                investigation_id=coerce_str(m.get("investigation_id")),
+                created_at=coerce_str(m.get("created_at")),
+                incident_type=coerce_str(m.get("incident_type")),
+                service=coerce_str(m.get("service")),
             )
             for m in hl.get("investigation_matches", []) or []
             if isinstance(m, dict)
@@ -241,18 +276,19 @@ class IntelligenceContext:
 
         # pattern_recognition
         pr = by_name.get("pattern_recognition") or {}
-        service = service or str(pr.get("service", ""))
-        incident_type = incident_type or str(pr.get("incident_type", ""))
+        service = service or coerce_str(pr.get("service"))
+        incident_type = incident_type or coerce_str(pr.get("incident_type"))
         patterns = tuple(
             PatternMatch(
-                pattern_id=str(p.get("pattern_id", "")),
-                incident_type=str(p.get("incident_type", "")),
-                services=list(p.get("services", []) or []),
-                canonical_symptoms=list(p.get("canonical_symptoms", []) or []),
-                occurrence_count=int(p.get("occurrence_count", 0) or 0),
-                success_count=int(p.get("success_count", 0) or 0),
-                success_rate=float(p.get("success_rate", 0.0) or 0.0),
-                last_seen=str(p.get("last_seen", "")),
+                pattern_id=coerce_str(p.get("pattern_id")),
+                incident_type=coerce_str(p.get("incident_type")),
+                services=[coerce_str(x) for x in (p.get("services") or [])],
+                canonical_symptoms=[coerce_str(x) for x in
+                                     (p.get("canonical_symptoms") or [])],
+                occurrence_count=coerce_int(p.get("occurrence_count")),
+                success_count=coerce_int(p.get("success_count")),
+                success_rate=coerce_float(p.get("success_rate")),
+                last_seen=coerce_str(p.get("last_seen")),
             )
             for p in pr.get("pattern_matches", []) or []
             if isinstance(p, dict)
@@ -260,53 +296,55 @@ class IntelligenceContext:
 
         # incident_graph_lookup
         ig = by_name.get("incident_graph_lookup") or {}
-        service = service or str(ig.get("service", ""))
-        related = tuple(str(x) for x in (ig.get("related_incident_ids", []) or []))
+        service = service or coerce_str(ig.get("service"))
+        related = tuple(coerce_str(x)
+                          for x in (ig.get("related_incident_ids") or []))
 
         # dependency_graph_lookup
         dg = by_name.get("dependency_graph_lookup") or {}
-        service = service or str(dg.get("service", ""))
+        service = service or coerce_str(dg.get("service"))
         upstream = tuple(
             DependencyEdge(
-                source_service=str(e.get("source_service", "")),
-                target_service=str(e.get("target_service", "")),
-                dep_type=str(e.get("dep_type", "")),
-                strength=float(e.get("strength", 0.0) or 0.0),
-                observed_count=int(e.get("observed_count", 0) or 0),
-                last_seen=str(e.get("last_seen", "")),
+                source_service=coerce_str(e.get("source_service")),
+                target_service=coerce_str(e.get("target_service")),
+                dep_type=coerce_str(e.get("dep_type")),
+                strength=coerce_float(e.get("strength")),
+                observed_count=coerce_int(e.get("observed_count")),
+                last_seen=coerce_str(e.get("last_seen")),
             )
             for e in dg.get("upstream", []) or []
             if isinstance(e, dict)
         )
         downstream = tuple(
             DependencyEdge(
-                source_service=str(e.get("source_service", "")),
-                target_service=str(e.get("target_service", "")),
-                dep_type=str(e.get("dep_type", "")),
-                strength=float(e.get("strength", 0.0) or 0.0),
-                observed_count=int(e.get("observed_count", 0) or 0),
-                last_seen=str(e.get("last_seen", "")),
+                source_service=coerce_str(e.get("source_service")),
+                target_service=coerce_str(e.get("target_service")),
+                dep_type=coerce_str(e.get("dep_type")),
+                strength=coerce_float(e.get("strength")),
+                observed_count=coerce_int(e.get("observed_count")),
+                last_seen=coerce_str(e.get("last_seen")),
             )
             for e in dg.get("downstream", []) or []
             if isinstance(e, dict)
         )
-        affected_services = tuple(str(x) for x in (dg.get("affected_services", []) or []))
+        affected_services = tuple(coerce_str(x)
+                                   for x in (dg.get("affected_services") or []))
 
         # episodic_memory_lookup
         em = by_name.get("episodic_memory_lookup") or {}
-        service = service or str(em.get("service", ""))
-        incident_type = incident_type or str(em.get("incident_type", ""))
+        service = service or coerce_str(em.get("service"))
+        incident_type = incident_type or coerce_str(em.get("incident_type"))
         episodes = tuple(
             EpisodeMatch(
-                episode_id=str(e.get("episode_id", "")),
-                incident_id=str(e.get("incident_id", "")),
-                service=str(e.get("service", "")),
-                incident_type=str(e.get("incident_type", "")),
-                root_cause_head=str(e.get("root_cause_head", "")),
-                resolution_action_head=str(e.get("resolution_action_head", "")),
-                outcome=str(e.get("outcome", "")),
-                confidence=float(e.get("confidence", 0.0) or 0.0),
-                recorded_at=str(e.get("recorded_at", "")),
+                episode_id=coerce_str(e.get("episode_id")),
+                incident_id=coerce_str(e.get("incident_id")),
+                service=coerce_str(e.get("service")),
+                incident_type=coerce_str(e.get("incident_type")),
+                root_cause_head=coerce_str(e.get("root_cause_head")),
+                resolution_action_head=coerce_str(e.get("resolution_action_head")),
+                outcome=coerce_str(e.get("outcome")),
+                confidence=coerce_float(e.get("confidence")),
+                recorded_at=coerce_str(e.get("recorded_at")),
             )
             for e in em.get("episodes", []) or []
             if isinstance(e, dict)
@@ -314,15 +352,15 @@ class IntelligenceContext:
 
         # causal_graph_lookup
         cg = by_name.get("causal_graph_lookup") or {}
-        service = service or str(cg.get("service", ""))
-        blast_severity = str(cg.get("severity", "low") or "low")
-        blast_total = int(cg.get("total_affected", 0) or 0)
+        service = service or coerce_str(cg.get("service"))
+        blast_severity = coerce_str(cg.get("severity"), default="low") or "low"
+        blast_total = coerce_int(cg.get("total_affected"))
         blast_affected = tuple(
             AffectedService(
-                service_id=str(a.get("service_id", "")),
-                probability=float(a.get("probability", 0.0) or 0.0),
-                propagation_ms=int(a.get("propagation_ms", 0) or 0),
-                path=list(a.get("path", []) or []),
+                service_id=coerce_str(a.get("service_id")),
+                probability=coerce_float(a.get("probability")),
+                propagation_ms=coerce_int(a.get("propagation_ms")),
+                path=[coerce_str(x) for x in (a.get("path") or [])],
             )
             for a in cg.get("affected", []) or []
             if isinstance(a, dict)
@@ -344,6 +382,26 @@ class IntelligenceContext:
             blast_radius_affected=blast_affected,
             module_names_seen=tuple(sorted(by_name.keys())),
         )
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _tuples_to_lists(obj: Any) -> Any:
+    """Recursively convert every tuple in ``obj`` to a list.
+
+    Mirrors the walker in ``sentinel_core/intel_memory/schemas.py``.
+    RC-I: the JSON-safe rendering contract now truly holds — every
+    tuple, at every depth, becomes a list.
+    """
+    if isinstance(obj, tuple):
+        return [_tuples_to_lists(v) for v in obj]
+    if isinstance(obj, list):
+        return [_tuples_to_lists(v) for v in obj]
+    if isinstance(obj, dict):
+        return {k: _tuples_to_lists(v) for k, v in obj.items()}
+    return obj
 
 
 __all__ = [

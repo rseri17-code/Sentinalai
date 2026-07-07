@@ -25,7 +25,19 @@ class OutcomeRecord:
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
-        d["feedback_signals"] = [s for s in d["feedback_signals"]]
+        # RC-F: sort feedback_signals canonically so identical logical
+        # signal sets always serialize byte-identically regardless of
+        # the ledger's ingest order. Sort key is (timestamp, source,
+        # kind, memory_id) — all four are strings on FeedbackSignal.
+        d["feedback_signals"] = sorted(
+            d["feedback_signals"],
+            key=lambda s: (
+                str(s.get("timestamp", "")),
+                str(s.get("source", "")),
+                str(s.get("kind", "")),
+                str(s.get("memory_id", "")),
+            ),
+        )
         d["replay_agreement"] = round(float(d["replay_agreement"]), 4)
         d["benchmark_agreement"] = round(float(d["benchmark_agreement"]), 4)
         return d

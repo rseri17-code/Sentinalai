@@ -29,6 +29,7 @@ here is designed to hold every source's payload without loss.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, dataclass, field
 from typing import Any, Iterable
 
@@ -190,7 +191,11 @@ class IntelligenceContext:
         Unknown module names are ignored — so future modules do not break
         old callers.
         """
-        by_name: dict[str, dict[str, Any]] = {}
+        # RC-F: flatten receipts into (name, payload) tuples first, then
+        # sort canonically before de-duping. Same set of receipts arrives
+        # at the last-write-wins step in the same order regardless of
+        # the caller's input list order.
+        _entries: list[tuple[str, dict[str, Any], str]] = []
         for r in receipts or []:
             if not isinstance(r, dict):
                 continue
@@ -207,7 +212,20 @@ class IntelligenceContext:
                 # entry["metadata"].
                 payload = entry.get("metadata") if isinstance(entry.get("metadata"), dict) else {}
                 if name:
-                    by_name[name] = payload
+                    # Serialize payload deterministically for tie-break.
+                    try:
+                        payload_key = json.dumps(payload, sort_keys=True,
+                                                  default=str)
+                    except (TypeError, ValueError):
+                        payload_key = repr(payload)
+                    _entries.append((str(name), payload, payload_key))
+        # Canonical order: name ascending, then payload_key ascending. The
+        # dedup loop below stays "last-write-wins" but now the "last"
+        # entry is a deterministic function of content, not caller order.
+        _entries.sort(key=lambda t: (t[0], t[2]))
+        by_name: dict[str, dict[str, Any]] = {}
+        for name, payload, _ in _entries:
+            by_name[name] = payload
 
         service = ""
         incident_type = ""

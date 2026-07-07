@@ -52,6 +52,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from sentinel_core.models._deterministic import canonical_max, canonical_sort
+
 
 # ---------------------------------------------------------------------------
 # The 6 read modules Decision Intelligence expects to see. If any is
@@ -179,13 +181,21 @@ class DecisionContext:
         module_names    = _as_tuple(_getattr_safe(ic, "module_names_seen", ()))
 
         # --- Recurring + top pattern ---------------------------------
+        # RC-F: sort pattern_matches canonically by (-occurrence_count,
+        # pattern_id) before scanning so ties resolve to the same
+        # pattern regardless of caller input order.
+        _pat_sorted = canonical_sort(
+            pattern_matches,
+            primary=lambda p: -int(_getattr_safe(p, "occurrence_count", 0) or 0),
+            secondary=lambda p: str(_getattr_safe(p, "pattern_id", "") or ""),
+        )
         top_pattern = None
-        for p in pattern_matches:
+        for p in _pat_sorted:
             occ = int(_getattr_safe(p, "occurrence_count", 0) or 0)
             if occ >= 2:
-                if top_pattern is None or occ > int(_getattr_safe(top_pattern,
-                                                                    "occurrence_count", 0) or 0):
-                    top_pattern = p
+                # First element in canonical sort with occ>=2 is the winner.
+                top_pattern = p
+                break
         recurring_incident = top_pattern is not None
 
         # --- historical_success_rate = max pattern success_rate ------
@@ -205,9 +215,16 @@ class DecisionContext:
             likely_failure_type = incident_type
 
         # --- likely_blast_radius -------------------------------------
+        # RC-F: canonical selection — highest probability, tie-break on
+        # service_id. Removes dependence on caller tuple order and
+        # aligns with the docstring's "highest-probability" claim.
         top_service = ""
         if blast_affected:
-            first = blast_affected[0]
+            first = canonical_max(
+                blast_affected,
+                primary=lambda a: -float(_getattr_safe(a, "probability", 0.0) or 0.0),
+                secondary=lambda a: str(_getattr_safe(a, "service_id", "") or ""),
+            )
             top_service = str(_getattr_safe(first, "service_id", "") or "")
         blast_radius = BlastRadiusProjection(
             severity=blast_severity,
@@ -218,13 +235,19 @@ class DecisionContext:
         # --- recommended_next_service --------------------------------
         # Highest-strength downstream edge's source_service (the caller
         # depending on us) — the operator's most useful "check this next".
+        # RC-F: canonical tie-break on source_service so equal-strength
+        # downstreams resolve deterministically.
         recommended_next_service = ""
         if downstream:
-            best = max(downstream,
-                        key=lambda e: float(_getattr_safe(e, "strength", 0.0) or 0.0))
+            best = canonical_max(
+                downstream,
+                primary=lambda e: -float(_getattr_safe(e, "strength", 0.0) or 0.0),
+                secondary=lambda e: str(_getattr_safe(e, "source_service", "") or ""),
+            )
             recommended_next_service = str(_getattr_safe(best, "source_service", "") or "")
         elif affected:
-            recommended_next_service = str(affected[0] or "")
+            # RC-F: sort affected canonically so the fallback is stable.
+            recommended_next_service = str(sorted(str(a or "") for a in affected)[0])
 
         # --- recommended_investigation_order -------------------------
         # Ordered, deterministic sequence of investigative "steps"

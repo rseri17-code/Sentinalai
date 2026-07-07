@@ -7,6 +7,7 @@ from statistics import mean
 from typing import Any, Iterable
 
 from sentinel_core.intel_memory import MemoryRecord
+from sentinel_core.models._deterministic import canonical_top
 
 
 @dataclass(frozen=True)
@@ -49,7 +50,9 @@ class ServiceLearning:
                 (r.detected_root_cause or "")[:120].strip()
                 for r in g if r.detected_root_cause
             )
-            top = tuple(rc_counts.most_common(3))
+            # RC-F: canonical_top applies (-count, key) tiebreak so tied
+            # root causes always emit in the same order across shuffled inputs.
+            top = tuple(canonical_top(rc_counts, 3))
             rows.append(ServiceLearningRow(
                 service=svc,
                 incident_count=len(g),

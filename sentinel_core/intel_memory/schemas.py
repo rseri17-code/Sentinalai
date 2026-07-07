@@ -237,6 +237,10 @@ class MemoryRecord:
             investigation_score=float(d.get("investigation_score", 0.0) or 0.0),
             sentinelbench_score=float(d.get("sentinelbench_score", 0.0) or 0.0),
             replay_history=tuple(str(x) for x in (d.get("replay_history", []) or [])),
+            # RC-I: preserve the caller-supplied schema_version so any
+            # v>1 payload does not silently downgrade to v1 on round-trip.
+            schema_version=int(d.get("schema_version", MEMORY_SCHEMA_VERSION)
+                                 or MEMORY_SCHEMA_VERSION),
         )
 
 

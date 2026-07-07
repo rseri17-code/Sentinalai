@@ -208,9 +208,9 @@ class IntelligenceContext:
         old callers.
         """
         # RC-F: flatten receipts into (name, payload) tuples first, then
-        # sort canonically before de-duping. Same set of receipts arrives
-        # at the last-write-wins step in the same order regardless of
-        # the caller's input list order.
+        # sort canonically before merging. Same set of receipts arrives
+        # at the merge step in the same order regardless of the caller's
+        # input list order.
         _entries: list[tuple[str, dict[str, Any], str]] = []
         for r in receipts or []:
             if not isinstance(r, dict):
@@ -235,13 +235,18 @@ class IntelligenceContext:
                     except (TypeError, ValueError):
                         payload_key = repr(payload)
                     _entries.append((str(name), payload, payload_key))
-        # Canonical order: name ascending, then payload_key ascending. The
-        # dedup loop below stays "last-write-wins" but now the "last"
-        # entry is a deterministic function of content, not caller order.
+        # Canonical order: name ascending, then payload_key ascending.
         _entries.sort(key=lambda t: (t[0], t[2]))
+        # RC-J: previously the loop was last-write-wins, silently
+        # dropping every earlier payload for the same module. Now
+        # duplicates for the same module are merged so no information
+        # is lost. Merge is deterministic (union of canonical inputs).
         by_name: dict[str, dict[str, Any]] = {}
         for name, payload, _ in _entries:
-            by_name[name] = payload
+            if name in by_name:
+                by_name[name] = _merge_module_payloads(by_name[name], payload)
+            else:
+                by_name[name] = payload
 
         service = ""
         incident_type = ""
@@ -402,6 +407,66 @@ def _tuples_to_lists(obj: Any) -> Any:
     if isinstance(obj, dict):
         return {k: _tuples_to_lists(v) for k, v in obj.items()}
     return obj
+
+
+def _merge_module_payloads(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
+    """RC-J: deterministically merge two payloads for the same module.
+
+    Policy (never silently drops data):
+
+    - Keys present in only one side are kept unchanged.
+    - Both scalar: keep ``a`` if non-empty, else ``b``. Ties (both
+      equal) keep ``a``.
+    - Both list: concatenate ``a + b``, then dedupe preserving the
+      canonical JSON form of each element (first-occurrence wins on
+      the deduped output — order is stable because ``a`` was
+      canonically pre-sorted upstream).
+    - Both dict: recurse.
+    - Mixed types: keep ``a`` (the earlier canonical entry).
+
+    Pure and deterministic — same ``(a, b)`` always returns the same
+    dict.
+    """
+    if not isinstance(a, dict) or not isinstance(b, dict):
+        return a if isinstance(a, dict) else (b if isinstance(b, dict) else {})
+    out: dict[str, Any] = {}
+    keys = sorted(set(a.keys()) | set(b.keys()))
+    for k in keys:
+        if k not in a:
+            out[k] = b[k]
+        elif k not in b:
+            out[k] = a[k]
+        else:
+            va, vb = a[k], b[k]
+            if isinstance(va, dict) and isinstance(vb, dict):
+                out[k] = _merge_module_payloads(va, vb)
+            elif isinstance(va, list) and isinstance(vb, list):
+                out[k] = _dedupe_by_json(va + vb)
+            elif type(va) is type(vb):
+                # Scalar of the same type — keep the earlier (a) unless
+                # it is falsy and b is non-falsy.
+                out[k] = va if va else vb
+            else:
+                # Mixed types — deterministic pick of the earlier side.
+                out[k] = va
+    return out
+
+
+def _dedupe_by_json(items: list[Any]) -> list[Any]:
+    """Return ``items`` with duplicates (by canonical JSON) removed,
+    preserving first-occurrence order."""
+    seen: set[str] = set()
+    out: list[Any] = []
+    for it in items:
+        try:
+            key = json.dumps(it, sort_keys=True, default=str)
+        except (TypeError, ValueError):
+            key = repr(it)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(it)
+    return out
 
 
 __all__ = [

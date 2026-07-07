@@ -6645,3 +6645,660 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-07T04:11:24.481Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 11f51c6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- eval/blast_radius_history.json
+- eval/cascade_tracker.json
+- eval/causal_graph.jsonl
+- eval/co_failure_index.json
+- eval/episodic_memory.jsonl
+- eval/investigations/inv-INC-DT_decisions.jsonl
+- eval/neural_confidence_calibrator.json
+- eval/pattern_registry.json
+- eval/recurrence_index.json
+- eval/retrieval_telemetry.jsonl
+- sentinel_core/causal_graph/schemas.py
+- sentinel_core/continuous_learning/learning_cycle.py
+- sentinel_core/hypotheses/hypothesis_tracker.py
+- sentinel_core/intel_memory/fingerprint.py
+- sentinel_core/models/intel_context.py
+- sentinel_wiki/patterns/099952ef.yaml
+- sentinel_wiki/patterns/0b2320f2.yaml
+- sentinel_wiki/patterns/21293d8b.yaml
+- sentinel_wiki/patterns/2564f02d.yaml
+- sentinel_wiki/patterns/2b138bfb.yaml
+- sentinel_wiki/patterns/311ba17f.yaml
+- sentinel_wiki/patterns/35321fd4.yaml
+- sentinel_wiki/patterns/360f7487.yaml
+- sentinel_wiki/patterns/3f6b30ff.yaml
+- sentinel_wiki/patterns/4d9a765e.yaml
+- sentinel_wiki/patterns/51aad8e8.yaml
+- sentinel_wiki/patterns/53f449ad.yaml
+- sentinel_wiki/patterns/7259c8f6.yaml
+- sentinel_wiki/patterns/7a35b5f0.yaml
+- sentinel_wiki/patterns/816f80ba.yaml
+- sentinel_wiki/patterns/9d460ed0.yaml
+- sentinel_wiki/patterns/a4c0864d.yaml
+- sentinel_wiki/patterns/ab499953.yaml
+- sentinel_wiki/patterns/b06db2a4.yaml
+- sentinel_wiki/patterns/b10a794a.yaml
+- sentinel_wiki/patterns/b6ddaaa5.yaml
+- sentinel_wiki/patterns/bffd30ef.yaml
+- sentinel_wiki/patterns/c511c65d.yaml
+- sentinel_wiki/patterns/c5448d15.yaml
+- sentinel_wiki/patterns/d119f2a9.yaml
+- sentinel_wiki/patterns/d1e91fc3.yaml
+- sentinel_wiki/patterns/e007163e.yaml
+- sentinel_wiki/patterns/e30560d2.yaml
+- sentinel_wiki/patterns/e4c3f023.yaml
+- sentinel_wiki/patterns/f4fa214a.yaml
+- sentinel_wiki/patterns/f8716a51.yaml
+- sentinel_wiki/receipts/INC12345_20260707.md
+- sentinel_wiki/receipts/INC12346_20260707.md
+- sentinel_wiki/receipts/INC12347_20260707.md
+- sentinel_wiki/receipts/INC12348_20260707.md
+- sentinel_wiki/receipts/INC12349_20260707.md
+- sentinel_wiki/receipts/INC12350_20260707.md
+- sentinel_wiki/receipts/INC12351_20260707.md
+- sentinel_wiki/receipts/INC12352_20260707.md
+- sentinel_wiki/receipts/INC12353_20260707.md
+- sentinel_wiki/receipts/INC12354_20260707.md
+- sentinel_wiki/receipts/INC_AD1_20260707.md
+- sentinel_wiki/receipts/INC_C1_20260707.md
+- sentinel_wiki/receipts/INC_E1_20260707.md
+- sentinel_wiki/receipts/INC_E2_20260707.md
+- sentinel_wiki/receipts/INC_F1_20260707.md
+- sentinel_wiki/receipts/INC_H1_20260707.md
+- sentinel_wiki/receipts/INC_H2_20260707.md
+- sentinel_wiki/receipts/INC_H3_20260707.md
+- sentinel_wiki/receipts/INC_H4_20260707.md
+- sentinel_wiki/receipts/INC_H5_20260707.md
+- sentinel_wiki/receipts/INC_H6_20260707.md
+- sentinel_wiki/receipts/INC_H7_20260707.md
+- sentinel_wiki/receipts/INC_H8_20260707.md
+- sentinel_wiki/receipts/INC_H9_20260707.md
+- sentinel_wiki/receipts/INC_L1_20260707.md
+- sentinel_wiki/receipts/INC_M1_20260707.md
+- sentinel_wiki/receipts/INC_N1_20260707.md
+- sentinel_wiki/receipts/INC_N2_20260707.md
+- sentinel_wiki/receipts/INC_S1_20260707.md
+- sentinel_wiki/receipts/INC_S2_20260707.md
+- sentinel_wiki/receipts/INC_SF1_20260707.md
+- sentinel_wiki/receipts/INC_SF2_20260707.md
+- sentinel_wiki/receipts/INC_T1_20260707.md
+- sentinel_wiki/receipts/INC_TEST001_20260707.md
+- tests/synthetic/scoring.py
+- tests/synthetic/test_synthetic_scoring.py
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `11f51c6 chore: update hot memory (stop hook auto-commit)`
+- `9ab1d18 chore: commit runtime-generated eval, wiki, and memory data`
+- `d2810e8 sprint4: RC-H input tolerance + RC-I contract correctness + RC-K planner tokens`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-07T04:32:53.289Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 11f51c6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- eval/blast_radius_history.json
+- eval/cascade_tracker.json
+- eval/causal_graph.jsonl
+- eval/co_failure_index.json
+- eval/episodic_memory.jsonl
+- eval/investigations/inv-INC-DT_decisions.jsonl
+- eval/neural_confidence_calibrator.json
+- eval/pattern_registry.json
+- eval/recurrence_index.json
+- eval/retrieval_telemetry.jsonl
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+- sentinel_core/causal_graph/schemas.py
+- sentinel_core/continuous_learning/learning_cycle.py
+- sentinel_core/hypotheses/hypothesis_tracker.py
+- sentinel_core/intel_memory/fingerprint.py
+- sentinel_core/models/intel_context.py
+- sentinel_wiki/patterns/099952ef.yaml
+- sentinel_wiki/patterns/0b2320f2.yaml
+- sentinel_wiki/patterns/21293d8b.yaml
+- sentinel_wiki/patterns/2564f02d.yaml
+- sentinel_wiki/patterns/2b138bfb.yaml
+- sentinel_wiki/patterns/311ba17f.yaml
+- sentinel_wiki/patterns/35321fd4.yaml
+- sentinel_wiki/patterns/360f7487.yaml
+- sentinel_wiki/patterns/3f6b30ff.yaml
+- sentinel_wiki/patterns/4d9a765e.yaml
+- sentinel_wiki/patterns/51aad8e8.yaml
+- sentinel_wiki/patterns/53f449ad.yaml
+- sentinel_wiki/patterns/7259c8f6.yaml
+- sentinel_wiki/patterns/7a35b5f0.yaml
+- sentinel_wiki/patterns/816f80ba.yaml
+- sentinel_wiki/patterns/9d460ed0.yaml
+- sentinel_wiki/patterns/a4c0864d.yaml
+- sentinel_wiki/patterns/ab499953.yaml
+- sentinel_wiki/patterns/b06db2a4.yaml
+- sentinel_wiki/patterns/b10a794a.yaml
+- sentinel_wiki/patterns/b6ddaaa5.yaml
+- sentinel_wiki/patterns/bffd30ef.yaml
+- sentinel_wiki/patterns/c511c65d.yaml
+- sentinel_wiki/patterns/c5448d15.yaml
+- sentinel_wiki/patterns/d119f2a9.yaml
+- sentinel_wiki/patterns/d1e91fc3.yaml
+- sentinel_wiki/patterns/e007163e.yaml
+- sentinel_wiki/patterns/e30560d2.yaml
+- sentinel_wiki/patterns/e4c3f023.yaml
+- sentinel_wiki/patterns/f4fa214a.yaml
+- sentinel_wiki/patterns/f8716a51.yaml
+- sentinel_wiki/receipts/INC12345_20260707.md
+- sentinel_wiki/receipts/INC12346_20260707.md
+- sentinel_wiki/receipts/INC12347_20260707.md
+- sentinel_wiki/receipts/INC12348_20260707.md
+- sentinel_wiki/receipts/INC12349_20260707.md
+- sentinel_wiki/receipts/INC12350_20260707.md
+- sentinel_wiki/receipts/INC12351_20260707.md
+- sentinel_wiki/receipts/INC12352_20260707.md
+- sentinel_wiki/receipts/INC12353_20260707.md
+- sentinel_wiki/receipts/INC12354_20260707.md
+- sentinel_wiki/receipts/INC_AD1_20260707.md
+- sentinel_wiki/receipts/INC_C1_20260707.md
+- sentinel_wiki/receipts/INC_E1_20260707.md
+- sentinel_wiki/receipts/INC_E2_20260707.md
+- sentinel_wiki/receipts/INC_F1_20260707.md
+- sentinel_wiki/receipts/INC_H1_20260707.md
+- sentinel_wiki/receipts/INC_H2_20260707.md
+- sentinel_wiki/receipts/INC_H3_20260707.md
+- sentinel_wiki/receipts/INC_H4_20260707.md
+- sentinel_wiki/receipts/INC_H5_20260707.md
+- sentinel_wiki/receipts/INC_H6_20260707.md
+- sentinel_wiki/receipts/INC_H7_20260707.md
+- sentinel_wiki/receipts/INC_H8_20260707.md
+- sentinel_wiki/receipts/INC_H9_20260707.md
+- sentinel_wiki/receipts/INC_L1_20260707.md
+- sentinel_wiki/receipts/INC_M1_20260707.md
+- sentinel_wiki/receipts/INC_N1_20260707.md
+- sentinel_wiki/receipts/INC_N2_20260707.md
+- sentinel_wiki/receipts/INC_S1_20260707.md
+- sentinel_wiki/receipts/INC_S2_20260707.md
+- sentinel_wiki/receipts/INC_SF1_20260707.md
+- sentinel_wiki/receipts/INC_SF2_20260707.md
+- sentinel_wiki/receipts/INC_T1_20260707.md
+- sentinel_wiki/receipts/INC_TEST001_20260707.md
+- tests/synthetic/scoring.py
+- tests/synthetic/test_synthetic_scoring.py
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `11f51c6 chore: update hot memory (stop hook auto-commit)`
+- `9ab1d18 chore: commit runtime-generated eval, wiki, and memory data`
+- `d2810e8 sprint4: RC-H input tolerance + RC-I contract correctness + RC-K planner tokens`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-07T05:03:52.769Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 11f51c6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- eval/blast_radius_history.json
+- eval/cascade_tracker.json
+- eval/causal_graph.jsonl
+- eval/co_failure_index.json
+- eval/episodic_memory.jsonl
+- eval/investigations/inv-INC-DT_decisions.jsonl
+- eval/neural_confidence_calibrator.json
+- eval/pattern_registry.json
+- eval/recurrence_index.json
+- eval/retrieval_telemetry.jsonl
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+- sentinel_core/causal_graph/schemas.py
+- sentinel_core/continuous_learning/learning_cycle.py
+- sentinel_core/hypotheses/hypothesis_tracker.py
+- sentinel_core/intel_memory/fingerprint.py
+- sentinel_core/models/intel_context.py
+- sentinel_wiki/patterns/099952ef.yaml
+- sentinel_wiki/patterns/0b2320f2.yaml
+- sentinel_wiki/patterns/21293d8b.yaml
+- sentinel_wiki/patterns/2564f02d.yaml
+- sentinel_wiki/patterns/2b138bfb.yaml
+- sentinel_wiki/patterns/311ba17f.yaml
+- sentinel_wiki/patterns/35321fd4.yaml
+- sentinel_wiki/patterns/360f7487.yaml
+- sentinel_wiki/patterns/3f6b30ff.yaml
+- sentinel_wiki/patterns/4d9a765e.yaml
+- sentinel_wiki/patterns/51aad8e8.yaml
+- sentinel_wiki/patterns/53f449ad.yaml
+- sentinel_wiki/patterns/7259c8f6.yaml
+- sentinel_wiki/patterns/7a35b5f0.yaml
+- sentinel_wiki/patterns/816f80ba.yaml
+- sentinel_wiki/patterns/9d460ed0.yaml
+- sentinel_wiki/patterns/a4c0864d.yaml
+- sentinel_wiki/patterns/ab499953.yaml
+- sentinel_wiki/patterns/b06db2a4.yaml
+- sentinel_wiki/patterns/b10a794a.yaml
+- sentinel_wiki/patterns/b6ddaaa5.yaml
+- sentinel_wiki/patterns/bffd30ef.yaml
+- sentinel_wiki/patterns/c511c65d.yaml
+- sentinel_wiki/patterns/c5448d15.yaml
+- sentinel_wiki/patterns/d119f2a9.yaml
+- sentinel_wiki/patterns/d1e91fc3.yaml
+- sentinel_wiki/patterns/e007163e.yaml
+- sentinel_wiki/patterns/e30560d2.yaml
+- sentinel_wiki/patterns/e4c3f023.yaml
+- sentinel_wiki/patterns/f4fa214a.yaml
+- sentinel_wiki/patterns/f8716a51.yaml
+- sentinel_wiki/receipts/INC12345_20260707.md
+- sentinel_wiki/receipts/INC12346_20260707.md
+- sentinel_wiki/receipts/INC12347_20260707.md
+- sentinel_wiki/receipts/INC12348_20260707.md
+- sentinel_wiki/receipts/INC12349_20260707.md
+- sentinel_wiki/receipts/INC12350_20260707.md
+- sentinel_wiki/receipts/INC12351_20260707.md
+- sentinel_wiki/receipts/INC12352_20260707.md
+- sentinel_wiki/receipts/INC12353_20260707.md
+- sentinel_wiki/receipts/INC12354_20260707.md
+- sentinel_wiki/receipts/INC_AD1_20260707.md
+- sentinel_wiki/receipts/INC_C1_20260707.md
+- sentinel_wiki/receipts/INC_E1_20260707.md
+- sentinel_wiki/receipts/INC_E2_20260707.md
+- sentinel_wiki/receipts/INC_F1_20260707.md
+- sentinel_wiki/receipts/INC_H1_20260707.md
+- sentinel_wiki/receipts/INC_H2_20260707.md
+- sentinel_wiki/receipts/INC_H3_20260707.md
+- sentinel_wiki/receipts/INC_H4_20260707.md
+- sentinel_wiki/receipts/INC_H5_20260707.md
+- sentinel_wiki/receipts/INC_H6_20260707.md
+- sentinel_wiki/receipts/INC_H7_20260707.md
+- sentinel_wiki/receipts/INC_H8_20260707.md
+- sentinel_wiki/receipts/INC_H9_20260707.md
+- sentinel_wiki/receipts/INC_L1_20260707.md
+- sentinel_wiki/receipts/INC_M1_20260707.md
+- sentinel_wiki/receipts/INC_N1_20260707.md
+- sentinel_wiki/receipts/INC_N2_20260707.md
+- sentinel_wiki/receipts/INC_S1_20260707.md
+- sentinel_wiki/receipts/INC_S2_20260707.md
+- sentinel_wiki/receipts/INC_SF1_20260707.md
+- sentinel_wiki/receipts/INC_SF2_20260707.md
+- sentinel_wiki/receipts/INC_T1_20260707.md
+- sentinel_wiki/receipts/INC_TEST001_20260707.md
+- tests/synthetic/scoring.py
+- tests/synthetic/test_synthetic_scoring.py
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `11f51c6 chore: update hot memory (stop hook auto-commit)`
+- `9ab1d18 chore: commit runtime-generated eval, wiki, and memory data`
+- `d2810e8 sprint4: RC-H input tolerance + RC-I contract correctness + RC-K planner tokens`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-07T06:48:21.641Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 11f51c6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- eval/blast_radius_history.json
+- eval/cascade_tracker.json
+- eval/causal_graph.jsonl
+- eval/co_failure_index.json
+- eval/episodic_memory.jsonl
+- eval/investigations/inv-INC-DT_decisions.jsonl
+- eval/neural_confidence_calibrator.json
+- eval/pattern_registry.json
+- eval/recurrence_index.json
+- eval/retrieval_telemetry.jsonl
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+- sentinel_core/causal_graph/schemas.py
+- sentinel_core/continuous_learning/learning_cycle.py
+- sentinel_core/hypotheses/hypothesis_tracker.py
+- sentinel_core/intel_memory/fingerprint.py
+- sentinel_core/models/intel_context.py
+- sentinel_wiki/patterns/099952ef.yaml
+- sentinel_wiki/patterns/0b2320f2.yaml
+- sentinel_wiki/patterns/21293d8b.yaml
+- sentinel_wiki/patterns/2564f02d.yaml
+- sentinel_wiki/patterns/2b138bfb.yaml
+- sentinel_wiki/patterns/311ba17f.yaml
+- sentinel_wiki/patterns/35321fd4.yaml
+- sentinel_wiki/patterns/360f7487.yaml
+- sentinel_wiki/patterns/3f6b30ff.yaml
+- sentinel_wiki/patterns/4d9a765e.yaml
+- sentinel_wiki/patterns/51aad8e8.yaml
+- sentinel_wiki/patterns/53f449ad.yaml
+- sentinel_wiki/patterns/7259c8f6.yaml
+- sentinel_wiki/patterns/7a35b5f0.yaml
+- sentinel_wiki/patterns/816f80ba.yaml
+- sentinel_wiki/patterns/9d460ed0.yaml
+- sentinel_wiki/patterns/a4c0864d.yaml
+- sentinel_wiki/patterns/ab499953.yaml
+- sentinel_wiki/patterns/b06db2a4.yaml
+- sentinel_wiki/patterns/b10a794a.yaml
+- sentinel_wiki/patterns/b6ddaaa5.yaml
+- sentinel_wiki/patterns/bffd30ef.yaml
+- sentinel_wiki/patterns/c511c65d.yaml
+- sentinel_wiki/patterns/c5448d15.yaml
+- sentinel_wiki/patterns/d119f2a9.yaml
+- sentinel_wiki/patterns/d1e91fc3.yaml
+- sentinel_wiki/patterns/e007163e.yaml
+- sentinel_wiki/patterns/e30560d2.yaml
+- sentinel_wiki/patterns/e4c3f023.yaml
+- sentinel_wiki/patterns/f4fa214a.yaml
+- sentinel_wiki/patterns/f8716a51.yaml
+- sentinel_wiki/receipts/INC12345_20260707.md
+- sentinel_wiki/receipts/INC12346_20260707.md
+- sentinel_wiki/receipts/INC12347_20260707.md
+- sentinel_wiki/receipts/INC12348_20260707.md
+- sentinel_wiki/receipts/INC12349_20260707.md
+- sentinel_wiki/receipts/INC12350_20260707.md
+- sentinel_wiki/receipts/INC12351_20260707.md
+- sentinel_wiki/receipts/INC12352_20260707.md
+- sentinel_wiki/receipts/INC12353_20260707.md
+- sentinel_wiki/receipts/INC12354_20260707.md
+- sentinel_wiki/receipts/INC_AD1_20260707.md
+- sentinel_wiki/receipts/INC_C1_20260707.md
+- sentinel_wiki/receipts/INC_E1_20260707.md
+- sentinel_wiki/receipts/INC_E2_20260707.md
+- sentinel_wiki/receipts/INC_F1_20260707.md
+- sentinel_wiki/receipts/INC_H1_20260707.md
+- sentinel_wiki/receipts/INC_H2_20260707.md
+- sentinel_wiki/receipts/INC_H3_20260707.md
+- sentinel_wiki/receipts/INC_H4_20260707.md
+- sentinel_wiki/receipts/INC_H5_20260707.md
+- sentinel_wiki/receipts/INC_H6_20260707.md
+- sentinel_wiki/receipts/INC_H7_20260707.md
+- sentinel_wiki/receipts/INC_H8_20260707.md
+- sentinel_wiki/receipts/INC_H9_20260707.md
+- sentinel_wiki/receipts/INC_L1_20260707.md
+- sentinel_wiki/receipts/INC_M1_20260707.md
+- sentinel_wiki/receipts/INC_N1_20260707.md
+- sentinel_wiki/receipts/INC_N2_20260707.md
+- sentinel_wiki/receipts/INC_S1_20260707.md
+- sentinel_wiki/receipts/INC_S2_20260707.md
+- sentinel_wiki/receipts/INC_SF1_20260707.md
+- sentinel_wiki/receipts/INC_SF2_20260707.md
+- sentinel_wiki/receipts/INC_T1_20260707.md
+- sentinel_wiki/receipts/INC_TEST001_20260707.md
+- tests/synthetic/scoring.py
+- tests/synthetic/test_synthetic_scoring.py
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `11f51c6 chore: update hot memory (stop hook auto-commit)`
+- `9ab1d18 chore: commit runtime-generated eval, wiki, and memory data`
+- `d2810e8 sprint4: RC-H input tolerance + RC-I contract correctness + RC-K planner tokens`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-07T07:16:19.353Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 11f51c6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- eval/blast_radius_history.json
+- eval/cascade_tracker.json
+- eval/causal_graph.jsonl
+- eval/co_failure_index.json
+- eval/episodic_memory.jsonl
+- eval/investigations/inv-INC-DT_decisions.jsonl
+- eval/neural_confidence_calibrator.json
+- eval/pattern_registry.json
+- eval/recurrence_index.json
+- eval/retrieval_telemetry.jsonl
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+- sentinel_core/causal_graph/schemas.py
+- sentinel_core/continuous_learning/learning_cycle.py
+- sentinel_core/hypotheses/hypothesis_tracker.py
+- sentinel_core/intel_memory/fingerprint.py
+- sentinel_core/models/intel_context.py
+- sentinel_wiki/patterns/099952ef.yaml
+- sentinel_wiki/patterns/0b2320f2.yaml
+- sentinel_wiki/patterns/21293d8b.yaml
+- sentinel_wiki/patterns/2564f02d.yaml
+- sentinel_wiki/patterns/2b138bfb.yaml
+- sentinel_wiki/patterns/311ba17f.yaml
+- sentinel_wiki/patterns/35321fd4.yaml
+- sentinel_wiki/patterns/360f7487.yaml
+- sentinel_wiki/patterns/3f6b30ff.yaml
+- sentinel_wiki/patterns/4d9a765e.yaml
+- sentinel_wiki/patterns/51aad8e8.yaml
+- sentinel_wiki/patterns/53f449ad.yaml
+- sentinel_wiki/patterns/7259c8f6.yaml
+- sentinel_wiki/patterns/7a35b5f0.yaml
+- sentinel_wiki/patterns/816f80ba.yaml
+- sentinel_wiki/patterns/9d460ed0.yaml
+- sentinel_wiki/patterns/a4c0864d.yaml
+- sentinel_wiki/patterns/ab499953.yaml
+- sentinel_wiki/patterns/b06db2a4.yaml
+- sentinel_wiki/patterns/b10a794a.yaml
+- sentinel_wiki/patterns/b6ddaaa5.yaml
+- sentinel_wiki/patterns/bffd30ef.yaml
+- sentinel_wiki/patterns/c511c65d.yaml
+- sentinel_wiki/patterns/c5448d15.yaml
+- sentinel_wiki/patterns/d119f2a9.yaml
+- sentinel_wiki/patterns/d1e91fc3.yaml
+- sentinel_wiki/patterns/e007163e.yaml
+- sentinel_wiki/patterns/e30560d2.yaml
+- sentinel_wiki/patterns/e4c3f023.yaml
+- sentinel_wiki/patterns/f4fa214a.yaml
+- sentinel_wiki/patterns/f8716a51.yaml
+- sentinel_wiki/receipts/INC12345_20260707.md
+- sentinel_wiki/receipts/INC12346_20260707.md
+- sentinel_wiki/receipts/INC12347_20260707.md
+- sentinel_wiki/receipts/INC12348_20260707.md
+- sentinel_wiki/receipts/INC12349_20260707.md
+- sentinel_wiki/receipts/INC12350_20260707.md
+- sentinel_wiki/receipts/INC12351_20260707.md
+- sentinel_wiki/receipts/INC12352_20260707.md
+- sentinel_wiki/receipts/INC12353_20260707.md
+- sentinel_wiki/receipts/INC12354_20260707.md
+- sentinel_wiki/receipts/INC_AD1_20260707.md
+- sentinel_wiki/receipts/INC_C1_20260707.md
+- sentinel_wiki/receipts/INC_E1_20260707.md
+- sentinel_wiki/receipts/INC_E2_20260707.md
+- sentinel_wiki/receipts/INC_F1_20260707.md
+- sentinel_wiki/receipts/INC_H1_20260707.md
+- sentinel_wiki/receipts/INC_H2_20260707.md
+- sentinel_wiki/receipts/INC_H3_20260707.md
+- sentinel_wiki/receipts/INC_H4_20260707.md
+- sentinel_wiki/receipts/INC_H5_20260707.md
+- sentinel_wiki/receipts/INC_H6_20260707.md
+- sentinel_wiki/receipts/INC_H7_20260707.md
+- sentinel_wiki/receipts/INC_H8_20260707.md
+- sentinel_wiki/receipts/INC_H9_20260707.md
+- sentinel_wiki/receipts/INC_L1_20260707.md
+- sentinel_wiki/receipts/INC_M1_20260707.md
+- sentinel_wiki/receipts/INC_N1_20260707.md
+- sentinel_wiki/receipts/INC_N2_20260707.md
+- sentinel_wiki/receipts/INC_S1_20260707.md
+- sentinel_wiki/receipts/INC_S2_20260707.md
+- sentinel_wiki/receipts/INC_SF1_20260707.md
+- sentinel_wiki/receipts/INC_SF2_20260707.md
+- sentinel_wiki/receipts/INC_T1_20260707.md
+- sentinel_wiki/receipts/INC_TEST001_20260707.md
+- tests/synthetic/scoring.py
+- tests/synthetic/test_synthetic_scoring.py
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `11f51c6 chore: update hot memory (stop hook auto-commit)`
+- `9ab1d18 chore: commit runtime-generated eval, wiki, and memory data`
+- `d2810e8 sprint4: RC-H input tolerance + RC-I contract correctness + RC-K planner tokens`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-07T07:27:28.110Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 11f51c6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- eval/blast_radius_history.json
+- eval/cascade_tracker.json
+- eval/causal_graph.jsonl
+- eval/co_failure_index.json
+- eval/episodic_memory.jsonl
+- eval/investigations/inv-INC-DT_decisions.jsonl
+- eval/neural_confidence_calibrator.json
+- eval/pattern_registry.json
+- eval/recurrence_index.json
+- eval/retrieval_telemetry.jsonl
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+- sentinel_core/causal_graph/schemas.py
+- sentinel_core/continuous_learning/learning_cycle.py
+- sentinel_core/hypotheses/hypothesis_tracker.py
+- sentinel_core/intel_memory/fingerprint.py
+- sentinel_core/models/intel_context.py
+- sentinel_wiki/patterns/099952ef.yaml
+- sentinel_wiki/patterns/0b2320f2.yaml
+- sentinel_wiki/patterns/21293d8b.yaml
+- sentinel_wiki/patterns/2564f02d.yaml
+- sentinel_wiki/patterns/2b138bfb.yaml
+- sentinel_wiki/patterns/311ba17f.yaml
+- sentinel_wiki/patterns/35321fd4.yaml
+- sentinel_wiki/patterns/360f7487.yaml
+- sentinel_wiki/patterns/3f6b30ff.yaml
+- sentinel_wiki/patterns/4d9a765e.yaml
+- sentinel_wiki/patterns/51aad8e8.yaml
+- sentinel_wiki/patterns/53f449ad.yaml
+- sentinel_wiki/patterns/7259c8f6.yaml
+- sentinel_wiki/patterns/7a35b5f0.yaml
+- sentinel_wiki/patterns/816f80ba.yaml
+- sentinel_wiki/patterns/9d460ed0.yaml
+- sentinel_wiki/patterns/a4c0864d.yaml
+- sentinel_wiki/patterns/ab499953.yaml
+- sentinel_wiki/patterns/b06db2a4.yaml
+- sentinel_wiki/patterns/b10a794a.yaml
+- sentinel_wiki/patterns/b6ddaaa5.yaml
+- sentinel_wiki/patterns/bffd30ef.yaml
+- sentinel_wiki/patterns/c511c65d.yaml
+- sentinel_wiki/patterns/c5448d15.yaml
+- sentinel_wiki/patterns/d119f2a9.yaml
+- sentinel_wiki/patterns/d1e91fc3.yaml
+- sentinel_wiki/patterns/e007163e.yaml
+- sentinel_wiki/patterns/e30560d2.yaml
+- sentinel_wiki/patterns/e4c3f023.yaml
+- sentinel_wiki/patterns/f4fa214a.yaml
+- sentinel_wiki/patterns/f8716a51.yaml
+- sentinel_wiki/receipts/INC12345_20260707.md
+- sentinel_wiki/receipts/INC12346_20260707.md
+- sentinel_wiki/receipts/INC12347_20260707.md
+- sentinel_wiki/receipts/INC12348_20260707.md
+- sentinel_wiki/receipts/INC12349_20260707.md
+- sentinel_wiki/receipts/INC12350_20260707.md
+- sentinel_wiki/receipts/INC12351_20260707.md
+- sentinel_wiki/receipts/INC12352_20260707.md
+- sentinel_wiki/receipts/INC12353_20260707.md
+- sentinel_wiki/receipts/INC12354_20260707.md
+- sentinel_wiki/receipts/INC_AD1_20260707.md
+- sentinel_wiki/receipts/INC_C1_20260707.md
+- sentinel_wiki/receipts/INC_E1_20260707.md
+- sentinel_wiki/receipts/INC_E2_20260707.md
+- sentinel_wiki/receipts/INC_F1_20260707.md
+- sentinel_wiki/receipts/INC_H1_20260707.md
+- sentinel_wiki/receipts/INC_H2_20260707.md
+- sentinel_wiki/receipts/INC_H3_20260707.md
+- sentinel_wiki/receipts/INC_H4_20260707.md
+- sentinel_wiki/receipts/INC_H5_20260707.md
+- sentinel_wiki/receipts/INC_H6_20260707.md
+- sentinel_wiki/receipts/INC_H7_20260707.md
+- sentinel_wiki/receipts/INC_H8_20260707.md
+- sentinel_wiki/receipts/INC_H9_20260707.md
+- sentinel_wiki/receipts/INC_L1_20260707.md
+- sentinel_wiki/receipts/INC_M1_20260707.md
+- sentinel_wiki/receipts/INC_N1_20260707.md
+- sentinel_wiki/receipts/INC_N2_20260707.md
+- sentinel_wiki/receipts/INC_S1_20260707.md
+- sentinel_wiki/receipts/INC_S2_20260707.md
+- sentinel_wiki/receipts/INC_SF1_20260707.md
+- sentinel_wiki/receipts/INC_SF2_20260707.md
+- sentinel_wiki/receipts/INC_T1_20260707.md
+- sentinel_wiki/receipts/INC_TEST001_20260707.md
+- tests/synthetic/scoring.py
+- tests/synthetic/test_synthetic_scoring.py
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `11f51c6 chore: update hot memory (stop hook auto-commit)`
+- `9ab1d18 chore: commit runtime-generated eval, wiki, and memory data`
+- `d2810e8 sprint4: RC-H input tolerance + RC-I contract correctness + RC-K planner tokens`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

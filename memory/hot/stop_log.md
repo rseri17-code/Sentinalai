@@ -8167,3 +8167,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-08T04:51:15.172Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: e39493d chore: commit runtime-generated wiki data (Wave 1 regression run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `e39493d chore: commit runtime-generated wiki data (Wave 1 regression run)`
+- `da801f8 chore: commit runtime-generated eval data (Wave 1 regression run)`
+- `9f91a42 wave1: Investigation Artifact — canonical immutable investigation record`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

@@ -83,8 +83,11 @@ class TestEvidenceCompleteness:
         s = score_evidence_completeness(("a", "b"), ("a",))
         assert s == 0.5
 
-    def test_empty_required_perfect(self):
-        assert score_evidence_completeness((), ("anything",)) == 1.0
+    def test_empty_required_returns_none_not_measured(self):
+        """RC-L: empty ground truth ⇒ NOT MEASURED (None), not a
+        silent perfect score. Previously returned 1.0 and inflated
+        the overall benchmark."""
+        assert score_evidence_completeness((), ("anything",)) is None
 
     def test_empty_reported_zero(self):
         assert score_evidence_completeness(("a",), ()) == 0.0
@@ -132,8 +135,9 @@ class TestDecisionTraceQuality:
         s = score_decision_trace_quality(("s1", "s2"), ("s1",))
         assert s == 0.5
 
-    def test_empty_expected_perfect(self):
-        assert score_decision_trace_quality((), ("anything",)) == 1.0
+    def test_empty_expected_returns_none_not_measured(self):
+        """RC-L: empty ground truth ⇒ NOT MEASURED (None)."""
+        assert score_decision_trace_quality((), ("anything",)) is None
 
 
 class TestRuntimeCost:

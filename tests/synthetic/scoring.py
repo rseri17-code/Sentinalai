@@ -37,25 +37,35 @@ DEFAULT_WEIGHTS: Mapping[str, float] = {
 
 @dataclass(frozen=True)
 class ScoreCard:
+    # RC-L: dimension scores are ``float | None``. ``None`` signals
+    # NOT MEASURED (scenario has no ground truth for that dimension)
+    # — the aggregator excludes such dimensions from ``overall_score``
+    # and renormalises the remaining weights. A ``0.0`` score is a
+    # measurement of "fully wrong", distinctly reported.
     scenario_id:             str
-    root_cause_match:        float = 0.0
-    evidence_completeness:   float = 0.0
-    red_herring_resistance:  float = 0.0
-    confidence_calibration:  float = 0.0
-    decision_trace_quality:  float = 0.0
-    runtime_cost_score:      float = 0.0
-    mtti_score:              float = 0.0
+    root_cause_match:        float | None = 0.0
+    evidence_completeness:   float | None = 0.0
+    red_herring_resistance:  float | None = 0.0
+    confidence_calibration:  float | None = 0.0
+    decision_trace_quality:  float | None = 0.0
+    runtime_cost_score:      float | None = 0.0
+    mtti_score:              float | None = 0.0
     overall_score:           float = 0.0
     weights:                 Mapping[str, float] = field(
         default_factory=lambda: dict(DEFAULT_WEIGHTS)
     )
     notes:                   tuple[str, ...] = ()
+    # RC-L: names of dimensions that were NOT MEASURED (returned ``None``
+    # from their scorer). Additive — existing readers ignore the field;
+    # new readers can distinguish "measured 0.0" from "not measured".
+    not_measured:            tuple[str, ...] = ()
     schema_version:          int = 1
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d["weights"] = dict(d["weights"])
         d["notes"]   = list(d["notes"])
+        d["not_measured"] = list(d["not_measured"])
         return d
 
 
@@ -91,21 +101,23 @@ def score_root_cause_match(expected: str, reported: str) -> float:
 def score_evidence_completeness(
     required: tuple[str, ...] | list[str],
     reported_keys: tuple[str, ...] | list[str],
-) -> float:
+) -> float | None:
     """Fraction of required evidence keys present in the reported set.
 
-    RC-H: ``required`` and ``reported_keys`` are pushed through
-    :func:`coerce_seq` before being iterated. If a caller (or a
-    malformed scenario JSON) passes a ``str`` where a sequence was
-    expected, it is treated as a single scalar — not iterated as
-    characters. This closes the string-iteration hole where
-    ``reported_keys="abc"`` scored a required set of ``("a", "b")`` as
-    perfect.
+    RC-H: inputs coerced via :func:`coerce_seq` so a string is not
+    iterated as characters.
+
+    RC-L: **returns ``None`` when ``required`` is empty** — the scenario
+    provides no ground truth for this dimension, so it is NOT MEASURED.
+    Previously the function returned ``1.0``, silently inflating the
+    benchmark's overall score. The aggregator (:func:`score_investigation`)
+    treats ``None`` as skip-this-dimension and renormalises the
+    remaining weights.
     """
     req = tuple(str(x) for x in coerce_seq(required))
     got = set(str(x) for x in coerce_seq(reported_keys))
     if not req:
-        return 1.0
+        return None  # RC-L: NOT MEASURED
     hits = sum(1 for r in req if r in got)
     return round(hits / len(req), 4)
 
@@ -148,17 +160,18 @@ def score_confidence_calibration(
 def score_decision_trace_quality(
     expected_signals: tuple[str, ...] | list[str],
     reported_signals: tuple[str, ...] | list[str],
-) -> float:
+) -> float | None:
     """Fraction of expected decision signals present in the reported set.
 
-    RC-H: ``coerce_seq`` applied to both inputs — a string reported as
-    the signals field is now treated as a single scalar, not iterated
-    as characters.
+    RC-H: ``coerce_seq`` applied to both inputs.
+
+    RC-L: **returns ``None`` when ``expected_signals`` is empty** —
+    NOT MEASURED. Previously returned ``1.0``, inflating overall.
     """
     exp = tuple(str(x) for x in coerce_seq(expected_signals))
     got = set(str(x) for x in coerce_seq(reported_signals))
     if not exp:
-        return 1.0
+        return None  # RC-L: NOT MEASURED
     hits = sum(1 for e in exp if e in got)
     return round(hits / len(exp), 4)
 
@@ -247,19 +260,37 @@ def score_investigation(
     if weights:
         w.update(weights)
 
-    overall = (
-        w["root_cause_match"]        * root_cause_match
-        + w["evidence_completeness"]  * evidence_completeness
-        + w["red_herring_resistance"] * red_herring_resistance
-        + w["confidence_calibration"] * confidence_calibration
-        + w["decision_trace_quality"] * decision_trace_quality
-        + w["runtime_cost_score"]     * runtime_cost_score
-        + w["mtti_score"]             * mtti_score
-    )
+    # RC-L: exclude NOT-MEASURED dimensions from ``overall_score`` and
+    # renormalise the remaining weights so the aggregate reflects only
+    # what was actually measured. If every dimension is None (an
+    # extreme edge case), ``overall_score`` is 0.0 — the report can be
+    # inspected via ``not_measured``.
+    per_dim: list[tuple[str, float | None]] = [
+        ("root_cause_match",        root_cause_match),
+        ("evidence_completeness",   evidence_completeness),
+        ("red_herring_resistance",  red_herring_resistance),
+        ("confidence_calibration",  confidence_calibration),
+        ("decision_trace_quality",  decision_trace_quality),
+        ("runtime_cost_score",      runtime_cost_score),
+        ("mtti_score",              mtti_score),
+    ]
+    measured = [(name, score) for name, score in per_dim if score is not None]
+    not_measured = tuple(sorted(name for name, score in per_dim if score is None))
+
+    total_measured_weight = sum(w[name] for name, _ in measured)
+    if total_measured_weight > 0:
+        overall = sum(w[name] * score for name, score in measured) / total_measured_weight
+    else:
+        overall = 0.0
 
     notes: list[str] = []
     if investigation_output is None:
         notes.append("scored_against_mock_output")
+    if not_measured:
+        # Deterministic, human-readable audit trail on the ScoreCard.
+        notes.append(
+            "not_measured_dimensions=" + ",".join(not_measured)
+        )
 
     return ScoreCard(
         scenario_id=scenario.scenario_id,
@@ -273,6 +304,7 @@ def score_investigation(
         overall_score=round(overall, 4),
         weights=w,
         notes=tuple(notes),
+        not_measured=not_measured,
     )
 
 

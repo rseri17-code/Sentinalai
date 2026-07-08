@@ -243,6 +243,81 @@ class MemoryRecord:
                                  or MEMORY_SCHEMA_VERSION),
         )
 
+    @classmethod
+    def from_artifact(cls, artifact: Any) -> "MemoryRecord":
+        """Wave 2: pure projection from an InvestigationArtifact.
+
+        Duck-typed on the artifact's attributes — no import of the
+        artifact package, so ``intel_memory`` gains no new dependency.
+        Deterministic: identical artifacts project to byte-identical
+        records. ``memory_id`` is the artifact's content-addressed id,
+        so the projection is idempotent by construction.
+
+        Summaries and pointers only — the artifact itself never carries
+        evidence values, so neither can the record.
+        """
+        from sentinel_core.intel_memory.fingerprint import (
+            FingerprintInput, compute_fingerprint,
+        )
+
+        def _d(name: str) -> dict:
+            v = getattr(artifact, name, None)
+            return dict(v) if isinstance(v, dict) else {}
+
+        decision = _d("decision_summary")
+        evidence = _d("evidence_key_summary")
+        planner  = _d("planner_trace_summary")
+        workers  = _d("worker_execution_summary")
+        summary  = _d("final_result_summary")
+
+        # Identity mirrored from the as-was DecisionContext snapshot —
+        # the artifact does not carry service/incident_type directly.
+        service       = str(decision.get("service", "") or "")
+        incident_type = str(decision.get("incident_type", "") or "")
+        ev_keys = tuple(str(k) for k in (evidence.get("keys") or ()))
+        mtti_ms = sum(
+            int(p.get("elapsed_ms", 0) or 0)
+            for p in workers.values() if isinstance(p, dict)
+        )
+        score = summary.get("online_quality_score", 0.0)
+        return cls(
+            memory_id=str(getattr(artifact, "artifact_id", "") or ""),
+            incident_id=str(getattr(artifact, "incident_id", "") or ""),
+            fingerprint=compute_fingerprint(FingerprintInput(
+                service=service,
+                incident_type=incident_type,
+                evidence_pattern=ev_keys,
+            )),
+            timestamp=str(getattr(artifact, "created_at", "") or ""),
+            service=service,
+            incident_type=incident_type,
+            evidence_collected=ev_keys,
+            evidence_ordering=ev_keys,
+            planner_decisions=tuple(
+                str(s) for s in (planner.get("steps") or ())
+            ),
+            # Provenance preservation: the artifact's identity, origin
+            # and admission snapshot travel on the decision_trace bag.
+            decision_trace={
+                "artifact_id": str(getattr(artifact, "artifact_id", "")),
+                "artifact_status": str(getattr(artifact, "status", "")),
+                "provenance": dict(getattr(artifact, "provenance", {}) or {}),
+                "decision_summary": decision,
+                "receipt_hashes": [
+                    str(h) for h in getattr(artifact, "receipt_hashes", ())
+                ],
+            },
+            detected_root_cause=str(getattr(artifact, "root_cause", "") or ""),
+            confidence=max(0, min(100,
+                                   int(getattr(artifact, "confidence", 0) or 0))),
+            mtti_ms=mtti_ms,
+            receipt_references=tuple(
+                str(h) for h in getattr(artifact, "receipt_hashes", ())
+            ),
+            investigation_score=float(score if isinstance(
+                score, (int, float)) else 0.0),
+        )
+
 
 # ---------------------------------------------------------------------------
 # Helpers

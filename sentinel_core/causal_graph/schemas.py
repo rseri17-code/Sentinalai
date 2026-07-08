@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any
@@ -195,12 +196,22 @@ class CausalRecommendation:
 # Deterministic id helpers -------------------------------------------------
 
 def make_chain_id(node_ids: tuple[str, ...]) -> str:
-    raw = ",".join(node_ids)
+    """Deterministic 16-hex chain id.
+
+    RC-G: previously joined node_ids with ``","`` — an id containing
+    a literal comma collided with the two-element tuple. Framed JSON
+    serialisation escapes such characters and closes the collision.
+    """
+    raw = json.dumps(list(node_ids), sort_keys=True)
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
 def make_path_id(*parts: str) -> str:
-    raw = "|".join(str(p) for p in parts)
+    """Deterministic 16-hex path id.
+
+    RC-G: same framed-JSON discipline as :func:`make_chain_id`.
+    """
+    raw = json.dumps([str(p) for p in parts], sort_keys=True)
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 

@@ -7,6 +7,7 @@ No vector store.
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
@@ -72,13 +73,26 @@ def compute_topology_hash(topo: TopologySnapshot | dict[str, Any] | None) -> str
 
 
 def compute_transaction_path_hash(path: Iterable[str] | None) -> str:
-    tokens = tuple(str(x) for x in (path or ()))
-    return _sha16("txp:" + ">".join(tokens))
+    """Deterministic sha16 hash of a transaction hop sequence.
+
+    RC-G: previously joined hops with ``">"`` — a hop containing a
+    literal ``>`` collided with a longer path split at that character.
+    Framed JSON serialisation escapes such characters inside each
+    element, closing the collision.
+    """
+    tokens = list(str(x) for x in (path or ()))
+    return _sha16("txp:" + json.dumps(tokens, sort_keys=True))
 
 
 def compute_planner_path_hash(steps: Iterable[str] | None) -> str:
-    tokens = tuple(str(x) for x in (steps or ()))
-    return _sha16("planner:" + ",".join(tokens))
+    """Deterministic sha16 hash of a planner-step sequence.
+
+    RC-G: same fix as :func:`compute_transaction_path_hash` — replaces
+    the ``","`` delimiter with framed JSON to prevent collisions from
+    steps that contain commas.
+    """
+    tokens = list(str(x) for x in (steps or ()))
+    return _sha16("planner:" + json.dumps(tokens, sort_keys=True))
 
 
 def compute_evidence_pattern_hash(evidence: Iterable[str] | None) -> str:

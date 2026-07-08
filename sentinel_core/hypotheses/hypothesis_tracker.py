@@ -36,17 +36,42 @@ class HypothesisTracker:
 
     def propose(self, name: str, description: str = "",
                  initial_confidence: int = 50) -> Hypothesis:
-        """Create a proposed hypothesis. Idempotent per name."""
+        """Create or refine a proposed hypothesis. Deterministic upsert
+        per name.
+
+        RC-J: previously first-write-wins — a second call with the same
+        name silently returned the original Hypothesis and dropped any
+        refined description or confidence supplied by the caller. The
+        new merge policy is monotone-informative:
+
+        - **description**: if a non-empty new description is supplied
+          and the stored description is empty (or strictly shorter),
+          replace it. Otherwise keep the stored value.
+        - **confidence**: keep ``max(stored, new)`` — a re-propose can
+          only strengthen conviction, never weaken it.
+
+        Both rules are pure functions of the two Hypotheses, so
+        determinism holds regardless of caller order.
+        """
         h = Hypothesis.make(
             name=name,
             description=description,
             status=HypothesisStatus.PROPOSED.value,
             confidence=_clamp(initial_confidence),
         )
-        # First-write-wins on name
-        if h.hypothesis_id not in self._by_id:
+        stored = self._by_id.get(h.hypothesis_id)
+        if stored is None:
             self._by_id[h.hypothesis_id] = h
-        return self._by_id[h.hypothesis_id]
+            return h
+        # Refinement merge — never silently discards new information.
+        new_desc = h.description
+        keep_desc = stored.description
+        if new_desc and (not keep_desc or len(new_desc) > len(keep_desc)):
+            keep_desc = new_desc
+        keep_conf = max(int(stored.confidence), int(h.confidence))
+        merged = replace(stored, description=keep_desc, confidence=keep_conf)
+        self._by_id[h.hypothesis_id] = merged
+        return merged
 
     def add_supporting_evidence(
         self, hypothesis_id: str, key: str,

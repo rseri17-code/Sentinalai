@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import asdict, dataclass, field
 from typing import Any, Iterable
 
@@ -47,7 +48,18 @@ class LearningSnapshot:
 
 
 def _make_snapshot_id(corpus_ids: tuple[str, ...], sequence: int) -> str:
-    raw = f"seq={sequence}|" + ",".join(corpus_ids)
+    """Build a deterministic 16-hex snapshot id.
+
+    RC-G: previously joined corpus_ids with ``","`` — an id containing
+    a literal comma collided with the two-element tuple. Now the
+    input is serialised as canonical JSON, which quotes/escapes each
+    element deterministically, so distinct logical inputs cannot
+    produce the same hash.
+    """
+    raw = json.dumps(
+        {"seq": int(sequence), "corpus_ids": list(corpus_ids)},
+        sort_keys=True,
+    )
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 

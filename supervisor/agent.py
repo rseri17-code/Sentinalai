@@ -338,6 +338,7 @@ class SentinalAISupervisor:
         from supervisor.phase_receipts import (
             PhaseReceiptCollector, attach_receipts, status_from_result,
         )
+        from supervisor.artifact_writer import maybe_write_investigation_artifact
         from supervisor.phases.analyze import AnalyzePhase
         from supervisor.phases.classify import ClassificationPhase
         from supervisor.phases.collect import CollectPhase
@@ -347,6 +348,15 @@ class SentinalAISupervisor:
         # Per-investigation phase-execution receipts (audit-only; attached to
         # the returned result under the internal "_phase_receipts" key).
         _phase_receipts = PhaseReceiptCollector()
+
+        def _finish(_res: dict) -> dict:
+            """Attach receipts, then emit the Wave 1 Investigation Artifact
+            (candidate-only; no-op unless INVESTIGATION_ARTIFACT_ENABLED)."""
+            _res = attach_receipts(_res, _phase_receipts)
+            maybe_write_investigation_artifact(
+                _res, incident_id, getattr(ctx, "investigation_id", ""),
+            )
+            return _res
         # IntelligenceRuntime — zero-cost no-op when ENABLE_INTELLIGENCE_RUNTIME
         # is off (default). When enabled, install_default_modules() registers
         # the default intelligence modules (ResolutionMemory at POST_PERSIST
@@ -400,7 +410,7 @@ class SentinalAISupervisor:
                             fetch_out=_fetch_res.output.result)
             fout = _fetch_res.output.result
             if fout["early_return"] is not None:
-                return attach_receipts(fout["early_return"], _phase_receipts)
+                return _finish(fout["early_return"])
 
             with _phase_receipts.record("classify") as _r:
                 _classify_res = ClassificationPhase(self).execute(ctx, fout, span=span)
@@ -419,7 +429,7 @@ class SentinalAISupervisor:
                             cout=_collect_res.output.result["collect"])
             cout = _collect_res.output.result["collect"]
             if cout.early_return is not None:
-                return attach_receipts(cout.early_return, _phase_receipts)
+                return _finish(cout.early_return)
 
             with _phase_receipts.record("analyze", evidence_before=len(cout.evidence)) as _r:
                 _analyze_res = AnalyzePhase(self).execute(ctx, fout, cres, cout)
@@ -436,7 +446,7 @@ class SentinalAISupervisor:
                             fetch_out=fout, cres=cres, cout=cout, aout=_aout_tmp)
             aout = _analyze_res.output.result["analyze"]
             if aout.early_return is not None:
-                return attach_receipts(aout.early_return, _phase_receipts)
+                return _finish(aout.early_return)
 
             with _phase_receipts.record("persist", evidence_before=len(aout.evidence)) as _r:
                 _persist_res = PersistPhase(self).execute(ctx, fout, cres, aout, span=span)
@@ -444,9 +454,7 @@ class SentinalAISupervisor:
                 _intel_hook(_r, IntelligenceStage.POST_PERSIST,
                             fetch_out=fout, cres=cres, cout=cout, aout=aout,
                             result=_persist_res.output.result["persist"].result)
-            return attach_receipts(
-                _persist_res.output.result["persist"].result, _phase_receipts,
-            )
+            return _finish(_persist_res.output.result["persist"].result)
 
     # ------------------------------------------------------------------ #
     # Internal: self-critique refinement

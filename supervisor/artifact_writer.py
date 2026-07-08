@@ -38,6 +38,16 @@ def _store_path() -> str:
     return os.environ.get("ARTIFACT_STORE_PATH", _DEFAULT_STORE_PATH)
 
 
+_DEFAULT_MEMORY_RECORD_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "eval", "memory_records",
+)
+
+
+def _memory_record_root() -> str:
+    return os.environ.get("MEMORY_RECORD_STORE_PATH",
+                          _DEFAULT_MEMORY_RECORD_PATH)
+
+
 def _provenance() -> dict[str, Any]:
     """Snapshot of the runtime configuration that shaped this run."""
     return {
@@ -87,6 +97,7 @@ def maybe_write_investigation_artifact(
             artifact.artifact_id, incident_id, artifact.status,
         )
 
+        decision = None
         if _flag("ADMISSION_CONTROL_ENABLED"):
             decision = AdmissionController().classify(artifact)
             store.record_decision(
@@ -99,6 +110,45 @@ def maybe_write_investigation_artifact(
                 artifact.artifact_id, decision.state,
                 ",".join(decision.reasons),
             )
+
+        # Wave 2 — admission-controlled MemoryRecord projection.
+        # Produce-only: nothing at runtime reads these records back.
+        if _flag("MEMORY_RECORD_FROM_ARTIFACT_ENABLED"):
+            from sentinel_core.intel_memory import MemoryRecord, MemoryStore
+
+            record = MemoryRecord.from_artifact(artifact)
+            memory_root = _memory_record_root()
+            if _flag("MEMORY_ADMISSION_ENABLED"):
+                # Only admitted (or offline-validated) artifacts may enter
+                # ACTIVE memory. Fail-closed: quarantined/rejected are
+                # skipped entirely — the artifact store retains them.
+                if decision is None:
+                    decision = AdmissionController().classify(artifact)
+                if decision.state == "admitted":
+                    mstore = MemoryStore(memory_root)
+                    if not mstore.has(record.memory_id):   # append-only
+                        mstore.save(record)
+                    logger.info(
+                        "memory_record.admitted.written memory_id=%s",
+                        record.memory_id,
+                    )
+                else:
+                    logger.info(
+                        "memory_record.skipped memory_id=%s decision=%s "
+                        "reasons=%s",
+                        record.memory_id, decision.state,
+                        ",".join(decision.reasons),
+                    )
+            else:
+                # Candidate-only mode (explicitly flagged): records land
+                # in an INACTIVE side area never scanned as active memory.
+                mstore = MemoryStore(os.path.join(memory_root, ".candidate"))
+                if not mstore.has(record.memory_id):        # append-only
+                    mstore.save(record)
+                logger.info(
+                    "memory_record.candidate.written memory_id=%s",
+                    record.memory_id,
+                )
     except Exception as exc:
         # Named event — the review's "no silent swallow" rule (M6).
         logger.warning(

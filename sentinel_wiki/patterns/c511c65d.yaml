@@ -5,7 +5,7 @@ services:
 - payment-service
 incident_types:
 - error_spike
-observation_count: 19
+observation_count: 20
 confidence_avg: 59.0
 quality_avg: 0.78
 evidence_signals:
@@ -18,6 +18,7 @@ evidence_signals:
 receipt_ids:
 - INC_E1_20260702
 - INC_E1_20260629
+- INC_E1_20260708
 - INC_E1_20260706
 - INC_E1_20260705
 - INC_E1_20260703
@@ -36,4 +37,4 @@ receipt_ids:
 - INC_E1_20260610
 - INC_E1_20260707
 first_seen: 2026-05-31 20:36:45.271731+00:00
-last_seen: 2026-07-07 07:59:23.593978+00:00
+last_seen: 2026-07-08 04:32:24.324973+00:00

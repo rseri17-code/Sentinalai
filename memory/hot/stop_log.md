@@ -9283,3 +9283,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-10T12:28:01.609Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 803d8cb chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `803d8cb chore: update hot memory (stop hook auto-commit)`
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

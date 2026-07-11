@@ -9363,3 +9363,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-11T12:42:24.844Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f7c838e chore: commit runtime-generated eval and wiki data (Wave 3 readiness regression run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `f7c838e chore: commit runtime-generated eval and wiki data (Wave 3 readiness regression run)`
+- `ea1e025 wave3-readiness: B1+B2+B3 fixes, value metrics, G1-G11 gates, shadow pipeline`
+- `35f442e chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

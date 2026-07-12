@@ -9469,3 +9469,113 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-12T12:51:44.389Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: c303ef6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `c303ef6 chore: update hot memory (stop hook auto-commit)`
+- `45f0983 chore: commit runtime-generated eval and wiki data (loop convergence regression run)`
+- `0c76c7c loop-convergence: R1-R4 executors, corpus intelligence, learning effectiveness`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-12T14:11:32.897Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: c303ef6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `c303ef6 chore: update hot memory (stop hook auto-commit)`
+- `45f0983 chore: commit runtime-generated eval and wiki data (loop convergence regression run)`
+- `0c76c7c loop-convergence: R1-R4 executors, corpus intelligence, learning effectiveness`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-12T15:19:43.880Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: c303ef6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `c303ef6 chore: update hot memory (stop hook auto-commit)`
+- `45f0983 chore: commit runtime-generated eval and wiki data (loop convergence regression run)`
+- `0c76c7c loop-convergence: R1-R4 executors, corpus intelligence, learning effectiveness`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-12T15:27:08.813Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: c303ef6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `c303ef6 chore: update hot memory (stop hook auto-commit)`
+- `45f0983 chore: commit runtime-generated eval and wiki data (loop convergence regression run)`
+- `0c76c7c loop-convergence: R1-R4 executors, corpus intelligence, learning effectiveness`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

@@ -5,7 +5,7 @@ services:
 - payment-service
 incident_types:
 - error_spike
-observation_count: 20
+observation_count: 22
 confidence_avg: 59.0
 quality_avg: 0.78
 evidence_signals:
@@ -16,14 +16,13 @@ evidence_signals:
 - check_itsm_changes
 - gap_get_change_data
 receipt_ids:
-- INC_E1_20260702
-- INC_E1_20260629
 - INC_E1_20260708
 - INC_E1_20260706
 - INC_E1_20260705
 - INC_E1_20260703
 - INC_E1_20260621
 - INC_E1_20260609
+- INC_E1_20260712
 - INC_E1_20260704
 - INC_E1_20260531
 - INC_E1_20260603
@@ -35,6 +34,7 @@ receipt_ids:
 - INC_E1_20260605
 - INC_E1_20260628
 - INC_E1_20260610
+- INC_E1_20260711
 - INC_E1_20260707
 first_seen: 2026-05-31 20:36:45.271731+00:00
-last_seen: 2026-07-08 04:56:55.223295+00:00
+last_seen: 2026-07-12 04:57:51.441250+00:00

@@ -98,7 +98,10 @@ class AdmissionController:
             reasons.append("Q2:missing_decision_summary")
         if not a.replay_pointer:
             reasons.append("Q3:missing_replay_pointer")
-        if not a.benchmark_pointer:
+        # Q4: the artifact is immutable, so a benchmark association made
+        # AFTER creation (offline matcher, R2) arrives as a signal — it
+        # satisfies the gate exactly as a baked-in pointer would.
+        if not a.benchmark_pointer and not sig.get("benchmark_pointer"):
             reasons.append("Q4:missing_benchmark_pointer")
         if bool(sig.get("operator_rejected")):
             reasons.append("Q5:operator_rejected")

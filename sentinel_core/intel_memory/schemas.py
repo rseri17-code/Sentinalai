@@ -63,12 +63,19 @@ class SimilarityScore:
     overall:         float = 0.0
     breakdown:       dict[str, float] = field(default_factory=dict)
     exact_match:     bool = False
+    # B1 (RC-L semantics): dimensions skipped because neither record had
+    # data. Additive — existing readers ignore it; ``breakdown`` holds
+    # measured dimensions only. Explains measured / not-measured /
+    # ignored (ignored = absent from both fields, zero weight).
+    not_measured:    tuple[str, ...] = ()
     schema_version:  int = MEMORY_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
         # RC-D: prevent mutation of the dict field through the attribute.
         # Uses object.__setattr__ because the dataclass is frozen.
         object.__setattr__(self, "breakdown", freeze_dict(self.breakdown))
+        object.__setattr__(self, "not_measured",
+                           tuple(str(x) for x in self.not_measured))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -76,6 +83,7 @@ class SimilarityScore:
             "overall":        round(float(self.overall), 4),
             "exact_match":    bool(self.exact_match),
             "breakdown":      {k: round(float(v), 4) for k, v in sorted(self.breakdown.items())},
+            "not_measured":   list(self.not_measured),
             "schema_version": self.schema_version,
         }
 
@@ -270,10 +278,12 @@ class MemoryRecord:
         workers  = _d("worker_execution_summary")
         summary  = _d("final_result_summary")
 
-        # Identity mirrored from the as-was DecisionContext snapshot —
-        # the artifact does not carry service/incident_type directly.
-        service       = str(decision.get("service", "") or "")
-        incident_type = str(decision.get("incident_type", "") or "")
+        # Identity: prefer the artifact's B2 enrichment fields; fall back
+        # to the as-was DecisionContext snapshot (pre-enrichment artifacts).
+        service = str(getattr(artifact, "service", "") or "") \
+            or str(decision.get("service", "") or "")
+        incident_type = str(getattr(artifact, "incident_type", "") or "") \
+            or str(decision.get("incident_type", "") or "")
         ev_keys = tuple(str(k) for k in (evidence.get("keys") or ()))
         mtti_ms = sum(
             int(p.get("elapsed_ms", 0) or 0)
@@ -291,8 +301,14 @@ class MemoryRecord:
             timestamp=str(getattr(artifact, "created_at", "") or ""),
             service=service,
             incident_type=incident_type,
+            environment=str(getattr(artifact, "environment", "") or ""),
+            application=str(getattr(artifact, "application", "") or ""),
+            severity=str(getattr(artifact, "severity", "") or ""),
             evidence_collected=ev_keys,
-            evidence_ordering=ev_keys,
+            # B3 projection honesty: the artifact's evidence snapshot is
+            # UNORDERED (sorted keys). Never fabricate collection order —
+            # truthful empty beats misleading alphabetical sequence.
+            evidence_ordering=(),
             planner_decisions=tuple(
                 str(s) for s in (planner.get("steps") or ())
             ),
@@ -308,9 +324,14 @@ class MemoryRecord:
                 ],
             },
             detected_root_cause=str(getattr(artifact, "root_cause", "") or ""),
+            resolution=str(getattr(artifact, "resolution", "") or ""),
+            false_leads=tuple(
+                str(x) for x in getattr(artifact, "false_leads", ()) or ()
+            ),
             confidence=max(0, min(100,
                                    int(getattr(artifact, "confidence", 0) or 0))),
             mtti_ms=mtti_ms,
+            runtime_cost=int(getattr(artifact, "runtime_cost", 0) or 0),
             receipt_references=tuple(
                 str(h) for h in getattr(artifact, "receipt_hashes", ())
             ),

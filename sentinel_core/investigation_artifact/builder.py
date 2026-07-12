@@ -141,6 +141,52 @@ def _worker_execution_summary(receipts: tuple) -> dict[str, Any]:
     return phases
 
 
+def _as_text(value: Any) -> str:
+    """Scalar → str; container → canonical JSON (deterministic, lossless).
+
+    B2 enrichment sources (remediation, critique gaps) have loose shapes;
+    truthful canonical text beats dropped data.
+    """
+    if isinstance(value, str):
+        return value
+    if value is None:
+        return ""
+    if isinstance(value, (int, float, bool)):
+        return str(value)
+    return canonical_json(value)
+
+
+def _enrichment(
+    result: Mapping[str, Any], decision: Mapping[str, Any],
+) -> dict[str, Any]:
+    """B2: identity + outcome enrichment captured at artifact creation.
+
+    Source priority: the structured rca_report already on the result
+    (produced by PersistPhase), then the as-was decision summary. All
+    fields degrade to empty — never invented.
+    """
+    rca = result.get("rca_report")
+    rca = rca if isinstance(rca, dict) else {}
+    gaps = result.get("_critique")
+    gaps = gaps.get("gaps") if isinstance(gaps, dict) else ()
+    if not isinstance(gaps, (list, tuple)):
+        gaps = ()
+    return {
+        "service": coerce_str(rca.get("affected_service"))
+        or coerce_str(decision.get("service")),
+        "incident_type": coerce_str(rca.get("incident_type"))
+        or coerce_str(decision.get("incident_type")),
+        "severity": coerce_str(rca.get("severity_label")),
+        "environment": coerce_str(result.get("environment"))
+        or coerce_str(decision.get("environment")),
+        "application": coerce_str(result.get("application"))
+        or coerce_str(decision.get("application")),
+        "resolution": _as_text(result.get("remediation")),
+        "false_leads": [_as_text(g) for g in gaps],
+        "runtime_cost": coerce_int(rca.get("tool_calls_made")),
+    }
+
+
 def build_artifact(
     result: Mapping[str, Any],
     incident_id: str,
@@ -160,6 +206,8 @@ def build_artifact(
     )
     root_cause = coerce_str(result.get("root_cause"))
     confidence = max(0, min(100, coerce_int(result.get("confidence"))))
+    decision = _decision_summary(receipts)
+    enrich = _enrichment(result, decision)
 
     content: dict[str, Any] = {
         "incident_id": coerce_str(incident_id),
@@ -171,7 +219,8 @@ def build_artifact(
         "phase_receipts": [dict(r) for r in receipts],
         "receipt_hashes": [_receipt_hash(r) for r in receipts],
         "final_result_summary": _final_result_summary(result),
-        "decision_summary": _decision_summary(receipts),
+        "decision_summary": decision,
+        **enrich,
         "evidence_key_summary": _evidence_key_summary(result),
         "planner_trace_summary": _planner_trace_summary(result),
         "worker_execution_summary": _worker_execution_summary(receipts),
@@ -190,6 +239,14 @@ def build_artifact(
         root_cause=root_cause,
         confidence=confidence,
         status=content["status"],
+        service=enrich["service"],
+        incident_type=enrich["incident_type"],
+        severity=enrich["severity"],
+        environment=enrich["environment"],
+        application=enrich["application"],
+        resolution=enrich["resolution"],
+        false_leads=tuple(enrich["false_leads"]),
+        runtime_cost=enrich["runtime_cost"],
         phase_receipts=receipts,
         receipt_hashes=tuple(content["receipt_hashes"]),
         final_result_summary=content["final_result_summary"],

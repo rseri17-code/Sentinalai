@@ -8193,3 +8193,1279 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-08T05:20:12.783Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T06:21:32.828Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T06:38:52.866Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T06:57:43.334Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T07:16:29.967Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T07:21:52.081Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T07:35:26.280Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T08:29:46.562Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T09:16:36.563Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T09:52:03.647Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T11:08:23.153Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T11:17:48.444Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T12:18:56.642Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T13:20:26.594Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T15:22:19.281Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T17:24:42.506Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T18:25:45.109Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T18:58:02.098Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-08T20:28:16.925Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T00:19:37.177Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T02:18:35.138Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T03:20:33.851Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T04:21:44.302Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T05:23:02.135Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T06:24:16.816Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T06:30:03.980Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T07:17:27.495Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T07:25:16.895Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T08:26:41.981Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T10:24:50.345Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T10:32:06.655Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T10:43:49.368Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T10:59:19.664Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T12:20:54.805Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T12:37:31.153Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T13:21:59.823Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T14:23:24.155Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T15:24:59.417Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-09T16:26:00.081Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+- `67c4e4a chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-10T12:28:01.609Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 803d8cb chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `803d8cb chore: update hot memory (stop hook auto-commit)`
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+- `c18bb30 wave2: admission-controlled MemoryRecord projection from InvestigationArtifact`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-10T12:47:32.789Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: a7f3864 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `a7f3864 chore: update hot memory (stop hook auto-commit)`
+- `803d8cb chore: update hot memory (stop hook auto-commit)`
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-11T09:39:37.542Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: a7f3864 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `a7f3864 chore: update hot memory (stop hook auto-commit)`
+- `803d8cb chore: update hot memory (stop hook auto-commit)`
+- `8be6dde chore: commit runtime-generated eval and wiki data (Wave 2 regression run)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-11T12:42:24.844Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: f7c838e chore: commit runtime-generated eval and wiki data (Wave 3 readiness regression run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `f7c838e chore: commit runtime-generated eval and wiki data (Wave 3 readiness regression run)`
+- `ea1e025 wave3-readiness: B1+B2+B3 fixes, value metrics, G1-G11 gates, shadow pipeline`
+- `35f442e chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-11T15:11:03.719Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 0b073b3 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `0b073b3 chore: update hot memory (stop hook auto-commit)`
+- `f7c838e chore: commit runtime-generated eval and wiki data (Wave 3 readiness regression run)`
+- `ea1e025 wave3-readiness: B1+B2+B3 fixes, value metrics, G1-G11 gates, shadow pipeline`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-12T04:25:14.211Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 0b073b3 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `0b073b3 chore: update hot memory (stop hook auto-commit)`
+- `f7c838e chore: commit runtime-generated eval and wiki data (Wave 3 readiness regression run)`
+- `ea1e025 wave3-readiness: B1+B2+B3 fixes, value metrics, G1-G11 gates, shadow pipeline`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-12T12:46:27.829Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 45f0983 chore: commit runtime-generated eval and wiki data (loop convergence regression run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `45f0983 chore: commit runtime-generated eval and wiki data (loop convergence regression run)`
+- `0c76c7c loop-convergence: R1-R4 executors, corpus intelligence, learning effectiveness`
+- `1ae5ede chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

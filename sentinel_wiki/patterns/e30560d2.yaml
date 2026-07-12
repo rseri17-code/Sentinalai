@@ -5,9 +5,9 @@ services:
 - inventory-service
 incident_types:
 - network
-observation_count: 20
+observation_count: 22
 confidence_avg: 96.0
-quality_avg: 0.7995
+quality_avg: 0.7992
 evidence_signals:
 - check_golden_signals
 - search_network_logs
@@ -20,8 +20,6 @@ evidence_signals:
 - gap_get_error_logs
 - gap_search_logs
 receipt_ids:
-- INC12350_20260705
-- INC12350_20260627
 - INC12350_20260626
 - INC12350_20260619
 - INC12350_20260611
@@ -30,6 +28,7 @@ receipt_ids:
 - INC12350_20260704
 - INC12350_20260628
 - INC12350_20260706
+- INC12350_20260711
 - INC12350_20260605
 - INC12350_20260707
 - INC12350_20260702
@@ -39,6 +38,7 @@ receipt_ids:
 - INC12350_20260609
 - INC12350_20260531
 - INC12350_20260610
+- INC12350_20260712
 - INC12350_20260703
 first_seen: 2026-05-31 20:37:52.777215+00:00
-last_seen: 2026-07-08 05:09:51.948427+00:00
+last_seen: 2026-07-12 05:08:49.304207+00:00

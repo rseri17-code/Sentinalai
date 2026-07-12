@@ -51,6 +51,18 @@ class InvestigationArtifact:
     confidence:               int = 0
     status:                   str = "completed"          # OUTCOME_STATUSES
 
+    # -- IDENTITY/OUTCOME enrichment (Wave 3 readiness, B2) --------------
+    # Additive optional fields; absent on pre-enrichment artifacts and
+    # defaulted by from_dict — no schema_version bump (additive rule).
+    service:                  str = ""
+    incident_type:            str = ""
+    severity:                 str = ""
+    environment:              str = ""
+    application:              str = ""
+    resolution:               str = ""
+    false_leads:              tuple = ()                 # tuple[str, ...]
+    runtime_cost:             int = 0
+
     # -- PROCESS --------------------------------------------------------
     phase_receipts:           tuple = ()                 # tuple[dict, ...]
     receipt_hashes:           tuple = ()                 # tuple[str, ...]
@@ -77,6 +89,8 @@ class InvestigationArtifact:
                            tuple(freeze_dict(r) if isinstance(r, dict) else r
                                  for r in self.phase_receipts))
         object.__setattr__(self, "receipt_hashes", tuple(self.receipt_hashes))
+        object.__setattr__(self, "false_leads",
+                           tuple(str(x) for x in self.false_leads))
         for name in ("final_result_summary", "decision_summary",
                      "evidence_key_summary", "planner_trace_summary",
                      "worker_execution_summary", "provenance"):

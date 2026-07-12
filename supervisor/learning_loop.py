@@ -471,6 +471,45 @@ def run_nightly_self_improvement() -> dict:
     except Exception as exc:
         summary["errors"].append(f"generate_self_eval_report failed: {exc}")
 
+    # Step 5 — Wave 3 readiness nightly learning pipeline (R3).
+    # Offline only; flag-gated, default OFF; never modifies runtime
+    # investigations. Produces evidence reports under eval/wave3_readiness.
+    import os as _os
+    if _os.environ.get("WAVE3_READINESS_NIGHTLY", "").lower() in (
+            "1", "true", "yes"):
+        try:
+            from datetime import datetime, timezone
+            from sentinel_core.investigation_value import (
+                run_nightly_learning,
+            )
+            _base = _os.path.join(_os.path.dirname(__file__), "..", "eval")
+            try:
+                from tests.synthetic.runner import load_all_scenarios
+                scenarios = load_all_scenarios()
+            except Exception:
+                scenarios = None    # pipeline records the skip explicitly
+            nightly = run_nightly_learning(
+                artifact_root=_os.environ.get(
+                    "ARTIFACT_STORE_PATH",
+                    _os.path.join(_base, "investigation_artifacts")),
+                memory_root=_os.environ.get(
+                    "MEMORY_RECORD_STORE_PATH",
+                    _os.path.join(_base, "memory_records")),
+                output_dir=_os.path.join(_base, "wave3_readiness"),
+                generated_at=datetime.now(timezone.utc).isoformat(),
+                scenarios=scenarios,
+            )
+            summary["wave3_readiness_nightly"] = nightly
+            summary["actions_taken"].append(
+                "Wave3 readiness nightly: admitted=%d gates=%d/11"
+                % (len(nightly["admission"]["admitted"]),
+                    nightly["readiness"]["passed"]))
+        except Exception as exc:
+            summary["errors"].append(
+                f"wave3 readiness nightly failed: {exc}")
+            logger.warning(
+                "Nightly self-improvement: wave3 readiness error: %s", exc)
+
     logger.info(
         "Nightly self-improvement complete: actions=%d errors=%d status=%s",
         len(summary["actions_taken"]),

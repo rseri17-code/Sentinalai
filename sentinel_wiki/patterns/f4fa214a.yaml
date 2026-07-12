@@ -5,9 +5,9 @@ services:
 - search-service
 incident_types:
 - latency
-observation_count: 20
+observation_count: 22
 confidence_avg: 86.0
-quality_avg: 0.5983
+quality_avg: 0.598
 evidence_signals:
 - check_golden_signals
 - check_latency_metrics
@@ -15,13 +15,13 @@ evidence_signals:
 - check_changes
 - get_network_evidence
 receipt_ids:
-- INC_H3_20260702
-- INC_H3_20260621
 - INC_H3_20260626
 - INC_H3_20260628
 - INC_H3_20260630
 - INC_H3_20260707
+- INC_H3_20260711
 - INC_H3_20260705
+- INC_H3_20260712
 - INC_H3_20260531
 - INC_H3_20260603
 - INC_H3_20260627
@@ -36,4 +36,4 @@ receipt_ids:
 - INC_H3_20260703
 - INC_H3_20260629
 first_seen: 2026-05-31 20:36:46.700898+00:00
-last_seen: 2026-07-08 04:57:20.263635+00:00
+last_seen: 2026-07-12 04:58:12.270378+00:00

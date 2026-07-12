@@ -9389,3 +9389,57 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-11T15:11:03.719Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 0b073b3 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `0b073b3 chore: update hot memory (stop hook auto-commit)`
+- `f7c838e chore: commit runtime-generated eval and wiki data (Wave 3 readiness regression run)`
+- `ea1e025 wave3-readiness: B1+B2+B3 fixes, value metrics, G1-G11 gates, shadow pipeline`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-12T04:25:14.211Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 0b073b3 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `0b073b3 chore: update hot memory (stop hook auto-commit)`
+- `f7c838e chore: commit runtime-generated eval and wiki data (Wave 3 readiness regression run)`
+- `ea1e025 wave3-readiness: B1+B2+B3 fixes, value metrics, G1-G11 gates, shadow pipeline`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

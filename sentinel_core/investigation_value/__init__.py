@@ -26,8 +26,36 @@ from sentinel_core.investigation_value.readiness import (
 from sentinel_core.investigation_value.shadow_pipeline import (
     run_readiness_evaluation,
 )
+from sentinel_core.investigation_value.admission_executor import (
+    run_admission_review,
+)
+from sentinel_core.investigation_value.benchmark_matcher import (
+    agreement_score,
+    match_scenario,
+    run_benchmark_matching,
+)
+from sentinel_core.investigation_value.corpus_health import (
+    corpus_health_report,
+)
+from sentinel_core.investigation_value.effectiveness import (
+    learning_effectiveness_report,
+)
+from sentinel_core.investigation_value.nightly import run_nightly_learning
+from sentinel_core.investigation_value.usefulness import (
+    corpus_usefulness_report,
+    record_usefulness,
+)
 
 __all__ = [
+    "agreement_score",
+    "corpus_health_report",
+    "corpus_usefulness_report",
+    "learning_effectiveness_report",
+    "match_scenario",
+    "record_usefulness",
+    "run_admission_review",
+    "run_benchmark_matching",
+    "run_nightly_learning",
     "GATES",
     "GateInputs",
     "METRICS_SCHEMA_VERSION",

@@ -5,7 +5,7 @@ services:
 - notification-service
 incident_types:
 - missing_data
-observation_count: 21
+observation_count: 22
 confidence_avg: 67.0
 quality_avg: 0.586
 evidence_signals:
@@ -14,7 +14,6 @@ evidence_signals:
 - search_error_logs
 - check_changes
 receipt_ids:
-- INC_H1_20260609
 - INC_H1_20260627
 - INC_H1_20260703
 - INC_H1_20260705
@@ -33,6 +32,7 @@ receipt_ids:
 - INC_H1_20260708
 - INC_H1_20260629
 - INC_H1_20260711
+- INC_H1_20260712
 - INC_H1_20260531
 first_seen: 2026-05-31 20:36:46.531608+00:00
-last_seen: 2026-07-11 12:24:08.946795+00:00
+last_seen: 2026-07-12 04:58:09.468214+00:00

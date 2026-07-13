@@ -9,8 +9,8 @@ observation_count: 23
 confidence_avg: 96.0
 quality_avg: 0.799
 evidence_signals:
-- check_itsm_changes
 - check_golden_signals
+- check_itsm_changes
 - search_network_logs
 - search_dns_logs
 - check_changes
@@ -41,4 +41,4 @@ receipt_ids:
 - INC12350_20260712
 - INC12350_20260703
 first_seen: 2026-05-31 20:37:52.777215+00:00
-last_seen: 2026-07-13 03:15:02.060092+00:00
+last_seen: 2026-07-13 03:43:14.269845+00:00

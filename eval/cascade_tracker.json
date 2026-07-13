@@ -4,45 +4,45 @@
       "api-gateway",
       "payment-service"
     ],
-    "count": 6215,
+    "count": 6289,
     "first_seen": "2026-05-31T05:13:25.636626+00:00",
-    "last_seen": "2026-07-13T03:14:52.035470+00:00"
+    "last_seen": "2026-07-13T03:43:03.850488+00:00"
   },
   {
     "chain": [
       "payment-service",
       "api-gateway"
     ],
-    "count": 261,
+    "count": 264,
     "first_seen": "2026-05-31T05:13:25.872107+00:00",
-    "last_seen": "2026-07-13T02:59:34.811430+00:00"
+    "last_seen": "2026-07-13T03:28:06.506418+00:00"
   },
   {
     "chain": [
       "inventory-service",
       "inv"
     ],
-    "count": 200,
+    "count": 202,
     "first_seen": "2026-05-31T05:13:26.652377+00:00",
-    "last_seen": "2026-07-13T03:00:17.750170+00:00"
+    "last_seen": "2026-07-13T03:28:50.787328+00:00"
   },
   {
     "chain": [
       "recommendation-service",
       "data-pipeline"
     ],
-    "count": 2410,
+    "count": 2439,
     "first_seen": "2026-05-31T05:13:26.799837+00:00",
-    "last_seen": "2026-07-13T03:15:10.457745+00:00"
+    "last_seen": "2026-07-13T03:43:22.364600+00:00"
   },
   {
     "chain": [
       "api-gateway",
       "payment-db"
     ],
-    "count": 2575,
+    "count": 2606,
     "first_seen": "2026-05-31T05:13:27.162464+00:00",
-    "last_seen": "2026-07-13T03:15:04.180172+00:00"
+    "last_seen": "2026-07-13T03:43:15.992993+00:00"
   },
   {
     "chain": [
@@ -50,18 +50,18 @@
       "payment-db",
       "payment-service"
     ],
-    "count": 100,
+    "count": 101,
     "first_seen": "2026-05-31T05:13:27.162464+00:00",
-    "last_seen": "2026-07-13T03:00:46.143204+00:00"
+    "last_seen": "2026-07-13T03:29:19.905969+00:00"
   },
   {
     "chain": [
       "inventory-service",
       "kube-dns"
     ],
-    "count": 2718,
+    "count": 2751,
     "first_seen": "2026-05-31T05:13:37.650317+00:00",
-    "last_seen": "2026-07-13T03:15:02.059550+00:00"
+    "last_seen": "2026-07-13T03:43:14.269392+00:00"
   },
   {
     "chain": [
@@ -69,9 +69,9 @@
       "payment-db",
       "checkout-service"
     ],
-    "count": 2475,
+    "count": 2505,
     "first_seen": "2026-05-31T05:13:37.673760+00:00",
-    "last_seen": "2026-07-13T03:15:04.180172+00:00"
+    "last_seen": "2026-07-13T03:43:15.992993+00:00"
   },
   {
     "chain": [
@@ -80,18 +80,18 @@
       "checkout-service",
       "payment-service"
     ],
-    "count": 2475,
+    "count": 2505,
     "first_seen": "2026-05-31T05:13:37.673760+00:00",
-    "last_seen": "2026-07-13T03:15:04.180172+00:00"
+    "last_seen": "2026-07-13T03:43:15.992993+00:00"
   },
   {
     "chain": [
       "unknown",
       "payment-service"
     ],
-    "count": 82,
+    "count": 83,
     "first_seen": "2026-05-31T05:14:05.001497+00:00",
-    "last_seen": "2026-07-13T03:11:12.293600+00:00"
+    "last_seen": "2026-07-13T03:39:28.849449+00:00"
   },
   {
     "chain": [
@@ -99,8 +99,8 @@
       "payment-service",
       "api-gateway"
     ],
-    "count": 82,
+    "count": 83,
     "first_seen": "2026-05-31T05:14:05.001497+00:00",
-    "last_seen": "2026-07-13T03:11:12.293600+00:00"
+    "last_seen": "2026-07-13T03:39:28.849449+00:00"
   }
 ]

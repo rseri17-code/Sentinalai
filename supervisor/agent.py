@@ -169,6 +169,23 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def _parse_incident_ts(value: Any) -> "datetime | None":
+    """Parse an immutable incident timestamp into an aware datetime, or None.
+
+    Deterministic and wall-clock-free: used to anchor investigation features
+    (change look-back window, DNA hour) to the incident's own timestamps
+    instead of ``datetime.now()`` (blockers B-1/B-2), so replaying the same
+    incident always produces the same behaviour.
+    """
+    if not value or not isinstance(value, str):
+        return None
+    try:
+        from datetime import datetime
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+
 # =========================================================================
 # Hypothesis dataclass for multi-hypothesis scoring (W2)
 # =========================================================================
@@ -2084,18 +2101,26 @@ class SentinalAISupervisor:
         if not created_at:
             return 24
         try:
-            from datetime import datetime, timezone
-            if isinstance(created_at, str):
-                # Handle ISO 8601 with or without timezone
-                created_at = created_at.replace("Z", "+00:00")
-                dt = datetime.fromisoformat(created_at)
-            else:
+            start = _parse_incident_ts(created_at)
+            if start is None:
                 return 24
-            now = datetime.now(timezone.utc)
-            elapsed_hours = (now - dt).total_seconds() / 3600
-            # Look back 2 hours before incident creation plus elapsed investigation time
-            window = max(4, min(48, int(elapsed_hours + 2)))
-            return window
+            # B-1: anchor the change look-back to IMMUTABLE incident
+            # timestamps ONLY — never the ambient wall clock — so replaying
+            # the same incident always queries the same window. When the
+            # incident carries an immutable end/detection timestamp, size the
+            # window from the incident's own duration; otherwise use the
+            # deterministic default.
+            end = None
+            for field in ("detected_at", "resolved_at", "closed_at",
+                          "updated_at", "end_time"):
+                end = _parse_incident_ts(incident.get(field))
+                if end is not None:
+                    break
+            if end is not None and end >= start:
+                elapsed_hours = (end - start).total_seconds() / 3600
+                # 2-hour look-back buffer before incident creation, capped 48h
+                return max(4, min(48, int(elapsed_hours + 2)))
+            return 24
         except Exception as exc:
             logger.debug("Time window calculation failed for %r, defaulting to 24h: %s", created_at, exc)
             return 24
@@ -3272,9 +3297,15 @@ class SentinalAISupervisor:
         )
 
         # Environment factors (dims 14-15)
+        # B-2: derive the hour from the IMMUTABLE incident timestamp, never
+        # the ambient wall clock, so the DNA fingerprint (and the hypothesis
+        # priming it drives) is identical on every replay of the same incident.
         try:
-            from datetime import datetime, timezone
-            flat["incident_hour"] = datetime.now(timezone.utc).hour
+            incident = getattr(self._tls, "current_incident", None) or {}
+            ts = incident.get("created_at") or incident.get("start_time")
+            dt = _parse_incident_ts(ts)
+            if dt is not None:
+                flat["incident_hour"] = dt.hour
         except Exception:
             pass
 

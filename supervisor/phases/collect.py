@@ -50,6 +50,35 @@ logger = logging.getLogger("sentinalai.collect")
 
 
 # ---------------------------------------------------------------------------
+# F-obs: dependency-failure observability
+# ---------------------------------------------------------------------------
+
+def _record_unavailable(evidence: dict[str, Any], source: str,
+                        reason: str) -> None:
+    """Record an unavailable/degraded evidence source so it is never silently
+    swallowed. Appends a deterministic entry to ``_sources_unavailable`` on
+    the evidence dict (surfaced to operators in the report + shadow metadata)
+    and logs it at WARNING. Additive only; never changes RCA authority."""
+    entry = {"source": str(source), "reason": str(reason)[:200]}
+    bucket = evidence.setdefault("_sources_unavailable", [])
+    if entry not in bucket:
+        bucket.append(entry)
+    logger.warning("evidence source unavailable: %s (%s)", source, entry["reason"])
+
+
+def _scan_worker_errors(evidence: dict[str, Any]) -> None:
+    """Post-collection sweep: any worker response that came back as an
+    ``{"error": ...}`` dict is an unavailable/degraded source. Deterministic
+    (sorted key iteration)."""
+    for key in sorted(evidence):
+        if key.startswith("_"):
+            continue
+        val = evidence.get(key)
+        if isinstance(val, dict) and val.get("error"):
+            _record_unavailable(evidence, key, str(val.get("error")))
+
+
+# ---------------------------------------------------------------------------
 # Typed result
 # ---------------------------------------------------------------------------
 
@@ -217,8 +246,9 @@ class CollectPhase:
         # --- Await experience_future + prime hypotheses ---
         try:
             past_experiences = experience_future.result(timeout=5)
-        except Exception:
+        except Exception as exc:
             past_experiences = []
+            _record_unavailable(evidence, "experience_store", exc)
         if past_experiences:
             evidence["_past_experiences"] = past_experiences
             if _shadow is not None:
@@ -261,8 +291,9 @@ class CollectPhase:
         # --- Await kg_future + prime hypotheses ---
         try:
             kg_similar = kg_future.result(timeout=3)
-        except Exception:
+        except Exception as exc:
             kg_similar = []
+            _record_unavailable(evidence, "knowledge_graph", exc)
         if kg_similar:
             evidence["_kg_similar_incidents"] = kg_similar
             if _shadow is not None:
@@ -395,6 +426,9 @@ class CollectPhase:
                     _shadow.set("visual_evidence", visual_ev)
         except Exception as exc:
             logger.debug("Visual evidence skipped: %s", exc)
+
+        # --- F-obs: sweep worker-error responses into sources_unavailable ---
+        _scan_worker_errors(evidence)
 
         # --- Final parity log ---
         if _shadow is not None:

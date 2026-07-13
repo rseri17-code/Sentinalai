@@ -302,6 +302,13 @@ class AnalyzePhase:
             k: bool(v) for k, v in evidence.items() if not k.startswith("_")
         }
 
+        # --- F-obs: surface degraded/unavailable evidence sources to the
+        # operator (report + shadow metadata). Additive; never changes RCA. ---
+        _unavailable = evidence.get("_sources_unavailable") or []
+        if _unavailable:
+            result["_sources_unavailable"] = _unavailable
+            result["degraded_investigation"] = True
+
         # --- Tranche 1: hypothesis-centric reasoning engine (shadow) ---
         # Flag-gated (HYPOTHESIS_ENGINE_ENABLED, default OFF = no-op).
         # Additive metadata only; never touches root_cause/confidence.

@@ -78,7 +78,10 @@ class ReplayStore:
             "evidence": evidence or {},
         }
 
-        path.write_text(json.dumps(artifact, indent=2, default=str))
+        # B-3: canonical serialization (sort_keys) so replaying the same
+        # investigation persists byte-identical artifacts with stable hashes.
+        path.write_text(json.dumps(artifact, indent=2, default=str,
+                                   sort_keys=True))
         logger.info("Saved replay artifact: %s", path)
         self._purge_old_artifacts()
         return str(path)

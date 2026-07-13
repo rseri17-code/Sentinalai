@@ -76,7 +76,10 @@ class RCAReport:
 
     def to_json(self, indent: int = 2) -> str:
         """Serialize to formatted JSON string."""
-        return json.dumps(self.to_dict(), indent=indent, default=str)
+        # B-3: canonical serialization (sort_keys) so the persisted RCA report
+        # is byte-identical across replays of the same investigation.
+        return json.dumps(self.to_dict(), indent=indent, default=str,
+                          sort_keys=True)
 
 
 def generate_rca_report(

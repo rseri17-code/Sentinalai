@@ -1,0 +1,97 @@
+{
+  "corpus_total": 3,
+  "e1_shadow": {
+    "authoritative_rca_delta": {
+      "authoritative_unchanged": true,
+      "control_correct": 3,
+      "note": "shadow-only stack: authoritative RCA identical ON/OFF by construction \u2014 delta is structurally zero",
+      "treatment_correct": 3
+    },
+    "confidence_calibration": {
+      "evidence_confidence_better": false,
+      "evidence_confidence_mae": 22.0,
+      "n": 3,
+      "raw_confidence_mae": 20.0
+    },
+    "n": 3,
+    "n_labeled": 3,
+    "safety_shadow_authoritative_agreement": 1.0,
+    "signal_quality_verification": {
+      "unverified_correct": 0,
+      "unverified_incorrect": 0,
+      "verified_correct": 3,
+      "verified_incorrect": 0
+    }
+  },
+  "failure_taxonomy": {
+    "cases": [],
+    "counts": {
+      "confidence": 0,
+      "counterfactual": 0,
+      "decision": 0,
+      "evidence": 0,
+      "hypothesis": 0,
+      "localization": 0,
+      "unknown": 0,
+      "validation": 0
+    },
+    "total_failures": 0
+  },
+  "mcnemar_rca": {
+    "b": 0,
+    "c": 0,
+    "discordant": 0,
+    "note": "no discordant pairs \u2014 no measurable difference",
+    "p_value": 1.0,
+    "significant": false
+  },
+  "n_records": 3,
+  "note": "Records model correct authoritative RCA to exercise the harness on the labeled corpus; the authoritative delta is structurally zero because Tranches 1-5 are shadow-only.",
+  "per_class": {
+    "authentication": {
+      "n": 1,
+      "n_labeled": 1,
+      "sufficient_sample": false,
+      "supported": true,
+      "treatment_correct": 1
+    },
+    "database": {
+      "n": 1,
+      "n_labeled": 1,
+      "sufficient_sample": false,
+      "supported": true,
+      "treatment_correct": 1
+    },
+    "kubernetes": {
+      "n": 1,
+      "n_labeled": 1,
+      "sufficient_sample": false,
+      "supported": true,
+      "treatment_correct": 1
+    }
+  },
+  "promotion_gates": {
+    "all_passed": false,
+    "gates": {
+      "authoritative_unchanged": true,
+      "corpus_sufficient": false,
+      "no_rca_regression": true,
+      "no_wrong_rca_increase": true,
+      "per_class_sufficient": false,
+      "regression_clean": true,
+      "replay_clean": true
+    },
+    "human_approval_required": true
+  },
+  "schema_version": 1,
+  "verdict": {
+    "authoritative_unchanged": true,
+    "corpus_total": 3,
+    "n_labeled": 3,
+    "reason": "stack is safe and regression-clean, but the labeled corpus (3 labeled / 3 total) is far below the 30-sample power floor and the 500-record readiness gate; RCA benefit is unmeasured and, for a shadow-only stack, unmeasurable without a controlled authoritative experiment",
+    "safety_agreement": 1.0,
+    "total_failures": 0,
+    "verdict": "READY_AFTER_MORE_SHADOW_EVIDENCE",
+    "verified_incorrect": 0
+  }
+}

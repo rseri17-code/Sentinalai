@@ -9605,3 +9605,57 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-13T03:50:15.885Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ff5e4c4 chore: commit runtime-generated eval and wiki data (Tranche 2 regression run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `ff5e4c4 chore: commit runtime-generated eval and wiki data (Tranche 2 regression run)`
+- `cee31c9 tranche2: adaptive evidence-acquisition advisor (shadow mode)`
+- `6e845f4 chore: commit runtime-generated eval and wiki data (Tranche 1 regression run)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-13T06:48:29.281Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ff5e4c4 chore: commit runtime-generated eval and wiki data (Tranche 2 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ff5e4c4 chore: commit runtime-generated eval and wiki data (Tranche 2 regression run)`
+- `cee31c9 tranche2: adaptive evidence-acquisition advisor (shadow mode)`
+- `6e845f4 chore: commit runtime-generated eval and wiki data (Tranche 1 regression run)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

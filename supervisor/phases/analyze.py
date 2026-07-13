@@ -314,13 +314,23 @@ class AnalyzePhase:
         # --- Tranche 2: adaptive evidence-acquisition advisor (shadow) ---
         # Flag-gated (ADAPTIVE_INVESTIGATION_ENABLED, default OFF = no-op).
         from supervisor.adaptive_investigation import run_adaptive_advisor
+        _symptom_time = str(
+            (incident or {}).get("created_at")
+            or (incident or {}).get("first_event_time") or "")
         run_adaptive_advisor(
             result, evidence, incident_type,
             hypotheses_meta=hypotheses_meta,
-            symptom_time=str(
-                (incident or {}).get("created_at")
-                or (incident or {}).get("first_event_time") or ""),
+            symptom_time=_symptom_time,
             budget=budget,
+        )
+
+        # --- Tranche 3: enterprise causal reasoning & localization (shadow) --
+        # Flag-gated (CAUSAL_INVESTIGATION_ENABLED, default OFF = no-op).
+        from supervisor.causal_investigation import run_causal_investigation
+        run_causal_investigation(
+            result, evidence, service,
+            hypotheses_meta=hypotheses_meta,
+            symptom_time=_symptom_time,
         )
 
         # --- git_blame_pinpoint extraction ---

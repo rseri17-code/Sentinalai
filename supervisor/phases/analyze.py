@@ -335,11 +335,20 @@ class AnalyzePhase:
 
         # --- Tranche 4: evidence validation & RCA verification (shadow) ---
         # Flag-gated (VALIDATION_ENGINE_ENABLED, default OFF = no-op).
-        # Runs LAST — composes the citations + Tranche 1/2/3 signals into a
-        # verification verdict. Additive metadata only; never changes
-        # root_cause / confidence.
+        # Composes the citations + Tranche 1/2/3 signals into a verification
+        # verdict. Additive metadata only; never changes root_cause /
+        # confidence.
         from supervisor.validation_engine import run_validation_engine
         run_validation_engine(result)
+
+        # --- Tranche 5: decision intelligence & evidence arbitration (shadow) -
+        # Flag-gated (DECISION_INTELLIGENCE_ENABLED, default OFF = no-op).
+        # Runs after validation — composes the Tranche 1-4 signals into a
+        # defensible decision (why this won, why others lost, which evidence
+        # mattered, how stable, how much uncertainty remains). Additive
+        # metadata only; never changes root_cause / confidence.
+        from supervisor.decision_intelligence import run_decision_intelligence
+        run_decision_intelligence(result)
 
         # --- git_blame_pinpoint extraction ---
         if evidence.get("git_blame"):

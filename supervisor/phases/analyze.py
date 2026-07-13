@@ -333,6 +333,14 @@ class AnalyzePhase:
             symptom_time=_symptom_time,
         )
 
+        # --- Tranche 4: evidence validation & RCA verification (shadow) ---
+        # Flag-gated (VALIDATION_ENGINE_ENABLED, default OFF = no-op).
+        # Runs LAST — composes the citations + Tranche 1/2/3 signals into a
+        # verification verdict. Additive metadata only; never changes
+        # root_cause / confidence.
+        from supervisor.validation_engine import run_validation_engine
+        run_validation_engine(result)
+
         # --- git_blame_pinpoint extraction ---
         if evidence.get("git_blame"):
             blame = evidence["git_blame"]

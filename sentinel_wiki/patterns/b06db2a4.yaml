@@ -5,7 +5,7 @@ services:
 - user-service
 incident_types:
 - oomkill
-observation_count: 22
+observation_count: 23
 confidence_avg: 87.0
 quality_avg: 0.746
 evidence_signals:
@@ -17,7 +17,6 @@ evidence_signals:
 - _suggested_root_causes
 - gap_get_change_data
 receipt_ids:
-- INC12346_20260706
 - INC12346_20260711
 - INC12346_20260605
 - INC12346_20260626
@@ -32,10 +31,11 @@ receipt_ids:
 - INC12346_20260628
 - INC12346_20260712
 - INC12346_20260705
+- INC12346_20260713
 - INC12346_20260531
 - INC12346_20260603
 - INC12346_20260621
 - INC12346_20260629
 - INC12346_20260704
 first_seen: 2026-05-31 20:37:52.284725+00:00
-last_seen: 2026-07-12 05:08:43.449865+00:00
+last_seen: 2026-07-13 03:14:54.233770+00:00

@@ -311,6 +311,18 @@ class AnalyzePhase:
             hypotheses_meta=hypotheses_meta, sup=sup, budget=budget,
         )
 
+        # --- Tranche 2: adaptive evidence-acquisition advisor (shadow) ---
+        # Flag-gated (ADAPTIVE_INVESTIGATION_ENABLED, default OFF = no-op).
+        from supervisor.adaptive_investigation import run_adaptive_advisor
+        run_adaptive_advisor(
+            result, evidence, incident_type,
+            hypotheses_meta=hypotheses_meta,
+            symptom_time=str(
+                (incident or {}).get("created_at")
+                or (incident or {}).get("first_event_time") or ""),
+            budget=budget,
+        )
+
         # --- git_blame_pinpoint extraction ---
         if evidence.get("git_blame"):
             blame = evidence["git_blame"]

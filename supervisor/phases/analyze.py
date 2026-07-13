@@ -234,6 +234,7 @@ class AnalyzePhase:
         # --- Pop transient fields onto local variables for downstream phases ---
         hypothesis_count  = result.pop("_hypothesis_count", 0)
         winner_hypothesis = result.pop("_winner_hypothesis", "none")
+        hypotheses_meta   = result.pop("_hypotheses", [])
         llm_metrics       = result.pop("_llm_metrics", {})
 
         # --- Step 4a-i: recurrence check (best-effort) ---
@@ -300,6 +301,15 @@ class AnalyzePhase:
         result["_evidence_snapshot"] = {
             k: bool(v) for k, v in evidence.items() if not k.startswith("_")
         }
+
+        # --- Tranche 1: hypothesis-centric reasoning engine (shadow) ---
+        # Flag-gated (HYPOTHESIS_ENGINE_ENABLED, default OFF = no-op).
+        # Additive metadata only; never touches root_cause/confidence.
+        from supervisor.hypothesis_engine import run_hypothesis_engine
+        run_hypothesis_engine(
+            result, evidence, incident_type,
+            hypotheses_meta=hypotheses_meta, sup=sup, budget=budget,
+        )
 
         # --- git_blame_pinpoint extraction ---
         if evidence.get("git_blame"):

@@ -592,6 +592,7 @@ class SentinalAISupervisor:
                 # Pop internal keys so caller handles them
                 refined.pop("_hypothesis_count", None)
                 refined.pop("_winner_hypothesis", None)
+                refined.pop("_hypotheses", None)
                 refined.pop("_llm_metrics", None)
                 logger.info(
                     "Self-critique refinement improved confidence: %d → %d",
@@ -2396,6 +2397,14 @@ class SentinalAISupervisor:
             "retrieval_confidence_boost": retrieval_boost,
             "_hypothesis_count": len(hypotheses),
             "_winner_hypothesis": winner.name if winner else "none",
+            # Tranche 1: full ranked differential (additive metadata; the
+            # hypothesis engine consumes it — previously discarded).
+            "_hypotheses": [
+                {"name": h.name, "root_cause": h.root_cause,
+                 "score": float(h.base_score),
+                 "evidence_refs": list(h.evidence_refs)}
+                for h in hypotheses[:8]
+            ],
             # Phase 2: carry DNA features and fingerprint forward for _persist_results
             "_dna_features": _dna_features,
             "_dna_fingerprint": _fingerprint,
@@ -3775,6 +3784,7 @@ class SentinalAISupervisor:
         # Online quality evaluation
         hypothesis_count = result.pop("_hypothesis_count", 0)
         result.pop("_winner_hypothesis", None)
+        result.pop("_hypotheses", None)
         result.pop("_llm_metrics", None)
         try:
             online_score = _online_evaluate(result, evidence, 0, hypothesis_count)

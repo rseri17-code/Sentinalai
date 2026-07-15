@@ -5,7 +5,7 @@ services:
 - api-gateway
 incident_types:
 - saturation
-observation_count: 24
+observation_count: 25
 confidence_avg: 49.0
 quality_avg: 0.375
 evidence_signals:
@@ -17,7 +17,6 @@ evidence_signals:
 - _kg_similar_incidents
 - _suggested_root_causes
 receipt_ids:
-- INC_TEST001_20260702
 - INC_TEST001_20260703
 - INC_TEST001_20260707
 - INC_TEST001_20260711
@@ -37,5 +36,6 @@ receipt_ids:
 - INC_TEST001_20260611
 - INC_TEST001_20260605
 - INC_TEST001_20260626
+- INC_TEST001_20260715
 first_seen: 2026-05-31 20:24:35.291247+00:00
-last_seen: 2026-07-14 00:42:01.661614+00:00
+last_seen: 2026-07-15 02:11:45.120805+00:00

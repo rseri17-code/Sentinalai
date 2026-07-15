@@ -1,0 +1,57 @@
+{
+  "category": "cascading_failure",
+  "difficulty": "cross_service",
+  "ground_truth": {
+    "decisive_evidence": [
+      "trace_chain"
+    ],
+    "necessary_evidence": [
+      "auth_logs",
+      "trace_chain"
+    ],
+    "root_cause": "auth-service timeout cascading to gateway 504s",
+    "root_cause_keywords": [
+      "504",
+      "auth",
+      "cascading",
+      "timeout"
+    ],
+    "root_cause_service": "auth-service"
+  },
+  "incident": {
+    "service": "frontend",
+    "severity": 1,
+    "summary": "multi-service 504s"
+  },
+  "schema_version": 1,
+  "task_hash": "c68d68198dbef446",
+  "task_id": "EIC-CASCADE-001",
+  "telemetry": {
+    "auth_logs": {
+      "errors": [
+        "timeout"
+      ]
+    },
+    "frontend_logs": {
+      "errors": [
+        "504"
+      ]
+    },
+    "trace_chain": {
+      "origin": "auth-service"
+    }
+  },
+  "telemetry_keys": [
+    "auth_logs",
+    "frontend_logs",
+    "trace_chain"
+  ],
+  "traps": {
+    "distractor_evidence": [
+      "frontend_logs"
+    ],
+    "false_hypotheses": [
+      "frontend rendering bug"
+    ]
+  }
+}

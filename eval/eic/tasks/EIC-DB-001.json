@@ -1,0 +1,59 @@
+{
+  "category": "database",
+  "difficulty": "competing_hypotheses",
+  "ground_truth": {
+    "decisive_evidence": [
+      "db_pool_metrics"
+    ],
+    "necessary_evidence": [
+      "app_logs",
+      "db_pool_metrics"
+    ],
+    "root_cause": "database connection pool exhaustion",
+    "root_cause_keywords": [
+      "connection pool",
+      "exhaustion"
+    ],
+    "root_cause_service": "db"
+  },
+  "incident": {
+    "service": "checkout",
+    "severity": 1,
+    "summary": "checkout 5xx spike"
+  },
+  "schema_version": 1,
+  "task_hash": "f9eff912a1b870b2",
+  "task_id": "EIC-DB-001",
+  "telemetry": {
+    "app_logs": {
+      "errors": [
+        "pool timeout"
+      ]
+    },
+    "db_pool_metrics": {
+      "active": 100,
+      "max": 100
+    },
+    "deploy_log": {
+      "last": "v1"
+    },
+    "dns_probe": {
+      "ok": true
+    }
+  },
+  "telemetry_keys": [
+    "app_logs",
+    "db_pool_metrics",
+    "deploy_log",
+    "dns_probe"
+  ],
+  "traps": {
+    "distractor_evidence": [
+      "dns_probe"
+    ],
+    "false_hypotheses": [
+      "bad deployment",
+      "dns failure"
+    ]
+  }
+}

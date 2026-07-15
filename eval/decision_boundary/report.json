@@ -1,0 +1,83 @@
+{
+  "boundaries": [
+    {
+      "authoritative_today": false,
+      "boundary_type": "corrective",
+      "decision_boundary": "hypothesis_ranking",
+      "leverage_rate": 0.0,
+      "note": "shadow re-ranks the SAME base_score candidates; changes the RCA",
+      "potential_benefit": "None",
+      "present_rate": 1.0,
+      "recommendation": "MORE_EVIDENCE \u2014 no divergence yet on this corpus",
+      "risk": "medium",
+      "shadow_signal": "T1/T5"
+    },
+    {
+      "authoritative_today": false,
+      "boundary_type": "corrective",
+      "decision_boundary": "confidence",
+      "leverage_rate": 0.0,
+      "note": "evidence_confidence vs calibrated confidence; changes a number",
+      "potential_benefit": "None",
+      "present_rate": 1.0,
+      "recommendation": "MORE_EVIDENCE \u2014 no divergence yet on this corpus",
+      "risk": "medium",
+      "shadow_signal": "T4"
+    },
+    {
+      "authoritative_today": false,
+      "boundary_type": "net_new",
+      "decision_boundary": "localization",
+      "leverage_rate": 1.0,
+      "note": "baseline emits no service localization; T3 adds one",
+      "potential_benefit": "High",
+      "present_rate": 1.0,
+      "recommendation": "SHADOW_FIRST \u2014 additive capability; measure usefulness in pilot",
+      "risk": "medium",
+      "shadow_signal": "T3"
+    },
+    {
+      "authoritative_today": false,
+      "boundary_type": "additive_gate",
+      "decision_boundary": "validation_gating",
+      "leverage_rate": 0.0,
+      "note": "gates a weak conclusion; never changes the winner",
+      "potential_benefit": "None",
+      "present_rate": 1.0,
+      "recommendation": "SAFE_FIRST_CANDIDATE \u2014 read-only gating, lowest risk; A/B once labeled",
+      "risk": "very_low",
+      "shadow_signal": "T4"
+    },
+    {
+      "authoritative_today": false,
+      "boundary_type": "net_new",
+      "decision_boundary": "decision_arbitration",
+      "leverage_rate": 1.0,
+      "note": "identifies decisive evidence; no authoritative counterpart",
+      "potential_benefit": "High",
+      "present_rate": 1.0,
+      "recommendation": "SHADOW_FIRST \u2014 additive capability; measure usefulness in pilot",
+      "risk": "medium",
+      "shadow_signal": "T5"
+    }
+  ],
+  "highest_leverage": "decision_arbitration",
+  "labeled": 3,
+  "limitations": "leverage measures where a shadow signal WOULD change/add to the authoritative decision; whether that change is an IMPROVEMENT still requires labeled outcomes",
+  "n": 3,
+  "priority_order": [
+    "decision_arbitration",
+    "localization",
+    "validation_gating",
+    "confidence",
+    "hypothesis_ranking"
+  ],
+  "safe_first_promotion": "validation_gating",
+  "schema_version": 1,
+  "why_identical": [
+    "structural: the shadow re-scores the baseline's OWN ranked candidate set (no independent hypothesis generation), so it rarely overturns the base_score argmax on the ranking boundary",
+    "contractual: every decision boundary is non-authoritative \u2014 the shadow signals are wired to nothing, so they cannot influence the outcome",
+    "evidential: corpus n=3 is small/homogeneous and may not exercise cases where re-ranking would flip the winner",
+    "observed: 0 ranking divergences on this corpus \u2014 the baseline's top candidate already matches the shadow's evidence-ranked winner"
+  ]
+}

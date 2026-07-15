@@ -9,10 +9,10 @@ observation_count: 25
 confidence_avg: 86.0
 quality_avg: 0.6076
 evidence_signals:
+- check_golden_signals
 - search_latency_logs
 - check_changes
 - check_latency_metrics
-- check_golden_signals
 - get_network_evidence
 receipt_ids:
 - INC_H2_20260611
@@ -36,4 +36,4 @@ receipt_ids:
 - INC_H2_20260708
 - INC_H2_20260711
 first_seen: 2026-05-31 20:36:46.616806+00:00
-last_seen: 2026-07-15 02:08:57.966595+00:00
+last_seen: 2026-07-15 02:40:37.745304+00:00

@@ -1,0 +1,148 @@
+{
+  "benefit_score": {
+    "ground_truth_directions": {
+      "same_rca_outcome": 3
+    },
+    "labeled": 3,
+    "limitations": "benefit scores compose shadow signals; they measure SIGNAL PRESENCE/STRENGTH, not proven RCA improvement, which requires labeled ground truth",
+    "localization_gain_rate": 1.0,
+    "n": 3,
+    "schema_version": 1,
+    "shadow_divergence_rate": 0.0,
+    "tranche_benefit": {
+      "adaptive": {
+        "ci95": [
+          0.6,
+          0.6
+        ],
+        "limitations": "composed benefit weight; not an RCA-accuracy measurement",
+        "n": 3,
+        "underpowered": true,
+        "value": 0.6
+      },
+      "causal": {
+        "ci95": [
+          1.0,
+          1.0
+        ],
+        "limitations": "composed benefit weight; not an RCA-accuracy measurement",
+        "n": 3,
+        "underpowered": true,
+        "value": 1.0
+      },
+      "decision": {
+        "ci95": [
+          1.0,
+          1.0
+        ],
+        "limitations": "composed benefit weight; not an RCA-accuracy measurement",
+        "n": 3,
+        "underpowered": true,
+        "value": 1.0
+      },
+      "hypothesis": {
+        "ci95": [
+          1.0,
+          1.0
+        ],
+        "limitations": "composed benefit weight; not an RCA-accuracy measurement",
+        "n": 3,
+        "underpowered": true,
+        "value": 1.0
+      },
+      "validation": {
+        "ci95": [
+          0.25,
+          0.25
+        ],
+        "limitations": "composed benefit weight; not an RCA-accuracy measurement",
+        "n": 3,
+        "underpowered": true,
+        "value": 0.25
+      }
+    },
+    "validation_gate_rate": 0.0
+  },
+  "decision_attribution": {
+    "n": 3,
+    "per_tranche": {
+      "adaptive": {
+        "differentiating": 3,
+        "present": 3,
+        "rate": 1.0,
+        "verdict": "CONSISTENTLY_MATTERS"
+      },
+      "causal": {
+        "differentiating": 3,
+        "present": 3,
+        "rate": 1.0,
+        "verdict": "CONSISTENTLY_MATTERS"
+      },
+      "decision": {
+        "differentiating": 3,
+        "present": 3,
+        "rate": 1.0,
+        "verdict": "CONSISTENTLY_MATTERS"
+      },
+      "hypothesis": {
+        "differentiating": 3,
+        "present": 3,
+        "rate": 1.0,
+        "verdict": "CONSISTENTLY_MATTERS"
+      },
+      "validation": {
+        "differentiating": 0,
+        "present": 3,
+        "rate": 0.0,
+        "verdict": "DECORATIVE_ON_CORPUS"
+      }
+    },
+    "schema_version": 1
+  },
+  "n": 3,
+  "promotion": {
+    "measurement_plan": "run the shadow pilot to a powered labeled corpus",
+    "promote": "NO_TRANCHES",
+    "reason": "RCA-benefit verdict is INCONCLUSIVE on 3 labeled outcomes; the gate philosophy forbids granting runtime authority without measured, powered benefit evidence",
+    "risk": "granting authority now would ship unproven behaviour",
+    "rollback": "n/a \u2014 nothing promoted",
+    "schema_version": 1
+  },
+  "retirement": {
+    "n": 3,
+    "recommendations": {
+      "adaptive": {
+        "reason": "corpus n=3 too small to judge retirement",
+        "recommendation": "RETAIN_PENDING_EVIDENCE"
+      },
+      "causal": {
+        "reason": "corpus n=3 too small to judge retirement",
+        "recommendation": "RETAIN_PENDING_EVIDENCE"
+      },
+      "decision": {
+        "reason": "corpus n=3 too small to judge retirement",
+        "recommendation": "RETAIN_PENDING_EVIDENCE"
+      },
+      "hypothesis": {
+        "reason": "corpus n=3 too small to judge retirement",
+        "recommendation": "RETAIN_PENDING_EVIDENCE"
+      },
+      "validation": {
+        "reason": "corpus n=3 too small to judge retirement",
+        "recommendation": "RETAIN_PENDING_EVIDENCE"
+      }
+    },
+    "schema_version": 1
+  },
+  "schema_version": 1,
+  "scientific_verdict": {
+    "improved": 0,
+    "labeled_outcomes": 3,
+    "limitations": "shadow stack is non-authoritative; a positive verdict bounds POTENTIAL benefit if promoted, not realized benefit today",
+    "rca_benefit_verdict": "INCONCLUSIVE",
+    "reason": "only 3 labeled outcomes (< 30 power floor); RCA-benefit direction is NOT_MEASURED",
+    "required_additional_evidence": "27 more labeled outcomes; a held-out, leakage-free corpus; per-class n>=20",
+    "schema_version": 1,
+    "worse": 0
+  }
+}

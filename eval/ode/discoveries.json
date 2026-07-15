@@ -1,0 +1,275 @@
+{
+  "by_type": {
+    "evidence": 1,
+    "hypothesis": 2,
+    "operational": 1,
+    "topology": 1
+  },
+  "discoveries": [
+    {
+      "affected_services": [
+        "checkout"
+      ],
+      "confidence": 1.0,
+      "contradicting_investigations": [],
+      "description": "'db_pool_metrics' is consistently decisive for saturation incidents",
+      "discovery_id": "disc:46c5b6b795bbd5",
+      "discovery_type": "evidence",
+      "first_observed": "2026-01-01T08:00:00Z",
+      "last_observed": "2026-01-06T08:00:00Z",
+      "recurrence_count": 6,
+      "reproducibility": true,
+      "schema_version": 1,
+      "signature": [
+        "saturation",
+        "db_pool_metrics"
+      ],
+      "statistical_support": {
+        "ci95": [
+          1.0,
+          1.0
+        ],
+        "contradictions": 0,
+        "opportunities": 6,
+        "recurrence": 6,
+        "significant": true,
+        "support_rate": 1.0,
+        "underpowered": false
+      },
+      "supporting_investigations": [
+        "INC-0",
+        "INC-1",
+        "INC-2",
+        "INC-3",
+        "INC-4",
+        "INC-5"
+      ]
+    },
+    {
+      "affected_services": [
+        "checkout"
+      ],
+      "confidence": 1.0,
+      "contradicting_investigations": [],
+      "description": "'bad deploy' is a recurring false lead for saturation incidents",
+      "discovery_id": "disc:0d8f35497ea223",
+      "discovery_type": "hypothesis",
+      "first_observed": "2026-01-01T08:00:00Z",
+      "last_observed": "2026-01-06T08:00:00Z",
+      "recurrence_count": 6,
+      "reproducibility": true,
+      "schema_version": 1,
+      "signature": [
+        "saturation",
+        "false_lead",
+        "bad deploy"
+      ],
+      "statistical_support": {
+        "ci95": [
+          1.0,
+          1.0
+        ],
+        "contradictions": 0,
+        "opportunities": 6,
+        "recurrence": 6,
+        "significant": true,
+        "support_rate": 1.0,
+        "underpowered": false
+      },
+      "supporting_investigations": [
+        "INC-0",
+        "INC-1",
+        "INC-2",
+        "INC-3",
+        "INC-4",
+        "INC-5"
+      ]
+    },
+    {
+      "affected_services": [
+        "checkout"
+      ],
+      "confidence": 1.0,
+      "contradicting_investigations": [],
+      "description": "'dns failure' is a recurring false lead for saturation incidents",
+      "discovery_id": "disc:45c5f1a274f4b3",
+      "discovery_type": "hypothesis",
+      "first_observed": "2026-01-01T08:00:00Z",
+      "last_observed": "2026-01-06T08:00:00Z",
+      "recurrence_count": 6,
+      "reproducibility": true,
+      "schema_version": 1,
+      "signature": [
+        "saturation",
+        "false_lead",
+        "dns failure"
+      ],
+      "statistical_support": {
+        "ci95": [
+          1.0,
+          1.0
+        ],
+        "contradictions": 0,
+        "opportunities": 6,
+        "recurrence": 6,
+        "significant": true,
+        "support_rate": 1.0,
+        "underpowered": false
+      },
+      "supporting_investigations": [
+        "INC-0",
+        "INC-1",
+        "INC-2",
+        "INC-3",
+        "INC-4",
+        "INC-5"
+      ]
+    },
+    {
+      "affected_services": [
+        "checkout",
+        "db"
+      ],
+      "confidence": 1.0,
+      "contradicting_investigations": [],
+      "description": "latent failure cluster: checkout and db recurrently fail together",
+      "discovery_id": "disc:0278a372e9e83f",
+      "discovery_type": "operational",
+      "first_observed": "2026-01-01T08:00:00Z",
+      "last_observed": "2026-01-06T08:00:00Z",
+      "recurrence_count": 6,
+      "reproducibility": true,
+      "schema_version": 1,
+      "signature": [
+        "checkout",
+        "db"
+      ],
+      "statistical_support": {
+        "ci95": [
+          1.0,
+          1.0
+        ],
+        "contradictions": 0,
+        "opportunities": 6,
+        "recurrence": 6,
+        "significant": true,
+        "support_rate": 1.0,
+        "underpowered": false
+      },
+      "supporting_investigations": [
+        "INC-0",
+        "INC-1",
+        "INC-2",
+        "INC-3",
+        "INC-4",
+        "INC-5"
+      ]
+    },
+    {
+      "affected_services": [
+        "checkout",
+        "db"
+      ],
+      "confidence": 1.0,
+      "contradicting_investigations": [],
+      "description": "undeclared dependency: db failure propagates to checkout",
+      "discovery_id": "disc:1cbef0f9775a57",
+      "discovery_type": "topology",
+      "first_observed": "2026-01-01T08:00:00Z",
+      "last_observed": "2026-01-06T08:00:00Z",
+      "recurrence_count": 6,
+      "reproducibility": true,
+      "schema_version": 1,
+      "signature": [
+        "db",
+        "checkout"
+      ],
+      "statistical_support": {
+        "ci95": [
+          1.0,
+          1.0
+        ],
+        "contradictions": 0,
+        "opportunities": 6,
+        "recurrence": 6,
+        "significant": true,
+        "support_rate": 1.0,
+        "underpowered": false
+      },
+      "supporting_investigations": [
+        "INC-0",
+        "INC-1",
+        "INC-2",
+        "INC-3",
+        "INC-4",
+        "INC-5"
+      ]
+    }
+  ],
+  "dqs": {
+    "disc:0278a372e9e83f": {
+      "components": {
+        "confidence": 1.0,
+        "novelty": 1.0,
+        "recurrence": 1.0,
+        "reproducibility": 1.0,
+        "stability": 1.0,
+        "usefulness": 0.8
+      },
+      "discovery_id": "disc:0278a372e9e83f",
+      "dqs": 0.97
+    },
+    "disc:0d8f35497ea223": {
+      "components": {
+        "confidence": 1.0,
+        "novelty": 1.0,
+        "recurrence": 1.0,
+        "reproducibility": 1.0,
+        "stability": 1.0,
+        "usefulness": 0.6
+      },
+      "discovery_id": "disc:0d8f35497ea223",
+      "dqs": 0.94
+    },
+    "disc:1cbef0f9775a57": {
+      "components": {
+        "confidence": 1.0,
+        "novelty": 1.0,
+        "recurrence": 1.0,
+        "reproducibility": 1.0,
+        "stability": 1.0,
+        "usefulness": 1.0
+      },
+      "discovery_id": "disc:1cbef0f9775a57",
+      "dqs": 1.0
+    },
+    "disc:45c5f1a274f4b3": {
+      "components": {
+        "confidence": 1.0,
+        "novelty": 1.0,
+        "recurrence": 1.0,
+        "reproducibility": 1.0,
+        "stability": 1.0,
+        "usefulness": 0.6
+      },
+      "discovery_id": "disc:45c5f1a274f4b3",
+      "dqs": 0.94
+    },
+    "disc:46c5b6b795bbd5": {
+      "components": {
+        "confidence": 1.0,
+        "novelty": 1.0,
+        "recurrence": 1.0,
+        "reproducibility": 1.0,
+        "stability": 1.0,
+        "usefulness": 0.7
+      },
+      "discovery_id": "disc:46c5b6b795bbd5",
+      "dqs": 0.955
+    }
+  },
+  "knowledge_count": 5,
+  "note": "each discovery is a recurring, statistically-supported operational relationship mined from investigation history; NOT_MEASURED where support is insufficient",
+  "observations": 6,
+  "schema_version": 1
+}

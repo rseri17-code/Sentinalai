@@ -1,0 +1,299 @@
+{
+  "records": [
+    {
+      "authoritative": {
+        "confidence": 80,
+        "root_cause": "Database connection pool exhaustion due to unclosed connections from payment service"
+      },
+      "commit": "a0d55c6",
+      "confidence_evolution": {
+        "calibrated": 80,
+        "evidence_derived": 78,
+        "raw": 82
+      },
+      "counterfactual": "",
+      "counterfactual_residual": 0.5,
+      "determinism_hash": "0bf28800e1a88342",
+      "eliminated": [
+        {
+          "name": "alt",
+          "reason": "refuted"
+        }
+      ],
+      "evidence_attribution": {
+        "decisive": [
+          "ev_a"
+        ],
+        "importance_ranking": [
+          "ev_a",
+          "ev_b",
+          "ev_c"
+        ]
+      },
+      "evidence_collected": [
+        "ev_a",
+        "ev_b",
+        "ev_c"
+      ],
+      "evidence_sequence": [
+        "ev_a",
+        "ev_b",
+        "ev_c"
+      ],
+      "evidence_sequence_is_true_order": true,
+      "hypotheses": [
+        {
+          "confidence": 80,
+          "name": "Database connection pool exhaustion due to unclosed connections from payment service",
+          "refuting": [],
+          "status": "confirmed",
+          "supporting": [
+            "ev_a",
+            "ev_b"
+          ]
+        },
+        {
+          "confidence": 40,
+          "name": "alt",
+          "refuting": [
+            "ev_c"
+          ],
+          "status": "ruled_out",
+          "supporting": []
+        }
+      ],
+      "incident_id": "INC-SAMPLE-001",
+      "incident_type": "saturation",
+      "investigation_completeness": 0.8,
+      "localization": "payment-service",
+      "model": "opus",
+      "next_best_evidence": [],
+      "operator": {
+        "agreed": true,
+        "corrections": [],
+        "interventions": [],
+        "operator_confidence": 85,
+        "present": true,
+        "validated_root_cause": "Database connection pool exhaustion due to unclosed connections from payment service"
+      },
+      "postmortem": {
+        "outcome": "resolved",
+        "present": true,
+        "resolution_time_ms": null,
+        "root_cause": "Database connection pool exhaustion due to unclosed connections from payment service",
+        "root_cause_keywords": [
+          "connection pool",
+          "database",
+          "exhaustion",
+          "unclosed"
+        ]
+      },
+      "record_id": "4a621fbb8847a61a",
+      "remediation": "",
+      "replay_hash": "rh_INC-SAMPLE-001",
+      "schema_version": 1,
+      "service": "payment-service",
+      "survived_disconfirmation": true,
+      "validated_rca": "Database connection pool exhaustion due to unclosed connections from payment service",
+      "verification_status": "supports",
+      "winner": "Database connection pool exhaustion due to unclosed connections from payment service"
+    },
+    {
+      "authoritative": {
+        "confidence": 80,
+        "root_cause": "Downstream auth-service timeout causing cascading 504 errors in API gateway"
+      },
+      "commit": "a0d55c6",
+      "confidence_evolution": {
+        "calibrated": 80,
+        "evidence_derived": 78,
+        "raw": 82
+      },
+      "counterfactual": "",
+      "counterfactual_residual": 0.5,
+      "determinism_hash": "3918b46353f025d2",
+      "eliminated": [
+        {
+          "name": "alt",
+          "reason": "refuted"
+        }
+      ],
+      "evidence_attribution": {
+        "decisive": [
+          "ev_a"
+        ],
+        "importance_ranking": [
+          "ev_a",
+          "ev_b",
+          "ev_c"
+        ]
+      },
+      "evidence_collected": [
+        "ev_a",
+        "ev_b",
+        "ev_c"
+      ],
+      "evidence_sequence": [
+        "ev_a",
+        "ev_b",
+        "ev_c"
+      ],
+      "evidence_sequence_is_true_order": true,
+      "hypotheses": [
+        {
+          "confidence": 80,
+          "name": "Downstream auth-service timeout causing cascading 504 errors in API gateway",
+          "refuting": [],
+          "status": "confirmed",
+          "supporting": [
+            "ev_a",
+            "ev_b"
+          ]
+        },
+        {
+          "confidence": 40,
+          "name": "alt",
+          "refuting": [
+            "ev_c"
+          ],
+          "status": "ruled_out",
+          "supporting": []
+        }
+      ],
+      "incident_id": "INC-SAMPLE-002",
+      "incident_type": "timeout",
+      "investigation_completeness": 0.8,
+      "localization": "api-gateway",
+      "model": "opus",
+      "next_best_evidence": [],
+      "operator": {
+        "agreed": true,
+        "corrections": [],
+        "interventions": [],
+        "operator_confidence": 85,
+        "present": true,
+        "validated_root_cause": "Downstream auth-service timeout causing cascading 504 errors in API gateway"
+      },
+      "postmortem": {
+        "outcome": "resolved",
+        "present": true,
+        "resolution_time_ms": null,
+        "root_cause": "Downstream auth-service timeout causing cascading 504 errors in API gateway",
+        "root_cause_keywords": [
+          "504",
+          "auth-service",
+          "cascading",
+          "gateway",
+          "timeout"
+        ]
+      },
+      "record_id": "a1e70c448eec0599",
+      "remediation": "",
+      "replay_hash": "rh_INC-SAMPLE-002",
+      "schema_version": 1,
+      "service": "api-gateway",
+      "survived_disconfirmation": true,
+      "validated_rca": "Downstream auth-service timeout causing cascading 504 errors in API gateway",
+      "verification_status": "supports",
+      "winner": "Downstream auth-service timeout causing cascading 504 errors in API gateway"
+    },
+    {
+      "authoritative": {
+        "confidence": 80,
+        "root_cause": "Memory leak in order-processor causing OOMKill after deployment v2.3.1"
+      },
+      "commit": "a0d55c6",
+      "confidence_evolution": {
+        "calibrated": 80,
+        "evidence_derived": 78,
+        "raw": 82
+      },
+      "counterfactual": "",
+      "counterfactual_residual": 0.5,
+      "determinism_hash": "ef15fbd6b969d1e0",
+      "eliminated": [
+        {
+          "name": "alt",
+          "reason": "refuted"
+        }
+      ],
+      "evidence_attribution": {
+        "decisive": [
+          "ev_a"
+        ],
+        "importance_ranking": [
+          "ev_a",
+          "ev_b",
+          "ev_c"
+        ]
+      },
+      "evidence_collected": [
+        "ev_a",
+        "ev_b",
+        "ev_c"
+      ],
+      "evidence_sequence": [
+        "ev_a",
+        "ev_b",
+        "ev_c"
+      ],
+      "evidence_sequence_is_true_order": true,
+      "hypotheses": [
+        {
+          "confidence": 80,
+          "name": "Memory leak in order-processor causing OOMKill after deployment v2.3.1",
+          "refuting": [],
+          "status": "confirmed",
+          "supporting": [
+            "ev_a",
+            "ev_b"
+          ]
+        },
+        {
+          "confidence": 40,
+          "name": "alt",
+          "refuting": [
+            "ev_c"
+          ],
+          "status": "ruled_out",
+          "supporting": []
+        }
+      ],
+      "incident_id": "INC-SAMPLE-003",
+      "incident_type": "oomkill",
+      "investigation_completeness": 0.8,
+      "localization": "order-processor",
+      "model": "opus",
+      "next_best_evidence": [],
+      "operator": {
+        "agreed": true,
+        "corrections": [],
+        "interventions": [],
+        "operator_confidence": 85,
+        "present": true,
+        "validated_root_cause": "Memory leak in order-processor causing OOMKill after deployment v2.3.1"
+      },
+      "postmortem": {
+        "outcome": "resolved",
+        "present": true,
+        "resolution_time_ms": null,
+        "root_cause": "Memory leak in order-processor causing OOMKill after deployment v2.3.1",
+        "root_cause_keywords": [
+          "OOMKill",
+          "deployment",
+          "memory leak",
+          "order-processor"
+        ]
+      },
+      "record_id": "e63fbaf092587fab",
+      "remediation": "",
+      "replay_hash": "rh_INC-SAMPLE-003",
+      "schema_version": 1,
+      "service": "order-processor",
+      "survived_disconfirmation": true,
+      "validated_rca": "Memory leak in order-processor causing OOMKill after deployment v2.3.1",
+      "verification_status": "supports",
+      "winner": "Memory leak in order-processor causing OOMKill after deployment v2.3.1"
+    }
+  ]
+}

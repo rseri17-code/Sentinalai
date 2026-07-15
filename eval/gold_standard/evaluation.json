@@ -1,0 +1,109 @@
+{
+  "investigation_quality_score": 0.818,
+  "iqs_coverage": 1.0,
+  "iqs_note": "IQS composed only from validated (measured) metrics; a high IQS at low coverage is not a pass \u2014 both travel together",
+  "metrics": {
+    "confidence_calibration": {
+      "ci95": [
+        0.78,
+        0.78
+      ],
+      "limitations": "requires labels; underpowered below n=30",
+      "n": 3,
+      "underpowered": true,
+      "value": 0.78
+    },
+    "decisive_evidence_latency": {
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "limitations": "needs true acquisition order (else sorted fallback, not real latency)",
+      "n": 3,
+      "underpowered": true,
+      "value": 1.0
+    },
+    "evidence_efficiency": {
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "limitations": "signal density; not correctness",
+      "n": 3,
+      "underpowered": true,
+      "value": 1.0
+    },
+    "false_lead_avoidance": {
+      "ci95": [
+        0.5,
+        0.5
+      ],
+      "limitations": "counts refuted hypotheses; a good pursuit may legitimately refute many",
+      "n": 3,
+      "underpowered": true,
+      "value": 0.5
+    },
+    "hypothesis_efficiency": {
+      "ci95": [
+        0.5,
+        0.5
+      ],
+      "limitations": "1/hypothesis_count; assumes a confirmed winner",
+      "n": 3,
+      "underpowered": true,
+      "value": 0.5
+    },
+    "investigation_completeness": {
+      "ci95": [
+        0.8,
+        0.8
+      ],
+      "limitations": "evidence-category coverage, not correctness",
+      "n": 3,
+      "underpowered": true,
+      "value": 0.8
+    },
+    "localization_accuracy": {
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "limitations": "requires validated ground truth",
+      "n": 3,
+      "underpowered": true,
+      "value": 1.0
+    },
+    "operator_agreement": {
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "limitations": "requires operator-validated RCA",
+      "n": 3,
+      "underpowered": true,
+      "value": 1.0
+    },
+    "replay_fidelity": {
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "limitations": "presence of a stable replay hash, not a re-run",
+      "n": 3,
+      "underpowered": true,
+      "value": 1.0
+    },
+    "unnecessary_evidence_avoided": {
+      "ci95": [
+        0.0,
+        0.0
+      ],
+      "limitations": "complement of signal density",
+      "n": 3,
+      "underpowered": true,
+      "value": 0.0
+    }
+  },
+  "n_records": 3,
+  "schema_version": 1
+}

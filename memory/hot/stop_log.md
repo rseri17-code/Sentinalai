@@ -10091,3 +10091,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-15T07:33:38.094Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 0554e0d chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `0554e0d chore: update hot memory (stop hook auto-commit)`
+- `a0d55c6 chore: update runtime-generated state (decision boundary analysis run)`
+- `e8f1b58 feat(effectiveness): Decision Boundary Analysis — locate shadow-engine leverage (produce-only)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

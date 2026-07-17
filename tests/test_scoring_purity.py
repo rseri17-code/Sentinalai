@@ -344,14 +344,15 @@ class TestCorroboratingSources:
     """Explicit corroborating_sources parameter adds +2 each."""
 
     def test_corroborating_sources_bonus(self) -> None:
-        """Each corroborating source adds +2."""
+        """R2: corroborating_sources no longer contributes — it double-counted
+        sources already credited by the per-category bonus. Confidence must be
+        independent of the evidence-ref count."""
         base = 50
         s0 = compute_confidence(base, [], _good_signals(), _good_metrics(), [], [], corroborating_sources=0)
         s1 = compute_confidence(base, [], _good_signals(), _good_metrics(), [], [], corroborating_sources=1)
         s2 = compute_confidence(base, [], _good_signals(), _good_metrics(), [], [], corroborating_sources=2)
 
-        assert s1 - s0 == 2
-        assert s2 - s1 == 2
+        assert s0 == s1 == s2      # ref count does not inflate confidence
 
 
 # ---------------------------------------------------------------------------

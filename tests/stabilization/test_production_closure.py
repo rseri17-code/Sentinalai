@@ -141,8 +141,10 @@ class TestFObsObservability:
         _record_unavailable(ev, "experience_store", "timeout")   # dup
         _record_unavailable(ev, "knowledge_graph", "refused")
         assert ev["_sources_unavailable"] == [
-            {"source": "experience_store", "reason": "timeout"},
-            {"source": "knowledge_graph", "reason": "refused"},
+            {"source": "experience_store", "reason": "timeout",
+             "state": "unavailable"},
+            {"source": "knowledge_graph", "reason": "refused",
+             "state": "unavailable"},
         ]
 
     def test_worker_error_scan_records_sources(self):

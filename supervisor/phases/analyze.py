@@ -309,6 +309,12 @@ class AnalyzePhase:
             result["_sources_unavailable"] = _unavailable
             result["degraded_investigation"] = True
 
+        # --- PB-3: lift the standardized evidence lifecycle onto the result so
+        # every evidence object's terminal state is visible in receipts. ---
+        _lifecycle = evidence.get("_evidence_lifecycle")
+        if _lifecycle:
+            result["_evidence_lifecycle"] = _lifecycle
+
         # --- Tranche 1: hypothesis-centric reasoning engine (shadow) ---
         # Flag-gated (HYPOTHESIS_ENGINE_ENABLED, default OFF = no-op).
         # Additive metadata only; never touches root_cause/confidence.

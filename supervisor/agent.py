@@ -217,7 +217,9 @@ class Hypothesis:
 # unchanged.
 # =========================================================================
 
-from supervisor.helpers.confidence import compute_confidence  # noqa: E402,F401
+from supervisor.helpers.confidence import (  # noqa: E402,F401
+    compute_confidence, confidence_provenance,
+)
 
 
 # =========================================================================
@@ -2317,7 +2319,11 @@ class SentinalAISupervisor:
         )
 
         # W3: Evidence-weighted confidence for each hypothesis
+        # R2: capture each hypothesis's pre-scoring prior so the winner's
+        # confidence can be exposed as a fully-attributable provenance (below).
+        _evidence_priors: dict[str, float] = {}
         for h in hypotheses:
+            _evidence_priors[h.name] = float(h.base_score)
             h.base_score = compute_confidence(
                 h.base_score, logs, signals, metrics, events, changes,
                 corroborating_sources=len(h.evidence_refs),
@@ -2464,6 +2470,15 @@ class SentinalAISupervisor:
             # Phase 2: carry DNA features and fingerprint forward for _persist_results
             "_dna_features": _dna_features,
             "_dna_fingerprint": _fingerprint,
+            # R2: evidence-derived confidence provenance for the winner — every
+            # contribution attributed exactly once (additive metadata only).
+            "_confidence_provenance": (
+                confidence_provenance(
+                    _evidence_priors.get(winner.name, 0.0),
+                    logs, signals, metrics, events, changes,
+                    incident_type=incident_type)
+                if winner else {"base": 0.0, "contributions": [],
+                                "final_confidence": confidence}),
         }
 
         if llm_refine_failed or llm_reasoning_failed:

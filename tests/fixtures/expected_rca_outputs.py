@@ -60,7 +60,10 @@ EXPECTED_RCA = {
         "incident_id": "INC12346",
         "root_cause": "memory leak in user-service",
         "root_cause_keywords": ["memory", "leak", "user-service"],
-        "confidence_min": 85,
+        # R2: recalibrated 85 -> 80 after the confidence double-count fix
+        # (source_count + corroborating_sources credited the same evidence
+        # twice). RCA/winner unchanged; only the inflated value was corrected.
+        "confidence_min": 80,
         "confidence_max": 92,
         "required_evidence": [
             "OOMKill event",

@@ -5,7 +5,7 @@ services:
 - recommendation-service
 incident_types:
 - silent_failure
-observation_count: 25
+observation_count: 26
 confidence_avg: 68.0
 quality_avg: 0.516
 evidence_signals:
@@ -35,4 +35,4 @@ receipt_ids:
 - INC_SF1_20260711
 - INC_SF1_20260603
 first_seen: 2026-05-31 20:36:46.245248+00:00
-last_seen: 2026-07-15 15:01:01.483657+00:00
+last_seen: 2026-07-17 12:43:08.011832+00:00

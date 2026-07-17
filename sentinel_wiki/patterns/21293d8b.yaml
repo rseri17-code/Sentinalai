@@ -5,7 +5,7 @@ services:
 - notification-service
 incident_types:
 - missing_data
-observation_count: 25
+observation_count: 26
 confidence_avg: 72.0
 quality_avg: 0.812
 evidence_signals:
@@ -17,13 +17,13 @@ evidence_signals:
 - _suggested_root_causes
 - gap_get_change_data
 receipt_ids:
-- INC12352_20260531
 - INC12352_20260711
 - INC12352_20260627
 - INC12352_20260603
 - INC12352_20260713
 - INC12352_20260712
 - INC12352_20260703
+- INC12352_20260717
 - INC12352_20260619
 - INC12352_20260714
 - INC12352_20260605
@@ -38,4 +38,4 @@ receipt_ids:
 - INC12352_20260629
 - INC12352_20260708
 first_seen: 2026-05-31 20:37:52.958706+00:00
-last_seen: 2026-07-15 15:14:29.962276+00:00
+last_seen: 2026-07-17 12:55:50.427703+00:00

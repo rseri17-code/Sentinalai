@@ -10835,3 +10835,57 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-17T05:28:51.186Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 40b3cdf docs(restoration): claim restoration diagnosis + specs (R1/R2, no code)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `40b3cdf docs(restoration): claim restoration diagnosis + specs (R1/R2, no code)`
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-17T11:12:49.613Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 40b3cdf docs(restoration): claim restoration diagnosis + specs (R1/R2, no code)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `40b3cdf docs(restoration): claim restoration diagnosis + specs (R1/R2, no code)`
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

@@ -6,14 +6,15 @@ services:
 incident_types:
 - error_spike
 observation_count: 5
-confidence_avg: 46.6
+confidence_avg: 45.0
 quality_avg: 0.702
 evidence_signals:
 - check_golden_signals
-- check_events
 - check_itsm_changes
+- check_events
 - search_error_logs
 - check_changes
+- _evidence_lifecycle
 - gap_get_change_data
 - gap_query_metrics
 - _kg_similar_incidents
@@ -25,4 +26,4 @@ receipt_ids:
 - INC_R1_STAMP_20260717
 - INC_R1_DET_20260717
 first_seen: 2026-07-17 12:41:10.745621+00:00
-last_seen: 2026-07-17 12:41:55.478993+00:00
+last_seen: 2026-07-17 15:09:58.084367+00:00

@@ -6,7 +6,7 @@ services:
 incident_types:
 - network
 observation_count: 52
-confidence_avg: 64.0
+confidence_avg: 63.92
 quality_avg: 0.8151
 evidence_signals:
 - check_golden_signals
@@ -17,6 +17,7 @@ evidence_signals:
 - gap_get_change_data
 - gap_search_logs
 - get_network_evidence
+- _evidence_lifecycle
 receipt_ids:
 - INC_H8_20260704
 - INC_N1_20260705
@@ -39,4 +40,4 @@ receipt_ids:
 - INC_N1_20260704
 - INC_N1_20260611
 first_seen: 2026-05-31 20:36:45.790929+00:00
-last_seen: 2026-07-17 12:43:24.505844+00:00
+last_seen: 2026-07-17 15:11:34.695188+00:00

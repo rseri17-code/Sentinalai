@@ -14,6 +14,7 @@ evidence_signals:
 - search_latency_logs
 - check_changes
 - get_network_evidence
+- _evidence_lifecycle
 receipt_ids:
 - INC_L1_20260703
 - INC_L1_20260611
@@ -36,4 +37,4 @@ receipt_ids:
 - INC_L1_20260711
 - INC_L1_20260630
 first_seen: 2026-05-31 20:36:45.527584+00:00
-last_seen: 2026-07-17 12:42:55.226891+00:00
+last_seen: 2026-07-17 15:11:02.691621+00:00

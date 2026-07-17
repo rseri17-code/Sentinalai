@@ -6,8 +6,8 @@ services:
 incident_types:
 - oomkill
 observation_count: 26
-confidence_avg: 87.0
-quality_avg: 0.746
+confidence_avg: 86.77
+quality_avg: 0.7458
 evidence_signals:
 - search_oom_logs
 - search_memory_logs
@@ -16,6 +16,7 @@ evidence_signals:
 - _kg_similar_incidents
 - _suggested_root_causes
 - gap_get_change_data
+- _evidence_lifecycle
 receipt_ids:
 - INC12346_20260627
 - INC12346_20260702
@@ -38,4 +39,4 @@ receipt_ids:
 - INC12346_20260629
 - INC12346_20260704
 first_seen: 2026-05-31 20:37:52.284725+00:00
-last_seen: 2026-07-17 12:55:39.957981+00:00
+last_seen: 2026-07-17 15:24:12.559269+00:00

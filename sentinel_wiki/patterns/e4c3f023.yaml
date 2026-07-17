@@ -6,7 +6,7 @@ services:
 incident_types:
 - error_spike
 observation_count: 26
-confidence_avg: 94.0
+confidence_avg: 93.77
 quality_avg: 0.815
 evidence_signals:
 - check_golden_signals
@@ -17,6 +17,7 @@ evidence_signals:
 - _kg_similar_incidents
 - _suggested_root_causes
 - gap_get_change_data
+- _evidence_lifecycle
 receipt_ids:
 - INC12347_20260626
 - INC12347_20260619
@@ -39,4 +40,4 @@ receipt_ids:
 - INC12347_20260717
 - INC12347_20260627
 first_seen: 2026-05-31 20:37:52.382600+00:00
-last_seen: 2026-07-17 12:55:41.709731+00:00
+last_seen: 2026-07-17 15:24:14.559837+00:00

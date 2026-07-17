@@ -13,6 +13,7 @@ evidence_signals:
 - check_traffic_metrics
 - search_service_logs
 - search_pipeline_logs
+- _evidence_lifecycle
 receipt_ids:
 - INC_SF2_20260712
 - INC_SF2_20260605
@@ -35,4 +36,4 @@ receipt_ids:
 - INC_SF2_20260708
 - INC_SF2_20260603
 first_seen: 2026-05-31 20:36:46.333677+00:00
-last_seen: 2026-07-17 12:43:09.645644+00:00
+last_seen: 2026-07-17 15:11:18.773872+00:00

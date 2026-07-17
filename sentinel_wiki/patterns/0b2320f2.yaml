@@ -6,8 +6,8 @@ services:
 incident_types:
 - cascading
 observation_count: 26
-confidence_avg: 96.0
-quality_avg: 0.775
+confidence_avg: 95.69
+quality_avg: 0.7756
 evidence_signals:
 - check_golden_signals
 - check_metrics
@@ -17,6 +17,7 @@ evidence_signals:
 - _kg_similar_incidents
 - _suggested_root_causes
 - gap_search_logs
+- _evidence_lifecycle
 receipt_ids:
 - INC12351_20260610
 - INC12351_20260715
@@ -39,4 +40,4 @@ receipt_ids:
 - INC12351_20260629
 - INC12351_20260708
 first_seen: 2026-05-31 20:37:52.866869+00:00
-last_seen: 2026-07-17 12:55:48.635071+00:00
+last_seen: 2026-07-17 15:24:21.957836+00:00

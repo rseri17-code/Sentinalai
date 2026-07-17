@@ -14,6 +14,7 @@ evidence_signals:
 - search_timeout_logs
 - check_changes
 - get_network_alerts
+- _evidence_lifecycle
 receipt_ids:
 - INC_AD1_20260712
 - INC_AD1_20260708
@@ -36,4 +37,4 @@ receipt_ids:
 - INC_AD1_20260705
 - INC_AD1_20260621
 first_seen: 2026-05-31 20:36:46.433855+00:00
-last_seen: 2026-07-17 12:43:11.255905+00:00
+last_seen: 2026-07-17 15:11:20.601394+00:00

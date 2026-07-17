@@ -15,6 +15,7 @@ evidence_signals:
 - search_cpu_logs
 - check_changes
 - gap_get_change_data
+- _evidence_lifecycle
 receipt_ids:
 - INC_S2_20260704
 - INC_S2_20260713
@@ -37,4 +38,4 @@ receipt_ids:
 - INC_S2_20260621
 - INC_S2_20260717
 first_seen: 2026-05-31 20:36:45.702475+00:00
-last_seen: 2026-07-17 12:42:58.429670+00:00
+last_seen: 2026-07-17 15:11:06.336886+00:00

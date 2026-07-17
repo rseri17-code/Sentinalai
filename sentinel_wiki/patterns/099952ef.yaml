@@ -6,13 +6,14 @@ services:
 incident_types:
 - oomkill
 observation_count: 26
-confidence_avg: 65.0
+confidence_avg: 64.92
 quality_avg: 0.556
 evidence_signals:
 - check_memory_metrics
 - check_events
 - search_oom_logs
 - search_memory_logs
+- _evidence_lifecycle
 receipt_ids:
 - INC_H4_20260619
 - INC_H4_20260705
@@ -35,4 +36,4 @@ receipt_ids:
 - INC_H4_20260627
 - INC_H4_20260628
 first_seen: 2026-05-31 20:36:46.784293+00:00
-last_seen: 2026-07-17 12:43:17.861553+00:00
+last_seen: 2026-07-17 15:11:27.689465+00:00

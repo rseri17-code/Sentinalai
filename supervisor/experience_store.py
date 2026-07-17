@@ -441,6 +441,13 @@ def _load_all_raw() -> dict:
 
     Returns {"experiences": [], "failed": []} on missing/corrupt file.
     """
+    # R1: during an investigation, read the pinned Frozen Corpus snapshot so the
+    # run never observes its own (or a concurrent run's) writes. Inert outside
+    # investigate() (returns None → live read below).
+    from supervisor.frozen_corpus import _frozen_or_live
+    _frozen = _frozen_or_live("experience")
+    if _frozen is not None:
+        return dict(_frozen)
     path = EXPERIENCE_STORE_PATH
     try:
         with open(path, "r") as f:

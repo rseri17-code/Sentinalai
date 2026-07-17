@@ -334,16 +334,41 @@ class SentinalAISupervisor:
                 stored_incident_type = stored_evidence.pop("_incident_type", "error_spike")
                 if stored_incident and stored_evidence:
                     logger.info("Replaying investigation for %s from stored evidence", incident_id)
-                    replayed = self._analyze_evidence(
-                        incident_id, stored_incident, stored_incident_type, stored_evidence
-                    )
-                    # Run citation annotation so replay results are consistent
-                    # with the primary run (which also runs annotate_citations)
-                    annotate_citations(replayed, stored_evidence)
+                    # R1 hermetic replay: read the recorded Frozen Corpus, never
+                    # live learning state. If the artifact predates R1 (no corpus
+                    # recorded), replay reads live but is flagged non-hermetic
+                    # (explicit verification failure, not a silent substitution).
+                    from supervisor import frozen_corpus as _fcorp
+                    _rec = stored.get("frozen_corpus")
+                    _replay_corpus = (_fcorp.FrozenCorpus.from_record(_rec)
+                                      if _rec else None)
+                    _fcorp.set_active_corpus(_replay_corpus,
+                                             replay=bool(_replay_corpus))
+                    try:
+                        replayed = self._analyze_evidence(
+                            incident_id, stored_incident, stored_incident_type, stored_evidence
+                        )
+                        # Run citation annotation so replay results are consistent
+                        # with the primary run (which also runs annotate_citations)
+                        annotate_citations(replayed, stored_evidence)
+                    finally:
+                        _fcorp.clear_active_corpus()
+                    if isinstance(replayed, dict):
+                        replayed["_replay_verification"] = (
+                            "OK" if _replay_corpus else "FAILED_NO_CORPUS")
                     return replayed
                 # Fallback: return cached result if evidence not available
                 if stored.get("result"):
                     return stored["result"]
+
+        # R1 Frozen Corpus: capture the four learning stores ONCE at entry into
+        # one immutable, content-addressed snapshot. All in-run reads consult
+        # this snapshot (thread-local), so the investigation never observes its
+        # own or a concurrent run's writes. Cleared + stamped in _finish.
+        from supervisor import frozen_corpus as _fcorp
+        _fcorp.clear_active_corpus()          # defensive: drop any leaked state
+        _frozen_corpus = _fcorp.capture()
+        _fcorp.set_active_corpus(_frozen_corpus, replay=False)
 
         # Phase modules are imported lazily (not at agent.py module top)
         # because they pull in worker / trace-correlation / visual-evidence
@@ -368,11 +393,17 @@ class SentinalAISupervisor:
 
         def _finish(_res: dict) -> dict:
             """Attach receipts, then emit the Wave 1 Investigation Artifact
-            (candidate-only; no-op unless INVESTIGATION_ARTIFACT_ENABLED)."""
+            (candidate-only; no-op unless INVESTIGATION_ARTIFACT_ENABLED).
+            Stamps the corpus_version replay inputs and releases the
+            investigation-scoped Frozen Corpus (universal exit path)."""
             _res = attach_receipts(_res, _phase_receipts)
+            if isinstance(_res, dict):
+                _res["corpus_stamp"] = _frozen_corpus.stamp()
+                _res["_corpus_version"] = _frozen_corpus.corpus_version
             maybe_write_investigation_artifact(
                 _res, incident_id, getattr(ctx, "investigation_id", ""),
             )
+            _fcorp.clear_active_corpus()
             return _res
         # IntelligenceRuntime — zero-cost no-op when ENABLE_INTELLIGENCE_RUNTIME
         # is off (default). When enabled, install_default_modules() registers

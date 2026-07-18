@@ -10969,3 +10969,85 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-18T02:08:34.973Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 5dbf397 docs(ovp): Operational Validation Program — measure external outcomes (no code)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `5dbf397 docs(ovp): Operational Validation Program — measure external outcomes (no code)`
+- `edc11e8 chore: update runtime-generated state (R2 confidence + evidence observability)`
+- `4f2b83c fix(r2): evidence-grounded confidence + evidence observability (R2 RESTORED)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-18T02:19:53.141Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 5dbf397 docs(ovp): Operational Validation Program — measure external outcomes (no code)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `5dbf397 docs(ovp): Operational Validation Program — measure external outcomes (no code)`
+- `edc11e8 chore: update runtime-generated state (R2 confidence + evidence observability)`
+- `4f2b83c fix(r2): evidence-grounded confidence + evidence observability (R2 RESTORED)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-18T03:42:28.889Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 5dbf397 docs(ovp): Operational Validation Program — measure external outcomes (no code)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `5dbf397 docs(ovp): Operational Validation Program — measure external outcomes (no code)`
+- `edc11e8 chore: update runtime-generated state (R2 confidence + evidence observability)`
+- `4f2b83c fix(r2): evidence-grounded confidence + evidence observability (R2 RESTORED)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

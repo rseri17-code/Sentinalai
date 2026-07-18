@@ -1,0 +1,79 @@
+{
+  "attention_order": [
+    "api-gateway",
+    "order-processor",
+    "payment-service"
+  ],
+  "band_counts": {
+    "at_risk": 0,
+    "healthy": 3,
+    "watch": 0
+  },
+  "estate_health_score": 0.9135,
+  "investigations": 3,
+  "period": "demo",
+  "schema_version": 1,
+  "services": {
+    "api-gateway": {
+      "confidence": 78,
+      "degraded_sources": [],
+      "evidence": {
+        "completeness": 0.83,
+        "unavailable": 0,
+        "used": 4
+      },
+      "health_band": "healthy",
+      "health_score": 0.9135,
+      "incidents": 1,
+      "next_action": "no action \u2014 healthy",
+      "owner": "api-gateway",
+      "recurring_root_causes": [],
+      "service": "api-gateway",
+      "verifiable": true,
+      "what_changed": false,
+      "what_happened": "1 investigation(s); latest: timeout",
+      "why": "Downstream auth-service timeout causing cascading 504 errors in API gateway"
+    },
+    "order-processor": {
+      "confidence": 78,
+      "degraded_sources": [],
+      "evidence": {
+        "completeness": 0.83,
+        "unavailable": 0,
+        "used": 4
+      },
+      "health_band": "healthy",
+      "health_score": 0.9135,
+      "incidents": 1,
+      "next_action": "no action \u2014 healthy",
+      "owner": "order-processor",
+      "recurring_root_causes": [],
+      "service": "order-processor",
+      "verifiable": true,
+      "what_changed": true,
+      "what_happened": "1 investigation(s); latest: oomkill",
+      "why": "Memory leak in order-processor causing OOMKill after deployment v2.3.1"
+    },
+    "payment-service": {
+      "confidence": 78,
+      "degraded_sources": [],
+      "evidence": {
+        "completeness": 0.83,
+        "unavailable": 0,
+        "used": 4
+      },
+      "health_band": "healthy",
+      "health_score": 0.9135,
+      "incidents": 1,
+      "next_action": "no action \u2014 healthy",
+      "owner": "payment-service",
+      "recurring_root_causes": [],
+      "service": "payment-service",
+      "verifiable": true,
+      "what_changed": false,
+      "what_happened": "1 investigation(s); latest: saturation",
+      "why": "Database connection pool exhaustion due to unclosed connections from payment service"
+    }
+  },
+  "services_evaluated": 3
+}

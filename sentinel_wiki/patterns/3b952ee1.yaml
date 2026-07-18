@@ -11,9 +11,9 @@ quality_avg: 0.702
 evidence_signals:
 - check_golden_signals
 - check_itsm_changes
+- check_events
 - search_error_logs
 - check_changes
-- check_events
 - _evidence_lifecycle
 - gap_get_change_data
 - gap_query_metrics
@@ -31,4 +31,4 @@ receipt_ids:
 - INC_R1_CLEAR_20260718
 - INC_R1_DET_20260717
 first_seen: 2026-07-17 12:41:10.745621+00:00
-last_seen: 2026-07-18 08:16:16.453090+00:00
+last_seen: 2026-07-18 16:52:28.516092+00:00

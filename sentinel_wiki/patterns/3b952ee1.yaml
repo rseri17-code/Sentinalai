@@ -5,25 +5,30 @@ services:
 - unknown
 incident_types:
 - error_spike
-observation_count: 5
+observation_count: 10
 confidence_avg: 45.0
 quality_avg: 0.702
 evidence_signals:
 - check_golden_signals
 - check_itsm_changes
-- check_events
 - search_error_logs
 - check_changes
+- check_events
 - _evidence_lifecycle
 - gap_get_change_data
 - gap_query_metrics
 - _kg_similar_incidents
 - _suggested_root_causes
 receipt_ids:
+- INC_R1_STAMP_20260718
 - INC_R1_CLEAR_20260717
 - INC_R1_LEARN_20260717
+- INC_R1_ROYW_20260718
+- INC_R1_LEARN_20260718
 - INC_R1_ROYW_20260717
+- INC_R1_DET_20260718
 - INC_R1_STAMP_20260717
+- INC_R1_CLEAR_20260718
 - INC_R1_DET_20260717
 first_seen: 2026-07-17 12:41:10.745621+00:00
-last_seen: 2026-07-17 15:09:58.084367+00:00
+last_seen: 2026-07-18 04:50:25.331835+00:00

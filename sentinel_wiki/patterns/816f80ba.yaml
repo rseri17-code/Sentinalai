@@ -5,14 +5,14 @@ services:
 - recommendation-service
 incident_types:
 - silent_failure
-observation_count: 26
+observation_count: 27
 confidence_avg: 44.0
 quality_avg: 0.44
 evidence_signals:
 - check_golden_signals
-- check_traffic_metrics
 - search_service_logs
 - search_pipeline_logs
+- check_traffic_metrics
 - _evidence_lifecycle
 receipt_ids:
 - INC_SF2_20260712
@@ -36,4 +36,4 @@ receipt_ids:
 - INC_SF2_20260708
 - INC_SF2_20260603
 first_seen: 2026-05-31 20:36:46.333677+00:00
-last_seen: 2026-07-17 15:11:18.773872+00:00
+last_seen: 2026-07-18 04:51:42.809318+00:00

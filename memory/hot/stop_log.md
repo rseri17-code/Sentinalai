@@ -11051,3 +11051,57 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-18T03:55:53.216Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8deaea0 docs(oip): Operational Intelligence Platform — Phase 3 enterprise decision layer (design only)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `8deaea0 docs(oip): Operational Intelligence Platform — Phase 3 enterprise decision layer (design only)`
+- `5dbf397 docs(ovp): Operational Validation Program — measure external outcomes (no code)`
+- `edc11e8 chore: update runtime-generated state (R2 confidence + evidence observability)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-18T04:12:16.654Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 8deaea0 docs(oip): Operational Intelligence Platform — Phase 3 enterprise decision layer (design only)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8deaea0 docs(oip): Operational Intelligence Platform — Phase 3 enterprise decision layer (design only)`
+- `5dbf397 docs(ovp): Operational Validation Program — measure external outcomes (no code)`
+- `edc11e8 chore: update runtime-generated state (R2 confidence + evidence observability)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

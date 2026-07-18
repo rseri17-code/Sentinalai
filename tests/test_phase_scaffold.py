@@ -256,7 +256,8 @@ class TestBehaviorParity:
                 score -= 5
             if not metrics or not metrics.get("metrics"):
                 score -= 3
-        score += corroborating_sources * 2
+        # R2: corroborating_sources no longer contributes (removed double-count
+        # — the same source was already credited by the per-category bonus).
         return max(0, min(100, int(round(score))))
 
     @pytest.mark.parametrize("scenario", [

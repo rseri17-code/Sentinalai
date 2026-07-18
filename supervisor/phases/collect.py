@@ -50,6 +50,74 @@ logger = logging.getLogger("sentinalai.collect")
 
 
 # ---------------------------------------------------------------------------
+# F-obs: dependency-failure observability
+# ---------------------------------------------------------------------------
+
+# PB-3 evidence lifecycle terminal states — every evidence object ends in
+# exactly one of these; "unknown"/silent disappearance is forbidden.
+EVIDENCE_STATES = ("used", "filtered", "suppressed", "unavailable", "error")
+
+
+def _record_unavailable(evidence: dict[str, Any], source: str,
+                        reason: str, *, state: str = "unavailable") -> None:
+    """Record a non-``used`` terminal state for an evidence source so it is
+    never silently swallowed. Appends a deterministic entry to
+    ``_sources_unavailable`` (surfaced to operators in receipts + report) and
+    logs it. Additive only; never changes RCA authority."""
+    state = state if state in EVIDENCE_STATES else "unavailable"
+    entry = {"source": str(source), "reason": str(reason)[:200], "state": state}
+    bucket = evidence.setdefault("_sources_unavailable", [])
+    if entry not in bucket:
+        bucket.append(entry)
+    logger.warning("evidence source %s: %s (%s)", state, source,
+                   entry["reason"])
+
+
+def _scan_worker_errors(evidence: dict[str, Any]) -> None:
+    """Post-collection sweep: classify every worker response's terminal state.
+    ``{"error": ...}`` → error; malformed ``{"raw_response": ...}`` (no usable
+    keys) → unavailable. Deterministic (sorted key iteration)."""
+    for key in sorted(evidence):
+        if key.startswith("_"):
+            continue
+        val = evidence.get(key)
+        if not isinstance(val, dict):
+            continue
+        if val.get("error"):
+            _record_unavailable(evidence, key, str(val.get("error")),
+                                state="error")
+        elif "raw_response" in val and len(val) == 1:
+            # malformed/non-JSON worker response — parsed nothing usable
+            _record_unavailable(evidence, key, "malformed response "
+                                "(unparseable raw_response)", state="unavailable")
+
+
+def _evidence_lifecycle(evidence: dict[str, Any]) -> dict[str, Any]:
+    """Summarise the terminal state of every evidence object (PB-3). Sources
+    with usable data are 'used'; the rest carry their recorded non-used state.
+    No source is 'unknown'."""
+    unavailable = {e["source"]: e.get("state", "unavailable")
+                   for e in evidence.get("_sources_unavailable", [])}
+    received = sorted(k for k in evidence if not str(k).startswith("_"))
+    states: dict[str, str] = {}
+    for k in received:
+        v = evidence.get(k)
+        if k in unavailable:
+            states[k] = unavailable[k]
+        elif v in (None, "", [], {}):
+            states[k] = "filtered"          # collected but empty
+        else:
+            states[k] = "used"
+    # include unavailable sources that never produced an evidence key
+    for src, st in unavailable.items():
+        states.setdefault(src, st)
+    counts: dict[str, int] = {s: 0 for s in EVIDENCE_STATES}
+    for st in states.values():
+        counts[st] = counts.get(st, 0) + 1
+    return {"by_source": dict(sorted(states.items())), "counts": counts}
+
+
+# ---------------------------------------------------------------------------
 # Typed result
 # ---------------------------------------------------------------------------
 
@@ -208,7 +276,7 @@ class CollectPhase:
             historical = historical_future.result(timeout=sup._call_timeout)
         except Exception as exc:
             historical = None
-            logger.warning("Historical context retrieval failed (non-critical): %s", exc)
+            _record_unavailable(evidence, "historical_context", exc)
         if historical:
             evidence["historical_context"] = historical
             if _shadow is not None:
@@ -217,8 +285,9 @@ class CollectPhase:
         # --- Await experience_future + prime hypotheses ---
         try:
             past_experiences = experience_future.result(timeout=5)
-        except Exception:
+        except Exception as exc:
             past_experiences = []
+            _record_unavailable(evidence, "experience_store", exc)
         if past_experiences:
             evidence["_past_experiences"] = past_experiences
             if _shadow is not None:
@@ -256,13 +325,14 @@ class CollectPhase:
                     incident_type, service, list(tool_recs.keys())[:5],
                 )
         except Exception as exc:
-            logger.debug("Tool recommendations failed (non-critical): %s", exc)
+            _record_unavailable(evidence, "tool_recommendations", exc)
 
         # --- Await kg_future + prime hypotheses ---
         try:
             kg_similar = kg_future.result(timeout=3)
-        except Exception:
+        except Exception as exc:
             kg_similar = []
+            _record_unavailable(evidence, "knowledge_graph", exc)
         if kg_similar:
             evidence["_kg_similar_incidents"] = kg_similar
             if _shadow is not None:
@@ -283,6 +353,11 @@ class CollectPhase:
             )
 
         logger.info("Playbook complete for %s: %d evidence items", incident_id, len(evidence))
+
+        # PB-3: sweep worker-error/malformed responses into terminal states
+        # BEFORE the gate check, so a gate BLOCK still records why sources were
+        # unavailable (no silent loss on the block path).
+        _scan_worker_errors(evidence)
 
         # --- Evidence Gate G1 + G4 check ---
         gate_post_collection = check_post_collection(evidence, budget.calls_made)
@@ -384,7 +459,7 @@ class CollectPhase:
                     phase="collect",
                 )
         except Exception as exc:
-            logger.debug("Trace correlation skipped: %s", exc)
+            _record_unavailable(evidence, "trace_correlation", exc)
 
         # --- Await visual evidence ---
         try:
@@ -394,7 +469,14 @@ class CollectPhase:
                 if _shadow is not None:
                     _shadow.set("visual_evidence", visual_ev)
         except Exception as exc:
-            logger.debug("Visual evidence skipped: %s", exc)
+            _record_unavailable(evidence, "visual_evidence", exc)
+
+        # --- F-obs: sweep worker-error responses into sources_unavailable ---
+        _scan_worker_errors(evidence)
+
+        # PB-3: standardized evidence lifecycle — every evidence object ends in
+        # exactly one terminal state (used/filtered/suppressed/unavailable/error).
+        evidence["_evidence_lifecycle"] = _evidence_lifecycle(evidence)
 
         # --- Final parity log ---
         if _shadow is not None:

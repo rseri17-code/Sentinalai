@@ -9797,3 +9797,1149 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-13T14:22:03.595Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d0e1cb0 chore: commit runtime-generated eval and wiki data (Tranche 5 regression run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `d0e1cb0 chore: commit runtime-generated eval and wiki data (Tranche 5 regression run)`
+- `5b22e09 feat(tranche5): decision intelligence & evidence arbitration engine (shadow)`
+- `621e4f2 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-13T15:55:15.170Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: cd0a97a chore: commit runtime-generated eval and wiki data (scientific validation run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `cd0a97a chore: commit runtime-generated eval and wiki data (scientific validation run)`
+- `8b174a0 feat(eval): scientific validation harness for Investigation Intelligence (eval-only)`
+- `1456d79 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-13T17:07:00.692Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: aed6476 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- supervisor/agent.py
+- supervisor/rca_report.py
+- supervisor/replay.py
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `aed6476 chore: update hot memory (stop hook auto-commit)`
+- `56e6a7c docs(certification): production readiness certification — 14 audit reports`
+- `cd0a97a chore: commit runtime-generated eval and wiki data (scientific validation run)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-13T18:06:29.441Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: e2c0dab chore: update runtime-generated state (production closure run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `e2c0dab chore: update runtime-generated state (production closure run)`
+- `23e8b28 docs(certification): production blocker closure report + trust index v2`
+- `56129ef fix(production): close verified determinism + observability blockers (B-1/B-2/B-3/F-obs)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-14T00:32:18.090Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: e2c0dab chore: update runtime-generated state (production closure run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `e2c0dab chore: update runtime-generated state (production closure run)`
+- `23e8b28 docs(certification): production blocker closure report + trust index v2`
+- `56129ef fix(production): close verified determinism + observability blockers (B-1/B-2/B-3/F-obs)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-14T00:58:40.702Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 621bff0 chore: update runtime-generated state (shadow pilot run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `621bff0 chore: update runtime-generated state (shadow pilot run)`
+- `a27dd56 feat(shadow-pilot): 90-day production evidence-collection engine (produce-only)`
+- `5b9b41e chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-14T10:22:11.774Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 621bff0 chore: update runtime-generated state (shadow pilot run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `621bff0 chore: update runtime-generated state (shadow pilot run)`
+- `a27dd56 feat(shadow-pilot): 90-day production evidence-collection engine (produce-only)`
+- `5b9b41e chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-14T12:56:19.907Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 621bff0 chore: update runtime-generated state (shadow pilot run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `621bff0 chore: update runtime-generated state (shadow pilot run)`
+- `a27dd56 feat(shadow-pilot): 90-day production evidence-collection engine (produce-only)`
+- `5b9b41e chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-14T18:13:14.597Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 07c5125 docs(review): independent world-class architecture review (no code)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `07c5125 docs(review): independent world-class architecture review (no code)`
+- `621bff0 chore: update runtime-generated state (shadow pilot run)`
+- `a27dd56 feat(shadow-pilot): 90-day production evidence-collection engine (produce-only)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-15T02:30:22.894Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: c745260 chore: update runtime-generated state (effectiveness program run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `c745260 chore: update runtime-generated state (effectiveness program run)`
+- `012fe80 feat(effectiveness): Investigation Effectiveness Program — produce-only value measurement`
+- `3dade1f chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-15T03:01:29.457Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: a0d55c6 chore: update runtime-generated state (decision boundary analysis run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `a0d55c6 chore: update runtime-generated state (decision boundary analysis run)`
+- `e8f1b58 feat(effectiveness): Decision Boundary Analysis — locate shadow-engine leverage (produce-only)`
+- `076b2c8 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-15T07:33:38.094Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 0554e0d chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `0554e0d chore: update hot memory (stop hook auto-commit)`
+- `a0d55c6 chore: update runtime-generated state (decision boundary analysis run)`
+- `e8f1b58 feat(effectiveness): Decision Boundary Analysis — locate shadow-engine leverage (produce-only)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-15T09:44:29.987Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d92d595 chore: update runtime-generated state (gold standard dataset run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `d92d595 chore: update runtime-generated state (gold standard dataset run)`
+- `93bbee7 feat(eval): Gold Standard Investigation Dataset + Investigation Quality Score (produce-only)`
+- `9f032b6 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-15T13:39:05.202Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: e289ffc chore: update runtime-generated state (EIC benchmark run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `e289ffc chore: update runtime-generated state (EIC benchmark run)`
+- `a432bf3 feat(eic): Enterprise Investigation Challenge — engine-agnostic RCA benchmark`
+- `82838bd chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-15T15:19:49.520Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 189608b chore: update runtime-generated state (ODE run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `189608b chore: update runtime-generated state (ODE run)`
+- `7a5a983 feat(ode): Operational Discovery Engine — offline operational knowledge discovery`
+- `5334d29 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-15T20:33:48.556Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: dba716a docs(audit): red-team production audit — adversarial source-only falsification
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+- `189608b chore: update runtime-generated state (ODE run)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-15T20:53:48.613Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: dba716a docs(audit): red-team production audit — adversarial source-only falsification
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+- `189608b chore: update runtime-generated state (ODE run)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T06:11:34.682Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T06:43:38.547Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T06:54:39.822Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T08:21:41.050Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T09:02:01.661Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T10:10:24.376Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T10:16:11.312Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T11:57:00.980Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T12:05:00.434Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T12:18:20.789Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T14:24:12.059Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T14:37:50.719Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T15:35:41.483Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T16:21:42.893Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T18:23:13.012Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T20:25:09.570Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T22:26:25.231Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T22:37:43.264Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-16T23:27:06.372Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-17T01:27:33.583Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-17T03:29:38.198Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+- `b8ba53d chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-17T05:28:51.186Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 40b3cdf docs(restoration): claim restoration diagnosis + specs (R1/R2, no code)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `40b3cdf docs(restoration): claim restoration diagnosis + specs (R1/R2, no code)`
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-17T11:12:49.613Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 40b3cdf docs(restoration): claim restoration diagnosis + specs (R1/R2, no code)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `40b3cdf docs(restoration): claim restoration diagnosis + specs (R1/R2, no code)`
+- `d2a9061 docs(reconciliation): reconcile all reviews into one canonical readiness position`
+- `dba716a docs(audit): red-team production audit — adversarial source-only falsification`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-17T13:01:19.011Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: abe7fb7 chore: update runtime-generated state (R1 frozen corpus run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `abe7fb7 chore: update runtime-generated state (R1 frozen corpus run)`
+- `bbdc61e fix(r1): Frozen Corpus & hermetic replay — restore determinism (R1 RESTORED)`
+- `3045b02 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-17T13:58:05.794Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: abe7fb7 chore: update runtime-generated state (R1 frozen corpus run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `abe7fb7 chore: update runtime-generated state (R1 frozen corpus run)`
+- `bbdc61e fix(r1): Frozen Corpus & hermetic replay — restore determinism (R1 RESTORED)`
+- `3045b02 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

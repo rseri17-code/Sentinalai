@@ -1,0 +1,377 @@
+{
+  "chaos": {
+    "degraded_investigations": 0,
+    "degraded_rate": 0.0,
+    "investigations": 3,
+    "period": "2026-W01",
+    "schema_version": 1,
+    "unavailable_by_reason": {},
+    "unavailable_by_source": {}
+  },
+  "production": {
+    "determinism": "PASS",
+    "gatekeeper_verdict": "GATES_FAILING",
+    "investigations": 3,
+    "labeled": 0,
+    "metrics": {
+      "calibration_error": {
+        "limitations": "|evidence_conf-correct|; requires labels",
+        "n": 0,
+        "period": "2026-W01",
+        "value": "NOT_MEASURED"
+      },
+      "citation_coverage": {
+        "ci95": [
+          0.9,
+          0.9
+        ],
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 0.9
+      },
+      "decision_quality": {
+        "ci95": [
+          0.85,
+          0.85
+        ],
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 0.85
+      },
+      "decision_stability": {
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 1.0
+      },
+      "degraded_rate": {
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 0.0
+      },
+      "evidence_validation_score": {
+        "ci95": [
+          0.85,
+          0.85
+        ],
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 0.85
+      },
+      "expert_concordance": {
+        "ci95": [
+          1.0,
+          1.0
+        ],
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 1.0
+      },
+      "investigation_completeness": {
+        "ci95": [
+          0.83,
+          0.83
+        ],
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 0.83
+      },
+      "rca_accuracy": {
+        "limitations": "requires operator labels",
+        "n": 0,
+        "period": "2026-W01",
+        "value": "NOT_MEASURED"
+      },
+      "shadow_authoritative_agreement": {
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 1.0
+      },
+      "source_availability": {
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 1.0
+      },
+      "worker_failure_rate": {
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 0.0
+      }
+    },
+    "note": "the readiness gate engine is the sole authority; a high PTI at low coverage is NOT a pass",
+    "period": "2026-W01",
+    "production_trust_index": 0.9186,
+    "pti_coverage": 0.875,
+    "readiness_gates": {
+      "all_passed": false,
+      "blocking_gates": [
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5",
+        "G6",
+        "G7",
+        "G8",
+        "G9",
+        "G10",
+        "G11"
+      ],
+      "failed_count": 11,
+      "gates": [
+        {
+          "blocking_reason": "threshold not met",
+          "description": "minimum corpus size (total + per-class depth)",
+          "gate": "G1",
+          "next_action": "enable produce-only flags in staging; accumulate corpus",
+          "passed": false,
+          "threshold": ">= 500 total AND >= 20 in at least one incident_type",
+          "value": {
+            "admitted_total": 3,
+            "classes_at_min_depth": [],
+            "per_class": {
+              "oomkill": 1,
+              "saturation": 1,
+              "timeout": 1
+            }
+          }
+        },
+        {
+          "blocking_reason": "insufficient data \u2014 measurement unavailable",
+          "description": "admission precision (retroactive demotions / 30d)",
+          "gate": "G2",
+          "next_action": "run nightly re-evaluation; wire Q5-Q7 signals",
+          "passed": false,
+          "threshold": "<= 0.05",
+          "value": null
+        },
+        {
+          "blocking_reason": "insufficient data \u2014 measurement unavailable",
+          "description": "replay agreement on sampled admitted records",
+          "gate": "G3",
+          "next_action": "run SentinelReplay over admitted-record scenarios",
+          "passed": false,
+          "threshold": ">= 0.95 and 0 unexplained regressions",
+          "value": {
+            "agreement": null,
+            "unexplained_regressions": null
+          }
+        },
+        {
+          "blocking_reason": "insufficient data \u2014 measurement unavailable",
+          "description": "benchmark agreement on scenario-matched records",
+          "gate": "G4",
+          "next_action": "wire benchmark-pointer matcher; append bench feedback",
+          "passed": false,
+          "threshold": "mean >= 0.75 and min >= 0.5",
+          "value": {
+            "mean": null,
+            "min": null
+          }
+        },
+        {
+          "blocking_reason": "insufficient data \u2014 measurement unavailable",
+          "description": "similarity precision on labeled same/diff-cause pairs",
+          "gate": "G5",
+          "next_action": "label 50 validated pairs; run offline similarity harness",
+          "passed": false,
+          "threshold": "separation >= 0.25 and diff-mean <= 0.45",
+          "value": null
+        },
+        {
+          "blocking_reason": "insufficient data \u2014 measurement unavailable",
+          "description": "retrieval usefulness (mean IIP + PGS, 30d shadow)",
+          "gate": "G6",
+          "next_action": "run shadow window; compute nightly IIP/PGS",
+          "passed": false,
+          "threshold": "IIP >= 0.4 and PGS >= 0.5",
+          "value": {
+            "mean_iip": null,
+            "mean_pgs": null
+          }
+        },
+        {
+          "blocking_reason": "insufficient data \u2014 measurement unavailable",
+          "description": "regression ceiling (WRS/RCAS < -0.1 share)",
+          "gate": "G7",
+          "next_action": "compute WRS/RCAS against baseline during shadow window",
+          "passed": false,
+          "threshold": "<= 0.05",
+          "value": null
+        },
+        {
+          "blocking_reason": "insufficient data \u2014 measurement unavailable",
+          "description": "false retrieval rate (labeled shadow sample)",
+          "gate": "G8",
+          "next_action": "label top-3 retrievals against validation ground truth",
+          "passed": false,
+          "threshold": "<= 0.1",
+          "value": null
+        },
+        {
+          "blocking_reason": "insufficient data \u2014 measurement unavailable",
+          "description": "confidence calibration (max 5-bin error)",
+          "gate": "G9",
+          "next_action": "run ConfidenceCalibrator over admitted corpus",
+          "passed": false,
+          "threshold": "<= 0.15",
+          "value": null
+        },
+        {
+          "blocking_reason": "insufficient data \u2014 measurement unavailable",
+          "description": "latency invariance (p99 investigate() delta)",
+          "gate": "G10",
+          "next_action": "capture 30-day p99 baseline with shadow flags ON",
+          "passed": false,
+          "threshold": "< 0.05",
+          "value": null
+        },
+        {
+          "blocking_reason": "insufficient data \u2014 measurement unavailable",
+          "description": "fail-safe drill (retroactive demotion end-to-end)",
+          "gate": "G11",
+          "next_action": "execute operator-rejection \u2192 quarantine drill in staging",
+          "passed": false,
+          "threshold": "completed once in staging",
+          "value": null
+        }
+      ],
+      "passed_count": 0,
+      "schema_version": 1,
+      "verdict": "NOT READY",
+      "wave3_enabled": false
+    },
+    "schema_version": 1,
+    "wave3_recommendation": "NOT_READY"
+  },
+  "quality": {
+    "determinism": "PASS",
+    "investigations": 3,
+    "labeled": 0,
+    "metrics": {
+      "calibration_error": {
+        "limitations": "|evidence_conf-correct|; requires labels",
+        "n": 0,
+        "period": "2026-W01",
+        "value": "NOT_MEASURED"
+      },
+      "citation_coverage": {
+        "ci95": [
+          0.9,
+          0.9
+        ],
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 0.9
+      },
+      "decision_quality": {
+        "ci95": [
+          0.85,
+          0.85
+        ],
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 0.85
+      },
+      "decision_stability": {
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 1.0
+      },
+      "degraded_rate": {
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 0.0
+      },
+      "evidence_validation_score": {
+        "ci95": [
+          0.85,
+          0.85
+        ],
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 0.85
+      },
+      "expert_concordance": {
+        "ci95": [
+          1.0,
+          1.0
+        ],
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 1.0
+      },
+      "investigation_completeness": {
+        "ci95": [
+          0.83,
+          0.83
+        ],
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 0.83
+      },
+      "rca_accuracy": {
+        "limitations": "requires operator labels",
+        "n": 0,
+        "period": "2026-W01",
+        "value": "NOT_MEASURED"
+      },
+      "shadow_authoritative_agreement": {
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 1.0
+      },
+      "source_availability": {
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 1.0
+      },
+      "worker_failure_rate": {
+        "limitations": "",
+        "n": 3,
+        "period": "2026-W01",
+        "underpowered": true,
+        "value": 0.0
+      }
+    },
+    "period": "2026-W01",
+    "schema_version": 1
+  }
+}

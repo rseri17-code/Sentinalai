@@ -5,9 +5,9 @@ services:
 - auth-service
 incident_types:
 - flapping
-observation_count: 46
-confidence_avg: 81.5
-quality_avg: 0.7615
+observation_count: 52
+confidence_avg: 81.35
+quality_avg: 0.7614
 evidence_signals:
 - check_golden_signals
 - check_pool_metrics
@@ -16,13 +16,12 @@ evidence_signals:
 - gap_search_logs
 - _kg_similar_incidents
 - _suggested_root_causes
+- _evidence_lifecycle
 receipt_ids:
-- INC12353_20260619
-- INC_H5_20260531
-- INC12353_20260531
 - INC12353_20260610
 - INC_H5_20260626
 - INC_H5_20260703
+- INC12353_20260717
 - INC_H5_20260706
 - INC_H5_20260628
 - INC12353_20260611
@@ -32,10 +31,12 @@ receipt_ids:
 - INC_H5_20260627
 - INC12353_20260629
 - INC12353_20260708
+- INC_H5_20260715
+- INC_H5_20260714
 - INC_H5_20260712
 - INC12353_20260704
 - INC12353_20260628
 - INC_H5_20260711
 - INC_H5_20260610
 first_seen: 2026-05-31 20:36:46.865205+00:00
-last_seen: 2026-07-13 14:15:12.862975+00:00
+last_seen: 2026-07-17 15:24:25.861290+00:00

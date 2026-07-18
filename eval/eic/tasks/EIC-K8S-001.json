@@ -1,0 +1,45 @@
+{
+  "category": "kubernetes",
+  "difficulty": "single_cause",
+  "ground_truth": {
+    "decisive_evidence": [
+      "oom_logs"
+    ],
+    "necessary_evidence": [
+      "mem_metrics",
+      "oom_logs"
+    ],
+    "root_cause": "memory leak causing OOMKill after v2.3.1",
+    "root_cause_keywords": [
+      "memory leak",
+      "oomkill"
+    ],
+    "root_cause_service": "order-processor"
+  },
+  "incident": {
+    "service": "order-processor",
+    "severity": 2,
+    "summary": "OOMKill loop"
+  },
+  "schema_version": 1,
+  "task_hash": "afb984121c00afbd",
+  "task_id": "EIC-K8S-001",
+  "telemetry": {
+    "mem_metrics": {
+      "usage": 0.99
+    },
+    "oom_logs": {
+      "event": "OOMKilled"
+    }
+  },
+  "telemetry_keys": [
+    "mem_metrics",
+    "oom_logs"
+  ],
+  "traps": {
+    "distractor_evidence": [],
+    "false_hypotheses": [
+      "cpu throttling"
+    ]
+  }
+}

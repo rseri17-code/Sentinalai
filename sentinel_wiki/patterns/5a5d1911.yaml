@@ -1,0 +1,29 @@
+pattern_id: PAT_5a5d1911
+root_cause_hash: 5a5d1911
+root_cause_template: unknown
+services:
+- unknown
+incident_types:
+- error_spike
+observation_count: 5
+confidence_avg: 47.4
+quality_avg: 0.744
+evidence_signals:
+- _past_experiences
+- _suggested_root_causes
+- _kg_similar_incidents
+- gap_get_change_data
+- check_golden_signals
+- check_events
+- search_error_logs
+- check_changes
+- check_itsm_changes
+- gap_query_metrics
+receipt_ids:
+- INC-2026-001_20260626
+- INC_R2_A_20260717
+- INC_R2_E2E_20260717
+- INC_R2_B_20260717
+- INC_R2_PROV_20260717
+first_seen: 2026-06-26 02:54:55.295086+00:00
+last_seen: 2026-07-17 14:48:22.038029+00:00

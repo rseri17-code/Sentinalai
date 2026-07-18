@@ -169,6 +169,23 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def _parse_incident_ts(value: Any) -> "datetime | None":
+    """Parse an immutable incident timestamp into an aware datetime, or None.
+
+    Deterministic and wall-clock-free: used to anchor investigation features
+    (change look-back window, DNA hour) to the incident's own timestamps
+    instead of ``datetime.now()`` (blockers B-1/B-2), so replaying the same
+    incident always produces the same behaviour.
+    """
+    if not value or not isinstance(value, str):
+        return None
+    try:
+        from datetime import datetime
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+
 # =========================================================================
 # Hypothesis dataclass for multi-hypothesis scoring (W2)
 # =========================================================================
@@ -200,7 +217,9 @@ class Hypothesis:
 # unchanged.
 # =========================================================================
 
-from supervisor.helpers.confidence import compute_confidence  # noqa: E402,F401
+from supervisor.helpers.confidence import (  # noqa: E402,F401
+    compute_confidence, confidence_provenance,
+)
 
 
 # =========================================================================
@@ -317,16 +336,41 @@ class SentinalAISupervisor:
                 stored_incident_type = stored_evidence.pop("_incident_type", "error_spike")
                 if stored_incident and stored_evidence:
                     logger.info("Replaying investigation for %s from stored evidence", incident_id)
-                    replayed = self._analyze_evidence(
-                        incident_id, stored_incident, stored_incident_type, stored_evidence
-                    )
-                    # Run citation annotation so replay results are consistent
-                    # with the primary run (which also runs annotate_citations)
-                    annotate_citations(replayed, stored_evidence)
+                    # R1 hermetic replay: read the recorded Frozen Corpus, never
+                    # live learning state. If the artifact predates R1 (no corpus
+                    # recorded), replay reads live but is flagged non-hermetic
+                    # (explicit verification failure, not a silent substitution).
+                    from supervisor import frozen_corpus as _fcorp
+                    _rec = stored.get("frozen_corpus")
+                    _replay_corpus = (_fcorp.FrozenCorpus.from_record(_rec)
+                                      if _rec else None)
+                    _fcorp.set_active_corpus(_replay_corpus,
+                                             replay=bool(_replay_corpus))
+                    try:
+                        replayed = self._analyze_evidence(
+                            incident_id, stored_incident, stored_incident_type, stored_evidence
+                        )
+                        # Run citation annotation so replay results are consistent
+                        # with the primary run (which also runs annotate_citations)
+                        annotate_citations(replayed, stored_evidence)
+                    finally:
+                        _fcorp.clear_active_corpus()
+                    if isinstance(replayed, dict):
+                        replayed["_replay_verification"] = (
+                            "OK" if _replay_corpus else "FAILED_NO_CORPUS")
                     return replayed
                 # Fallback: return cached result if evidence not available
                 if stored.get("result"):
                     return stored["result"]
+
+        # R1 Frozen Corpus: capture the four learning stores ONCE at entry into
+        # one immutable, content-addressed snapshot. All in-run reads consult
+        # this snapshot (thread-local), so the investigation never observes its
+        # own or a concurrent run's writes. Cleared + stamped in _finish.
+        from supervisor import frozen_corpus as _fcorp
+        _fcorp.clear_active_corpus()          # defensive: drop any leaked state
+        _frozen_corpus = _fcorp.capture()
+        _fcorp.set_active_corpus(_frozen_corpus, replay=False)
 
         # Phase modules are imported lazily (not at agent.py module top)
         # because they pull in worker / trace-correlation / visual-evidence
@@ -351,11 +395,17 @@ class SentinalAISupervisor:
 
         def _finish(_res: dict) -> dict:
             """Attach receipts, then emit the Wave 1 Investigation Artifact
-            (candidate-only; no-op unless INVESTIGATION_ARTIFACT_ENABLED)."""
+            (candidate-only; no-op unless INVESTIGATION_ARTIFACT_ENABLED).
+            Stamps the corpus_version replay inputs and releases the
+            investigation-scoped Frozen Corpus (universal exit path)."""
             _res = attach_receipts(_res, _phase_receipts)
+            if isinstance(_res, dict):
+                _res["corpus_stamp"] = _frozen_corpus.stamp()
+                _res["_corpus_version"] = _frozen_corpus.corpus_version
             maybe_write_investigation_artifact(
                 _res, incident_id, getattr(ctx, "investigation_id", ""),
             )
+            _fcorp.clear_active_corpus()
             return _res
         # IntelligenceRuntime — zero-cost no-op when ENABLE_INTELLIGENCE_RUNTIME
         # is off (default). When enabled, install_default_modules() registers
@@ -2084,18 +2134,26 @@ class SentinalAISupervisor:
         if not created_at:
             return 24
         try:
-            from datetime import datetime, timezone
-            if isinstance(created_at, str):
-                # Handle ISO 8601 with or without timezone
-                created_at = created_at.replace("Z", "+00:00")
-                dt = datetime.fromisoformat(created_at)
-            else:
+            start = _parse_incident_ts(created_at)
+            if start is None:
                 return 24
-            now = datetime.now(timezone.utc)
-            elapsed_hours = (now - dt).total_seconds() / 3600
-            # Look back 2 hours before incident creation plus elapsed investigation time
-            window = max(4, min(48, int(elapsed_hours + 2)))
-            return window
+            # B-1: anchor the change look-back to IMMUTABLE incident
+            # timestamps ONLY — never the ambient wall clock — so replaying
+            # the same incident always queries the same window. When the
+            # incident carries an immutable end/detection timestamp, size the
+            # window from the incident's own duration; otherwise use the
+            # deterministic default.
+            end = None
+            for field in ("detected_at", "resolved_at", "closed_at",
+                          "updated_at", "end_time"):
+                end = _parse_incident_ts(incident.get(field))
+                if end is not None:
+                    break
+            if end is not None and end >= start:
+                elapsed_hours = (end - start).total_seconds() / 3600
+                # 2-hour look-back buffer before incident creation, capped 48h
+                return max(4, min(48, int(elapsed_hours + 2)))
+            return 24
         except Exception as exc:
             logger.debug("Time window calculation failed for %r, defaulting to 24h: %s", created_at, exc)
             return 24
@@ -2261,7 +2319,11 @@ class SentinalAISupervisor:
         )
 
         # W3: Evidence-weighted confidence for each hypothesis
+        # R2: capture each hypothesis's pre-scoring prior so the winner's
+        # confidence can be exposed as a fully-attributable provenance (below).
+        _evidence_priors: dict[str, float] = {}
         for h in hypotheses:
+            _evidence_priors[h.name] = float(h.base_score)
             h.base_score = compute_confidence(
                 h.base_score, logs, signals, metrics, events, changes,
                 corroborating_sources=len(h.evidence_refs),
@@ -2408,6 +2470,15 @@ class SentinalAISupervisor:
             # Phase 2: carry DNA features and fingerprint forward for _persist_results
             "_dna_features": _dna_features,
             "_dna_fingerprint": _fingerprint,
+            # R2: evidence-derived confidence provenance for the winner — every
+            # contribution attributed exactly once (additive metadata only).
+            "_confidence_provenance": (
+                confidence_provenance(
+                    _evidence_priors.get(winner.name, 0.0),
+                    logs, signals, metrics, events, changes,
+                    incident_type=incident_type)
+                if winner else {"base": 0.0, "contributions": [],
+                                "final_confidence": confidence}),
         }
 
         if llm_refine_failed or llm_reasoning_failed:
@@ -3272,9 +3343,15 @@ class SentinalAISupervisor:
         )
 
         # Environment factors (dims 14-15)
+        # B-2: derive the hour from the IMMUTABLE incident timestamp, never
+        # the ambient wall clock, so the DNA fingerprint (and the hypothesis
+        # priming it drives) is identical on every replay of the same incident.
         try:
-            from datetime import datetime, timezone
-            flat["incident_hour"] = datetime.now(timezone.utc).hour
+            incident = getattr(self._tls, "current_incident", None) or {}
+            ts = incident.get("created_at") or incident.get("start_time")
+            dt = _parse_incident_ts(ts)
+            if dt is not None:
+                flat["incident_hour"] = dt.hour
         except Exception:
             pass
 

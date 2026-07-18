@@ -78,7 +78,20 @@ class ReplayStore:
             "evidence": evidence or {},
         }
 
-        path.write_text(json.dumps(artifact, indent=2, default=str))
+        # R1: embed the investigation-scoped Frozen Corpus snapshot so replay is
+        # hermetic (reconstructs the exact learning state, never reads live).
+        try:
+            from supervisor.frozen_corpus import get_active_corpus
+            _fc = get_active_corpus()
+            if _fc is not None:
+                artifact["frozen_corpus"] = _fc.to_record()
+        except Exception:
+            pass
+
+        # B-3: canonical serialization (sort_keys) so replaying the same
+        # investigation persists byte-identical artifacts with stable hashes.
+        path.write_text(json.dumps(artifact, indent=2, default=str,
+                                   sort_keys=True))
         logger.info("Saved replay artifact: %s", path)
         self._purge_old_artifacts()
         return str(path)

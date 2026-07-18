@@ -114,9 +114,17 @@ class PatternRegistry:
         """
         from supervisor.incident_dna import _cosine_similarity  # local import avoids circular
 
+        # R1: during an investigation, match against the pinned Frozen Corpus
+        # snapshot rather than the live (mutating) singleton records.
+        from supervisor.frozen_corpus import _frozen_or_live
+        _frozen = _frozen_or_live("pattern_registry")
+        _records = self._records if _frozen is None else {
+            r["fingerprint"]: PatternRecord.from_dict(r) for r in _frozen
+            if isinstance(r, dict) and "fingerprint" in r}
+
         with self._lock:
             scored: list[tuple[float, PatternRecord]] = []
-            for rec in self._records.values():
+            for rec in _records.values():
                 if not rec.features or len(rec.features) != len(dna_features):
                     continue
                 cos = _cosine_similarity(dna_features, rec.features)

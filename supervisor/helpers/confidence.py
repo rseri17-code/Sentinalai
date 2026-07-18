@@ -40,40 +40,81 @@ def compute_confidence(
     the defining characteristic of the incident, not a gap in investigation quality.
     Penalising those types would systematically under-score correct investigations.
     """
-    score = base
+    # ``corroborating_sources`` is retained for backward compatibility with the
+    # single caller (agent.py) but no longer contributes: R2 proved it
+    # double-counted sources already credited by ``source_count`` — each
+    # ``evidence_ref`` (e.g. "logs:timeout") names a category ``source_count``
+    # already counts. Corroboration is now counted exactly ONCE per source.
+    base_val, contributions = _score(
+        base, logs, signals, metrics, events, changes, incident_type)
+    final = base_val + sum(c["delta"] for c in contributions)
+    return max(0, min(100, int(round(final))))
 
-    # Corroboration bonus: count how many sources have data
-    source_count = 0
+
+def _score(base, logs, signals, metrics, events, changes, incident_type):
+    """Single source of truth for confidence math. Returns (base, contributions)
+    where each contribution is {kind, source, delta} and appears exactly once."""
+    contributions: list[dict] = []
+
+    # Per-source corroboration: counted once per present category (+2 each),
+    # plus source-specific detail bonuses.
     if logs:
-        source_count += 1
-        score += min(len(logs), 5)  # +1 per log, max +5
+        contributions.append({"kind": "corroboration", "source": "logs",
+                              "delta": 2})
+        contributions.append({"kind": "detail", "source": "logs",
+                              "delta": min(len(logs), 5)})   # +1/log, max +5
     if signals and signals.get("golden_signals"):
-        source_count += 1
+        contributions.append({"kind": "corroboration", "source": "golden_signals",
+                              "delta": 2})
         if signals.get("anomaly_detected"):
-            score += 2
+            contributions.append({"kind": "detail", "source": "golden_signals",
+                                  "delta": 2})
     if metrics and metrics.get("metrics"):
-        source_count += 1
+        contributions.append({"kind": "corroboration", "source": "metrics",
+                              "delta": 2})
         if metrics.get("pattern"):
-            score += 1
+            contributions.append({"kind": "detail", "source": "metrics",
+                                  "delta": 1})
     if events:
-        source_count += 1
+        contributions.append({"kind": "corroboration", "source": "events",
+                              "delta": 2})
     if changes:
-        source_count += 1
+        contributions.append({"kind": "corroboration", "source": "changes",
+                              "delta": 2})
 
-    # Cross-signal bonus
-    score += source_count * 2
-
-    # Missing-source penalty (only for incident types where presence is expected)
+    # Missing-source penalties (once each) where presence is expected.
     if incident_type not in _ABSENCE_IS_SYMPTOM:
         if not signals or not signals.get("golden_signals"):
-            score -= 5
+            contributions.append({"kind": "penalty", "source": "golden_signals",
+                                  "delta": -5})
         if not metrics or not metrics.get("metrics"):
-            score -= 3
+            contributions.append({"kind": "penalty", "source": "metrics",
+                                  "delta": -3})
 
-    # Explicit corroboration from caller
-    score += corroborating_sources * 2
-
-    return max(0, min(100, int(round(score))))
+    return float(base), contributions
 
 
-__all__ = ["compute_confidence", "_ABSENCE_IS_SYMPTOM"]
+def confidence_provenance(
+    base: float,
+    logs: list[dict],
+    signals: dict,
+    metrics: dict,
+    events: list[dict],
+    changes: list[dict],
+    incident_type: str = "",
+) -> dict:
+    """Deterministic, fully-attributable breakdown of evidence-derived
+    confidence: base + one line item per contribution → final. Every
+    contribution appears exactly once and sums to ``compute_confidence``."""
+    base_val, contributions = _score(
+        base, logs, signals, metrics, events, changes, incident_type)
+    final = max(0, min(100, int(round(
+        base_val + sum(c["delta"] for c in contributions)))))
+    return {
+        "base": base_val,
+        "contributions": contributions,
+        "final_confidence": final,
+    }
+
+
+__all__ = ["compute_confidence", "confidence_provenance", "_ABSENCE_IS_SYMPTOM"]

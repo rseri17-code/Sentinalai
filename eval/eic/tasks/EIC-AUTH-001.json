@@ -1,0 +1,48 @@
+{
+  "category": "authentication",
+  "difficulty": "single_cause",
+  "ground_truth": {
+    "decisive_evidence": [
+      "cert_status"
+    ],
+    "necessary_evidence": [
+      "auth_logs",
+      "cert_status"
+    ],
+    "root_cause": "expired TLS certificate on auth service",
+    "root_cause_keywords": [
+      "certificate",
+      "expired",
+      "tls"
+    ],
+    "root_cause_service": "auth"
+  },
+  "incident": {
+    "service": "auth",
+    "severity": 2,
+    "summary": "login failures"
+  },
+  "schema_version": 1,
+  "task_hash": "7dfee172ae343e3b",
+  "task_id": "EIC-AUTH-001",
+  "telemetry": {
+    "auth_logs": {
+      "errors": [
+        "cert verify failed"
+      ]
+    },
+    "cert_status": {
+      "expired": true
+    }
+  },
+  "telemetry_keys": [
+    "auth_logs",
+    "cert_status"
+  ],
+  "traps": {
+    "distractor_evidence": [],
+    "false_hypotheses": [
+      "password service outage"
+    ]
+  }
+}

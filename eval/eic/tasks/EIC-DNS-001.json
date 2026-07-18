@@ -1,0 +1,54 @@
+{
+  "category": "dns",
+  "difficulty": "contradictory_evidence",
+  "ground_truth": {
+    "decisive_evidence": [
+      "dns_latency"
+    ],
+    "necessary_evidence": [
+      "app_logs",
+      "dns_latency"
+    ],
+    "root_cause": "DNS resolution latency from upstream resolver",
+    "root_cause_keywords": [
+      "dns",
+      "latency",
+      "resolution"
+    ],
+    "root_cause_service": "api-gateway"
+  },
+  "incident": {
+    "service": "api-gateway",
+    "severity": 1,
+    "summary": "intermittent timeouts"
+  },
+  "schema_version": 1,
+  "task_hash": "e8f4bca3b280f6d4",
+  "task_id": "EIC-DNS-001",
+  "telemetry": {
+    "app_logs": {
+      "errors": [
+        "NXDOMAIN"
+      ]
+    },
+    "cpu_metrics": {
+      "usage": 0.4
+    },
+    "dns_latency": {
+      "p99": 4000
+    }
+  },
+  "telemetry_keys": [
+    "app_logs",
+    "cpu_metrics",
+    "dns_latency"
+  ],
+  "traps": {
+    "distractor_evidence": [
+      "cpu_metrics"
+    ],
+    "false_hypotheses": [
+      "cpu saturation"
+    ]
+  }
+}

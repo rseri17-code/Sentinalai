@@ -1,0 +1,46 @@
+{
+  "category": "deployment",
+  "difficulty": "missing_telemetry",
+  "ground_truth": {
+    "decisive_evidence": [
+      "deploy_events"
+    ],
+    "necessary_evidence": [
+      "deploy_events",
+      "error_metrics"
+    ],
+    "root_cause": "regression introduced in deployment v4.2",
+    "root_cause_keywords": [
+      "deployment",
+      "regression",
+      "v4.2"
+    ],
+    "root_cause_service": "payments"
+  },
+  "incident": {
+    "service": "payments",
+    "severity": 2,
+    "summary": "error rate up post-release"
+  },
+  "schema_version": 1,
+  "task_hash": "4bd13a23edf3cd4e",
+  "task_id": "EIC-DEPLOY-001",
+  "telemetry": {
+    "deploy_events": {
+      "version": "v4.2"
+    },
+    "error_metrics": {
+      "rate": 0.08
+    }
+  },
+  "telemetry_keys": [
+    "deploy_events",
+    "error_metrics"
+  ],
+  "traps": {
+    "distractor_evidence": [],
+    "false_hypotheses": [
+      "database slowdown"
+    ]
+  }
+}

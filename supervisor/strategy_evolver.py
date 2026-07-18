@@ -586,6 +586,11 @@ def _extract_step_labels(receipts: list[dict]) -> list[str]:
 
 def _load_raw() -> dict:
     """Load strategy from disk. Returns {} if absent or corrupt."""
+    # R1: read the pinned Frozen Corpus snapshot during an investigation.
+    from supervisor.frozen_corpus import _frozen_or_live
+    _frozen = _frozen_or_live("evolved_strategy")
+    if _frozen is not None:
+        return dict(_frozen)
     path = EVOLVED_STRATEGY_PATH
     try:
         with open(path, "r") as f:

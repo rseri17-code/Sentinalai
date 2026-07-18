@@ -442,7 +442,10 @@ def query_similar(service: str, incident_type: str, top_k: int = 5) -> list[dict
     """Query the global graph for similar historical incidents."""
     if not KG_ENABLED:
         return []
-    g = get_graph()
+    # R1: during an investigation, query the pinned Frozen Corpus snapshot.
+    from supervisor.frozen_corpus import _frozen_or_live
+    _frozen = _frozen_or_live("knowledge_graph")
+    g = get_graph() if _frozen is None else KnowledgeGraph.from_dict(_frozen)
     return g.find_similar_incidents(service, incident_type, top_k=top_k)
 
 

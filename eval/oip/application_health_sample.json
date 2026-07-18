@@ -1,0 +1,237 @@
+{
+  "applications": {
+    "billing": {
+      "application": "billing",
+      "confidence": 78,
+      "driving_incidents": [],
+      "evidence": {
+        "completeness": 0.86,
+        "unavailable": 0,
+        "used": 10
+      },
+      "health_band": "healthy",
+      "health_score": 0.921,
+      "incident_trends": {
+        "changed_since_previous": {
+          "available": true,
+          "by_class": {
+            "deploy": {
+              "current": 1,
+              "delta": 1,
+              "previous": 0
+            },
+            "saturation": {
+              "current": 0,
+              "delta": -1,
+              "previous": 1
+            }
+          },
+          "current": "2026-07-06",
+          "previous": "2026-06-29"
+        },
+        "investigate_first": [
+          {
+            "evidence": [
+              "INC-3255"
+            ],
+            "priority": "increasing_incident_class",
+            "signal": 1.0,
+            "target": "deploy"
+          }
+        ],
+        "periods": [
+          "2026-06-29",
+          "2026-07-06"
+        ]
+      },
+      "incidents": 2,
+      "is_healthy": true,
+      "next_action": "investigate increasing incident class: deploy",
+      "operational_health": {
+        "attention_order": [
+          "ledger",
+          "invoicer"
+        ],
+        "band_counts": {
+          "at_risk": 0,
+          "healthy": 2,
+          "watch": 0
+        },
+        "estate_health_score": 0.921
+      },
+      "owner": "fin-platform-team",
+      "recurring_root_causes": [],
+      "services": [
+        "invoicer",
+        "ledger"
+      ],
+      "services_evaluated": 2,
+      "verifiable": true,
+      "what_changed": true,
+      "what_is_increasing": [
+        {
+          "evidence": [
+            "INC-3255"
+          ],
+          "incident_class": "deploy",
+          "series": [
+            0,
+            1
+          ],
+          "slope": 1.0,
+          "total": 1,
+          "verdict": "increasing"
+        }
+      ],
+      "why": "all services healthy"
+    },
+    "checkout": {
+      "application": "checkout",
+      "confidence": 66,
+      "driving_incidents": [
+        "INC-3175"
+      ],
+      "evidence": {
+        "completeness": 0.7167,
+        "unavailable": 0,
+        "used": 15
+      },
+      "health_band": "at_risk",
+      "health_score": 0.7612,
+      "incident_trends": {
+        "changed_since_previous": {
+          "available": true,
+          "by_class": {
+            "network": {
+              "current": 1,
+              "delta": 1,
+              "previous": 0
+            },
+            "saturation": {
+              "current": 2,
+              "delta": 1,
+              "previous": 1
+            }
+          },
+          "current": "2026-07-06",
+          "previous": "2026-06-29"
+        },
+        "investigate_first": [
+          {
+            "evidence": [
+              "INC-3101",
+              "INC-3140",
+              "INC-3166"
+            ],
+            "priority": "recurring_failure",
+            "signal": 3.0,
+            "target": "db connection pool exhaustion"
+          },
+          {
+            "evidence": [
+              "INC-3175"
+            ],
+            "priority": "increasing_incident_class",
+            "signal": 1.0,
+            "target": "network"
+          },
+          {
+            "evidence": [
+              "INC-3101",
+              "INC-3140",
+              "INC-3166"
+            ],
+            "priority": "increasing_incident_class",
+            "signal": 1.0,
+            "target": "saturation"
+          }
+        ],
+        "periods": [
+          "2026-06-29",
+          "2026-07-06"
+        ]
+      },
+      "incidents": 4,
+      "is_healthy": false,
+      "next_action": "investigate recurring failure: db connection pool exhaustion",
+      "operational_health": {
+        "attention_order": [
+          "edge-cdn",
+          "cart-service",
+          "payment-service"
+        ],
+        "band_counts": {
+          "at_risk": 1,
+          "healthy": 2,
+          "watch": 0
+        },
+        "estate_health_score": 0.7612
+      },
+      "owner": "commerce-team",
+      "recurring_root_causes": [
+        {
+          "count": 3,
+          "evidence": [
+            "INC-3101",
+            "INC-3140",
+            "INC-3166"
+          ],
+          "incident_class": "saturation",
+          "root_cause": "db connection pool exhaustion"
+        }
+      ],
+      "services": [
+        "cart-service",
+        "edge-cdn",
+        "payment-service"
+      ],
+      "services_evaluated": 3,
+      "verifiable": true,
+      "what_changed": false,
+      "what_is_increasing": [
+        {
+          "evidence": [
+            "INC-3175"
+          ],
+          "incident_class": "network",
+          "series": [
+            0,
+            1
+          ],
+          "slope": 1.0,
+          "total": 1,
+          "verdict": "increasing"
+        },
+        {
+          "evidence": [
+            "INC-3101",
+            "INC-3140",
+            "INC-3166"
+          ],
+          "incident_class": "saturation",
+          "series": [
+            1,
+            2
+          ],
+          "slope": 1.0,
+          "total": 3,
+          "verdict": "increasing"
+        }
+      ],
+      "why": "at_risk: worst service 'edge-cdn' \u2014 dns resolution failure"
+    }
+  },
+  "applications_evaluated": 2,
+  "attention_order": [
+    "checkout",
+    "billing"
+  ],
+  "band_counts": {
+    "at_risk": 1,
+    "healthy": 1,
+    "watch": 0
+  },
+  "estate_health_score": 0.8411,
+  "investigations": 6,
+  "schema_version": 1
+}

@@ -1,0 +1,239 @@
+{
+  "attention_order": [
+    "payment-service",
+    "edge-cdn",
+    "order-service"
+  ],
+  "band_counts": {
+    "at_risk": 0,
+    "healthy": 2,
+    "watch": 1
+  },
+  "estate_reliability_score": 0.8217,
+  "investigations": 6,
+  "schema_version": 1,
+  "services": {
+    "edge-cdn": {
+      "affecting_incidents": [
+        "INC-4300"
+      ],
+      "confidence": 79,
+      "evidence": {
+        "completeness": 0.85,
+        "unavailable": 0,
+        "used": 5
+      },
+      "fix_first": "no action \u2014 healthy",
+      "incident_trends": {
+        "changed_since_previous": {
+          "available": false,
+          "reason": "need >= 2 periods"
+        },
+        "investigate_first": [],
+        "periods": [
+          "2026-07-06"
+        ]
+      },
+      "incidents": 1,
+      "operational_health": {
+        "degraded_sources": [],
+        "health_band": "healthy",
+        "health_score": 0.9205,
+        "next_action": "no action \u2014 healthy"
+      },
+      "owner": "platform-team",
+      "recurring_failures": [],
+      "reliability_band": "healthy",
+      "reliability_direction": "insufficient_history",
+      "reliability_score": 0.9205,
+      "reliability_trend": {
+        "direction": "insufficient_history",
+        "periods": [
+          "2026-07-06"
+        ],
+        "series": [
+          0.9205
+        ],
+        "slope": 0.0
+      },
+      "reliable": true,
+      "service": "edge-cdn",
+      "verifiable": true,
+      "why": "dns resolution failure"
+    },
+    "order-service": {
+      "affecting_incidents": [
+        "INC-4210",
+        "INC-4255"
+      ],
+      "confidence": 82,
+      "evidence": {
+        "completeness": 0.88,
+        "unavailable": 0,
+        "used": 5
+      },
+      "fix_first": "fix increasing incident class: saturation",
+      "incident_trends": {
+        "changed_since_previous": {
+          "available": true,
+          "by_class": {
+            "deploy": {
+              "current": 0,
+              "delta": -1,
+              "previous": 1
+            },
+            "saturation": {
+              "current": 1,
+              "delta": 1,
+              "previous": 0
+            }
+          },
+          "current": "2026-07-06",
+          "previous": "2026-06-29"
+        },
+        "investigate_first": [
+          {
+            "evidence": [
+              "INC-4255"
+            ],
+            "priority": "increasing_incident_class",
+            "signal": 1.0,
+            "target": "saturation"
+          }
+        ],
+        "periods": [
+          "2026-06-29",
+          "2026-07-06"
+        ]
+      },
+      "incidents": 2,
+      "operational_health": {
+        "degraded_sources": [],
+        "health_band": "healthy",
+        "health_score": 0.932,
+        "next_action": "no action \u2014 healthy"
+      },
+      "owner": "commerce-team",
+      "recurring_failures": [],
+      "reliability_band": "healthy",
+      "reliability_direction": "improving",
+      "reliability_score": 0.932,
+      "reliability_trend": {
+        "direction": "improving",
+        "periods": [
+          "2026-06-29",
+          "2026-07-06"
+        ],
+        "series": [
+          0.925,
+          0.939
+        ],
+        "slope": 0.014
+      },
+      "reliable": true,
+      "service": "order-service",
+      "verifiable": true,
+      "why": "cache eviction storm"
+    },
+    "payment-service": {
+      "affecting_incidents": [
+        "INC-4101",
+        "INC-4140",
+        "INC-4166"
+      ],
+      "confidence": 41,
+      "evidence": {
+        "completeness": 0.6,
+        "unavailable": 0,
+        "used": 5
+      },
+      "fix_first": "fix recurring failure: db connection pool exhaustion",
+      "incident_trends": {
+        "changed_since_previous": {
+          "available": true,
+          "by_class": {
+            "saturation": {
+              "current": 2,
+              "delta": 1,
+              "previous": 1
+            }
+          },
+          "current": "2026-07-06",
+          "previous": "2026-06-29"
+        },
+        "investigate_first": [
+          {
+            "evidence": [
+              "INC-4101",
+              "INC-4140",
+              "INC-4166"
+            ],
+            "priority": "recurring_failure",
+            "signal": 3.0,
+            "target": "db connection pool exhaustion"
+          },
+          {
+            "evidence": [
+              "INC-4101",
+              "INC-4140",
+              "INC-4166"
+            ],
+            "priority": "increasing_incident_class",
+            "signal": 1.0,
+            "target": "saturation"
+          },
+          {
+            "evidence": [],
+            "priority": "service_health_decline",
+            "signal": 0.4955,
+            "target": "payment-service"
+          }
+        ],
+        "periods": [
+          "2026-06-29",
+          "2026-07-06"
+        ]
+      },
+      "incidents": 3,
+      "operational_health": {
+        "degraded_sources": [],
+        "health_band": "watch",
+        "health_score": 0.6127,
+        "next_action": "address recurring root cause 'db connection pool exhaustion' (3x)"
+      },
+      "owner": "payments-team",
+      "recurring_failures": [
+        {
+          "count": 3,
+          "evidence": [
+            "INC-4101",
+            "INC-4140",
+            "INC-4166"
+          ],
+          "incident_class": "saturation",
+          "root_cause": "db connection pool exhaustion"
+        }
+      ],
+      "reliability_band": "watch",
+      "reliability_direction": "degrading",
+      "reliability_score": 0.6127,
+      "reliability_trend": {
+        "direction": "degrading",
+        "periods": [
+          "2026-06-29",
+          "2026-07-06"
+        ],
+        "series": [
+          0.943,
+          0.4475
+        ],
+        "slope": -0.4955
+      },
+      "reliable": false,
+      "service": "payment-service",
+      "verifiable": true,
+      "why": "db connection pool exhaustion"
+    }
+  },
+  "services_evaluated": 3
+}

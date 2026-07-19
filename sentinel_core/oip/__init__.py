@@ -8,5 +8,7 @@ records); they add no reasoning, no new intelligence, and never touch runtime.
 from sentinel_core.oip.application_health import application_health
 from sentinel_core.oip.incident_trends import incident_trends
 from sentinel_core.oip.operational_health import operational_health
+from sentinel_core.oip.service_reliability import service_reliability
 
-__all__ = ["application_health", "incident_trends", "operational_health"]
+__all__ = ["application_health", "incident_trends", "operational_health",
+           "service_reliability"]

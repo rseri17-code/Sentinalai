@@ -9,9 +9,9 @@ observation_count: 28
 confidence_avg: 93.36
 quality_avg: 0.815
 evidence_signals:
+- check_itsm_changes
 - check_golden_signals
 - check_events
-- check_itsm_changes
 - search_error_logs
 - check_changes
 - _kg_similar_incidents
@@ -40,4 +40,4 @@ receipt_ids:
 - INC12347_20260717
 - INC12347_20260627
 first_seen: 2026-05-31 20:37:52.382600+00:00
-last_seen: 2026-07-19 03:16:17.528127+00:00
+last_seen: 2026-07-19 05:10:45.292710+00:00

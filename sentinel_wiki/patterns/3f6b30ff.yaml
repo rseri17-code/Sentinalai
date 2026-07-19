@@ -5,7 +5,7 @@ services:
 - auth-service
 incident_types:
 - flapping
-observation_count: 27
+observation_count: 28
 confidence_avg: 35.0
 quality_avg: 0.645
 evidence_signals:
@@ -16,10 +16,10 @@ evidence_signals:
 - gap_query_metrics
 - _evidence_lifecycle
 receipt_ids:
-- INC_F1_20260707
 - INC_F1_20260628
 - INC_F1_20260704
 - INC_F1_20260621
+- INC_F1_20260719
 - INC_F1_20260711
 - INC_F1_20260630
 - INC_F1_20260715
@@ -37,4 +37,4 @@ receipt_ids:
 - INC_F1_20260619
 - INC_F1_20260702
 first_seen: 2026-05-31 20:36:46.151357+00:00
-last_seen: 2026-07-18 16:54:12.341924+00:00
+last_seen: 2026-07-19 02:14:54.246821+00:00

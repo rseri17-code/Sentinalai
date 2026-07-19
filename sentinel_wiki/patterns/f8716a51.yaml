@@ -5,8 +5,8 @@ services:
 - order-service
 incident_types:
 - saturation
-observation_count: 27
-confidence_avg: 62.85
+observation_count: 28
+confidence_avg: 62.79
 quality_avg: 0.634
 evidence_signals:
 - check_golden_signals
@@ -17,10 +17,10 @@ evidence_signals:
 - gap_get_change_data
 - _evidence_lifecycle
 receipt_ids:
-- INC_S1_20260627
 - INC_S1_20260704
 - INC_S1_20260703
 - INC_S1_20260717
+- INC_S1_20260719
 - INC_S1_20260711
 - INC_S1_20260611
 - INC_S1_20260626
@@ -38,4 +38,4 @@ receipt_ids:
 - INC_S1_20260712
 - INC_S1_20260702
 first_seen: 2026-05-31 20:36:45.614115+00:00
-last_seen: 2026-07-18 16:53:58.421994+00:00
+last_seen: 2026-07-19 02:14:44.089625+00:00

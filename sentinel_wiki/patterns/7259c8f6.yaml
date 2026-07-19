@@ -5,8 +5,8 @@ services:
 - notification-service
 incident_types:
 - missing_data
-observation_count: 27
-confidence_avg: 66.7
+observation_count: 28
+confidence_avg: 66.57
 quality_avg: 0.586
 evidence_signals:
 - check_golden_signals
@@ -36,4 +36,4 @@ receipt_ids:
 - INC_H1_20260712
 - INC_H1_20260531
 first_seen: 2026-05-31 20:36:46.531608+00:00
-last_seen: 2026-07-18 16:54:21.589731+00:00
+last_seen: 2026-07-19 02:15:01.397531+00:00

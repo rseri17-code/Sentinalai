@@ -116,7 +116,7 @@
     },
     "recommendation_traceability": {
       "actionable_items": 16,
-      "items_with_supporting_incidents": 15,
+      "items_with_supporting_incidents": 16,
       "per_bucket": {
         "application_health.at_risk": {
           "total": 1,
@@ -132,7 +132,7 @@
         },
         "daily_brief.highest_priority_actions": {
           "total": 4,
-          "traced": 3
+          "traced": 4
         },
         "daily_brief.recurring_failures": {
           "total": 1,
@@ -155,7 +155,7 @@
           "traced": 1
         }
       },
-      "traceability_rate": 0.9375,
+      "traceability_rate": 1.0,
       "underpowered": true
     },
     "verifiability": {

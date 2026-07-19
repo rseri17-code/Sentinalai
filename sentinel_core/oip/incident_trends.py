@@ -178,6 +178,13 @@ def _health_decline(obs_pairs, periods) -> list[dict[str, Any]]:
                 if o["observed_period"] == period}
         return operational_health(results, incs)["services"]
 
+    # Incident ids per service across the two compared periods (for evidence).
+    ids_by_service: dict[str, list[str]] = {}
+    for o, _, _ in obs_pairs:
+        if o["observed_period"] in (prev, curr):
+            svc = o.get("core", {}).get("service", "") or "(none)"
+            ids_by_service.setdefault(svc, []).append(str(o["incident_id"]))
+
     hp, hc = health_for(prev), health_for(curr)
     out = []
     for svc in sorted(set(hp) & set(hc)):
@@ -185,7 +192,8 @@ def _health_decline(obs_pairs, periods) -> list[dict[str, Any]]:
         if drop > 0.0:
             out.append({"service": svc, "previous_score": hp[svc]["health_score"],
                         "current_score": hc[svc]["health_score"],
-                        "decline": drop, "why": hc[svc]["why"]})
+                        "decline": drop, "why": hc[svc]["why"],
+                        "evidence": sorted(set(ids_by_service.get(svc, [])))})
     return sorted(out, key=lambda s: (-s["decline"], s["service"]))
 
 
@@ -204,7 +212,7 @@ def _investigate_first(class_trends, recurring, health_decline) -> list[dict[str
     for s in health_decline:
         items.append({"priority": "service_health_decline",
                       "target": s["service"], "signal": s["decline"],
-                      "evidence": []})
+                      "evidence": s.get("evidence", [])})
     return sorted(items, key=lambda x: (-x["signal"], x["priority"],
                                         str(x["target"])))[:10]
 

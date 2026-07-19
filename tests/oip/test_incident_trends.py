@@ -122,10 +122,17 @@ class TestIncidentTrends:
         ]
         inc = {"A1": _inc("A1", "edge", "deploy", "2026-01-05"),
                "A2": _inc("A2", "edge", "network", "2026-01-12")}
-        worse = incident_trends(results, inc)["services_getting_worse"]
+        out = incident_trends(results, inc)
+        worse = out["services_getting_worse"]
         assert worse and worse[0]["service"] == "edge"
         assert worse[0]["decline"] > 0.0
         assert worse[0]["current_score"] < worse[0]["previous_score"]
+        # OVP defect fix: declining-service entries carry supporting incidents
+        assert worse[0]["evidence"] == ["A1", "A2"]
+        # and the derived investigate-first action inherits that evidence
+        decline_actions = [i for i in out["investigate_first"]
+                           if i["priority"] == "service_health_decline"]
+        assert decline_actions and all(a["evidence"] for a in decline_actions)
 
     def test_investigate_first_ranks_signals(self):
         results, inc = _sample()

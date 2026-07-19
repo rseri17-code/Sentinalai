@@ -106,7 +106,7 @@ Primary (P), Safety (S), Experience (E). Baseline = unaided arm; target = assist
 | Recommendation acceptance | P | followed? per observation | `NOT_MEASURED` |
 | Repeat-investigation rate | P | ODE recurrence of same cause post-fix | `NOT_MEASURED` |
 | False-positive rate | S | verified-incorrect RCA | provisional `n=3` |
-| **Recommendation traceability** | S | committed OIP outputs | **measured: 0.9375** (§8) |
+| **Recommendation traceability** | S | committed OIP outputs | **measured: 1.0** (§8; gap closed in pilot readiness) |
 | **Verifiability** | S | R1 corpus stamp | **measured: 1.0** (§8) |
 | **Determinism** | S | recompute byte-equality | **measured: CONFIRMED** (§8) |
 
@@ -142,17 +142,17 @@ requires it. Findings available *now* from offline execution:
 
 | Finding | Category | Evidence |
 |---|---|---|
-| Output is deterministic and byte-reproducible | **Proven Strength** | recompute equality + 5916-test regression |
+| Output is deterministic and byte-reproducible | **Proven Strength** | recompute equality + full regression |
 | Every conclusion carries an R1 corpus stamp (verifiability = 1.0) | **Proven Strength** | §8 verifiability |
-| 15/16 actionable items cite supporting incidents | **Proven Strength** | §8 traceability |
-| `service_health_decline` actions ship with an **empty evidence list** | **Product Improvement** | §8 per-bucket: `daily_brief.highest_priority_actions` 3/4 |
+| 16/16 actionable items cite supporting incidents (was 15/16) | **Proven Strength** | §8 traceability |
+| `service_health_decline` actions shipped with an empty evidence list | **Defect → FIXED** (pilot readiness) | now carries the declining service's incidents; regenerated samples show 16/16 |
 | Real labelled corpus is `n=3` — every outcome metric underpowered | **Operational Improvement** | §2; gold `underpowered=true` |
 | Operators/timeline absent → no MTTI/trust evidence | **Operational Improvement** | §0 boundary |
 
-The one Product Improvement traces to `incident_trends._investigate_first`, where the
-`service_health_decline` branch sets `evidence: []`. It is a **traceability gap, not a defect**
-(the service-decline signal is itself derived from per-period health), and is logged to the
-backlog — **not** fixed here, because this phase changes no code on the platform.
+The traceability gap traced to `incident_trends._investigate_first`, where the
+`service_health_decline` branch set `evidence: []`. It has since been **fixed during pilot
+readiness** (declining-service entries now carry the incidents behind them), taking measured
+traceability from 15/16 to **16/16**. See `docs/pilot/GO_NO_GO.md` §Defect Review.
 
 ---
 
@@ -164,9 +164,9 @@ Classification is **evidence-gated**. On the evidence available now:
 
 Justification, strictly from observed evidence:
 
-- **What is proven (offline):** determinism, verifiability (1.0), and near-complete
-  recommendation traceability (0.9375) — the *integrity* properties an operator must be able to
-  rely on. These clear the bar for a **supervised pilot**.
+- **What is proven (offline):** determinism, verifiability (1.0), and complete
+  recommendation traceability (1.0, after the pilot-readiness fix) — the *integrity* properties
+  an operator must be able to rely on. These clear the bar for a **supervised pilot**.
 - **What is unproven:** every *operational-outcome* and *trust* claim is `NOT_MEASURED`. There is
   no evidence yet that operators are faster, more accurate, or more confident with SentinelAI.
 - **Therefore:** not "Ready for limited production" (no outcome evidence), not "Not ready"
@@ -185,7 +185,7 @@ Reads only committed OIP outputs + the gold evaluation; calls only existing OIP 
 
 | Property | Value | Note |
 |---|---|---|
-| Recommendation traceability | **15/16 = 0.9375** | 1 gap: `service_health_decline` empty evidence (§6). `underpowered=true` |
+| Recommendation traceability | **16/16 = 1.0** | gap closed in pilot readiness (was 15/16). `underpowered=true` by sample size |
 | Verifiability (R1 corpus stamp) | **1.0** (all units) | daily-brief `verification_status`: verifiable, 6/6 stamped |
 | Determinism | **CONFIRMED** | all 5 services byte-identical on recompute |
 | RCA-side (gold IQS) | IQS 0.818 @ coverage 1.0 | **all 10 metrics `n=3`, `underpowered=true`** — provisional |

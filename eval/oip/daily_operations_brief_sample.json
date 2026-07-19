@@ -103,7 +103,10 @@
       "target": "network"
     },
     {
-      "evidence": [],
+      "evidence": [
+        "INC-5101",
+        "INC-5140"
+      ],
       "priority": "service_health_decline",
       "signal": 0.4965,
       "target": "payment-service"

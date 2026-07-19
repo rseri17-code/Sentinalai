@@ -1,0 +1,164 @@
+{
+  "applications_at_risk": [
+    {
+      "application": "checkout",
+      "evidence": [
+        "INC-5175",
+        "INC-5101",
+        "INC-5140"
+      ],
+      "health_band": "at_risk",
+      "health_score": 0.6857,
+      "next_action": "investigate recurring failure: db connection pool exhaustion",
+      "owner": "payments-team",
+      "verifiable": true,
+      "why": "at_risk: worst service 'edge-cdn' \u2014 dns resolution failure"
+    }
+  ],
+  "changed_since_previous": {
+    "available": true,
+    "by_class": {
+      "deploy": {
+        "current": 1,
+        "delta": 1,
+        "previous": 0
+      },
+      "network": {
+        "current": 1,
+        "delta": 1,
+        "previous": 0
+      },
+      "saturation": {
+        "current": 2,
+        "delta": 0,
+        "previous": 2
+      }
+    },
+    "current": "2026-07-06",
+    "previous": "2026-07-05"
+  },
+  "critical_services": [
+    {
+      "evidence": [
+        "INC-5175"
+      ],
+      "fix_first": "investigate: low verification / completeness",
+      "owner": "platform-team",
+      "reliability_band": "at_risk",
+      "reliability_direction": "insufficient_history",
+      "reliability_score": 0.442,
+      "service": "edge-cdn",
+      "verifiable": true,
+      "why": "dns resolution failure"
+    },
+    {
+      "evidence": [
+        "INC-5101",
+        "INC-5140"
+      ],
+      "fix_first": "fix recurring failure: db connection pool exhaustion",
+      "owner": "payments-team",
+      "reliability_band": "watch",
+      "reliability_direction": "degrading",
+      "reliability_score": 0.6967,
+      "service": "payment-service",
+      "verifiable": true,
+      "why": "db connection pool exhaustion"
+    }
+  ],
+  "headline": {
+    "applications_at_risk": 1,
+    "applications_evaluated": 2,
+    "critical_services": 2,
+    "increasing_trends": 2,
+    "priority_actions": 4,
+    "recurring_failures": 1,
+    "services_evaluated": 5
+  },
+  "highest_priority_actions": [
+    {
+      "evidence": [
+        "INC-5101",
+        "INC-5140",
+        "INC-5166"
+      ],
+      "priority": "recurring_failure",
+      "signal": 3.0,
+      "target": "db connection pool exhaustion"
+    },
+    {
+      "evidence": [
+        "INC-5255"
+      ],
+      "priority": "increasing_incident_class",
+      "signal": 1.0,
+      "target": "deploy"
+    },
+    {
+      "evidence": [
+        "INC-5175"
+      ],
+      "priority": "increasing_incident_class",
+      "signal": 1.0,
+      "target": "network"
+    },
+    {
+      "evidence": [],
+      "priority": "service_health_decline",
+      "signal": 0.4965,
+      "target": "payment-service"
+    }
+  ],
+  "investigations": 6,
+  "period": "2026-07-06 overnight shift",
+  "periods_covered": [
+    "2026-07-05",
+    "2026-07-06"
+  ],
+  "recurring_failures": [
+    {
+      "count": 3,
+      "evidence": [
+        "INC-5101",
+        "INC-5140",
+        "INC-5166"
+      ],
+      "incident_class": "saturation",
+      "root_cause": "db connection pool exhaustion"
+    }
+  ],
+  "schema_version": 1,
+  "significant_incident_trends": [
+    {
+      "evidence": [
+        "INC-5255"
+      ],
+      "incident_class": "deploy",
+      "series": [
+        0,
+        1
+      ],
+      "slope": 1.0,
+      "total": 1,
+      "verdict": "increasing"
+    },
+    {
+      "evidence": [
+        "INC-5175"
+      ],
+      "incident_class": "network",
+      "series": [
+        0,
+        1
+      ],
+      "slope": 1.0,
+      "total": 1,
+      "verdict": "increasing"
+    }
+  ],
+  "verification_status": {
+    "corpus_stamped": 6,
+    "investigations": 6,
+    "verifiable": true
+  }
+}

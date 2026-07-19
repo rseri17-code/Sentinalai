@@ -1,0 +1,173 @@
+{
+  "environment": "offline; no live operators; no incident timeline",
+  "headline": {
+    "determinism": "CONFIRMED (byte-identical recompute + full regression)",
+    "operator_outcomes": "NOT_MEASURED (no operators in environment)",
+    "traceability": "measured on committed outputs (underpowered N)"
+  },
+  "min_sample_size": 30,
+  "operator_side_NOT_MEASURED": {
+    "investigation_duration": {
+      "instrumentation_needed": "shift-time capture of investigation start/stop, owner-identification timestamp, action-decision timestamp, and a post-incident operator survey",
+      "reason": "requires live operators and an incident response timeline; neither is present in this offline environment"
+    },
+    "mtti": {
+      "instrumentation_needed": "shift-time capture of investigation start/stop, owner-identification timestamp, action-decision timestamp, and a post-incident operator survey",
+      "reason": "requires live operators and an incident response timeline; neither is present in this offline environment"
+    },
+    "operator_confidence": {
+      "instrumentation_needed": "shift-time capture of investigation start/stop, owner-identification timestamp, action-decision timestamp, and a post-incident operator survey",
+      "reason": "requires live operators and an incident response timeline; neither is present in this offline environment"
+    },
+    "operator_trust": {
+      "instrumentation_needed": "shift-time capture of investigation start/stop, owner-identification timestamp, action-decision timestamp, and a post-incident operator survey",
+      "reason": "requires live operators and an incident response timeline; neither is present in this offline environment"
+    },
+    "recommendation_acceptance": {
+      "instrumentation_needed": "shift-time capture of investigation start/stop, owner-identification timestamp, action-decision timestamp, and a post-incident operator survey",
+      "reason": "requires live operators and an incident response timeline; neither is present in this offline environment"
+    },
+    "repeat_investigation_rate": {
+      "instrumentation_needed": "shift-time capture of investigation start/stop, owner-identification timestamp, action-decision timestamp, and a post-incident operator survey",
+      "reason": "requires live operators and an incident response timeline; neither is present in this offline environment"
+    },
+    "time_to_decide_next_action": {
+      "instrumentation_needed": "shift-time capture of investigation start/stop, owner-identification timestamp, action-decision timestamp, and a post-incident operator survey",
+      "reason": "requires live operators and an incident response timeline; neither is present in this offline environment"
+    },
+    "time_to_identify_evidence": {
+      "instrumentation_needed": "shift-time capture of investigation start/stop, owner-identification timestamp, action-decision timestamp, and a post-incident operator survey",
+      "reason": "requires live operators and an incident response timeline; neither is present in this offline environment"
+    },
+    "time_to_identify_owner": {
+      "instrumentation_needed": "shift-time capture of investigation start/stop, owner-identification timestamp, action-decision timestamp, and a post-incident operator survey",
+      "reason": "requires live operators and an incident response timeline; neither is present in this offline environment"
+    }
+  },
+  "phase": "OVP Phase 1 \u2014 Real Operator Validation",
+  "platform_side_measured": {
+    "determinism": {
+      "all_deterministic": true,
+      "byte_identical_recompute": {
+        "application_health": true,
+        "daily_operations_brief": true,
+        "incident_trends": true,
+        "operational_health": true,
+        "service_reliability": true
+      },
+      "services_checked": 5
+    },
+    "rca_side_provisional": {
+      "investigation_quality_score": 0.818,
+      "iqs_coverage": 1.0,
+      "metrics": {
+        "confidence_calibration": {
+          "n": 3,
+          "underpowered": true,
+          "value": 0.78
+        },
+        "decisive_evidence_latency": {
+          "n": 3,
+          "underpowered": true,
+          "value": 1.0
+        },
+        "evidence_efficiency": {
+          "n": 3,
+          "underpowered": true,
+          "value": 1.0
+        },
+        "false_lead_avoidance": {
+          "n": 3,
+          "underpowered": true,
+          "value": 0.5
+        },
+        "hypothesis_efficiency": {
+          "n": 3,
+          "underpowered": true,
+          "value": 0.5
+        },
+        "investigation_completeness": {
+          "n": 3,
+          "underpowered": true,
+          "value": 0.8
+        },
+        "localization_accuracy": {
+          "n": 3,
+          "underpowered": true,
+          "value": 1.0
+        },
+        "operator_agreement": {
+          "n": 3,
+          "underpowered": true,
+          "value": 1.0
+        },
+        "replay_fidelity": {
+          "n": 3,
+          "underpowered": true,
+          "value": 1.0
+        },
+        "unnecessary_evidence_avoided": {
+          "n": 3,
+          "underpowered": true,
+          "value": 0.0
+        }
+      },
+      "note": "n=3 across the board \u2014 every RCA-side metric is underpowered (min n=30). Provisional, not conclusive."
+    },
+    "recommendation_traceability": {
+      "actionable_items": 16,
+      "items_with_supporting_incidents": 15,
+      "per_bucket": {
+        "application_health.at_risk": {
+          "total": 1,
+          "traced": 1
+        },
+        "daily_brief.applications_at_risk": {
+          "total": 1,
+          "traced": 1
+        },
+        "daily_brief.critical_services": {
+          "total": 2,
+          "traced": 2
+        },
+        "daily_brief.highest_priority_actions": {
+          "total": 4,
+          "traced": 3
+        },
+        "daily_brief.recurring_failures": {
+          "total": 1,
+          "traced": 1
+        },
+        "incident_trends.investigate_first": {
+          "total": 3,
+          "traced": 3
+        },
+        "incident_trends.what_is_increasing": {
+          "total": 2,
+          "traced": 2
+        },
+        "incident_trends.what_is_recurring": {
+          "total": 1,
+          "traced": 1
+        },
+        "service_reliability.non_healthy": {
+          "total": 1,
+          "traced": 1
+        }
+      },
+      "traceability_rate": 0.9375,
+      "underpowered": true
+    },
+    "verifiability": {
+      "daily_brief_verification": {
+        "corpus_stamped": 6,
+        "investigations": 6,
+        "verifiable": true
+      },
+      "underpowered": true,
+      "units_evaluated": 8,
+      "units_verifiable": 8,
+      "verifiability_rate": 1.0
+    }
+  }
+}

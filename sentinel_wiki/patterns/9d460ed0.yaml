@@ -5,9 +5,9 @@ services:
 - auth-service
 incident_types:
 - flapping
-observation_count: 56
-confidence_avg: 81.07
-quality_avg: 0.7613
+observation_count: 58
+confidence_avg: 80.95
+quality_avg: 0.7612
 evidence_signals:
 - check_golden_signals
 - check_pool_metrics
@@ -39,4 +39,4 @@ receipt_ids:
 - INC_H5_20260711
 - INC_H5_20260610
 first_seen: 2026-05-31 20:36:46.865205+00:00
-last_seen: 2026-07-19 05:10:56.042253+00:00
+last_seen: 2026-07-20 23:08:40.323518+00:00

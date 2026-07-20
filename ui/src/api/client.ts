@@ -286,4 +286,43 @@ export const transparencyApi = {
   },
 }
 
+// ── Operational Health (OIP convergence) ────────────────────────────────────
+
+export interface ServiceHealth {
+  service: string
+  health_score: number
+  health_band: 'healthy' | 'watch' | 'at_risk'
+  incidents: number
+  why: string
+  confidence: number
+  verifiable: boolean
+  evidence: { used: number; unavailable: number; completeness: number }
+  next_action: string
+}
+
+export interface OperationalHealthResponse {
+  services_evaluated: number
+  investigations: number
+  estate_health_score: number | null
+  band_counts: Record<string, number>
+  attention_order: string[]
+  services: Record<string, ServiceHealth>
+  drilldown: Record<string, string>
+  signal_coverage: {
+    investigations: number
+    with_corpus_version: number
+    with_evidence_lifecycle: number
+    with_validation_signals: number
+    deferred_signals: string[]
+    note: string
+  }
+}
+
+export const operationalHealthApi = {
+  get: async () => {
+    const res = await api.get('/api/v1/operational-health')
+    return res.data as OperationalHealthResponse
+  },
+}
+
 export default api

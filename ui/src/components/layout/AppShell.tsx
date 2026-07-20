@@ -14,6 +14,7 @@ import { ToolCallInspector } from '@/components/ToolCallInspector'
 import MTTRDashboard from '@/components/MTTRDashboard'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { MissionControl } from '@/components/MissionControl'
+import { OperationalHealth } from '@/components/OperationalHealth'
 import { CausalGraph } from '@/components/CausalGraph'
 import { CommandPalette } from '@/components/CommandPalette'
 import { useInvestigationStore } from '@/store/investigationStore'
@@ -79,6 +80,7 @@ export function AppShell() {
             <Route path="/investigations" element={<ErrorBoundary label="Mission Control"><MissionControl /></ErrorBoundary>} />
             <Route path="/investigations/:investigationId" element={<ErrorBoundary label="Investigation"><InvestigationView /></ErrorBoundary>} />
             <Route path="/dashboard" element={<ErrorBoundary label="MTTR Dashboard"><MTTRDashboard /></ErrorBoundary>} />
+            <Route path="/operational-health" element={<ErrorBoundary label="Operational Health"><OperationalHealth /></ErrorBoundary>} />
             <Route path="/graph" element={<ErrorBoundary label="Knowledge Graph"><KnowledgeGraphPage /></ErrorBoundary>} />
             <Route path="*" element={<Navigate to="/investigations" replace />} />
           </Routes>

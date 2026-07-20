@@ -129,6 +129,12 @@ class IncidentState(BaseModel):
     hypotheses: list[HypothesisSummary] = Field(default_factory=list)
     winner_hypothesis: Optional[str] = None
 
+    # Operator-intelligence projection (R1/R2 signals lifted from the result at
+    # completion so Operational Intelligence can consume investigations without
+    # re-running the engine). Additive + optional — backward compatible.
+    corpus_version: Optional[str] = None          # R1 reproducibility stamp
+    evidence_lifecycle: dict = Field(default_factory=dict)  # R2 evidence counts
+
     # Evidence
     receipt_ids: list[str] = Field(default_factory=list)
     tool_calls_total: int = 0

@@ -6,6 +6,9 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+# ...but the built SPA IS committed so the BFF can serve it without an npm step
+!ui/dist/
+!ui/dist/**
 eggs/
 *.egg
 

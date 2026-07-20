@@ -1196,25 +1196,22 @@ def _stub_github(action: str, params: dict) -> dict:
     if "deployment" in action:
         return {"deployments": []}
     if "create" in action and ("pr" in action or "pull" in action):
-        repo = params.get("repo", params.get("repository", "org/service"))
-        branch = params.get("branch", params.get("head_branch", "fix/auto-remediation"))
-        pr_num = 9001
+        # NEVER fabricate a remediation. In stub mode (no GitHub gateway) no PR
+        # is created; say so explicitly so an operator cannot mistake this for a
+        # real, mergeable PR. No fake URL, no PR number, no mergeable flag.
         return {
-            "pr": {
-                "number": pr_num,
-                "url": f"https://github.com/{repo}/pull/{pr_num}",
-                "html_url": f"https://github.com/{repo}/pull/{pr_num}",
-                "state": "open",
-                "title": params.get("title", "Auto-remediation fix"),
-                "head": {"ref": branch},
-                "base": {"ref": params.get("base_branch", "main")},
-                "mergeable": True,
-            },
-            "pr_url": f"https://github.com/{repo}/pull/{pr_num}",
-            "pr_number": pr_num,
+            "pr": None,
+            "created": False,
+            "stub": True,
+            "error": "github_gateway_not_configured",
+            "detail": ("No PR was created — GitHub gateway is not configured "
+                       "(stub mode). Configure AGENTCORE_GATEWAY_URL to enable "
+                       "real remediation."),
         }
     if "pr" in action or "pull" in action:
-        return {"pr": {"number": 0, "state": "open", "mergeable": True}}
+        return {"pr": None, "stub": True,
+                "error": "github_gateway_not_configured",
+                "detail": "No PR data — GitHub gateway not configured (stub mode)."}
     if "commit" in action or "diff" in action:
         return {"commit": {}}
     if "workflow" in action:

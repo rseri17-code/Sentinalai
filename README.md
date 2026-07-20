@@ -1,8 +1,8 @@
 # SentinalAI
 
-**Autonomous, self-correcting SRE agent for production incident root cause analysis.**
+**Deterministic, evidence-grounded RCA assistant for production incidents — with an operator-facing intelligence layer.**
 
-SentinalAI runs a full investigation loop — fetching alert metadata, gathering multi-source evidence, applying deterministic correlation rules, and generating evidence-weighted RCA — without a human in the loop. The system is designed for production SRE environments where reproducibility, auditability, and bounded execution cost are non-negotiable.
+SentinalAI runs a full investigation loop — fetching alert metadata, gathering multi-source evidence, applying deterministic correlation rules, and generating evidence-weighted RCA. In its **default configuration it is decision support, not autonomy**: the agentic planner (`AGENTIC_PLANNER`) and Wave-3 retrieval authority are OFF, a human reviews and decides, and the system takes no remediation action on its own. Autonomy is an opt-in capability, not the shipped default. The system is designed for production SRE environments where reproducibility, auditability, and bounded execution cost are non-negotiable, and where **no operational evidence is ever fabricated** — when a data source is unavailable, SentinalAI says so rather than inventing a result.
 
 ```
 Incident In → [Fetch] → [Classify] → [Planner/Playbook] → [Evidence Gathering]

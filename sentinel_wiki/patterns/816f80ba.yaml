@@ -5,7 +5,7 @@ services:
 - recommendation-service
 incident_types:
 - silent_failure
-observation_count: 29
+observation_count: 30
 confidence_avg: 44.0
 quality_avg: 0.44
 evidence_signals:
@@ -15,7 +15,6 @@ evidence_signals:
 - search_pipeline_logs
 - _evidence_lifecycle
 receipt_ids:
-- INC_SF2_20260605
 - INC_SF2_20260719
 - INC_SF2_20260629
 - INC_SF2_20260619
@@ -31,9 +30,10 @@ receipt_ids:
 - INC_SF2_20260627
 - INC_SF2_20260611
 - INC_SF2_20260707
+- INC_SF2_20260721
 - INC_SF2_20260628
 - INC_SF2_20260621
 - INC_SF2_20260708
 - INC_SF2_20260603
 first_seen: 2026-05-31 20:36:46.333677+00:00
-last_seen: 2026-07-20 22:49:26.710033+00:00
+last_seen: 2026-07-21 10:11:13.589233+00:00

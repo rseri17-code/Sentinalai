@@ -5,14 +5,14 @@ services:
 - notification-service
 incident_types:
 - missing_data
-observation_count: 29
+observation_count: 30
 confidence_avg: 28.0
 quality_avg: 0.494
 evidence_signals:
 - check_golden_signals
-- check_events
 - search_error_logs
 - check_changes
+- check_events
 - _evidence_lifecycle
 receipt_ids:
 - INC_M1_20260719
@@ -36,4 +36,4 @@ receipt_ids:
 - INC_M1_20260702
 - INC_M1_20260715
 first_seen: 2026-05-31 20:36:46.065985+00:00
-last_seen: 2026-07-20 22:49:19.424014+00:00
+last_seen: 2026-07-21 10:11:06.394226+00:00

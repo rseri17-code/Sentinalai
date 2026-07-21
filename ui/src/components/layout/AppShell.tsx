@@ -19,6 +19,14 @@ import { OperationalHealth } from '@/components/OperationalHealth'
 import { CausalGraph } from '@/components/CausalGraph'
 import { CommandPalette } from '@/components/CommandPalette'
 import { useInvestigationStore } from '@/store/investigationStore'
+import { recordOperatorEvent, type OperatorMilestone } from '@/api/operatorTelemetry'
+
+// Map an investigation panel to the operator milestone its viewing represents.
+const PANEL_MILESTONE: Partial<Record<string, OperatorMilestone>> = {
+  timeline: 'timeline_opened',
+  graph: 'graph_opened',
+  evidence: 'evidence_panel_opened',
+}
 
 function KnowledgeGraphPage() {
   return (
@@ -41,9 +49,19 @@ function InvestigationView() {
   useEffect(() => {
     if (investigationId) {
       connectToInvestigation(investigationId)
+      // Operator timeline: the investigation was opened (real interaction time).
+      recordOperatorEvent(investigationId, 'investigation_opened')
     }
     return () => disconnectWS()
   }, [investigationId, connectToInvestigation, disconnectWS])
+
+  // Operator timeline: record which panel the operator viewed.
+  useEffect(() => {
+    const milestone = PANEL_MILESTONE[activePanel]
+    if (investigationId && milestone) {
+      recordOperatorEvent(investigationId, milestone, { screen: activePanel })
+    }
+  }, [investigationId, activePanel])
 
   if (!investigationId) return null
 

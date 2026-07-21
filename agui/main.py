@@ -55,6 +55,7 @@ from agui.api.itsm_api import router as itsm_router
 from agui.api.loop_api import router as loop_router
 from agui.api.operational_health import router as operational_health_router
 from agui.api.mtti import router as mtti_router
+from agui.api.operator_telemetry import router as operator_telemetry_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -119,6 +120,7 @@ def create_app() -> FastAPI:
     app.include_router(loop_router)
     app.include_router(operational_health_router)
     app.include_router(mtti_router)
+    app.include_router(operator_telemetry_router)
 
     # ── Tenant management endpoints ───────────────────────────────────────
     @app.get("/api/v1/tenants", tags=["tenants"])

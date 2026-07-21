@@ -325,4 +325,28 @@ export const operationalHealthApi = {
   },
 }
 
+// ── MTTI (decision-acceleration timing) ─────────────────────────────────────
+
+export interface MttiResponse {
+  investigation_id: string
+  milestones: Record<string, number | null>
+  segments_ms: {
+    time_to_first_evidence_ms: number | null
+    time_to_root_cause_ms: number | null
+    time_to_owner_ms: number | null
+    time_to_recommendation_ms: number | null
+    total_ms: number | null
+  }
+  actionable: boolean
+  events_observed: number
+  note: string
+}
+
+export const mttiApi = {
+  forInvestigation: async (investigationId: string) => {
+    const res = await api.get(`/api/v1/investigations/${investigationId}/mtti`)
+    return res.data as MttiResponse
+  },
+}
+
 export default api

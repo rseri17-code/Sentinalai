@@ -395,7 +395,7 @@ export interface EnrichedToolReceipt {
 // ── UI State Types ────────────────────────────────────────────────────────────
 
 export type WSStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
-export type ActivePanel = 'timeline' | 'graph' | 'evidence' | 'memory' | 'replay' | 'control' | 'reflection' | 'tools'
+export type ActivePanel = 'timeline' | 'graph' | 'evidence' | 'memory' | 'replay' | 'control' | 'reflection' | 'tools' | 'mtti'
 export type UserRole = 'viewer' | 'operator' | 'approver' | 'admin'
 
 export interface AppUser {

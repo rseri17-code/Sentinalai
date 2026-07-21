@@ -11,6 +11,7 @@ import { ControlPanel } from '@/components/ControlPanel'
 import { RiskConfidenceLayer } from '@/components/RiskConfidenceLayer'
 import { ReflectionPanel } from '@/components/ReflectionPanel'
 import { ToolCallInspector } from '@/components/ToolCallInspector'
+import { MttiTimeline } from '@/components/MttiTimeline'
 import MTTRDashboard from '@/components/MTTRDashboard'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { MissionControl } from '@/components/MissionControl'
@@ -62,6 +63,7 @@ function InvestigationView() {
           {activePanel === 'control' && <ErrorBoundary label="Control Panel"><ControlPanel /></ErrorBoundary>}
           {activePanel === 'reflection' && <ErrorBoundary label="Self-Awareness"><ReflectionPanel /></ErrorBoundary>}
           {activePanel === 'tools' && <ErrorBoundary label="Tool Inspector"><ToolCallInspector /></ErrorBoundary>}
+          {activePanel === 'mtti' && <ErrorBoundary label="MTTI"><MttiTimeline /></ErrorBoundary>}
         </div>
       </div>
     </div>

@@ -5,15 +5,15 @@ services:
 - payment-service
 incident_types:
 - error_spike
-observation_count: 30
-confidence_avg: 58.67
+observation_count: 31
+confidence_avg: 58.61
 quality_avg: 0.78
 evidence_signals:
 - check_golden_signals
+- check_itsm_changes
 - check_events
 - search_error_logs
 - check_changes
-- check_itsm_changes
 - gap_get_change_data
 - _evidence_lifecycle
 receipt_ids:
@@ -38,4 +38,4 @@ receipt_ids:
 - INC_E1_20260711
 - INC_E1_20260707
 first_seen: 2026-05-31 20:36:45.271731+00:00
-last_seen: 2026-07-21 10:44:54.504622+00:00
+last_seen: 2026-07-22 20:11:32.997755+00:00

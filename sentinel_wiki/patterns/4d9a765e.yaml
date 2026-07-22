@@ -5,8 +5,8 @@ services:
 - notification-service
 incident_types:
 - missing_data
-observation_count: 30
-confidence_avg: 64.67
+observation_count: 31
+confidence_avg: 64.61
 quality_avg: 0.575
 evidence_signals:
 - check_golden_signals
@@ -15,7 +15,7 @@ evidence_signals:
 - check_changes
 - _evidence_lifecycle
 receipt_ids:
-- INC_H6_20260628
+- INC_H6_20260722
 - INC_H6_20260708
 - INC_H6_20260714
 - INC_H6_20260712
@@ -36,4 +36,4 @@ receipt_ids:
 - INC_H6_20260704
 - INC_H6_20260626
 first_seen: 2026-05-31 20:36:47.025659+00:00
-last_seen: 2026-07-21 10:45:39.415242+00:00
+last_seen: 2026-07-22 20:12:20.419601+00:00

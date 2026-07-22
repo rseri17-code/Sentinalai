@@ -5,8 +5,8 @@ services:
 - recommendation-service
 incident_types:
 - silent_failure
-observation_count: 30
-confidence_avg: 91.0
+observation_count: 31
+confidence_avg: 90.84
 quality_avg: 0.772
 evidence_signals:
 - check_golden_signals
@@ -19,9 +19,9 @@ evidence_signals:
 - gap_get_error_logs
 - _evidence_lifecycle
 receipt_ids:
-- INC12354_20260629
 - INC12354_20260609
 - INC12354_20260707
+- INC12354_20260722
 - INC12354_20260619
 - INC12354_20260720
 - INC12354_20260706
@@ -40,4 +40,4 @@ receipt_ids:
 - INC12354_20260708
 - INC12354_20260603
 first_seen: 2026-05-31 20:37:53.137721+00:00
-last_seen: 2026-07-21 11:04:28.435558+00:00
+last_seen: 2026-07-22 20:31:53.293428+00:00

@@ -5,9 +5,9 @@ services:
 - notification-service
 incident_types:
 - missing_data
-observation_count: 30
-confidence_avg: 71.0
-quality_avg: 0.8188
+observation_count: 31
+confidence_avg: 70.84
+quality_avg: 0.8199
 evidence_signals:
 - check_golden_signals
 - search_error_logs
@@ -18,9 +18,9 @@ evidence_signals:
 - gap_get_change_data
 - _evidence_lifecycle
 receipt_ids:
-- INC12352_20260603
 - INC12352_20260713
 - INC12352_20260712
+- INC12352_20260722
 - INC12352_20260703
 - INC12352_20260721
 - INC12352_20260717
@@ -39,4 +39,4 @@ receipt_ids:
 - INC12352_20260629
 - INC12352_20260708
 first_seen: 2026-05-31 20:37:52.958706+00:00
-last_seen: 2026-07-21 11:04:22.989589+00:00
+last_seen: 2026-07-22 20:31:47.872034+00:00

@@ -5,8 +5,8 @@ services:
 - inventory-service
 incident_types:
 - network
-observation_count: 60
-confidence_avg: 63.67
+observation_count: 62
+confidence_avg: 63.61
 quality_avg: 0.8148
 evidence_signals:
 - check_golden_signals
@@ -40,4 +40,4 @@ receipt_ids:
 - INC_N1_20260704
 - INC_N1_20260611
 first_seen: 2026-05-31 20:36:45.790929+00:00
-last_seen: 2026-07-21 10:45:44.330396+00:00
+last_seen: 2026-07-22 20:12:25.614225+00:00

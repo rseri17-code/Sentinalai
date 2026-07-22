@@ -5,8 +5,8 @@ services:
 - search-service
 incident_types:
 - latency
-observation_count: 30
-confidence_avg: 85.0
+observation_count: 31
+confidence_avg: 84.84
 quality_avg: 0.6075
 evidence_signals:
 - check_golden_signals
@@ -37,4 +37,4 @@ receipt_ids:
 - INC_H2_20260708
 - INC_H2_20260711
 first_seen: 2026-05-31 20:36:46.616806+00:00
-last_seen: 2026-07-21 10:45:29.614550+00:00
+last_seen: 2026-07-22 20:12:10.021343+00:00

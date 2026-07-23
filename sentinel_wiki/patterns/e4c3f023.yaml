@@ -5,8 +5,8 @@ services:
 - payment-service
 incident_types:
 - error_spike
-observation_count: 31
-confidence_avg: 92.84
+observation_count: 32
+confidence_avg: 92.69
 quality_avg: 0.815
 evidence_signals:
 - check_itsm_changes
@@ -40,4 +40,4 @@ receipt_ids:
 - INC12347_20260717
 - INC12347_20260627
 first_seen: 2026-05-31 20:37:52.382600+00:00
-last_seen: 2026-07-22 20:31:34.782154+00:00
+last_seen: 2026-07-23 15:00:28.802659+00:00

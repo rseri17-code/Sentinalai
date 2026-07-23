@@ -11827,3 +11827,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-23T17:03:16.273Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: a2ba5d9 docs(ux): Phase 2 UX audit + Investigation Workspace IA design (audit only)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `a2ba5d9 docs(ux): Phase 2 UX audit + Investigation Workspace IA design (audit only)`
+- `a5ed37a chore: update runtime-generated state (Phase 1 regression run)`
+- `d71734c feat(enterprise-validation): deterministic Synthetic Enterprise Validation Platform (Phase 1)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

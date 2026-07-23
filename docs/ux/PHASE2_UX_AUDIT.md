@@ -145,9 +145,15 @@ runtime behavior. Deterministic behavior is untouched (UI-only).
 
 ---
 
-## Iteration plan (small, validated — implementation deferred to next cycles)
+## Iteration plan (small, validated)
 1. **Persistent Investigation Summary header** (addresses C-1, H-1, H-2) — the
    single highest-MTTI-impact change; additive, no panel removed.
+   **STATUS: IMPLEMENTED** — `ui/src/components/InvestigationSummary` mounted in
+   `AppShell.InvestigationView` above the risk/confidence bar. Displays only
+   existing investigation fields (status, service/owner, root cause, confidence,
+   evidence count → Evidence panel, next action = `awaiting_approval_for`,
+   verification = `replay_available`); derives nothing, adds no backend call,
+   flat + semantic + keyboard/screen-reader friendly + responsive.
 2. **Accessibility baseline** (H-3) — roles + keyboard panel switching + focus.
 3. **Remove dead panels** (M-1) — pure subtraction, zero capability loss.
 4. **Wide-viewport summary + drill-down** (H-4) — progressive enhancement.

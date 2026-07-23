@@ -12,6 +12,7 @@ import { RiskConfidenceLayer } from '@/components/RiskConfidenceLayer'
 import { ReflectionPanel } from '@/components/ReflectionPanel'
 import { ToolCallInspector } from '@/components/ToolCallInspector'
 import { MttiTimeline } from '@/components/MttiTimeline'
+import { InvestigationSummary } from '@/components/InvestigationSummary'
 import MTTRDashboard from '@/components/MTTRDashboard'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { MissionControl } from '@/components/MissionControl'
@@ -67,6 +68,9 @@ function InvestigationView() {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Persistent Investigation Summary (Phase 2) — answers the 5 operator
+          questions without opening a panel, from existing fields only. */}
+      <InvestigationSummary />
       {/* Always-visible risk/confidence bar */}
       <RiskConfidenceLayer />
 

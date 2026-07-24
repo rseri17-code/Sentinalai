@@ -74,9 +74,15 @@ function InvestigationView() {
       {/* Always-visible risk/confidence bar */}
       <RiskConfidenceLayer />
 
-      {/* Main content area */}
+      {/* Main content area — the tabpanel controlled by the Sidebar tablist (H-3) */}
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 overflow-hidden">
+        <div
+          className="flex-1 overflow-hidden"
+          role="tabpanel"
+          id="inv-tabpanel"
+          aria-labelledby={`inv-tab-${activePanel}`}
+          tabIndex={0}
+        >
           {activePanel === 'timeline' && <ErrorBoundary label="Timeline"><IncidentCommandCenter /></ErrorBoundary>}
           {activePanel === 'graph' && <ErrorBoundary label="Execution Graph"><ExecutionGraph /></ErrorBoundary>}
           {activePanel === 'evidence' && <ErrorBoundary label="Evidence"><EvidenceDrawer /></ErrorBoundary>}

@@ -54,7 +54,12 @@ the operator must switch panels and hold prior context in working memory.
   owner · next action · verifiable badge.
 - **Expected benefit:** the decision-critical facts are always on screen.
 
-### H-3 · Accessibility near-absent — **HIGH (enterprise) / MEDIUM (pilot)**
+### H-3 · Accessibility near-absent — **HIGH (enterprise) / MEDIUM (pilot)** — **RESOLVED (Iter 2)**
+- **Status:** Investigation navigation is now a WAI-ARIA vertical tablist —
+  `role=tablist/tab/tabpanel`, roving `tabIndex`, Arrow/Home/End keyboard nav,
+  `aria-selected`/`aria-controls`/`aria-labelledby`, visible `focus-visible`
+  ring (`Sidebar.tsx` + `AppShell.tsx`). Estate-wide a11y beyond investigation
+  navigation remains partially open (tracked).
 - **Problem:** across all `ui/src`: 1 aria attribute, 0 `role=`, 0 `tabIndex`,
   1 `onKeyDown`. Panels switch via `<button onClick>` with no keyboard model or
   focus management; no skip links.

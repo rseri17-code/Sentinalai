@@ -80,9 +80,14 @@ the operator must switch panels and hold prior context in working memory.
 - **Expected benefit:** uses the operator's real estate; fewer switches on big
   displays.
 
-### M-1 · Dead panels shipped — **MEDIUM (cognitive + bundle)**
-- **Problem:** `ArchitectureMiniMap`, `IntelligenceFeed`, `NeuralArchitecturePanel`
-  are built but imported nowhere (component inventory vs `AppShell`/`Sidebar`).
+### M-1 · Dead panels shipped — **MEDIUM (cognitive + bundle)** — **RESOLVED (Iter 3)**
+- **Status:** `ArchitectureMiniMap`, `IntelligenceFeed`, `NeuralArchitecturePanel`
+  removed — each proven dead (0 imports/routes/tests/asset refs across the repo;
+  only the audit docs referenced them). Typecheck + build pass; no capability
+  lost. (Bundle bytes ~unchanged since unimported code was already tree-shaken;
+  the win is source-tree + maintenance simplification.)
+- **Problem (historical):** `ArchitectureMiniMap`, `IntelligenceFeed`,
+  `NeuralArchitecturePanel` were built but imported nowhere.
 - **Impact:** bundle weight; reviewer/operator confusion; maintenance drag.
 - **Recommendation:** remove or wire. (Deletion is a candidate iteration — it
   reduces cognitive load and bundle size with zero capability loss.)

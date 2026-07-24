@@ -5,8 +5,8 @@ services:
 - api-gateway
 incident_types:
 - timeout
-observation_count: 64
-confidence_avg: 90.91
+observation_count: 66
+confidence_avg: 90.79
 quality_avg: 0.7507
 evidence_signals:
 - check_golden_signals
@@ -41,4 +41,4 @@ receipt_ids:
 - INC_H7_20260719
 - INC_H7_20260720
 first_seen: 2026-05-31 20:36:47.113876+00:00
-last_seen: 2026-07-23 18:24:09.094955+00:00
+last_seen: 2026-07-24 01:30:07.247014+00:00

@@ -5,8 +5,8 @@ services:
 - order-service
 incident_types:
 - saturation
-observation_count: 32
-confidence_avg: 96.69
+observation_count: 33
+confidence_avg: 96.55
 quality_avg: 0.848
 evidence_signals:
 - check_golden_signals
@@ -41,4 +41,4 @@ receipt_ids:
 - INC12349_20260605
 - INC12349_20260704
 first_seen: 2026-05-31 20:37:52.678231+00:00
-last_seen: 2026-07-23 18:24:16.892666+00:00
+last_seen: 2026-07-24 01:30:19.891172+00:00

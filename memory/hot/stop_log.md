@@ -11853,3 +11853,165 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-23T18:29:17.915Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 6d00cd9 chore: update runtime-generated state (Phase 2 iter1 regression run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `6d00cd9 chore: update runtime-generated state (Phase 2 iter1 regression run)`
+- `ff5d402 feat(ux): persistent Investigation Summary header (Phase 2, Iteration 1)`
+- `a2ba5d9 docs(ux): Phase 2 UX audit + Investigation Workspace IA design (audit only)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-24T00:19:56.366Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 6d00cd9 chore: update runtime-generated state (Phase 2 iter1 regression run)
+
+### Files Changed vs HEAD
+- docs/ux/PHASE2_UX_AUDIT.md
+- eval/blast_radius_history.json
+- eval/cascade_tracker.json
+- eval/causal_graph.jsonl
+- eval/co_failure_index.json
+- eval/episodic_memory.jsonl
+- eval/investigations/inv-INC-DT_decisions.jsonl
+- eval/neural_confidence_calibrator.json
+- eval/pattern_registry.json
+- eval/recurrence_index.json
+- eval/retrieval_telemetry.jsonl
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+- sentinel_wiki/patterns/099952ef.yaml
+- sentinel_wiki/patterns/2b138bfb.yaml
+- sentinel_wiki/patterns/311ba17f.yaml
+- sentinel_wiki/patterns/35321fd4.yaml
+- sentinel_wiki/patterns/360f7487.yaml
+- sentinel_wiki/patterns/3b952ee1.yaml
+- sentinel_wiki/patterns/3f6b30ff.yaml
+- sentinel_wiki/patterns/4d9a765e.yaml
+- sentinel_wiki/patterns/53f449ad.yaml
+- sentinel_wiki/patterns/7259c8f6.yaml
+- sentinel_wiki/patterns/816f80ba.yaml
+- sentinel_wiki/patterns/9d460ed0.yaml
+- sentinel_wiki/patterns/a4c0864d.yaml
+- sentinel_wiki/patterns/ab499953.yaml
+- sentinel_wiki/patterns/b10a794a.yaml
+- sentinel_wiki/patterns/b6ddaaa5.yaml
+- sentinel_wiki/patterns/bffd30ef.yaml
+- sentinel_wiki/patterns/c511c65d.yaml
+- sentinel_wiki/patterns/c5448d15.yaml
+- sentinel_wiki/patterns/d119f2a9.yaml
+- sentinel_wiki/patterns/d1e91fc3.yaml
+- sentinel_wiki/patterns/e007163e.yaml
+- sentinel_wiki/patterns/f4fa214a.yaml
+- sentinel_wiki/patterns/f8716a51.yaml
+- ui/dist/assets/index-DD7hqNXJ.js
+- ui/dist/assets/index-Dl5peLRY.css
+- ui/dist/index.html
+- ui/src/components/layout/AppShell.tsx
+- ui/src/components/layout/Sidebar.tsx
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `6d00cd9 chore: update runtime-generated state (Phase 2 iter1 regression run)`
+- `ff5d402 feat(ux): persistent Investigation Summary header (Phase 2, Iteration 1)`
+- `a2ba5d9 docs(ux): Phase 2 UX audit + Investigation Workspace IA design (audit only)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-24T01:01:49.369Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 6d00cd9 chore: update runtime-generated state (Phase 2 iter1 regression run)
+
+### Files Changed vs HEAD
+- docs/ux/PHASE2_UX_AUDIT.md
+- eval/blast_radius_history.json
+- eval/cascade_tracker.json
+- eval/causal_graph.jsonl
+- eval/co_failure_index.json
+- eval/episodic_memory.jsonl
+- eval/investigations/inv-INC-DT_decisions.jsonl
+- eval/neural_confidence_calibrator.json
+- eval/pattern_registry.json
+- eval/recurrence_index.json
+- eval/retrieval_telemetry.jsonl
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+- sentinel_wiki/patterns/099952ef.yaml
+- sentinel_wiki/patterns/2b138bfb.yaml
+- sentinel_wiki/patterns/311ba17f.yaml
+- sentinel_wiki/patterns/35321fd4.yaml
+- sentinel_wiki/patterns/360f7487.yaml
+- sentinel_wiki/patterns/3b952ee1.yaml
+- sentinel_wiki/patterns/3f6b30ff.yaml
+- sentinel_wiki/patterns/4d9a765e.yaml
+- sentinel_wiki/patterns/53f449ad.yaml
+- sentinel_wiki/patterns/7259c8f6.yaml
+- sentinel_wiki/patterns/816f80ba.yaml
+- sentinel_wiki/patterns/9d460ed0.yaml
+- sentinel_wiki/patterns/a4c0864d.yaml
+- sentinel_wiki/patterns/ab499953.yaml
+- sentinel_wiki/patterns/b10a794a.yaml
+- sentinel_wiki/patterns/b6ddaaa5.yaml
+- sentinel_wiki/patterns/bffd30ef.yaml
+- sentinel_wiki/patterns/c511c65d.yaml
+- sentinel_wiki/patterns/c5448d15.yaml
+- sentinel_wiki/patterns/d119f2a9.yaml
+- sentinel_wiki/patterns/d1e91fc3.yaml
+- sentinel_wiki/patterns/e007163e.yaml
+- sentinel_wiki/patterns/f4fa214a.yaml
+- sentinel_wiki/patterns/f8716a51.yaml
+- ui/dist/assets/index-DD7hqNXJ.js
+- ui/dist/assets/index-Dl5peLRY.css
+- ui/dist/index.html
+- ui/src/components/layout/AppShell.tsx
+- ui/src/components/layout/Sidebar.tsx
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `6d00cd9 chore: update runtime-generated state (Phase 2 iter1 regression run)`
+- `ff5d402 feat(ux): persistent Investigation Summary header (Phase 2, Iteration 1)`
+- `a2ba5d9 docs(ux): Phase 2 UX audit + Investigation Workspace IA design (audit only)`
+
+### Tests Run
+yes (cache mtime: 2026-06-26T09:20:45.131Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

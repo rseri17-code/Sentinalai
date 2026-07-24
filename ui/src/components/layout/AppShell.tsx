@@ -67,12 +67,19 @@ function InvestigationView() {
   if (!investigationId) return null
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Persistent Investigation Summary (Phase 2) — answers the 5 operator
-          questions without opening a panel, from existing fields only. */}
-      <InvestigationSummary />
-      {/* Always-visible risk/confidence bar */}
-      <RiskConfidenceLayer />
+    // Progressive enhancement (H-4): stacked on laptop; on ultra-wide (2xl)
+    // the "understanding" column (Summary + risk/confidence) sits BESIDE the
+    // active panel so current understanding stays visible while drilling in.
+    // Below 2xl the 2xl:* classes are inert — laptop layout is unchanged.
+    <div className="flex flex-col h-full 2xl:flex-row">
+      {/* Understanding column: full-width top strip on laptop, left rail on 2xl */}
+      <div className="flex flex-col shrink-0 2xl:w-[22rem] 2xl:h-full 2xl:overflow-y-auto 2xl:border-r 2xl:border-slate-800">
+        {/* Persistent Investigation Summary (Phase 2) — answers the 5 operator
+            questions without opening a panel, from existing fields only. */}
+        <InvestigationSummary />
+        {/* Always-visible risk/confidence bar */}
+        <RiskConfidenceLayer />
+      </div>
 
       {/* Main content area — the tabpanel controlled by the Sidebar tablist (H-3) */}
       <div className="flex flex-1 overflow-hidden">

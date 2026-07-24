@@ -71,8 +71,14 @@ the operator must switch panels and hold prior context in working memory.
 - **Expected benefit:** keyboard-driven investigation (faster than mouse for
   power users); procurement compliance.
 
-### H-4 · No responsive / large-display adaptation — **MEDIUM**
-- **Problem:** 5 breakpoints total; layout is fixed `h-screen` flex.
+### H-4 · No responsive / large-display adaptation — **MEDIUM** — **RESOLVED (Iter 4)**
+- **Status:** progressive enhancement in `AppShell.InvestigationView` — at
+  ultra-wide (`2xl` ≥1536px) the understanding column (Summary + risk/confidence)
+  sits BESIDE the active panel (left rail, scrollable), so understanding stays
+  visible while drilling into any single panel. Below `2xl` every `2xl:*` class
+  is inert — the laptop layout is unchanged. Only one drill-down panel is ever
+  shown; no new store/API/state; no dashboard clutter.
+- **Problem (historical):** 5 breakpoints total; layout was fixed `h-screen` flex.
 - **Impact:** large OCC wall displays waste space (one panel) while the operator
   could see several; small/secondary screens break.
 - **Recommendation:** on wide viewports, allow the summary + one drill-down

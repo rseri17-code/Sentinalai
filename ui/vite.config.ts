@@ -25,6 +25,6 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false,   // do not ship a multi-MB source map to production
   },
 })

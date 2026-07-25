@@ -131,6 +131,16 @@ async def _dispatch_investigation(
             state.completed_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             state.root_cause = result.get("root_cause", "") if result else ""
             state.confidence = float(result.get("confidence", 0.0)) if result else 0.0
+            # Lift the R1/R2 operator-intelligence signals off the real result so
+            # Operational Intelligence can consume them (no engine re-run, no
+            # duplication). Absent signals stay absent — never fabricated.
+            if result:
+                cv = result.get("_corpus_version")
+                if cv:
+                    state.corpus_version = str(cv)
+                el = result.get("_evidence_lifecycle")
+                if isinstance(el, dict):
+                    state.evidence_lifecycle = el
             state.replay_available = True
             await store.put_state(state)
 

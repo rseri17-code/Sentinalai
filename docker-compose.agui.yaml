@@ -11,13 +11,19 @@ services:
     ports:
       - "8081:8081"
     environment:
-      # AG UI config
+      # AG UI config — secure by default; override explicitly for local dev.
       AGUI_BFF_PORT: "8081"
-      AGUI_AUTH_REQUIRED: "false"         # Set to true in production
-      AGUI_JWT_SECRET: "dev-secret-change-in-production"
-      AGUI_CORS_ORIGINS: "http://localhost:5173,http://localhost:3000"
+      AGUI_AUTH_REQUIRED: "${AGUI_AUTH_REQUIRED:-true}"   # auth ON by default
+      # No baked secret. Supply AGUI_JWT_SECRET from the environment; compose
+      # fails fast if it is unset rather than shipping a known dev secret.
+      AGUI_JWT_SECRET: "${AGUI_JWT_SECRET:?set AGUI_JWT_SECRET — no baked secret}"
+      AGUI_CORS_ORIGINS: "${AGUI_CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}"
       AGUI_ENABLED: "true"
       AGUI_DEV_RELOAD: "false"
+      # Explicit runtime data mode. 'stub' returns synthetic fixtures and must
+      # never be used in production; set AGENTCORE_GATEWAY_URL for real data.
+      GATEWAY_MODE: "${GATEWAY_MODE:-stub}"
+      AGENTCORE_GATEWAY_URL: "${AGENTCORE_GATEWAY_URL:-}"
 
       # Storage (optional — falls back to in-memory/local)
       AGUI_DYNAMODB_TABLE: "agui-state"

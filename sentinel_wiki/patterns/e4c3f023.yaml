@@ -5,12 +5,12 @@ services:
 - payment-service
 incident_types:
 - error_spike
-observation_count: 26
-confidence_avg: 93.77
+observation_count: 33
+confidence_avg: 92.55
 quality_avg: 0.815
 evidence_signals:
-- check_golden_signals
 - check_itsm_changes
+- check_golden_signals
 - check_events
 - search_error_logs
 - check_changes
@@ -19,12 +19,11 @@ evidence_signals:
 - gap_get_change_data
 - _evidence_lifecycle
 receipt_ids:
-- INC12347_20260626
-- INC12347_20260619
 - INC12347_20260703
 - INC12347_20260704
 - INC12347_20260609
 - INC12347_20260611
+- INC12347_20260724
 - INC12347_20260630
 - INC12347_20260605
 - INC12347_20260610
@@ -36,8 +35,9 @@ receipt_ids:
 - INC12347_20260711
 - INC12347_20260531
 - INC12347_20260708
+- INC12347_20260722
 - INC12347_20260629
 - INC12347_20260717
 - INC12347_20260627
 first_seen: 2026-05-31 20:37:52.382600+00:00
-last_seen: 2026-07-17 15:24:14.559837+00:00
+last_seen: 2026-07-24 11:24:47.256518+00:00

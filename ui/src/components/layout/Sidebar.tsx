@@ -1,7 +1,7 @@
 import React from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 import {
-  Activity, GitBranch, FileText, Brain, RotateCcw, Shield, AlertTriangle, BarChart2, Sparkles, Wrench, Share2
+  Activity, GitBranch, FileText, Brain, RotateCcw, Shield, AlertTriangle, BarChart2, Sparkles, Wrench, Share2, HeartPulse, Clock
 } from 'lucide-react'
 import { useInvestigationStore, useAuthStore } from '@/store/investigationStore'
 import type { ActivePanel } from '@/types'
@@ -14,6 +14,7 @@ const PANELS: { id: ActivePanel; label: string; icon: React.ReactNode; minRole: 
   { id: 'memory', label: 'Memory Trace', icon: <Brain size={16} />, minRole: 'viewer' },
   { id: 'reflection', label: 'Self-Awareness', icon: <Sparkles size={16} />, minRole: 'viewer' },
   { id: 'tools', label: 'Tool Inspector', icon: <Wrench size={16} />, minRole: 'viewer' },
+  { id: 'mtti', label: 'MTTI', icon: <Clock size={16} />, minRole: 'viewer' },
   { id: 'replay', label: 'Replay', icon: <RotateCcw size={16} />, minRole: 'operator' },
   { id: 'control', label: 'Control', icon: <Shield size={16} />, minRole: 'operator' },
 ]
@@ -22,6 +23,36 @@ export function Sidebar() {
   const { investigationId } = useParams<{ investigationId?: string }>()
   const { activePanel, setActivePanel, wsStatus, pendingApproval, harnessPhase } = useInvestigationStore()
   const { hasRole } = useAuthStore()
+
+  // Roving-tabindex refs for the investigation tablist (H-3 keyboard nav).
+  const tabRefs = React.useRef<Record<string, HTMLButtonElement | null>>({})
+
+  function onPanelKeyDown(e: React.KeyboardEvent<HTMLButtonElement>, currentId: ActivePanel) {
+    const ids = PANELS
+      .filter((p) => hasRole(p.minRole as 'viewer' | 'operator'))
+      .map((p) => p.id)
+    const idx = ids.indexOf(currentId)
+    if (idx < 0) return
+    let next = -1
+    switch (e.key) {
+      case 'ArrowDown':
+      case 'ArrowRight':
+        next = (idx + 1) % ids.length; break
+      case 'ArrowUp':
+      case 'ArrowLeft':
+        next = (idx - 1 + ids.length) % ids.length; break
+      case 'Home':
+        next = 0; break
+      case 'End':
+        next = ids.length - 1; break
+      default:
+        return
+    }
+    e.preventDefault()
+    const nextId = ids[next]
+    setActivePanel(nextId)
+    tabRefs.current[nextId]?.focus()
+  }
 
   const wsColor = {
     connected: 'bg-green-500',
@@ -79,6 +110,20 @@ export function Sidebar() {
           MTTR Dashboard
         </NavLink>
         <NavLink
+          to="/operational-health"
+          className={({ isActive }) =>
+            clsx(
+              'flex items-center gap-2 px-3 py-2 mx-1 rounded text-sm transition-colors',
+              isActive
+                ? 'bg-blue-900/40 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            )
+          }
+        >
+          <HeartPulse size={15} />
+          Operational Health
+        </NavLink>
+        <NavLink
           to="/graph"
           className={({ isActive }) =>
             clsx(
@@ -93,22 +138,37 @@ export function Sidebar() {
           Knowledge Graph
         </NavLink>
 
-        {/* Investigation panels — only shown when viewing an investigation */}
+        {/* Investigation panels — only shown when viewing an investigation.
+            WAI-ARIA vertical tablist: keyboard reachable, arrow/Home/End nav,
+            roving tabindex, aria-selected/controls, visible focus (H-3). */}
         {investigationId && (
-          <>
+          <div
+            role="tablist"
+            aria-label="Investigation panels"
+            aria-orientation="vertical"
+          >
             <div className="px-3 py-1.5 mt-3 text-xs text-slate-500 uppercase tracking-wider">
               Investigation
             </div>
             {PANELS.map((panel) => {
               const enabled = hasRole(panel.minRole as 'viewer' | 'operator')
+              const selected = activePanel === panel.id
               return (
                 <button
                   key={panel.id}
+                  ref={(el) => { tabRefs.current[panel.id] = el }}
+                  role="tab"
+                  id={`inv-tab-${panel.id}`}
+                  aria-selected={selected}
+                  aria-controls="inv-tabpanel"
+                  tabIndex={selected ? 0 : -1}
                   disabled={!enabled}
                   onClick={() => enabled && setActivePanel(panel.id)}
+                  onKeyDown={(e) => onPanelKeyDown(e, panel.id)}
                   className={clsx(
                     'w-full flex items-center gap-2 px-3 py-2 mx-1 rounded text-sm transition-colors text-left',
-                    activePanel === panel.id
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+                    selected
                       ? 'bg-blue-900/40 text-blue-400'
                       : enabled
                       ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
@@ -128,7 +188,7 @@ export function Sidebar() {
                 </button>
               )
             })}
-          </>
+          </div>
         )}
       </nav>
 

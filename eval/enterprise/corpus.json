@@ -1,0 +1,625 @@
+{
+  "corpus": [
+    {
+      "expected": {
+        "confidence_max": 90,
+        "confidence_min": 68,
+        "incident_class": "saturation",
+        "owner": "media-team",
+        "recommendation": "add S3 request-rate backoff + prefix sharding"
+      },
+      "task": {
+        "category": "cloud",
+        "difficulty": "single_cause",
+        "ground_truth": {
+          "decisive_evidence": [
+            "aws_cloudwatch"
+          ],
+          "necessary_evidence": [
+            "aws_cloudwatch",
+            "splunk_logs"
+          ],
+          "root_cause": "S3 request-rate throttling on media-service upload path",
+          "root_cause_keywords": [
+            "request rate",
+            "s3",
+            "throttling"
+          ],
+          "root_cause_service": "media-service"
+        },
+        "incident": {
+          "service": "media-service",
+          "severity": 2,
+          "summary": "upload failures"
+        },
+        "schema_version": 1,
+        "task_hash": "2a10ed53da571570",
+        "task_id": "ENT-AWS-001",
+        "telemetry": {
+          "aws_cloudwatch": {
+            "s3_5xx": 120,
+            "throttling": true
+          },
+          "cmdb_ci": {
+            "owner": "media-team",
+            "service": "media-service"
+          },
+          "splunk_logs": {
+            "errors": [
+              "SlowDown: reduce request rate"
+            ]
+          }
+        },
+        "telemetry_keys": [
+          "aws_cloudwatch",
+          "cmdb_ci",
+          "splunk_logs"
+        ],
+        "traps": {
+          "distractor_evidence": [],
+          "false_hypotheses": [
+            "disk full"
+          ]
+        }
+      }
+    },
+    {
+      "expected": {
+        "confidence_max": 85,
+        "confidence_min": 60,
+        "incident_class": "batch",
+        "owner": "treasury-team",
+        "recommendation": "add upstream-file dependency gate to SETTLE_EOD"
+      },
+      "task": {
+        "category": "batch",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "autosys_jobs"
+          ],
+          "necessary_evidence": [
+            "autosys_jobs",
+            "splunk_logs"
+          ],
+          "root_cause": "Autosys job SETTLE_EOD terminated on missing upstream file",
+          "root_cause_keywords": [
+            "autosys",
+            "job",
+            "terminated",
+            "upstream file"
+          ],
+          "root_cause_service": "settlement-batch"
+        },
+        "incident": {
+          "service": "settlement-batch",
+          "severity": 2,
+          "summary": "nightly settlement delayed"
+        },
+        "schema_version": 1,
+        "task_hash": "689cc59293674459",
+        "task_id": "ENT-BATCH-001",
+        "telemetry": {
+          "autosys_jobs": {
+            "exit": 1,
+            "job": "SETTLE_EOD",
+            "status": "TERMINATED"
+          },
+          "aws_cloudwatch": {
+            "s3_latency_ms": 40
+          },
+          "cmdb_ci": {
+            "owner": "treasury-team",
+            "service": "settlement-batch"
+          },
+          "splunk_logs": {
+            "errors": [
+              "upstream file not found"
+            ]
+          }
+        },
+        "telemetry_keys": [
+          "autosys_jobs",
+          "aws_cloudwatch",
+          "cmdb_ci",
+          "splunk_logs"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "aws_cloudwatch"
+          ],
+          "false_hypotheses": [
+            "s3 latency"
+          ]
+        }
+      }
+    },
+    {
+      "expected": {
+        "confidence_max": 86,
+        "confidence_min": 62,
+        "incident_class": "cascade",
+        "owner": "catalog-team",
+        "recommendation": "shed load + scale inventory-service DB pool"
+      },
+      "task": {
+        "category": "cascade",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "database_pool_metrics"
+          ],
+          "necessary_evidence": [
+            "database_pool_metrics",
+            "dynatrace_problems"
+          ],
+          "root_cause": "inventory-service DB saturation cascading to storefront",
+          "root_cause_keywords": [
+            "cascading",
+            "inventory",
+            "saturation"
+          ],
+          "root_cause_service": "inventory-service"
+        },
+        "incident": {
+          "service": "storefront",
+          "severity": 1,
+          "summary": "storefront degraded, multiple services alerting"
+        },
+        "schema_version": 1,
+        "task_hash": "24b712a588ee5775",
+        "task_id": "ENT-CASCADE-001",
+        "telemetry": {
+          "application_traces": {
+            "downstream": "cart",
+            "slow_span": "inventory.reserve"
+          },
+          "cmdb_ci": {
+            "owner": "catalog-team",
+            "service": "inventory-service"
+          },
+          "database_pool_metrics": {
+            "active": 199,
+            "max": 200
+          },
+          "dynatrace_problems": {
+            "entry": "inventory-service",
+            "problem": "cascading failure"
+          },
+          "splunk_logs": {
+            "errors": [
+              "inventory timeout",
+              "cart 503"
+            ]
+          },
+          "thousandeyes_probe": {
+            "ok": true
+          }
+        },
+        "telemetry_keys": [
+          "application_traces",
+          "cmdb_ci",
+          "database_pool_metrics",
+          "dynatrace_problems",
+          "splunk_logs",
+          "thousandeyes_probe"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "thousandeyes_probe"
+          ],
+          "false_hypotheses": [
+            "network",
+            "storefront bug"
+          ]
+        }
+      }
+    },
+    {
+      "expected": {
+        "confidence_max": 95,
+        "confidence_min": 70,
+        "incident_class": "saturation",
+        "owner": "payments-team",
+        "recommendation": "increase pool size / fix unclosed connections"
+      },
+      "task": {
+        "category": "database",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "database_pool_metrics"
+          ],
+          "necessary_evidence": [
+            "database_pool_metrics",
+            "splunk_logs"
+          ],
+          "root_cause": "database connection pool exhaustion in payment-service",
+          "root_cause_keywords": [
+            "connection pool",
+            "database",
+            "exhaustion"
+          ],
+          "root_cause_service": "payment-service"
+        },
+        "incident": {
+          "service": "payment-service",
+          "severity": 1,
+          "summary": "payment 5xx spike + latency"
+        },
+        "schema_version": 1,
+        "task_hash": "8194b592159c9732",
+        "task_id": "ENT-DB-001",
+        "telemetry": {
+          "cmdb_ci": {
+            "owner": "payments-team",
+            "service": "payment-service"
+          },
+          "database_pool_metrics": {
+            "active": 200,
+            "max": 200,
+            "wait_ms": 4200
+          },
+          "dynatrace_problems": {
+            "problem": "response time degradation"
+          },
+          "servicenow_incident": {
+            "number": "INC0012001",
+            "priority": 1
+          },
+          "splunk_logs": {
+            "errors": [
+              "HikariPool timeout",
+              "connection refused"
+            ]
+          },
+          "thousandeyes_probe": {
+            "ok": true
+          }
+        },
+        "telemetry_keys": [
+          "cmdb_ci",
+          "database_pool_metrics",
+          "dynatrace_problems",
+          "servicenow_incident",
+          "splunk_logs",
+          "thousandeyes_probe"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "thousandeyes_probe"
+          ],
+          "false_hypotheses": [
+            "bad deployment",
+            "network failure"
+          ]
+        }
+      }
+    },
+    {
+      "expected": {
+        "confidence_max": 92,
+        "confidence_min": 70,
+        "incident_class": "deploy",
+        "owner": "commerce-team",
+        "recommendation": "roll back checkout-service to v8.3"
+      },
+      "task": {
+        "category": "deploy",
+        "difficulty": "single_cause",
+        "ground_truth": {
+          "decisive_evidence": [
+            "servicenow_change"
+          ],
+          "necessary_evidence": [
+            "servicenow_change",
+            "splunk_logs"
+          ],
+          "root_cause": "regression introduced in checkout-service release v8.4",
+          "root_cause_keywords": [
+            "deployment",
+            "regression",
+            "release",
+            "v8.4"
+          ],
+          "root_cause_service": "checkout-service"
+        },
+        "incident": {
+          "service": "checkout-service",
+          "severity": 1,
+          "summary": "error rate jump after release"
+        },
+        "schema_version": 1,
+        "task_hash": "bf89e4e637b0243f",
+        "task_id": "ENT-DEPLOY-001",
+        "telemetry": {
+          "cmdb_ci": {
+            "owner": "commerce-team",
+            "service": "checkout-service"
+          },
+          "dynatrace_problems": {
+            "problem": "failure rate increase"
+          },
+          "kubernetes_events": {
+            "rollout": "v8.4 complete"
+          },
+          "servicenow_change": {
+            "change_id": "CHG0044021",
+            "release": "v8.4"
+          },
+          "splunk_logs": {
+            "errors": [
+              "NullPointerException in v8.4"
+            ]
+          }
+        },
+        "telemetry_keys": [
+          "cmdb_ci",
+          "dynatrace_problems",
+          "kubernetes_events",
+          "servicenow_change",
+          "splunk_logs"
+        ],
+        "traps": {
+          "distractor_evidence": [],
+          "false_hypotheses": [
+            "database exhaustion"
+          ]
+        }
+      }
+    },
+    {
+      "expected": {
+        "confidence_max": 95,
+        "confidence_min": 75,
+        "incident_class": "identity",
+        "owner": "identity-team",
+        "recommendation": "rotate signing key + automate expiry alert"
+      },
+      "task": {
+        "category": "identity",
+        "difficulty": "single_cause",
+        "ground_truth": {
+          "decisive_evidence": [
+            "identity_auth"
+          ],
+          "necessary_evidence": [
+            "identity_auth",
+            "splunk_logs"
+          ],
+          "root_cause": "expired token signing key in auth-service",
+          "root_cause_keywords": [
+            "expired",
+            "jwt",
+            "signing key",
+            "token"
+          ],
+          "root_cause_service": "auth-service"
+        },
+        "incident": {
+          "service": "auth-service",
+          "severity": 1,
+          "summary": "login failures estate-wide"
+        },
+        "schema_version": 1,
+        "task_hash": "1c93818d6dda0c7d",
+        "task_id": "ENT-IDENTITY-001",
+        "telemetry": {
+          "cmdb_ci": {
+            "owner": "identity-team",
+            "service": "auth-service"
+          },
+          "identity_auth": {
+            "error": "token signing key expired"
+          },
+          "servicenow_incident": {
+            "number": "INC0012044",
+            "priority": 1
+          },
+          "splunk_logs": {
+            "errors": [
+              "JWT validation failed"
+            ]
+          }
+        },
+        "telemetry_keys": [
+          "cmdb_ci",
+          "identity_auth",
+          "servicenow_incident",
+          "splunk_logs"
+        ],
+        "traps": {
+          "distractor_evidence": [],
+          "false_hypotheses": [
+            "network"
+          ]
+        }
+      }
+    },
+    {
+      "expected": {
+        "confidence_max": 88,
+        "confidence_min": 65,
+        "incident_class": "oomkill",
+        "owner": "fulfilment-team",
+        "recommendation": "raise memory limit + patch leak in v2.3.2"
+      },
+      "task": {
+        "category": "kubernetes",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "kubernetes_events"
+          ],
+          "necessary_evidence": [
+            "kubernetes_events",
+            "sysdig_events"
+          ],
+          "root_cause": "memory leak in order-processor causing OOMKill after v2.3.1",
+          "root_cause_keywords": [
+            "leak",
+            "memory",
+            "oomkill"
+          ],
+          "root_cause_service": "order-processor"
+        },
+        "incident": {
+          "service": "order-processor",
+          "severity": 2,
+          "summary": "pods restarting"
+        },
+        "schema_version": 1,
+        "task_hash": "e7aee507f51b1e7a",
+        "task_id": "ENT-K8S-001",
+        "telemetry": {
+          "cmdb_ci": {
+            "owner": "fulfilment-team",
+            "service": "order-processor"
+          },
+          "kubernetes_events": {
+            "count": 7,
+            "reason": "OOMKilled"
+          },
+          "servicenow_change": {
+            "change_id": "CHG0044099",
+            "release": "v2.3.1"
+          },
+          "splunk_logs": {
+            "errors": [
+              "heap OutOfMemory"
+            ]
+          },
+          "sysdig_events": {
+            "memory": "limit exceeded"
+          }
+        },
+        "telemetry_keys": [
+          "cmdb_ci",
+          "kubernetes_events",
+          "servicenow_change",
+          "splunk_logs",
+          "sysdig_events"
+        ],
+        "traps": {
+          "distractor_evidence": [],
+          "false_hypotheses": [
+            "node failure"
+          ]
+        }
+      }
+    },
+    {
+      "expected": {
+        "confidence_max": 90,
+        "confidence_min": 65,
+        "incident_class": "network",
+        "owner": "platform-team",
+        "recommendation": "engage network team on edge->core path"
+      },
+      "task": {
+        "category": "network",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "thousandeyes_probe"
+          ],
+          "necessary_evidence": [
+            "network_path",
+            "thousandeyes_probe"
+          ],
+          "root_cause": "network packet loss on edge->core path causing gateway 504s",
+          "root_cause_keywords": [
+            "504",
+            "network",
+            "packet loss",
+            "timeout"
+          ],
+          "root_cause_service": "api-gateway"
+        },
+        "incident": {
+          "service": "api-gateway",
+          "severity": 1,
+          "summary": "intermittent 504s"
+        },
+        "schema_version": 1,
+        "task_hash": "bf93513ab7cf6220",
+        "task_id": "ENT-NET-001",
+        "telemetry": {
+          "cmdb_ci": {
+            "owner": "platform-team",
+            "service": "api-gateway"
+          },
+          "database_pool_metrics": {
+            "active": 20,
+            "max": 200
+          },
+          "dynatrace_problems": {
+            "problem": "gateway timeout"
+          },
+          "network_path": {
+            "hop_loss": true
+          },
+          "splunk_logs": {
+            "errors": [
+              "upstream timeout 504"
+            ]
+          },
+          "thousandeyes_probe": {
+            "packet_loss": 0.18,
+            "path": "edge->core"
+          }
+        },
+        "telemetry_keys": [
+          "cmdb_ci",
+          "database_pool_metrics",
+          "dynatrace_problems",
+          "network_path",
+          "splunk_logs",
+          "thousandeyes_probe"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "database_pool_metrics"
+          ],
+          "false_hypotheses": [
+            "db exhaustion"
+          ]
+        }
+      }
+    }
+  ],
+  "kind": "synthetic_enterprise_validation_corpus",
+  "note": "SYNTHETIC validation data \u2014 not production data, not operator behavior, not benchmark results. Deterministic, content-addressed via the EIC benchmark.",
+  "schema_version": 1,
+  "tasks": 8,
+  "tool_sources_declared": [
+    "splunk",
+    "dynatrace",
+    "sysdig",
+    "servicenow",
+    "cmdb",
+    "kubernetes",
+    "aws",
+    "network",
+    "identity",
+    "application",
+    "database",
+    "autosys",
+    "thousandeyes"
+  ],
+  "tool_sources_exercised": [
+    "application",
+    "autosys",
+    "aws",
+    "cmdb",
+    "database",
+    "dynatrace",
+    "identity",
+    "kubernetes",
+    "network",
+    "servicenow",
+    "splunk",
+    "sysdig",
+    "thousandeyes"
+  ]
+}

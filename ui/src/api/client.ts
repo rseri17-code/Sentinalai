@@ -286,4 +286,67 @@ export const transparencyApi = {
   },
 }
 
+// ── Operational Health (OIP convergence) ────────────────────────────────────
+
+export interface ServiceHealth {
+  service: string
+  health_score: number
+  health_band: 'healthy' | 'watch' | 'at_risk'
+  incidents: number
+  why: string
+  confidence: number
+  verifiable: boolean
+  evidence: { used: number; unavailable: number; completeness: number }
+  next_action: string
+}
+
+export interface OperationalHealthResponse {
+  services_evaluated: number
+  investigations: number
+  estate_health_score: number | null
+  band_counts: Record<string, number>
+  attention_order: string[]
+  services: Record<string, ServiceHealth>
+  drilldown: Record<string, string>
+  signal_coverage: {
+    investigations: number
+    with_corpus_version: number
+    with_evidence_lifecycle: number
+    with_validation_signals: number
+    deferred_signals: string[]
+    note: string
+  }
+}
+
+export const operationalHealthApi = {
+  get: async () => {
+    const res = await api.get('/api/v1/operational-health')
+    return res.data as OperationalHealthResponse
+  },
+}
+
+// ── MTTI (decision-acceleration timing) ─────────────────────────────────────
+
+export interface MttiResponse {
+  investigation_id: string
+  milestones: Record<string, number | null>
+  segments_ms: {
+    time_to_first_evidence_ms: number | null
+    time_to_root_cause_ms: number | null
+    time_to_owner_ms: number | null
+    time_to_recommendation_ms: number | null
+    total_ms: number | null
+  }
+  actionable: boolean
+  events_observed: number
+  note: string
+}
+
+export const mttiApi = {
+  forInvestigation: async (investigationId: string) => {
+    const res = await api.get(`/api/v1/investigations/${investigationId}/mtti`)
+    return res.data as MttiResponse
+  },
+}
+
 export default api

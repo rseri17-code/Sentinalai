@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 COPY requirements.txt* requirements-agentcore.txt* ./
 RUN pip install --no-cache-dir -r requirements-agentcore.txt 2>/dev/null || pip install --no-cache-dir fastapi uvicorn pydantic PyYAML
 
+COPY sentinel_core/ sentinel_core/
 COPY supervisor/ supervisor/
 COPY workers/ workers/
 COPY agui/ agui/

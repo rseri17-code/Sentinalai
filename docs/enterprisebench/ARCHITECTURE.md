@@ -214,6 +214,77 @@ ground-truth / evaluation / regression / reporting frameworks **designed** ✅ �
 documentation (this) ✅ · phased implementation plan ✅. **Implementation: not
 started** (awaiting review, per the execution strategy).
 
+## 9a. EB-0 — Baseline Evaluation Runner (IMPLEMENTED)
+
+The first executable slice. Package `enterprisebench/` — additive, offline,
+deterministic; treats SentinelAI as the system under test (no engine/replay/
+evidence/confidence/planner change).
+
+**Pipeline:** Corpus Discovery → Schema Validation → Scenario Loading →
+Investigation Execution (pluggable) → Ground-Truth Evaluation (REUSE
+`eic.score_submission`) → scorer-determinism check → Scenario Report → Aggregate
+(`eic.leaderboard`) → Baseline Comparison → Exit decision.
+
+**Missing-contract note (documented, not faked):** the enterprise corpus
+telemetry is **not** wired into the live investigation engine — nothing feeds it
+into `workers/mcp_client`. That injection is **EB-2 (`BenchMCPSource`)**, not
+built. Therefore EB-0's *investigation execution* is a pluggable
+`SubmissionProvider`: the default (`no_engine_provider`) returns `None`, so each
+scenario is honestly `NOT_MEASURED`; a `file_provider({task_id: submission})`
+supplies neutral submissions (how a future EB-2/engine run — or a test — feeds
+results). EB-0 **never fabricates an investigation**. Engine *replay* validation
+is likewise deferred to EB-2 (`replay_status: NOT_MEASURED` with reason);
+EB-0 validates *scorer* determinism (score twice → byte-identical).
+
+**Outcomes:** `PASS | FAIL | SKIPPED | UNSUPPORTED | NOT_MEASURED | ERROR`
+(never collapsed). **Exit codes:** `0` ok · `1` regression · `2` invalid
+corpus/config · `3` execution error.
+
+**Corpus contract:** hard-rejects (exit 2) duplicate ids, missing ground-truth
+root cause, malformed `necessary_evidence`, invalid confidence bounds,
+unsupported corpus schema; per-scenario task-schema mismatch → `UNSUPPORTED`.
+Deterministic ordering (by `task_id`); order-independent `corpus_hash`. No
+coercion, no fabricated fields.
+
+**Evaluation contract:** composes the EIC scorer (10 dimensions, each raw + a
+`measured`/`NOT_MEASURED` state) — no scoring formula re-implemented; operator-
+facing checks reuse `eval.enterprise.validate.check_expected`. No placeholder
+numerics. No claim of real operator trust / adoption / human-MTTI / production
+effectiveness — those stay `NOT_MEASURED`.
+
+**Reporting:** deterministic `enterprisebench_report.json`,
+`scenario_results.jsonl`, `baseline_summary.json` (+ optional `.md`). A
+`content_hash` covers all but the documented volatile fields
+(`run_timestamp`, `runtime_ms`, `commit`); no machine-specific absolute paths.
+
+**Baseline contract:** explicit deterministic thresholds only (default composite
+drop > 0.02); detects pass→fail, score degradation, determinism regression,
+replay-status change, newly-unsupported, missing scenarios, scorer/corpus change.
+**No auto-update** — a baseline is only written by `baseline create`.
+
+**CLI (stdlib argparse, no new dependency):**
+```
+python -m enterprisebench run [--scenario ID] [--subset a,b] [--submissions PATH]
+    [--out DIR] [--markdown] [--baseline PATH] [--fail-on-regression]
+python -m enterprisebench baseline create --output PATH [--submissions PATH]
+```
+
+**CI:** offline, pytest-invocable; `tests/enterprisebench/test_eb0.py` (21) runs
+the fast path per commit. The full-corpus lane (once EB-2 supplies engine
+submissions) is scheduled/explicit — EB-0 makes **no** per-commit full-corpus
+coverage claim.
+
+**Tests (21):** deterministic ordering, duplicate/malformed/unsupported
+rejection, scorer composition, NOT_MEASURED preservation, deterministic report
+serialization, repeated-run equivalence (content-hash equal), baseline
+comparison + regression exit code, explicit baseline creation, **no automatic
+baseline mutation**, scenario filtering, offline default-corpus run.
+
+**Known limitations:** engine execution + engine replay against the corpus are
+deferred to EB-2; without supplied submissions every scenario is `NOT_MEASURED`
+(by design); statistical-significance gating is deferred (explicit thresholds
+only).
+
 ## 10. Recommendation
 
 Proceed to **EB-0** first (evaluation runner over the existing EIC scorer +

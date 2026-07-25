@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "taxonomy": {
+    "api_gateway": [
+      "gateway_5xx",
+      "istio_mtls_failure",
+      "rate_limit_saturation"
+    ],
+    "application_runtime": [
+      "deadlock",
+      "gc_pause",
+      "memory_leak",
+      "thread_pool_exhaustion"
+    ],
+    "batch": [
+      "autosys_dependency_failure",
+      "job_timeout"
+    ],
+    "certificates": [
+      "certificate_expiry",
+      "chain_incomplete"
+    ],
+    "cloud_aws": [
+      "regional_impairment",
+      "s3_request_throttling",
+      "security_group_misconfig"
+    ],
+    "database": [
+      "connection_pool_exhaustion",
+      "deadlock",
+      "disk_full",
+      "replica_lag",
+      "slow_query"
+    ],
+    "deployment": [
+      "bad_rollout",
+      "config_drift",
+      "regression"
+    ],
+    "dns": [
+      "resolution_failure",
+      "stale_record"
+    ],
+    "identity": [
+      "iam_permission_denied",
+      "ldap_outage",
+      "oauth_misconfig",
+      "token_signing_key_expiry"
+    ],
+    "kubernetes": [
+      "crashloopbackoff",
+      "imagepullbackoff",
+      "node_pressure_eviction",
+      "oomkilled",
+      "readiness_probe_failure"
+    ],
+    "messaging": [
+      "kafka_consumer_lag",
+      "rabbitmq_queue_backup",
+      "redis_eviction"
+    ],
+    "networking": [
+      "mtu_blackhole",
+      "network_partition",
+      "packet_loss"
+    ],
+    "observability": [
+      "alert_storm",
+      "metrics_gap"
+    ],
+    "storage": [
+      "iops_throttle",
+      "volume_full"
+    ]
+  }
+}

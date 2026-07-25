@@ -1,0 +1,2085 @@
+{
+  "corpus": [
+    {
+      "efic": {
+        "business_impact": "media upload failures",
+        "contributing_factors": [
+          "hot key prefix; no request-rate sharding"
+        ],
+        "difficulty": "competing_hypotheses",
+        "expected_confidence_range": [
+          68,
+          90
+        ],
+        "expected_owner": "media-team",
+        "expected_recommendation": "shard S3 key prefixes; add request-rate backoff",
+        "failure_family": "cloud_aws",
+        "failure_mode": "s3_request_throttling",
+        "hypotheses_considered": [
+          "s3 throttling",
+          "disk full",
+          "network"
+        ],
+        "hypotheses_eliminated": [
+          "disk full (disk normal)",
+          "network (S3-specific errors)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "required",
+          "certificates": "not_applicable",
+          "cmdb": "not_applicable",
+          "database": "not_applicable",
+          "dynatrace": "not_applicable",
+          "identity": "not_applicable",
+          "kubernetes": "not_applicable",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "not_applicable",
+          "splunk": "required",
+          "sysdig": "not_applicable",
+          "thousandeyes": "not_applicable"
+        },
+        "negative_evidence": [
+          "node disk usage normal \u2014 rules out disk full"
+        ],
+        "reasoning_category": "cloud_service_limit",
+        "red_herrings": [
+          "a disk-usage alert on a sibling host"
+        ],
+        "replay_seed": "644af958cd0a1711",
+        "scenario_id": "EFIC-AWS-S3-001",
+        "title": "Upload failures from S3 request throttling"
+      },
+      "expected": {
+        "confidence_max": 90,
+        "confidence_min": 68,
+        "incident_class": "cloud_aws",
+        "owner": "media-team",
+        "recommendation": "shard S3 key prefixes; add request-rate backoff"
+      },
+      "task": {
+        "category": "cloud_aws",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "aws_cloudwatch"
+          ],
+          "necessary_evidence": [
+            "aws_cloudwatch",
+            "splunk"
+          ],
+          "root_cause": "S3 request-rate throttling on the media upload prefix",
+          "root_cause_keywords": [
+            "request rate",
+            "s3",
+            "slowdown",
+            "throttling"
+          ],
+          "root_cause_service": "media-service"
+        },
+        "incident": {
+          "service": "media-service",
+          "severity": 2,
+          "summary": "media uploads failing intermittently"
+        },
+        "schema_version": 1,
+        "task_hash": "644af958cd0a1711",
+        "task_id": "EFIC-AWS-S3-001",
+        "telemetry": {
+          "aws_cloudwatch": {
+            "s3_503_slowdown": 130,
+            "throttled": true
+          },
+          "splunk": {
+            "errors": [
+              "SlowDown: reduce request rate"
+            ]
+          }
+        },
+        "telemetry_keys": [
+          "aws_cloudwatch",
+          "splunk"
+        ],
+        "traps": {
+          "distractor_evidence": [],
+          "false_hypotheses": [
+            "disk full",
+            "network"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "delayed financial settlement",
+        "contributing_factors": [
+          "upstream extract job slipped its SLA"
+        ],
+        "difficulty": "competing_hypotheses",
+        "expected_confidence_range": [
+          62,
+          85
+        ],
+        "expected_owner": "treasury-team",
+        "expected_recommendation": "add upstream-file dependency gate + SLA alert to SETTLE_EOD",
+        "failure_family": "batch",
+        "failure_mode": "autosys_dependency_failure",
+        "hypotheses_considered": [
+          "autosys dependency",
+          "s3 latency",
+          "db"
+        ],
+        "hypotheses_eliminated": [
+          "s3 latency (normal)",
+          "db (job never reached DB stage)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "required",
+          "aws_cloudwatch": "expected_empty",
+          "certificates": "not_applicable",
+          "cmdb": "not_applicable",
+          "database": "not_applicable",
+          "dynatrace": "not_applicable",
+          "identity": "not_applicable",
+          "kubernetes": "not_applicable",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "not_applicable",
+          "splunk": "required",
+          "sysdig": "not_applicable",
+          "thousandeyes": "not_applicable"
+        },
+        "negative_evidence": [
+          "S3 latency normal \u2014 rules out s3 slowness"
+        ],
+        "reasoning_category": "batch_dependency_chain",
+        "red_herrings": [
+          "a benign S3 latency metric"
+        ],
+        "replay_seed": "6f77739025b4bf69",
+        "scenario_id": "EFIC-BATCH-AUTOSYS-001",
+        "title": "Settlement delayed by Autosys dependency failure"
+      },
+      "expected": {
+        "confidence_max": 85,
+        "confidence_min": 62,
+        "incident_class": "batch",
+        "owner": "treasury-team",
+        "recommendation": "add upstream-file dependency gate + SLA alert to SETTLE_EOD"
+      },
+      "task": {
+        "category": "batch",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "autosys"
+          ],
+          "necessary_evidence": [
+            "autosys",
+            "splunk"
+          ],
+          "root_cause": "Autosys job SETTLE_EOD terminated on a missing upstream file dependency",
+          "root_cause_keywords": [
+            "autosys",
+            "job",
+            "terminated",
+            "upstream file"
+          ],
+          "root_cause_service": "settlement-batch"
+        },
+        "incident": {
+          "service": "settlement-batch",
+          "severity": 2,
+          "summary": "nightly settlement did not run"
+        },
+        "schema_version": 1,
+        "task_hash": "6f77739025b4bf69",
+        "task_id": "EFIC-BATCH-AUTOSYS-001",
+        "telemetry": {
+          "autosys": {
+            "exit": 1,
+            "job": "SETTLE_EOD",
+            "status": "TERMINATED"
+          },
+          "aws_cloudwatch": {
+            "s3_latency_ms": 40
+          },
+          "splunk": {
+            "errors": [
+              "upstream file not found"
+            ]
+          }
+        },
+        "telemetry_keys": [
+          "autosys",
+          "aws_cloudwatch",
+          "splunk"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "aws_cloudwatch"
+          ],
+          "false_hypotheses": [
+            "db",
+            "s3 latency"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "storefront degraded for all shoppers",
+        "contributing_factors": [
+          "no bulkhead between inventory and storefront"
+        ],
+        "difficulty": "competing_hypotheses",
+        "expected_confidence_range": [
+          60,
+          86
+        ],
+        "expected_owner": "catalog-team",
+        "expected_recommendation": "shed load + scale inventory DB pool; add bulkhead",
+        "failure_family": "database",
+        "failure_mode": "connection_pool_exhaustion",
+        "hypotheses_considered": [
+          "inventory saturation",
+          "network",
+          "storefront bug"
+        ],
+        "hypotheses_eliminated": [
+          "network (TE green)",
+          "storefront bug (no change; upstream slow)"
+        ],
+        "mcp_utilization": {
+          "application": "optional",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "not_applicable",
+          "certificates": "not_applicable",
+          "cmdb": "not_applicable",
+          "database": "required",
+          "dynatrace": "required",
+          "identity": "not_applicable",
+          "kubernetes": "not_applicable",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "not_applicable",
+          "splunk": "optional",
+          "sysdig": "not_applicable",
+          "thousandeyes": "expected_empty"
+        },
+        "negative_evidence": [
+          "storefront code unchanged \u2014 weakens 'storefront bug'"
+        ],
+        "reasoning_category": "cascade_localization",
+        "red_herrings": [
+          "storefront is where the symptom surfaces, not the cause"
+        ],
+        "replay_seed": "a68e67003554e0e3",
+        "scenario_id": "EFIC-CASCADE-001",
+        "title": "Storefront degraded by inventory DB saturation cascade"
+      },
+      "expected": {
+        "confidence_max": 86,
+        "confidence_min": 60,
+        "incident_class": "database",
+        "owner": "catalog-team",
+        "recommendation": "shed load + scale inventory DB pool; add bulkhead"
+      },
+      "task": {
+        "category": "database",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "database"
+          ],
+          "necessary_evidence": [
+            "database",
+            "dynatrace"
+          ],
+          "root_cause": "inventory-service DB saturation cascading to storefront",
+          "root_cause_keywords": [
+            "cascading",
+            "inventory",
+            "saturation"
+          ],
+          "root_cause_service": "inventory-service"
+        },
+        "incident": {
+          "service": "storefront",
+          "severity": 1,
+          "summary": "storefront degraded, multiple services alerting"
+        },
+        "schema_version": 1,
+        "task_hash": "a68e67003554e0e3",
+        "task_id": "EFIC-CASCADE-001",
+        "telemetry": {
+          "application": {
+            "downstream": "cart",
+            "slow_span": "inventory.reserve"
+          },
+          "database": {
+            "active": 199,
+            "max": 200
+          },
+          "dynatrace": {
+            "entry": "inventory-service",
+            "problem": "cascading failure"
+          },
+          "splunk": {
+            "errors": [
+              "inventory timeout",
+              "cart 503"
+            ]
+          },
+          "thousandeyes": {
+            "ok": true
+          }
+        },
+        "telemetry_keys": [
+          "application",
+          "database",
+          "dynatrace",
+          "splunk",
+          "thousandeyes"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "thousandeyes"
+          ],
+          "false_hypotheses": [
+            "network",
+            "storefront bug"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "billing clients cannot connect",
+        "contributing_factors": [
+          "cert auto-renewal job silently failed"
+        ],
+        "difficulty": "single_cause",
+        "expected_confidence_range": [
+          78,
+          95
+        ],
+        "expected_owner": "platform-team",
+        "expected_recommendation": "rotate certificate; fix renewal automation + alert",
+        "failure_family": "certificates",
+        "failure_mode": "certificate_expiry",
+        "hypotheses_considered": [
+          "cert expiry",
+          "network",
+          "lb misconfig"
+        ],
+        "hypotheses_eliminated": [
+          "network (reachable, TLS-only failure)",
+          "lb (config stable)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "not_applicable",
+          "certificates": "required",
+          "cmdb": "not_applicable",
+          "database": "not_applicable",
+          "dynatrace": "not_applicable",
+          "identity": "not_applicable",
+          "kubernetes": "not_applicable",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "not_applicable",
+          "splunk": "required",
+          "sysdig": "not_applicable",
+          "thousandeyes": "optional"
+        },
+        "negative_evidence": [
+          "routing/LB config unchanged \u2014 rules out lb misconfig"
+        ],
+        "reasoning_category": "lifecycle_expiry",
+        "red_herrings": [
+          "a recent LB config touch that is unrelated"
+        ],
+        "replay_seed": "b0d1e71aaacc5564",
+        "scenario_id": "EFIC-CERT-001",
+        "title": "TLS handshake failures on cert expiry"
+      },
+      "expected": {
+        "confidence_max": 95,
+        "confidence_min": 78,
+        "incident_class": "certificates",
+        "owner": "platform-team",
+        "recommendation": "rotate certificate; fix renewal automation + alert"
+      },
+      "task": {
+        "category": "certificates",
+        "difficulty": "single_cause",
+        "ground_truth": {
+          "decisive_evidence": [
+            "certificates"
+          ],
+          "necessary_evidence": [
+            "certificates",
+            "splunk"
+          ],
+          "root_cause": "expired TLS certificate on billing-gateway",
+          "root_cause_keywords": [
+            "certificate",
+            "expired",
+            "handshake",
+            "tls"
+          ],
+          "root_cause_service": "billing-gateway"
+        },
+        "incident": {
+          "service": "billing-gateway",
+          "severity": 1,
+          "summary": "clients cannot establish TLS to billing"
+        },
+        "schema_version": 1,
+        "task_hash": "b0d1e71aaacc5564",
+        "task_id": "EFIC-CERT-001",
+        "telemetry": {
+          "certificates": {
+            "cn": "billing-gateway",
+            "status": "expired"
+          },
+          "splunk": {
+            "errors": [
+              "tls handshake failure: certificate expired"
+            ]
+          },
+          "thousandeyes": {
+            "tls_error": true
+          }
+        },
+        "telemetry_keys": [
+          "certificates",
+          "splunk",
+          "thousandeyes"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "thousandeyes"
+          ],
+          "false_hypotheses": [
+            "lb misconfig",
+            "network"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "degraded search for a fraction of traffic",
+        "contributing_factors": [
+          "autoscaler used a stale launch template"
+        ],
+        "difficulty": "competing_hypotheses",
+        "expected_confidence_range": [
+          64,
+          86
+        ],
+        "expected_owner": "search-team",
+        "expected_recommendation": "reconcile launch template; enforce config parity check",
+        "failure_family": "deployment",
+        "failure_mode": "config_drift",
+        "hypotheses_considered": [
+          "config drift",
+          "bad deploy",
+          "network"
+        ],
+        "hypotheses_eliminated": [
+          "bad deploy (old nodes healthy)",
+          "network (node-local errors)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "not_applicable",
+          "certificates": "not_applicable",
+          "cmdb": "required",
+          "database": "not_applicable",
+          "dynatrace": "not_applicable",
+          "identity": "not_applicable",
+          "kubernetes": "not_applicable",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "not_applicable",
+          "splunk": "required",
+          "sysdig": "not_applicable",
+          "thousandeyes": "expected_empty"
+        },
+        "negative_evidence": [
+          "only new nodes affected \u2014 weakens 'bad deploy' (all would fail)"
+        ],
+        "reasoning_category": "partial_fleet_inconsistency",
+        "red_herrings": [
+          "a recent deploy that actually succeeded"
+        ],
+        "replay_seed": "613f58ad75254ca1",
+        "scenario_id": "EFIC-CONFIG-DRIFT-001",
+        "title": "Partial outage from config drift after scale-out"
+      },
+      "expected": {
+        "confidence_max": 86,
+        "confidence_min": 64,
+        "incident_class": "deployment",
+        "owner": "search-team",
+        "recommendation": "reconcile launch template; enforce config parity check"
+      },
+      "task": {
+        "category": "deployment",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "cmdb"
+          ],
+          "necessary_evidence": [
+            "cmdb",
+            "splunk"
+          ],
+          "root_cause": "new search-service nodes came up with drifted (old) config",
+          "root_cause_keywords": [
+            "config",
+            "drift",
+            "inconsistent",
+            "nodes"
+          ],
+          "root_cause_service": "search-service"
+        },
+        "incident": {
+          "service": "search-service",
+          "severity": 2,
+          "summary": "a subset of search nodes return errors"
+        },
+        "schema_version": 1,
+        "task_hash": "613f58ad75254ca1",
+        "task_id": "EFIC-CONFIG-DRIFT-001",
+        "telemetry": {
+          "cmdb": {
+            "config_version": {
+              "nodeA": "v3",
+              "nodeB": "v2"
+            }
+          },
+          "splunk": {
+            "errors": [
+              "only some nodes: invalid index config"
+            ]
+          },
+          "thousandeyes": {
+            "ok": true
+          }
+        },
+        "telemetry_keys": [
+          "cmdb",
+          "splunk",
+          "thousandeyes"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "thousandeyes"
+          ],
+          "false_hypotheses": [
+            "bad deploy",
+            "network"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "order write failures",
+        "contributing_factors": [
+          "new code path acquires locks in reverse order"
+        ],
+        "difficulty": "competing_hypotheses",
+        "expected_confidence_range": [
+          68,
+          88
+        ],
+        "expected_owner": "commerce-team",
+        "expected_recommendation": "normalize lock acquisition order; add retry",
+        "failure_family": "database",
+        "failure_mode": "deadlock",
+        "hypotheses_considered": [
+          "deadlock",
+          "pool exhaustion",
+          "slow query"
+        ],
+        "hypotheses_eliminated": [
+          "pool exhaustion (pool healthy)",
+          "slow query (unrelated)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "not_applicable",
+          "certificates": "not_applicable",
+          "cmdb": "not_applicable",
+          "database": "required",
+          "dynatrace": "optional",
+          "identity": "not_applicable",
+          "kubernetes": "not_applicable",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "not_applicable",
+          "splunk": "required",
+          "sysdig": "not_applicable",
+          "thousandeyes": "not_applicable"
+        },
+        "negative_evidence": [
+          "pool utilization normal \u2014 rules out pool exhaustion"
+        ],
+        "reasoning_category": "concurrency_correctness",
+        "red_herrings": [
+          "a slow query on an unrelated report"
+        ],
+        "replay_seed": "c95b97887c0aad0f",
+        "scenario_id": "EFIC-DB-DEADLOCK-001",
+        "title": "Order writes failing on DB deadlock"
+      },
+      "expected": {
+        "confidence_max": 88,
+        "confidence_min": 68,
+        "incident_class": "database",
+        "owner": "commerce-team",
+        "recommendation": "normalize lock acquisition order; add retry"
+      },
+      "task": {
+        "category": "database",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "database"
+          ],
+          "necessary_evidence": [
+            "database",
+            "splunk"
+          ],
+          "root_cause": "lock-order inversion causing database deadlocks in order-service",
+          "root_cause_keywords": [
+            "database",
+            "deadlock",
+            "lock"
+          ],
+          "root_cause_service": "order-service"
+        },
+        "incident": {
+          "service": "order-service",
+          "severity": 2,
+          "summary": "intermittent order write failures"
+        },
+        "schema_version": 1,
+        "task_hash": "c95b97887c0aad0f",
+        "task_id": "EFIC-DB-DEADLOCK-001",
+        "telemetry": {
+          "database": {
+            "deadlocks": 37,
+            "victim": "order_txn"
+          },
+          "dynatrace": {
+            "problem": "failure rate spike"
+          },
+          "splunk": {
+            "errors": [
+              "deadlock victim; transaction rolled back"
+            ]
+          }
+        },
+        "telemetry_keys": [
+          "database",
+          "dynatrace",
+          "splunk"
+        ],
+        "traps": {
+          "distractor_evidence": [],
+          "false_hypotheses": [
+            "pool exhaustion",
+            "slow query"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "checkout degraded at peak",
+        "contributing_factors": [
+          "traffic surge exposed a connection leak"
+        ],
+        "difficulty": "competing_hypotheses",
+        "expected_confidence_range": [
+          70,
+          90
+        ],
+        "expected_owner": "commerce-team",
+        "expected_recommendation": "fix connection leak; size pool to load",
+        "failure_family": "database",
+        "failure_mode": "connection_pool_exhaustion",
+        "hypotheses_considered": [
+          "pool exhaustion",
+          "network",
+          "bad deployment"
+        ],
+        "hypotheses_eliminated": [
+          "network (TE green)",
+          "deployment (no change window)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "not_applicable",
+          "certificates": "not_applicable",
+          "cmdb": "not_applicable",
+          "database": "required",
+          "dynatrace": "optional",
+          "identity": "not_applicable",
+          "kubernetes": "not_applicable",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "optional",
+          "splunk": "required",
+          "sysdig": "not_applicable",
+          "thousandeyes": "expected_empty"
+        },
+        "negative_evidence": [
+          "no recent deploy \u2014 weakens 'bad deployment'"
+        ],
+        "reasoning_category": "resource_saturation_leak",
+        "red_herrings": [
+          "dynatrace flags latency without a cause"
+        ],
+        "replay_seed": "3ef8e27bb3ea938c",
+        "scenario_id": "EFIC-DB-POOL-001",
+        "title": "Checkout DB pool exhaustion under load"
+      },
+      "expected": {
+        "confidence_max": 90,
+        "confidence_min": 70,
+        "incident_class": "database",
+        "owner": "commerce-team",
+        "recommendation": "fix connection leak; size pool to load"
+      },
+      "task": {
+        "category": "database",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "database"
+          ],
+          "necessary_evidence": [
+            "database",
+            "splunk"
+          ],
+          "root_cause": "database connection pool exhaustion from unclosed connections",
+          "root_cause_keywords": [
+            "connection pool",
+            "database",
+            "exhaustion"
+          ],
+          "root_cause_service": "checkout-service"
+        },
+        "incident": {
+          "service": "checkout-service",
+          "severity": 1,
+          "summary": "checkout latency + 5xx spike"
+        },
+        "schema_version": 1,
+        "task_hash": "3ef8e27bb3ea938c",
+        "task_id": "EFIC-DB-POOL-001",
+        "telemetry": {
+          "database": {
+            "active": 200,
+            "max": 200,
+            "wait_ms": 4200
+          },
+          "dynatrace": {
+            "problem": "response time degradation"
+          },
+          "splunk": {
+            "errors": [
+              "HikariPool timeout"
+            ]
+          },
+          "thousandeyes": {
+            "ok": true
+          }
+        },
+        "telemetry_keys": [
+          "database",
+          "dynatrace",
+          "splunk",
+          "thousandeyes"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "thousandeyes"
+          ],
+          "false_hypotheses": [
+            "bad deployment",
+            "network"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "checkout error spike",
+        "contributing_factors": [
+          "insufficient pre-prod coverage for the changed path"
+        ],
+        "difficulty": "single_cause",
+        "expected_confidence_range": [
+          74,
+          92
+        ],
+        "expected_owner": "commerce-team",
+        "expected_recommendation": "roll back checkout-service to v8.3",
+        "failure_family": "deployment",
+        "failure_mode": "regression",
+        "hypotheses_considered": [
+          "release regression",
+          "db exhaustion",
+          "network"
+        ],
+        "hypotheses_eliminated": [
+          "db exhaustion (pool healthy)",
+          "network (internal error)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "not_applicable",
+          "certificates": "not_applicable",
+          "cmdb": "not_applicable",
+          "database": "not_applicable",
+          "dynatrace": "optional",
+          "identity": "not_applicable",
+          "kubernetes": "not_applicable",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "required",
+          "splunk": "required",
+          "sysdig": "not_applicable",
+          "thousandeyes": "not_applicable"
+        },
+        "negative_evidence": [
+          "DB pool healthy \u2014 rules out db exhaustion"
+        ],
+        "reasoning_category": "change_correlation_temporal",
+        "red_herrings": [
+          "a routine DB failover minutes earlier"
+        ],
+        "replay_seed": "3f165f8065f2757b",
+        "scenario_id": "EFIC-DEPLOY-001",
+        "title": "Error spike from checkout release regression"
+      },
+      "expected": {
+        "confidence_max": 92,
+        "confidence_min": 74,
+        "incident_class": "deployment",
+        "owner": "commerce-team",
+        "recommendation": "roll back checkout-service to v8.3"
+      },
+      "task": {
+        "category": "deployment",
+        "difficulty": "single_cause",
+        "ground_truth": {
+          "decisive_evidence": [
+            "servicenow"
+          ],
+          "necessary_evidence": [
+            "servicenow",
+            "splunk"
+          ],
+          "root_cause": "null-pointer regression introduced in checkout-service v8.4",
+          "root_cause_keywords": [
+            "deployment",
+            "regression",
+            "release",
+            "v8.4"
+          ],
+          "root_cause_service": "checkout-service"
+        },
+        "incident": {
+          "service": "checkout-service",
+          "severity": 1,
+          "summary": "error rate jumped right after release"
+        },
+        "schema_version": 1,
+        "task_hash": "3f165f8065f2757b",
+        "task_id": "EFIC-DEPLOY-001",
+        "telemetry": {
+          "dynatrace": {
+            "problem": "failure rate increase"
+          },
+          "servicenow": {
+            "change": "CHG9 v8.4 release",
+            "when": "-10m"
+          },
+          "splunk": {
+            "errors": [
+              "NullPointerException in v8.4"
+            ]
+          }
+        },
+        "telemetry_keys": [
+          "dynatrace",
+          "servicenow",
+          "splunk"
+        ],
+        "traps": {
+          "distractor_evidence": [],
+          "false_hypotheses": [
+            "db exhaustion",
+            "network"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "catalog unavailable",
+        "contributing_factors": [
+          "migration left the old record in place"
+        ],
+        "difficulty": "competing_hypotheses",
+        "expected_confidence_range": [
+          70,
+          90
+        ],
+        "expected_owner": "platform-team",
+        "expected_recommendation": "update Route53 record; add post-migration DNS check",
+        "failure_family": "dns",
+        "failure_mode": "stale_record",
+        "hypotheses_considered": [
+          "stale DNS",
+          "datastore outage",
+          "certificate"
+        ],
+        "hypotheses_eliminated": [
+          "datastore outage (new endpoint healthy)",
+          "cert (unrelated)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "not_applicable",
+          "certificates": "expected_empty",
+          "cmdb": "not_applicable",
+          "database": "not_applicable",
+          "dynatrace": "optional",
+          "identity": "not_applicable",
+          "kubernetes": "not_applicable",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "required",
+          "servicenow": "not_applicable",
+          "splunk": "required",
+          "sysdig": "not_applicable",
+          "thousandeyes": "not_applicable"
+        },
+        "negative_evidence": [
+          "new datastore is healthy \u2014 rules out datastore outage"
+        ],
+        "reasoning_category": "misconfig_reference",
+        "red_herrings": [
+          "an expired cert on a sibling service"
+        ],
+        "replay_seed": "049253bef263293b",
+        "scenario_id": "EFIC-DNS-001",
+        "title": "App-wide failures from stale DNS record"
+      },
+      "expected": {
+        "confidence_max": 90,
+        "confidence_min": 70,
+        "incident_class": "dns",
+        "owner": "platform-team",
+        "recommendation": "update Route53 record; add post-migration DNS check"
+      },
+      "task": {
+        "category": "dns",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "route53_dns"
+          ],
+          "necessary_evidence": [
+            "route53_dns",
+            "splunk"
+          ],
+          "root_cause": "stale Route53 record points catalog-service to a decommissioned endpoint",
+          "root_cause_keywords": [
+            "dns",
+            "record",
+            "route53",
+            "stale"
+          ],
+          "root_cause_service": "catalog-service"
+        },
+        "incident": {
+          "service": "catalog-service",
+          "severity": 1,
+          "summary": "catalog cannot reach its datastore"
+        },
+        "schema_version": 1,
+        "task_hash": "049253bef263293b",
+        "task_id": "EFIC-DNS-001",
+        "telemetry": {
+          "dynatrace": {
+            "problem": "dependency unavailable"
+          },
+          "route53_dns": {
+            "points_to": "old-endpoint",
+            "record": "db.catalog"
+          },
+          "splunk": {
+            "errors": [
+              "connection refused to old-endpoint"
+            ]
+          }
+        },
+        "telemetry_keys": [
+          "dynatrace",
+          "route53_dns",
+          "splunk"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "dynatrace"
+          ],
+          "false_hypotheses": [
+            "cert",
+            "datastore outage"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "delayed nightly reporting",
+        "contributing_factors": [
+          "a least-privilege cleanup over-pruned the policy"
+        ],
+        "difficulty": "competing_hypotheses",
+        "expected_confidence_range": [
+          72,
+          92
+        ],
+        "expected_owner": "data-platform-team",
+        "expected_recommendation": "restore s3:GetObject on the batch role; add policy review",
+        "failure_family": "identity",
+        "failure_mode": "iam_permission_denied",
+        "hypotheses_considered": [
+          "iam revocation",
+          "s3 outage",
+          "network"
+        ],
+        "hypotheses_eliminated": [
+          "s3 outage (health green)",
+          "network (TE green)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "required",
+          "certificates": "not_applicable",
+          "cmdb": "not_applicable",
+          "database": "not_applicable",
+          "dynatrace": "not_applicable",
+          "identity": "required",
+          "kubernetes": "not_applicable",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "not_applicable",
+          "splunk": "optional",
+          "sysdig": "not_applicable",
+          "thousandeyes": "expected_empty"
+        },
+        "negative_evidence": [
+          "S3 service health green \u2014 rules out S3 outage"
+        ],
+        "reasoning_category": "authorization_change",
+        "red_herrings": [
+          "S3 latency metric noise"
+        ],
+        "replay_seed": "f523eff4ce0447e9",
+        "scenario_id": "EFIC-IAM-001",
+        "title": "Batch failures from revoked IAM permission"
+      },
+      "expected": {
+        "confidence_max": 92,
+        "confidence_min": 72,
+        "incident_class": "identity",
+        "owner": "data-platform-team",
+        "recommendation": "restore s3:GetObject on the batch role; add policy review"
+      },
+      "task": {
+        "category": "identity",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "identity"
+          ],
+          "necessary_evidence": [
+            "aws_cloudwatch",
+            "identity"
+          ],
+          "root_cause": "IAM policy change revoked reporting-batch S3 read permission",
+          "root_cause_keywords": [
+            "denied",
+            "iam",
+            "permission",
+            "s3"
+          ],
+          "root_cause_service": "reporting-batch"
+        },
+        "incident": {
+          "service": "reporting-batch",
+          "severity": 2,
+          "summary": "nightly reporting job fails to read S3"
+        },
+        "schema_version": 1,
+        "task_hash": "f523eff4ce0447e9",
+        "task_id": "EFIC-IAM-001",
+        "telemetry": {
+          "aws_cloudwatch": {
+            "s3_403": 240
+          },
+          "identity": {
+            "policy_change": "CHG8 remove s3:GetObject"
+          },
+          "splunk": {
+            "errors": [
+              "AccessDenied: not authorized s3:GetObject"
+            ]
+          },
+          "thousandeyes": {
+            "ok": true
+          }
+        },
+        "telemetry_keys": [
+          "aws_cloudwatch",
+          "identity",
+          "splunk",
+          "thousandeyes"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "thousandeyes"
+          ],
+          "false_hypotheses": [
+            "network",
+            "s3 outage"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "estate-wide authentication outage",
+        "contributing_factors": [
+          "key rotation calendar lapsed"
+        ],
+        "difficulty": "single_cause",
+        "expected_confidence_range": [
+          76,
+          95
+        ],
+        "expected_owner": "identity-team",
+        "expected_recommendation": "rotate signing key; automate expiry alerting",
+        "failure_family": "identity",
+        "failure_mode": "token_signing_key_expiry",
+        "hypotheses_considered": [
+          "signing key expiry",
+          "ldap outage",
+          "network"
+        ],
+        "hypotheses_eliminated": [
+          "ldap outage (directory healthy)",
+          "network (auth reachable)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "not_applicable",
+          "certificates": "not_applicable",
+          "cmdb": "not_applicable",
+          "database": "not_applicable",
+          "dynatrace": "not_applicable",
+          "identity": "required",
+          "kubernetes": "not_applicable",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "optional",
+          "splunk": "required",
+          "sysdig": "not_applicable",
+          "thousandeyes": "not_applicable"
+        },
+        "negative_evidence": [
+          "LDAP directory reachable \u2014 rules out LDAP outage"
+        ],
+        "reasoning_category": "lifecycle_expiry",
+        "red_herrings": [
+          "a transient LDAP latency blip"
+        ],
+        "replay_seed": "ef8b8244361e5b49",
+        "scenario_id": "EFIC-IDENTITY-001",
+        "title": "Estate login failure from signing-key expiry"
+      },
+      "expected": {
+        "confidence_max": 95,
+        "confidence_min": 76,
+        "incident_class": "identity",
+        "owner": "identity-team",
+        "recommendation": "rotate signing key; automate expiry alerting"
+      },
+      "task": {
+        "category": "identity",
+        "difficulty": "single_cause",
+        "ground_truth": {
+          "decisive_evidence": [
+            "identity"
+          ],
+          "necessary_evidence": [
+            "identity",
+            "splunk"
+          ],
+          "root_cause": "expired token signing key in auth-service",
+          "root_cause_keywords": [
+            "expired",
+            "jwt",
+            "signing key",
+            "token"
+          ],
+          "root_cause_service": "auth-service"
+        },
+        "incident": {
+          "service": "auth-service",
+          "severity": 1,
+          "summary": "JWT validation failing estate-wide"
+        },
+        "schema_version": 1,
+        "task_hash": "ef8b8244361e5b49",
+        "task_id": "EFIC-IDENTITY-001",
+        "telemetry": {
+          "identity": {
+            "error": "signing key expired",
+            "kid": "k-2024"
+          },
+          "servicenow": {
+            "incident": "INC7 priority 1"
+          },
+          "splunk": {
+            "errors": [
+              "JWT signature validation failed"
+            ]
+          }
+        },
+        "telemetry_keys": [
+          "identity",
+          "servicenow",
+          "splunk"
+        ],
+        "traps": {
+          "distractor_evidence": [],
+          "false_hypotheses": [
+            "ldap outage",
+            "network"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "internal order flow failing",
+        "contributing_factors": [
+          "mesh CA rotated without sidecar restart"
+        ],
+        "difficulty": "competing_hypotheses",
+        "expected_confidence_range": [
+          66,
+          88
+        ],
+        "expected_owner": "platform-team",
+        "expected_recommendation": "restart sidecars to reload certs; automate on CA rotation",
+        "failure_family": "api_gateway",
+        "failure_mode": "istio_mtls_failure",
+        "hypotheses_considered": [
+          "mtls failure",
+          "network",
+          "app bug"
+        ],
+        "hypotheses_eliminated": [
+          "network (TE green)",
+          "app bug (TLS-layer errors)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "not_applicable",
+          "certificates": "not_applicable",
+          "cmdb": "not_applicable",
+          "database": "not_applicable",
+          "dynatrace": "optional",
+          "identity": "not_applicable",
+          "kubernetes": "required",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "not_applicable",
+          "splunk": "required",
+          "sysdig": "not_applicable",
+          "thousandeyes": "expected_empty"
+        },
+        "negative_evidence": [
+          "north-south (TE) healthy \u2014 isolates to east-west mesh"
+        ],
+        "reasoning_category": "mesh_security_rotation",
+        "red_herrings": [
+          "healthy external probes suggest 'not a real outage'"
+        ],
+        "replay_seed": "53cb1bd52bd9b85a",
+        "scenario_id": "EFIC-ISTIO-MTLS-001",
+        "title": "Service mesh 503s from mTLS cert rotation gap"
+      },
+      "expected": {
+        "confidence_max": 88,
+        "confidence_min": 66,
+        "incident_class": "api_gateway",
+        "owner": "platform-team",
+        "recommendation": "restart sidecars to reload certs; automate on CA rotation"
+      },
+      "task": {
+        "category": "api_gateway",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "splunk"
+          ],
+          "necessary_evidence": [
+            "kubernetes",
+            "splunk"
+          ],
+          "root_cause": "istio mTLS failure: sidecar cert not rotated after CA change",
+          "root_cause_keywords": [
+            "certificate",
+            "istio",
+            "mtls",
+            "sidecar"
+          ],
+          "root_cause_service": "orders-mesh"
+        },
+        "incident": {
+          "service": "orders-mesh",
+          "severity": 1,
+          "summary": "east-west 503s after mesh upgrade"
+        },
+        "schema_version": 1,
+        "task_hash": "53cb1bd52bd9b85a",
+        "task_id": "EFIC-ISTIO-MTLS-001",
+        "telemetry": {
+          "dynatrace": {
+            "problem": "east-west failure rate"
+          },
+          "kubernetes": {
+            "event": "istio-proxy cert reload failed"
+          },
+          "splunk": {
+            "errors": [
+              "upstream connect error; TLS handshake"
+            ]
+          },
+          "thousandeyes": {
+            "ok": true
+          }
+        },
+        "telemetry_keys": [
+          "dynatrace",
+          "kubernetes",
+          "splunk",
+          "thousandeyes"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "thousandeyes"
+          ],
+          "false_hypotheses": [
+            "app bug",
+            "network"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "estate-wide login failures",
+        "contributing_factors": [
+          "config change merged without validation"
+        ],
+        "difficulty": "single_cause",
+        "expected_confidence_range": [
+          75,
+          93
+        ],
+        "expected_owner": "identity-team",
+        "expected_recommendation": "revert configmap; add startup config validation",
+        "failure_family": "kubernetes",
+        "failure_mode": "crashloopbackoff",
+        "hypotheses_considered": [
+          "config error",
+          "image pull",
+          "oom"
+        ],
+        "hypotheses_eliminated": [
+          "image pull (digest OK)",
+          "oom (no OOMKill reason)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "not_applicable",
+          "certificates": "not_applicable",
+          "cmdb": "not_applicable",
+          "database": "not_applicable",
+          "dynatrace": "not_applicable",
+          "identity": "not_applicable",
+          "kubernetes": "required",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "optional",
+          "splunk": "required",
+          "sysdig": "not_applicable",
+          "thousandeyes": "not_applicable"
+        },
+        "negative_evidence": [
+          "image digest resolves \u2014 rules out image pull"
+        ],
+        "reasoning_category": "config_startup_failure",
+        "red_herrings": [
+          "OOM-looking restart count"
+        ],
+        "replay_seed": "2d539d6d4fe4d65d",
+        "scenario_id": "EFIC-K8S-CLB-001",
+        "title": "Auth pods CrashLoopBackOff on bad config"
+      },
+      "expected": {
+        "confidence_max": 93,
+        "confidence_min": 75,
+        "incident_class": "kubernetes",
+        "owner": "identity-team",
+        "recommendation": "revert configmap; add startup config validation"
+      },
+      "task": {
+        "category": "kubernetes",
+        "difficulty": "single_cause",
+        "ground_truth": {
+          "decisive_evidence": [
+            "splunk"
+          ],
+          "necessary_evidence": [
+            "kubernetes",
+            "splunk"
+          ],
+          "root_cause": "invalid config map key crashes auth-service on startup",
+          "root_cause_keywords": [
+            "config",
+            "crashloop",
+            "startup"
+          ],
+          "root_cause_service": "auth-service"
+        },
+        "incident": {
+          "service": "auth-service",
+          "severity": 1,
+          "summary": "auth pods crash looping"
+        },
+        "schema_version": 1,
+        "task_hash": "2d539d6d4fe4d65d",
+        "task_id": "EFIC-K8S-CLB-001",
+        "telemetry": {
+          "kubernetes": {
+            "exit": 1,
+            "reason": "CrashLoopBackOff"
+          },
+          "servicenow": {
+            "change": "CHG5010 configmap edit"
+          },
+          "splunk": {
+            "errors": [
+              "FATAL missing config key OIDC_URL"
+            ]
+          }
+        },
+        "telemetry_keys": [
+          "kubernetes",
+          "servicenow",
+          "splunk"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "thousandeyes"
+          ],
+          "false_hypotheses": [
+            "image pull",
+            "oom"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "checkout failures for paying customers",
+        "contributing_factors": [
+          "heap sizing unchanged for new workload"
+        ],
+        "difficulty": "single_cause",
+        "expected_confidence_range": [
+          72,
+          92
+        ],
+        "expected_owner": "payments-team",
+        "expected_recommendation": "raise memory limit + patch leak in v8.3",
+        "failure_family": "kubernetes",
+        "failure_mode": "oomkilled",
+        "hypotheses_considered": [
+          "memory leak",
+          "node failure",
+          "network"
+        ],
+        "hypotheses_eliminated": [
+          "node failure (other pods healthy)",
+          "network (TE green)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "not_applicable",
+          "certificates": "not_applicable",
+          "cmdb": "not_applicable",
+          "database": "not_applicable",
+          "dynatrace": "not_applicable",
+          "identity": "not_applicable",
+          "kubernetes": "required",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "optional",
+          "splunk": "optional",
+          "sysdig": "required",
+          "thousandeyes": "expected_empty"
+        },
+        "negative_evidence": [
+          "thousandeyes shows healthy network \u2014 rules out network"
+        ],
+        "reasoning_category": "resource_saturation_temporal",
+        "red_herrings": [
+          "a concurrent DNS blip on an unrelated service"
+        ],
+        "replay_seed": "7ecdbc757df9ebce",
+        "scenario_id": "EFIC-K8S-OOM-001",
+        "title": "Payment pods OOMKilled after v8 rollout"
+      },
+      "expected": {
+        "confidence_max": 92,
+        "confidence_min": 72,
+        "incident_class": "kubernetes",
+        "owner": "payments-team",
+        "recommendation": "raise memory limit + patch leak in v8.3"
+      },
+      "task": {
+        "category": "kubernetes",
+        "difficulty": "single_cause",
+        "ground_truth": {
+          "decisive_evidence": [
+            "kubernetes"
+          ],
+          "necessary_evidence": [
+            "kubernetes",
+            "sysdig"
+          ],
+          "root_cause": "memory leak in payment-service v8.2 causing OOMKill",
+          "root_cause_keywords": [
+            "leak",
+            "memory",
+            "oomkill"
+          ],
+          "root_cause_service": "payment-service"
+        },
+        "incident": {
+          "service": "payment-service",
+          "severity": 1,
+          "summary": "payment pods restarting, 5xx rising"
+        },
+        "schema_version": 1,
+        "task_hash": "7ecdbc757df9ebce",
+        "task_id": "EFIC-K8S-OOM-001",
+        "telemetry": {
+          "kubernetes": {
+            "reason": "OOMKilled",
+            "restarts": 9
+          },
+          "servicenow": {
+            "change": "CHG5001 v8.2",
+            "when": "-2h"
+          },
+          "sysdig": {
+            "rss": "limit exceeded",
+            "trend": "monotonic up"
+          },
+          "thousandeyes": {
+            "ok": true
+          }
+        },
+        "telemetry_keys": [
+          "kubernetes",
+          "servicenow",
+          "sysdig",
+          "thousandeyes"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "thousandeyes"
+          ],
+          "false_hypotheses": [
+            "network",
+            "node failure"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "delayed customer notifications",
+        "contributing_factors": [
+          "no dead-letter handling for malformed messages"
+        ],
+        "difficulty": "competing_hypotheses",
+        "expected_confidence_range": [
+          66,
+          86
+        ],
+        "expected_owner": "platform-team",
+        "expected_recommendation": "add dead-letter queue; skip+alert on poison message",
+        "failure_family": "messaging",
+        "failure_mode": "kafka_consumer_lag",
+        "hypotheses_considered": [
+          "poison message",
+          "broker outage",
+          "network"
+        ],
+        "hypotheses_eliminated": [
+          "broker outage (brokers healthy)",
+          "network (TE green)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "not_applicable",
+          "certificates": "not_applicable",
+          "cmdb": "not_applicable",
+          "database": "not_applicable",
+          "dynatrace": "required",
+          "identity": "not_applicable",
+          "kubernetes": "not_applicable",
+          "moogsoft": "not_applicable",
+          "network": "not_applicable",
+          "route53_dns": "not_applicable",
+          "servicenow": "not_applicable",
+          "splunk": "required",
+          "sysdig": "not_applicable",
+          "thousandeyes": "expected_empty"
+        },
+        "negative_evidence": [
+          "broker metrics healthy \u2014 rules out broker outage"
+        ],
+        "reasoning_category": "stuck_processing",
+        "red_herrings": [
+          "one broker restarted hours earlier, unrelated"
+        ],
+        "replay_seed": "80934cdae8bdb473",
+        "scenario_id": "EFIC-KAFKA-LAG-001",
+        "title": "Notification lag from stuck Kafka consumer"
+      },
+      "expected": {
+        "confidence_max": 86,
+        "confidence_min": 66,
+        "incident_class": "messaging",
+        "owner": "platform-team",
+        "recommendation": "add dead-letter queue; skip+alert on poison message"
+      },
+      "task": {
+        "category": "messaging",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "splunk"
+          ],
+          "necessary_evidence": [
+            "dynatrace",
+            "splunk"
+          ],
+          "root_cause": "notification-service consumer stuck on a poison message, lag growing",
+          "root_cause_keywords": [
+            "consumer",
+            "kafka",
+            "lag",
+            "poison"
+          ],
+          "root_cause_service": "notification-service"
+        },
+        "incident": {
+          "service": "notification-service",
+          "severity": 2,
+          "summary": "notifications delayed by hours"
+        },
+        "schema_version": 1,
+        "task_hash": "80934cdae8bdb473",
+        "task_id": "EFIC-KAFKA-LAG-001",
+        "telemetry": {
+          "dynatrace": {
+            "consumer_lag": 1200000,
+            "trend": "up"
+          },
+          "splunk": {
+            "errors": [
+              "deserialization error; consumer paused"
+            ]
+          },
+          "thousandeyes": {
+            "ok": true
+          }
+        },
+        "telemetry_keys": [
+          "dynatrace",
+          "splunk",
+          "thousandeyes"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "thousandeyes"
+          ],
+          "false_hypotheses": [
+            "broker outage",
+            "network"
+          ]
+        }
+      }
+    },
+    {
+      "efic": {
+        "business_impact": "intermittent API failures across services",
+        "contributing_factors": [
+          "a flapping optic on an edge link"
+        ],
+        "difficulty": "competing_hypotheses",
+        "expected_confidence_range": [
+          64,
+          88
+        ],
+        "expected_owner": "network-team",
+        "expected_recommendation": "engage network on edge->core; fail over the link",
+        "failure_family": "networking",
+        "failure_mode": "packet_loss",
+        "hypotheses_considered": [
+          "network loss",
+          "db exhaustion",
+          "bad deploy"
+        ],
+        "hypotheses_eliminated": [
+          "db exhaustion (pool idle)",
+          "deploy (no change)"
+        ],
+        "mcp_utilization": {
+          "application": "not_applicable",
+          "autosys": "not_applicable",
+          "aws_cloudwatch": "not_applicable",
+          "certificates": "not_applicable",
+          "cmdb": "not_applicable",
+          "database": "expected_empty",
+          "dynatrace": "not_applicable",
+          "identity": "not_applicable",
+          "kubernetes": "not_applicable",
+          "moogsoft": "not_applicable",
+          "network": "required",
+          "route53_dns": "not_applicable",
+          "servicenow": "not_applicable",
+          "splunk": "optional",
+          "sysdig": "not_applicable",
+          "thousandeyes": "required"
+        },
+        "negative_evidence": [
+          "DB pool underutilized \u2014 rules out db exhaustion"
+        ],
+        "reasoning_category": "infra_network_path",
+        "red_herrings": [
+          "healthy-looking DB metrics invite a wrong hypothesis"
+        ],
+        "replay_seed": "a6696f902debd82f",
+        "scenario_id": "EFIC-NET-LOSS-001",
+        "title": "Intermittent 504s from edge packet loss"
+      },
+      "expected": {
+        "confidence_max": 88,
+        "confidence_min": 64,
+        "incident_class": "networking",
+        "owner": "network-team",
+        "recommendation": "engage network on edge->core; fail over the link"
+      },
+      "task": {
+        "category": "networking",
+        "difficulty": "competing_hypotheses",
+        "ground_truth": {
+          "decisive_evidence": [
+            "thousandeyes"
+          ],
+          "necessary_evidence": [
+            "network",
+            "thousandeyes"
+          ],
+          "root_cause": "packet loss on edge->core path causing gateway upstream timeouts",
+          "root_cause_keywords": [
+            "504",
+            "network",
+            "packet loss",
+            "timeout"
+          ],
+          "root_cause_service": "api-gateway"
+        },
+        "incident": {
+          "service": "api-gateway",
+          "severity": 1,
+          "summary": "intermittent gateway 504s"
+        },
+        "schema_version": 1,
+        "task_hash": "a6696f902debd82f",
+        "task_id": "EFIC-NET-LOSS-001",
+        "telemetry": {
+          "database": {
+            "active": 20,
+            "max": 200
+          },
+          "network": {
+            "hop_loss": true
+          },
+          "splunk": {
+            "errors": [
+              "upstream timeout 504"
+            ]
+          },
+          "thousandeyes": {
+            "packet_loss": 0.18,
+            "path": "edge->core"
+          }
+        },
+        "telemetry_keys": [
+          "database",
+          "network",
+          "splunk",
+          "thousandeyes"
+        ],
+        "traps": {
+          "distractor_evidence": [
+            "database"
+          ],
+          "false_hypotheses": [
+            "bad deploy",
+            "db exhaustion"
+          ]
+        }
+      }
+    }
+  ],
+  "coverage": {
+    "failure_families_covered": [
+      "api_gateway",
+      "batch",
+      "certificates",
+      "cloud_aws",
+      "database",
+      "deployment",
+      "dns",
+      "identity",
+      "kubernetes",
+      "messaging",
+      "networking"
+    ],
+    "failure_families_total": 14,
+    "failure_modes_covered": [
+      "api_gateway:istio_mtls_failure",
+      "batch:autosys_dependency_failure",
+      "certificates:certificate_expiry",
+      "cloud_aws:s3_request_throttling",
+      "database:connection_pool_exhaustion",
+      "database:deadlock",
+      "deployment:config_drift",
+      "deployment:regression",
+      "dns:stale_record",
+      "identity:iam_permission_denied",
+      "identity:token_signing_key_expiry",
+      "kubernetes:crashloopbackoff",
+      "kubernetes:oomkilled",
+      "messaging:kafka_consumer_lag",
+      "networking:packet_loss"
+    ],
+    "failure_modes_gaps": [
+      "api_gateway:gateway_5xx",
+      "api_gateway:rate_limit_saturation",
+      "application_runtime:deadlock",
+      "application_runtime:gc_pause",
+      "application_runtime:memory_leak",
+      "application_runtime:thread_pool_exhaustion",
+      "batch:job_timeout",
+      "certificates:chain_incomplete",
+      "cloud_aws:regional_impairment",
+      "cloud_aws:security_group_misconfig",
+      "database:disk_full",
+      "database:replica_lag",
+      "database:slow_query",
+      "deployment:bad_rollout",
+      "dns:resolution_failure",
+      "identity:ldap_outage",
+      "identity:oauth_misconfig",
+      "kubernetes:imagepullbackoff",
+      "kubernetes:node_pressure_eviction",
+      "kubernetes:readiness_probe_failure",
+      "messaging:rabbitmq_queue_backup",
+      "messaging:redis_eviction",
+      "networking:mtu_blackhole",
+      "networking:network_partition",
+      "observability:alert_storm",
+      "observability:metrics_gap",
+      "storage:iops_throttle",
+      "storage:volume_full"
+    ],
+    "failure_modes_total": 43,
+    "mcp_required_coverage": [
+      "autosys",
+      "aws_cloudwatch",
+      "certificates",
+      "cmdb",
+      "database",
+      "dynatrace",
+      "identity",
+      "kubernetes",
+      "network",
+      "route53_dns",
+      "servicenow",
+      "splunk",
+      "sysdig",
+      "thousandeyes"
+    ],
+    "reasoning_categories": [
+      "authorization_change",
+      "batch_dependency_chain",
+      "cascade_localization",
+      "change_correlation_temporal",
+      "cloud_service_limit",
+      "concurrency_correctness",
+      "config_startup_failure",
+      "infra_network_path",
+      "lifecycle_expiry",
+      "mesh_security_rotation",
+      "misconfig_reference",
+      "partial_fleet_inconsistency",
+      "resource_saturation_leak",
+      "resource_saturation_temporal",
+      "stuck_processing"
+    ],
+    "scenarios": 16,
+    "scenarios_with_negative_evidence": 16,
+    "scenarios_with_red_herrings": 16
+  },
+  "kind": "enterprise_failure_intelligence_corpus",
+  "note": "Synthetic, deterministic enterprise failure scenarios \u2014 the engine must EARN the root cause; ground truth + traps are the hidden answer key. Reuses the EIC task format (EB-0 runnable).",
+  "schema_version": 1,
+  "taxonomy": {
+    "api_gateway": [
+      "gateway_5xx",
+      "istio_mtls_failure",
+      "rate_limit_saturation"
+    ],
+    "application_runtime": [
+      "deadlock",
+      "gc_pause",
+      "memory_leak",
+      "thread_pool_exhaustion"
+    ],
+    "batch": [
+      "autosys_dependency_failure",
+      "job_timeout"
+    ],
+    "certificates": [
+      "certificate_expiry",
+      "chain_incomplete"
+    ],
+    "cloud_aws": [
+      "regional_impairment",
+      "s3_request_throttling",
+      "security_group_misconfig"
+    ],
+    "database": [
+      "connection_pool_exhaustion",
+      "deadlock",
+      "disk_full",
+      "replica_lag",
+      "slow_query"
+    ],
+    "deployment": [
+      "bad_rollout",
+      "config_drift",
+      "regression"
+    ],
+    "dns": [
+      "resolution_failure",
+      "stale_record"
+    ],
+    "identity": [
+      "iam_permission_denied",
+      "ldap_outage",
+      "oauth_misconfig",
+      "token_signing_key_expiry"
+    ],
+    "kubernetes": [
+      "crashloopbackoff",
+      "imagepullbackoff",
+      "node_pressure_eviction",
+      "oomkilled",
+      "readiness_probe_failure"
+    ],
+    "messaging": [
+      "kafka_consumer_lag",
+      "rabbitmq_queue_backup",
+      "redis_eviction"
+    ],
+    "networking": [
+      "mtu_blackhole",
+      "network_partition",
+      "packet_loss"
+    ],
+    "observability": [
+      "alert_storm",
+      "metrics_gap"
+    ],
+    "storage": [
+      "iops_throttle",
+      "volume_full"
+    ]
+  }
+}

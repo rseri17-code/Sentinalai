@@ -94,16 +94,31 @@ class TestQualityGates:
 
 class TestCoverage:
     def test_coverage_model_present_and_honest(self):
-        cov = build_corpus()["coverage"]
-        assert cov["scenarios"] == 16
+        c = build_corpus()
+        cov = c["coverage"]
+        n = len(c["corpus"])
+        assert cov["scenarios"] == n
         # families covered are a subset of the taxonomy
         assert set(cov["failure_families_covered"]).issubset(set(TAXONOMY))
-        # gaps are reported (not hidden) — the foundational set is not complete
+        # gaps are reported (not hidden) — the corpus is not yet complete
         assert cov["failure_modes_gaps"], "gaps must be reported honestly"
-        # every scenario carries negative evidence + red herrings
-        assert cov["scenarios_with_negative_evidence"] == 16
-        assert cov["scenarios_with_red_herrings"] == 16
+        # every scenario carries negative evidence + red herrings (count-agnostic)
+        assert cov["scenarios_with_negative_evidence"] == n
+        assert cov["scenarios_with_red_herrings"] == n
 
     def test_taxonomy_modes_are_distinct(self):
         for fam, modes in TAXONOMY.items():
             assert len(modes) == len(set(modes)), fam
+
+    def test_all_families_covered(self):
+        cov = build_corpus()["coverage"]
+        assert set(cov["failure_families_covered"]) == set(TAXONOMY)
+
+    def test_reasoning_record_fields_present(self):
+        for e in build_corpus()["corpus"]:
+            ef = e["efic"]
+            assert ef["coverage_contribution"]
+            # expected_queries covers every required MCP
+            required = {m for m, u in ef["mcp_utilization"].items() if u == "required"}
+            assert set(ef["expected_queries"]) == required
+            assert "supporting_evidence" in ef

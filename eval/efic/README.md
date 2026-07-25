@@ -34,8 +34,8 @@ Each corpus entry = `{task, expected, efic}`:
 ## Coverage (honest)
 `coverage.json` records exactly which taxonomy modes have scenarios and which are
 **gaps** — the foundational set is intentionally not complete, and gaps are
-reported, never padded. Current foundational set: **16 scenarios across 11 of 14
-families**, each a distinct reasoning problem; **28 taxonomy modes remain gaps**
+reported, never padded. Current set: **30 scenarios across 14 of 14
+families**, each a distinct reasoning problem; **14 taxonomy modes remain gaps**
 (the next-highest-value work).
 
 ## Files
@@ -57,4 +57,4 @@ knowledge base poses well-formed, distinct, cross-MCP reasoning problems** — i
 does **not** prove real operator outcomes (those remain `NOT_MEASURED` until the
 supervised pilot).
 
-Tests: `tests/efic/test_efic_corpus.py` (14).
+Tests: `tests/efic/test_efic_corpus.py` (16).

@@ -5,7 +5,7 @@ services:
 - inventory-service
 incident_types:
 - network
-observation_count: 33
+observation_count: 34
 confidence_avg: 41.0
 quality_avg: 0.6178
 evidence_signals:
@@ -39,4 +39,4 @@ receipt_ids:
 - INC_N2_20260610
 - INC_N2_20260621
 first_seen: 2026-05-31 20:36:45.882144+00:00
-last_seen: 2026-07-24 11:08:26.393970+00:00
+last_seen: 2026-07-25 04:25:21.181286+00:00

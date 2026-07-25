@@ -5,7 +5,7 @@ services:
 - unknown
 incident_types:
 - error_spike
-observation_count: 40
+observation_count: 45
 confidence_avg: 45.0
 quality_avg: 0.702
 evidence_signals:
@@ -20,9 +20,8 @@ evidence_signals:
 - _kg_similar_incidents
 - _suggested_root_causes
 receipt_ids:
-- INC_R1_DET_20260723
-- INC_R1_DET_20260724
 - INC_R1_DET_20260721
+- INC_R1_CLEAR_20260725
 - INC_R1_STAMP_20260723
 - INC_R1_ROYW_20260719
 - INC_R1_DET_20260718
@@ -34,6 +33,7 @@ receipt_ids:
 - INC_R1_LEARN_20260722
 - INC_R1_DET_20260720
 - INC_R1_ROYW_20260723
+- INC_R1_LEARN_20260725
 - INC_R1_LEARN_20260720
 - INC_R1_ROYW_20260722
 - INC_R1_CLEAR_20260722
@@ -41,4 +41,4 @@ receipt_ids:
 - INC_R1_CLEAR_20260724
 - INC_R1_ROYW_20260721
 first_seen: 2026-07-17 12:41:10.745621+00:00
-last_seen: 2026-07-24 11:06:57.678227+00:00
+last_seen: 2026-07-25 04:23:48.606671+00:00

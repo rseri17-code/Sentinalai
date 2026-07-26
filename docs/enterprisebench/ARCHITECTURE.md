@@ -360,9 +360,38 @@ engine's current capability and the EFIC enterprise-realism bar.
 
 **Known limitations:** EB-2 measures the deterministic core (LLM-refinement layer
 excluded); it evaluates the current engine, whose default RC phrasing is
-symptom-level; ~11/30 scenarios need EB-3 simulators for full evidence reach;
+symptom-level; ~11/30 scenarios reference MCPs the engine cannot query (EB-3 §9c
+found this is an engine-consumption gap, not a twin gap — simulators alone do not
+close it);
 golden-signal magnitudes are synthesized generically (specifics come from
 log/event/change text); process depth is bounded by what the engine exposes.
+
+## 9c. EB-3 — Enterprise Digital Twin: MCP simulators + reachability wall (IMPLEMENTED)
+
+EB-3 set out to give every EFIC-required MCP a dedicated, production-shaped
+simulator so investigations run on realistic native sources rather than folded
+substitutes. A mandatory reachability analysis (cited below) established the
+**load-bearing finding**: under the hard constraint *"do not modify the
+investigation engine"*, almost none of these MCPs can be reached.
+
+**Reachability (unmodified engine, env/config only — proven, with cites):**
+
+| MCP | Engine-reachable? | Evidence |
+|---|---|---|
+| thousandeyes | **Yes, via `ENABLE_THOUSANDEYES_RCA=true`** | `network_worker` (`workers/network_worker.py:33`) + timeout/latency/network playbook steps (`supervisor/tool_selector.py:37,57,71`) |
+| certificates, route53/DNS, identity/IAM, aws_cloudwatch, autosys | **No** | no worker, no playbook step, no gateway mapping, no flag — only appear as classification keywords/log hints. Querying them requires **adding a worker + playbook step** (an engine code change the mission forbids). |
+| cmdb | **Not a distinct MCP** | served through `servicenow.get_ci_details` (already supported) |
+
+**Delivered (additive, honest):**
+- **ThousandEyes simulator** (`enterprisebench/pipeline/simulators.py`) — deterministic, production-shaped (`te_list_alerts`/`te_get_test_results`/`te_list_tests`); healthy probes yield NO alerts (genuine negative evidence), positive signals (packet loss / DNS failure / TLS error) raise active alerts. Wired via the engine's own `TE_USE_FIXTURES`/adapter transport seam (subprocess-local injection; no engine source change) and activated by the engine's `ENABLE_THOUSANDEYES_RCA` flag.
+- **CMDB → ServiceNow CI**: EFIC `cmdb` evidence (config versions, registry) is surfaced in `servicenow.get_ci_details` — its production equivalent the engine actually queries — not folded.
+- **Folding removed**: `render.py` no longer flattens non-native sources into Splunk log lines. Each source now maps to a native channel or is marked engine-unreachable in provenance. The observable symptom still reaches the engine via native EFIC-authored Splunk telemetry.
+
+**The decisive, honest result:** activating ThousandEyes is a **measured no-op** — `TE-on == TE-off` (identical root cause + confidence on the scenario where TE is decisive, EFIC-NET-LOSS-001). The deterministic analyzer does not convert network evidence into a different diagnosis. Across the full corpus, removing folding + adding the reachable simulators moved mean EIC only 0.277 → 0.278. **Improving twin fidelity does not change what the black-box engine investigates, because the engine has no consumption path for these MCPs.** The gap is engine-side, not twin-side.
+
+**Consequence for the mission:** the EB-3 objective ("simulate every MCP so every investigation uses realistic native sources") is **not achievable under "engine untouched"** — 5 MCPs have no query path and the one reachable MCP is a no-op. Building dedicated simulators for the 5 unreachable MCPs would be unconsumed theater and is deliberately *not* done. To make the twin consumable, the engine must gain workers + playbook steps for these MCPs — an architectural decision that requires lifting the no-engine-change rule. **Decision: EB-3 INCOMPLETE** (reachable fidelity delivered; the remaining frontier is blocked by the constraint and escalated for review).
+
+**Tests:** `tests/enterprisebench/test_eb3.py` (9) — simulator determinism + shape, healthy=no-alerts / positive=alerts, folding removed, cmdb→ServiceNow-CI, engine-unreachable MCPs documented. EB-2 pipeline unchanged and still deterministic (`test_eb2.py` green).
 
 ## 10. Recommendation
 
@@ -373,8 +402,13 @@ code and the highest immediate value, and it validates the whole EnterpriseBench
 contract on a small corpus before scaling generation (EB-4). Do not begin EB-0
 until this architecture is reviewed.
 
-*Update: EB-0 and EB-2 are now implemented (§9a, §9b). The highest-value next
-objective is **EB-3** — the missing MCP simulators (certificates, route53/DNS,
-identity, aws_cloudwatch, autosys, cmdb) — which would move ~11/30 EFIC scenarios
-from "required evidence unreachable" to fully exercised, directly widening what
-EB-2 can measure.*
+*Update: EB-0, EB-2, and EB-3 are now implemented (§9a, §9b, §9c). EB-3
+established that the Enterprise Digital Twin cannot be completed for EFIC's MCPs
+without modifying the black-box engine (5 MCPs unreachable; the one reachable MCP
+is a no-op in the deterministic analyzer). The highest-value next objective is
+therefore an **architectural decision, not another simulator phase**: either
+(a) sanction a bounded, reviewed extension of the engine's worker/playbook layer
+so it can query certificates/DNS/identity/aws/autosys (lifting the no-engine-change
+rule for a scoped increment), or (b) accept that these failure modes are
+investigated only through Splunk/ServiceNow and re-scope EFIC accordingly. Both
+are decisions for the review board; EB-3 does not force either.*

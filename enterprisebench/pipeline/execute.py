@@ -56,7 +56,8 @@ _CONFIG_FLAGS_OFF = ("LLM_ENABLED", "CALIBRATION_ENABLED", "RECURRENCE_ENABLED",
                      "KNOWLEDGE_GRAPH_ENABLED", "MCP_DEDUP_ENABLED",
                      "INTELLIGENCE_ENABLED")  # async learning/background writer
 _CONFIG_FLAGS_ON = ("HYPOTHESIS_ENGINE_ENABLED", "CAUSAL_INVESTIGATION_ENABLED",
-                    "DECISION_INTELLIGENCE_ENABLED", "VALIDATION_ENGINE_ENABLED")
+                    "DECISION_INTELLIGENCE_ENABLED", "VALIDATION_ENGINE_ENABLED",
+                    "ENABLE_THOUSANDEYES_RCA")  # EB-3: the one reachable simulator
 
 # The exact configuration string recorded in the report for reproducibility.
 EVALUATED_CONFIG = {
@@ -82,11 +83,29 @@ def configure_deterministic_offline_env(state_dir: str, *, force: bool = True) -
     setter("SENTINEL_WIKI_DIR", os.path.join(state_dir, "wiki"))
 
 
+def _activate_thousandeyes(te: Mapping[str, Any] | None) -> None:
+    """EB-3: enable the ThousandEyes RCA path (engine's own flag) and serve this
+    scenario's TE responses through the adapter's transport seam. Subprocess-local
+    — no engine source is modified. ThousandEyes bypasses the MCP gateway, so this
+    is the one simulator injected outside BenchMCPSource."""
+    from enterprisebench.pipeline.simulators import thousandeyes_responses
+    data = te or thousandeyes_responses(None)      # healthy/empty default
+    os.environ["ENABLE_THOUSANDEYES_RCA"] = "true"
+    try:
+        import integrations.thousandeyes.adapter as _ad
+        _ad.list_alerts = lambda ws=None, we=None: data["list_alerts"]
+        _ad.get_test_results = lambda tid, ws=None: data["get_test_results"]
+        _ad.list_tests = lambda: data["list_tests"]
+    except Exception:
+        pass
+
+
 def _run_in_process(task: Mapping[str, Any]) -> dict[str, Any]:
     """Run one investigation in THIS process (fresh state assumed). Used by the
     isolated worker; not called directly by the pipeline."""
     rendered = render(task)
     source = BenchMCPSource(rendered)
+    _activate_thousandeyes(rendered.te)
     from supervisor.agent import SentinalAISupervisor
     supervisor = SentinalAISupervisor(gateway=source)
     result = supervisor.investigate(str(task.get("task_id", "")))
@@ -154,8 +173,12 @@ def capture_trace(task: Mapping[str, Any], result: Mapping[str, Any],
     submission["ruled_out"] = sorted(submission.get("ruled_out", []))
 
     receipts = result.get("receipts") or []
+    snap = result.get("_evidence_snapshot") or {}
+    te_signal = any(isinstance(v, Mapping) and v.get("network_evidence")
+                    for v in snap.values() if isinstance(v, Mapping))
     return {
         "task_id": str(task.get("task_id", "")),
+        "thousandeyes_evidence_present": bool(te_signal),
         "root_cause": str(result.get("root_cause", "")),
         "confidence": int(result.get("confidence", 0) or 0),
         "localized_service": submission.get("localized_service", ""),

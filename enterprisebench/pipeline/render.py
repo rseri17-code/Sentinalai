@@ -50,11 +50,16 @@ NATIVE_CHANNELS = {
     "kubernetes": "sysdig.events",         # k8s events surface through Sysdig
     "servicenow": "servicenow.changes",
     "github": "github.deployments",
+    "cmdb": "servicenow.ci",               # EB-3: CMDB is served through ServiceNow CI
+    "thousandeyes": "thousandeyes.network",  # EB-3: dedicated simulator (flag-gated)
 }
-# EFIC sources the engine cannot query directly — folded into Splunk logs.
-FOLDED_SOURCES = (
+# EFIC sources the UNMODIFIED engine has NO query path to (no worker/playbook/flag).
+# EB-3: these are documented as engine-unreachable, NOT folded into another source
+# (their observable symptom already reaches the engine via native EFIC-authored
+# Splunk/ServiceNow telemetry). Simulating them would be unconsumed theater.
+ENGINE_UNREACHABLE = (
     "certificates", "route53_dns", "identity", "aws_cloudwatch", "autosys",
-    "cmdb", "network", "application", "thousandeyes", "moogsoft", "signalfx",
+    "network", "application",
 )
 
 
@@ -80,15 +85,14 @@ def _log_line(source: str, message: str) -> dict[str, Any]:
 
 
 def _splunk_logs(incident: Mapping[str, Any],
-                 telemetry: Mapping[str, Any]) -> tuple[dict[str, Any], list[str]]:
-    """Render Splunk search results: native splunk errors + folded symptom lines.
+                 telemetry: Mapping[str, Any]) -> dict[str, Any]:
+    """Render Splunk search results from the scenario's NATIVE splunk telemetry.
 
-    Returns (response, folded_sources)."""
+    EB-3: no folding. Only EFIC's own splunk evidence (the observable log symptom
+    the corpus authors) is rendered here — no other source is flattened into logs.
+    """
     service = str(incident.get("service", "unknown"))
     results: list[dict[str, Any]] = []
-    folded: list[str] = []
-
-    # Native splunk errors (EFIC authors these as the observable log symptom).
     splunk = telemetry.get("splunk")
     if isinstance(splunk, Mapping):
         errs = splunk.get("errors")
@@ -101,18 +105,8 @@ def _splunk_logs(incident: Mapping[str, Any],
                     continue
                 results.append({**_log_line("splunk", f"{k}: {_flatten(splunk[k])}"),
                                 "service": service})
-
-    # Fold non-native sources into log lines (deterministic order).
-    for src in FOLDED_SOURCES:
-        payload = telemetry.get(src)
-        if not payload:
-            continue
-        results.append({**_log_line(src, f"[{src}] {_flatten(payload)}"),
-                        "service": service})
-        folded.append(src)
-
     return {"logs": {"results": results, "count": len(results),
-                     "first_occurrence": BASE_TS}}, folded
+                     "first_occurrence": BASE_TS}}
 
 
 def _change_records(telemetry: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -215,9 +209,20 @@ def _sysdig_events(telemetry: Mapping[str, Any]) -> dict[str, Any] | None:
 
 def _ci_details(incident: Mapping[str, Any],
                 telemetry: Mapping[str, Any]) -> dict[str, Any]:
+    """ServiceNow CI details — the engine's production channel for CMDB data.
+
+    EB-3: CMDB is not a distinct engine MCP; it is served through
+    ``servicenow.get_ci_details``. Any EFIC ``cmdb`` evidence (config versions,
+    registry reachability) is surfaced here — its production equivalent — instead
+    of being folded into another source."""
     service = str(incident.get("service", "unknown"))
-    return {"ci": {"name": service, "sys_class_name": "cmdb_ci_service",
-                   "environment": "production"}}
+    ci: dict[str, Any] = {"name": service, "sys_class_name": "cmdb_ci_service",
+                          "environment": "production"}
+    cmdb = telemetry.get("cmdb")
+    if isinstance(cmdb, Mapping):
+        for k in sorted(cmdb):
+            ci[k] = cmdb[k]
+    return {"ci": ci}
 
 
 def render(task: Mapping[str, Any]) -> "RenderedScenario":
@@ -229,7 +234,6 @@ def render(task: Mapping[str, Any]) -> "RenderedScenario":
     incident = task.get("incident", {}) or {}
     telemetry = task.get("telemetry", {}) or {}
 
-    logs, folded = _splunk_logs(incident, telemetry)
     channels: dict[str, dict[str, Any]] = {
         "moogsoft.get_incident_by_id": {"incident": {
             "incident_id": str(task.get("task_id", "")),
@@ -240,7 +244,7 @@ def render(task: Mapping[str, Any]) -> "RenderedScenario":
             "created_at": BASE_TS,
             "detected_at": BASE_TS,
         }},
-        "splunk.search_logs": logs,
+        "splunk.search_logs": _splunk_logs(incident, telemetry),
         "splunk.get_change_data": {"changes": _change_records(telemetry)},
         "servicenow.get_change_records": {"change_records": _change_records(telemetry)},
         "servicenow.get_ci_details": _ci_details(incident, telemetry),
@@ -255,25 +259,35 @@ def render(task: Mapping[str, Any]) -> "RenderedScenario":
     if se is not None:
         channels["sysdig.get_events"] = se
 
-    # Provenance: which sources reached the engine, and how.
+    # EB-3: ThousandEyes — the one dedicated non-gateway simulator (flag-gated).
+    from enterprisebench.pipeline.simulators import thousandeyes_responses
+    te = thousandeyes_responses(telemetry.get("thousandeyes")) \
+        if "thousandeyes" in telemetry else None
+
+    # Provenance: which sources reach the engine, through which channel, and which
+    # are engine-unreachable (documented, not folded — EB-3).
     provenance = {
-        "native": sorted(s for s in telemetry if s in NATIVE_CHANNELS),
-        "folded_to_logs": sorted(folded),
+        "native_channel": sorted(s for s in telemetry if s in NATIVE_CHANNELS),
+        "engine_unreachable": sorted(s for s in telemetry if s in ENGINE_UNREACHABLE),
         "sources": sorted(telemetry),
+        "folded_to_logs": [],   # EB-3: folding removed
     }
-    return RenderedScenario(channels=channels, provenance=provenance)
+    return RenderedScenario(channels=channels, provenance=provenance, te=te)
 
 
 class RenderedScenario:
-    """The per-channel responses for one scenario + provenance metadata."""
+    """The per-channel gateway responses for one scenario + provenance, plus the
+    ThousandEyes responses (served outside the gateway, via the TE adapter)."""
 
-    __slots__ = ("channels", "provenance")
+    __slots__ = ("channels", "provenance", "te")
 
     def __init__(self, *, channels: dict[str, dict[str, Any]],
-                 provenance: dict[str, Any]) -> None:
+                 provenance: dict[str, Any],
+                 te: dict[str, Any] | None = None) -> None:
         self.channels = channels
         self.provenance = provenance
+        self.te = te
 
 
-__all__ = ["render", "RenderedScenario", "NATIVE_CHANNELS", "FOLDED_SOURCES",
+__all__ = ["render", "RenderedScenario", "NATIVE_CHANNELS", "ENGINE_UNREACHABLE",
            "BASE_TS"]

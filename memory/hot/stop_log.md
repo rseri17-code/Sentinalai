@@ -12579,3 +12579,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-26T12:32:14.644Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: fe2c2dd feat(enterprisebench): EB-2 deterministic Investigation Evaluation Pipeline
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `fe2c2dd feat(enterprisebench): EB-2 deterministic Investigation Evaluation Pipeline`
+- `bb88451 chore: update hot memory (stop hook auto-commit)`
+- `1179780 chore: update runtime-generated state (EFIC-3 regression run)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

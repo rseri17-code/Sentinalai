@@ -12525,3 +12525,57 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-26T04:36:09.071Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 1179780 chore: update runtime-generated state (EFIC-3 regression run)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `1179780 chore: update runtime-generated state (EFIC-3 regression run)`
+- `c9ff67f feat(efic): EFIC-3 Enterprise Investigation Specification for every scenario`
+- `642cdfd chore: update runtime-generated state (EFIC-2 regression run)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-26T11:26:05.024Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 1179780 chore: update runtime-generated state (EFIC-3 regression run)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `1179780 chore: update runtime-generated state (EFIC-3 regression run)`
+- `c9ff67f feat(efic): EFIC-3 Enterprise Investigation Specification for every scenario`
+- `642cdfd chore: update runtime-generated state (EFIC-2 regression run)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

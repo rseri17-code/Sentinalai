@@ -56,6 +56,8 @@ def _route(server: str, action: str) -> str | None:
         if "ci" in a:
             return "servicenow.get_ci_details"
         return None
+    if server == "route53":                       # IE-2 (flag-gated at render)
+        return "route53.check_resolver" if "resolver" in a else "route53.get_record"
     return None
 
 
@@ -70,6 +72,11 @@ class BenchMCPSource:
 
     # -- McpGateway interface -------------------------------------------------
     def discover_tools(self) -> frozenset[str]:
+        # IE-2: advertise route53 only when the pilot flag is on, so the engine
+        # registers the DNS worker only in that mode (flag-off is unchanged).
+        import os
+        if os.environ.get("IE_DNS_ENABLED", "false").lower() in ("1", "true", "yes"):
+            return _ADVERTISED_SERVERS | {"route53"}
         return _ADVERTISED_SERVERS
 
     def invoke(self, mcp_tool_name: str, tool_action: str,

@@ -110,6 +110,7 @@ from workers.confluence_worker import ConfluenceWorker
 from workers.code_worker import CodeWorker
 from workers.git_worker import GitWorker
 from workers.network_worker import ThousandEyesWorker
+from workers.dns_worker import DnsWorker
 from supervisor.cmdb_traversal import CMDBTraversal, build_change_summary
 from supervisor.fix_engine import get_fix_engine, ProposedFix
 from supervisor.evidence_citation import annotate_citations
@@ -147,6 +148,14 @@ try:
     _SPLUNK_PLANNER_AVAILABLE = True
 except ImportError:
     _SPLUNK_PLANNER_AVAILABLE = False
+
+def _ie_dns_enabled() -> bool:
+    """IE-2 DNS/Route53 vertical-slice flag (default OFF). Read at call time so
+    tests/EnterpriseBench can toggle it per run. When OFF the entire DNS path —
+    worker registration, the proof-gated probe, and the DNS analyzer — is inert,
+    and investigation behavior is byte-identical to today's engine."""
+    return os.environ.get("IE_DNS_ENABLED", "false").lower() in ("1", "true", "yes")
+
 
 # Institutional knowledge layer (opt-in via env var, graceful degradation)
 _KNOWLEDGE_ENABLED = os.environ.get("KNOWLEDGE_GRAPH_ENABLED", "").lower() in ("1", "true", "yes")
@@ -251,6 +260,7 @@ class SentinalAISupervisor:
         "event_worker":     frozenset({"dynatrace", "signalfx"}),  # → ApmWorker (sysdig k8s events)
         "change_worker":    frozenset({"github"}),                  # → DevopsWorker
         "network_worker":   frozenset(),  # always available; ENABLE_THOUSANDEYES_RCA gates internally
+        "dns_worker":       frozenset({"route53"}),  # IE-2; only registered when IE_DNS_ENABLED
     }
 
     def __init__(
@@ -284,6 +294,10 @@ class SentinalAISupervisor:
             "change_worker":    lambda: DevopsWorker(gateway=gw),
             "network_worker":   lambda: ThousandEyesWorker(),
         }
+        # IE-2: DNS worker registered ONLY when the pilot flag is on, so the
+        # flag-off worker set is byte-identical to today's engine.
+        if _ie_dns_enabled():
+            _worker_factory["dns_worker"] = lambda: DnsWorker(gateway=gw)
 
         self.workers: dict[str, Any] = {}
         for name, factory in _worker_factory.items():
@@ -1579,6 +1593,107 @@ class SentinalAISupervisor:
         return best
 
     # ------------------------------------------------------------------ #
+    # IE-2: DNS / Route53 vertical slice (additive; gated by IE_DNS_ENABLED)
+    # ------------------------------------------------------------------ #
+
+    _DNS_LOG_HINTS = (
+        "nxdomain", "name resolution", "failed to resolve", "cannot resolve",
+        "no such host", "unresolved host", "connection refused",
+        "dependency unavailable",
+    )
+
+    def _dns_probe_warranted(self, evidence: dict) -> bool:
+        """Proof-gate: only probe DNS when the collected logs show a DNS- or
+        named-dependency-connectivity symptom (mirrors how an SRE checks DNS only
+        after seeing resolution / connection-refused errors)."""
+        for entry in self._extract_logs(evidence):
+            msg = str(entry.get("message", "")).lower()
+            if any(h in msg for h in self._DNS_LOG_HINTS):
+                return True
+        return False
+
+    def _maybe_fetch_dns_evidence(
+        self, service: str, evidence: dict,
+        receipts: Any | None = None, budget: Any | None = None,
+        circuits: Any | None = None,
+    ) -> dict | None:
+        """Proof-gated Route53/DNS probe (Step 3g). Returns additive dns evidence
+        or None. Inert unless IE_DNS_ENABLED and a DNS symptom is present."""
+        if not _ie_dns_enabled():
+            return None
+        worker = self.workers.get("dns_worker")
+        if worker is None or not self._dns_probe_warranted(evidence):
+            return None
+        if budget and not budget.can_call():
+            return None
+        result: dict[str, Any] = {}
+        rec = self._call_worker(worker, "get_dns_record", {"service": service},
+                                receipts, budget, worker_name="dns_worker",
+                                circuits=circuits)
+        if rec.get("record"):
+            result["record"] = rec["record"]
+        res = self._call_worker(worker, "check_resolver", {"service": service},
+                                receipts, budget, worker_name="dns_worker",
+                                circuits=circuits)
+        if res.get("resolver"):
+            result["resolver"] = res["resolver"]
+        return result or None
+
+    def _extract_dns_evidence(self, evidence: dict) -> dict:
+        """Normalize the DNS probe result the supervisor stored under dns_evidence."""
+        dns = evidence.get("dns_evidence")
+        return dns if isinstance(dns, dict) else {}
+
+    def _analyze_dns(self, service: str, dns_ev: dict, logs: list) -> list:
+        """Emit DNS hypotheses from Route53 evidence. Only fires on a real DNS
+        problem, so a probe that returns clean/empty DNS contributes nothing —
+        DNS evidence changes the diagnosis only when appropriate."""
+        hyps: list = []
+        if not dns_ev:
+            return hyps
+        resolver = dns_ev.get("resolver") or {}
+        record = dns_ev.get("record") or {}
+
+        if str(resolver.get("status", "")).lower() in ("unhealthy", "down", "degraded"):
+            hyps.append(Hypothesis(
+                name="dns_resolver_outage",
+                root_cause=("internal DNS resolver outage causing NXDOMAIN / name "
+                            f"resolution failures affecting {service}"),
+                base_score=84,
+                evidence_refs=["route53:resolver_unhealthy", "logs:nxdomain"],
+                reasoning=(
+                    f"The DNS resolver reports status '{resolver.get('status')}' with "
+                    f"query_timeouts={resolver.get('query_timeouts', '?')}; logs show "
+                    "NXDOMAIN / name-resolution failures across services."),
+            ))
+
+        points_to = str(record.get("points_to", ""))
+        stale = any(t in points_to.lower()
+                    for t in ("old", "decommiss", "stale", "legacy", "deprecated"))
+        if record and (stale or self._logs_refuse_host(logs, points_to)):
+            name = record.get("name", record.get("record", ""))
+            hyps.append(Hypothesis(
+                name="stale_dns_record",
+                root_cause=(f"stale Route53 DNS record ({name}) points {service} to a "
+                            f"decommissioned endpoint ({points_to})"),
+                base_score=82,
+                evidence_refs=["route53:stale_record", "logs:connection_refused"],
+                reasoning=(
+                    f"Route53 record {name} resolves to '{points_to}', which the logs "
+                    "show is refusing connections — the record was not updated after "
+                    "the endpoint was decommissioned."),
+            ))
+        return hyps
+
+    @staticmethod
+    def _logs_refuse_host(logs: list, host: str) -> bool:
+        if not host:
+            return False
+        h = host.lower()
+        return any("refused" in str(e.get("message", "")).lower()
+                   and h in str(e.get("message", "")).lower() for e in logs)
+
+    # ------------------------------------------------------------------ #
     # Internal: Code diff analysis (AI-powered — Phase 3e)
     # ------------------------------------------------------------------ #
 
@@ -2317,6 +2432,17 @@ class SentinalAISupervisor:
             incident_type, service, summary, logs, signals, metrics, events, changes, timeline,
             suggested_root_causes=suggested_root_causes,
         )
+
+        # IE-2: DNS/Route53 reasoning (additive, flag-gated). DNS evidence acquired
+        # by the proof-gated probe in COLLECT joins the hypothesis pool here, so it
+        # participates in evidence-weighted scoring, elimination, and winner
+        # selection exactly like any other hypothesis. Inert when IE_DNS_ENABLED
+        # is off or no DNS problem was found.
+        if _ie_dns_enabled():
+            dns_hyps = self._analyze_dns(
+                service, self._extract_dns_evidence(evidence), logs)
+            if dns_hyps:
+                hypotheses.extend(dns_hyps)
 
         # W3: Evidence-weighted confidence for each hypothesis
         # R2: capture each hypothesis's pre-scoring prior so the winner's

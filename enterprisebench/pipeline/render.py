@@ -225,6 +225,32 @@ def _ci_details(incident: Mapping[str, Any],
     return {"ci": ci}
 
 
+def _route53_channels(telemetry: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """IE-2: render Route53/DNS telemetry into the route53 MCP channels the DNS
+    worker queries. Neutral facts only — the *verdict* (stale/outage) is left to
+    the engine's `_analyze_dns` reasoning, never encoded here."""
+    payload = telemetry.get("route53_dns")
+    if not isinstance(payload, Mapping):
+        return {}
+    if "record" in payload or "points_to" in payload:
+        record = {"name": payload.get("record", ""),
+                  "points_to": payload.get("points_to", ""), "type": "CNAME"}
+    else:
+        record = None
+    if "resolver" in payload or "query_timeouts" in payload:
+        resolver = {"status": payload.get("resolver", "healthy"),
+                    "query_timeouts": payload.get("query_timeouts", "low")}
+    else:
+        resolver = None
+    return {"route53.get_record": {"record": record},
+            "route53.check_resolver": {"resolver": resolver}}
+
+
+def _dns_flag_on() -> bool:
+    import os
+    return os.environ.get("IE_DNS_ENABLED", "false").lower() in ("1", "true", "yes")
+
+
 def render(task: Mapping[str, Any]) -> "RenderedScenario":
     """Render one EFIC task's PUBLIC telemetry into per-channel MCP responses.
 
@@ -264,11 +290,20 @@ def render(task: Mapping[str, Any]) -> "RenderedScenario":
     te = thousandeyes_responses(telemetry.get("thousandeyes")) \
         if "thousandeyes" in telemetry else None
 
-    # Provenance: which sources reach the engine, through which channel, and which
-    # are engine-unreachable (documented, not folded — EB-3).
+    # IE-2: Route53/DNS is engine-reachable ONLY when IE_DNS_ENABLED. Flag off ⇒
+    # route53_dns stays engine-unreachable and no route53 channel is rendered, so
+    # the flag-off report is byte-identical to the EB-3 baseline.
+    dns_on = _dns_flag_on()
+    if dns_on:
+        channels.update(_route53_channels(telemetry))
+
+    unreachable = sorted(s for s in telemetry if s in ENGINE_UNREACHABLE
+                         and not (dns_on and s == "route53_dns"))
+    native = sorted([s for s in telemetry if s in NATIVE_CHANNELS]
+                    + (["route53_dns"] if dns_on and "route53_dns" in telemetry else []))
     provenance = {
-        "native_channel": sorted(s for s in telemetry if s in NATIVE_CHANNELS),
-        "engine_unreachable": sorted(s for s in telemetry if s in ENGINE_UNREACHABLE),
+        "native_channel": native,
+        "engine_unreachable": unreachable,
         "sources": sorted(telemetry),
         "folded_to_logs": [],   # EB-3: folding removed
     }

@@ -349,6 +349,9 @@ def _fetch_secret_from_asm(secret_arn: str) -> str:
 # ---------------------------------------------------------------------------
 
 _TOOL_TO_SERVER: dict[str, str] = {
+    # Route53 / DNS (IE-2 pilot; only queried when IE_DNS_ENABLED)
+    "route53.get_record": "route53",
+    "route53.check_resolver": "route53",
     # Moogsoft (AIOPS)
     "moogsoft.get_incident_by_id": "moogsoft",
     "moogsoft.get_incidents": "moogsoft",
@@ -1264,7 +1267,16 @@ def _stub_confluence(action: str, params: dict) -> dict:
     return {}
 
 
+def _stub_route53(action: str, params: dict) -> dict:
+    # No real Route53 MCP is connected in stub/prod-without-DNS-MCP mode, so a
+    # query returns a production-shaped empty (safe no-op even with IE_DNS_ENABLED).
+    if "resolver" in action:
+        return {"resolver": None}
+    return {"record": None}
+
+
 _STUB_DISPATCH: dict[str, Any] = {
+    "route53": _stub_route53,
     "moogsoft": _stub_moogsoft,
     "splunk": _stub_splunk,
     "sysdig": _stub_sysdig,

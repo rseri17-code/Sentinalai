@@ -441,6 +441,19 @@ class CollectPhase:
                         if _shadow is not None:
                             _shadow.set("git_blame", blame_result)
 
+        # --- Step 3g: DNS resolution enrichment (proof-gated; IE-2) ---
+        # Gated at the call site by IE_DNS_ENABLED so that flag-off, this block is
+        # entirely skipped — no new call reaches the supervisor and behavior is
+        # byte-identical to today's engine.
+        if os.environ.get("IE_DNS_ENABLED", "false").lower() in ("1", "true", "yes"):
+            dns_context = sup._maybe_fetch_dns_evidence(
+                service, evidence, receipts, budget, circuits,
+            )
+            if dns_context:
+                evidence["dns_evidence"] = dns_context
+                if _shadow is not None:
+                    _shadow.set("dns_evidence", dns_context)
+
         # --- Await trace correlation ---
         try:
             trace_corr = _trace_future.result(timeout=5)

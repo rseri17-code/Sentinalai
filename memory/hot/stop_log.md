@@ -12631,3 +12631,85 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-26T19:41:45.082Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 48e0cb3 docs(investigation): IE-1 evidence-acquisition capability expansion (architecture only)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `48e0cb3 docs(investigation): IE-1 evidence-acquisition capability expansion (architecture only)`
+- `5055ecf feat(enterprisebench): EB-3 Enterprise Digital Twin — MCP simulators + reachability wall`
+- `d37f45f chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-26T22:37:52.468Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 48e0cb3 docs(investigation): IE-1 evidence-acquisition capability expansion (architecture only)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `48e0cb3 docs(investigation): IE-1 evidence-acquisition capability expansion (architecture only)`
+- `5055ecf feat(enterprisebench): EB-3 Enterprise Digital Twin — MCP simulators + reachability wall`
+- `d37f45f chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-26T22:43:49.271Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 48e0cb3 docs(investigation): IE-1 evidence-acquisition capability expansion (architecture only)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `48e0cb3 docs(investigation): IE-1 evidence-acquisition capability expansion (architecture only)`
+- `5055ecf feat(enterprisebench): EB-3 Enterprise Digital Twin — MCP simulators + reachability wall`
+- `d37f45f chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

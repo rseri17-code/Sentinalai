@@ -285,6 +285,85 @@ deferred to EB-2; without supplied submissions every scenario is `NOT_MEASURED`
 (by design); statistical-significance gating is deferred (explicit thresholds
 only).
 
+## 9b. EB-2 — Investigation Evaluation Pipeline (IMPLEMENTED)
+
+The missing contract EB-0 documented — corpus telemetry wired into the *live*
+investigation engine — is now built. Package `enterprisebench/pipeline/`
+(additive; no engine/planner/runtime/replay/scoring change). It drives the
+**unmodified** `SentinalAISupervisor.investigate(incident_id)` end-to-end against
+EFIC telemetry and evaluates the engine's investigation *process* against the
+hidden Enterprise Investigation Specification.
+
+**Pipeline:** EFIC task → **telemetry render** (`render.py`) → **BenchMCPSource**
+(`bench_source.py`) → **unmodified `investigate()`** (isolated subprocess,
+`execute.py` + `_isolated_worker.py`) → **trace capture** → **reasoning
+evaluation** (`evaluate.py`, REUSES `eic.score_submission` + the
+`sentinelai_submission` adapter) → per-scenario score → deterministic **report**
+(`run.py`, `__main__.py`).
+
+**BenchMCPSource** duck-types `workers.mcp_client.McpGateway` (`invoke` +
+`discover_tools`) and is injected via the engine's own
+`SentinalAISupervisor(gateway=...)` seam — the single boundary every worker
+funnels through. It responds ONLY to queries the engine issues; unmatched queries
+fall through to the real stub dispatch, so absent evidence returns the exact
+production-shaped empty (a genuine "no data", not an error or a hint). It respects
+the query's server + action and records the full MCP interaction stream.
+
+**Telemetry rendering** maps EFIC's abstract per-source telemetry into the exact
+response schemas the engine reads (splunk logs/changes, dynatrace golden signals,
+sysdig metrics/events, servicenow change-records/CI, moogsoft incident). Sources
+with no native engine channel (certificates, route53_dns, identity, aws_cloudwatch,
+autosys, cmdb, …) are folded into Splunk log lines — how such failures actually
+surface to a log-first investigation — carrying only the observable *symptom*,
+never the hidden root-cause sentence.
+
+**Isolation invariant (proven):** the source is built from a `RenderedScenario`
+derived from the PUBLIC `task.incident` + `task.telemetry` only. `ground_truth`,
+`traps`, the `efic` block, and `investigation_spec` NEVER reach the engine.
+Tests: `render()` is byte-identical under a scrambled answer key; no rendered
+channel contains the root-cause sentence; and no `supervisor/` / `workers/` /
+`intelligence/` module references `investigation_spec`.
+
+**Evaluated configuration (fixed for every scenario, recorded in the report):**
+the deterministic reasoning core — LLM refinement OFF (non-deterministic, needs
+network), cross-incident learning neutralized (empty learning state, per-incident
+isolation), engine reasoning stack ON (hypothesis engine, causal localization,
+decision intelligence). These are the engine's own flags; no code is changed.
+
+**Determinism:** each scenario runs in a fresh isolated subprocess with empty
+learning state (no in-memory singleton or background-write leakage); concurrency-
+ordered trace fields (the engine dispatches collection workers on a thread pool)
+are canonicalized; the report excludes volatile timing from its `content_hash`.
+The engine's one repo-anchored side-effect (an episodic-memory append, never read
+back) is sandboxed so a run leaves the working tree unchanged. The full 30-scenario
+run reproduces byte-identically (`content_hash` stable across runs).
+
+**Honest first measurement (30 EFIC scenarios, this engine, this config):** the
+engine **localizes** the failing service well (localization 0.97, 29/30) and
+**collects the right evidence across MCPs** (evidence-collection 0.98, cross-MCP
+1.0, recommendation present 1.0), but does **not name the enterprise root cause**
+(rca_correctness 0/30 by keyword grading — root causes are symptom-level), its
+confidence is suppressed below the expected band by the anti-hallucination
+citation gate (confidence-in-range 1/30), and decisive-evidence attribution /
+multi-hypothesis elimination are not exposed in this configuration. 11/30
+scenarios reference an MCP the engine cannot yet query (the EB-3 simulator gap);
+only 1 has fully-unreachable decisive evidence. Process dimensions the engine
+does not expose (blast radius, business context, confidence-evolution trajectory,
+evidence-attribution detail, recovery validation) are reported `NOT_MEASURED`,
+never faked. This is a real, reproducible measurement of the gap between the
+engine's current capability and the EFIC enterprise-realism bar.
+
+**CLI:** `python -m enterprisebench.pipeline run [--only IDs] [--out DIR]
+[--markdown] [--threshold T]`. **Tests:** `tests/enterprisebench/test_eb2.py`
+(11) — isolation proof, production-parity source behavior, evaluator reuse +
+`NOT_MEASURED` honesty, end-to-end determinism, and no-repo-pollution.
+
+**Known limitations:** EB-2 measures the deterministic core (LLM-refinement layer
+excluded); it evaluates the current engine, whose default RC phrasing is
+symptom-level; ~11/30 scenarios need EB-3 simulators for full evidence reach;
+golden-signal magnitudes are synthesized generically (specifics come from
+log/event/change text); process depth is bounded by what the engine exposes.
+
 ## 10. Recommendation
 
 Proceed to **EB-0** first (evaluation runner over the existing EIC scorer +
@@ -293,3 +372,9 @@ assets into a per-commit investigation-quality measurement with the least new
 code and the highest immediate value, and it validates the whole EnterpriseBench
 contract on a small corpus before scaling generation (EB-4). Do not begin EB-0
 until this architecture is reviewed.
+
+*Update: EB-0 and EB-2 are now implemented (§9a, §9b). The highest-value next
+objective is **EB-3** — the missing MCP simulators (certificates, route53/DNS,
+identity, aws_cloudwatch, autosys, cmdb) — which would move ~11/30 EFIC scenarios
+from "required evidence unreachable" to fully exercised, directly widening what
+EB-2 can measure.*

@@ -12605,3 +12605,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-26T18:01:05.679Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 5055ecf feat(enterprisebench): EB-3 Enterprise Digital Twin — MCP simulators + reachability wall
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `5055ecf feat(enterprisebench): EB-3 Enterprise Digital Twin — MCP simulators + reachability wall`
+- `d37f45f chore: update hot memory (stop hook auto-commit)`
+- `fe2c2dd feat(enterprisebench): EB-2 deterministic Investigation Evaluation Pipeline`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

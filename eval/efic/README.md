@@ -18,7 +18,28 @@ Each corpus entry = `{task, expected, efic}`:
   impact, **MCP utilization** (`required` / `optional` / `expected_empty` /
   `not_applicable` for every MCP), contributing factors, **negative evidence**,
   **red herrings**, hypotheses considered/eliminated, reasoning category,
-  difficulty, and a content-addressed **replay seed** (the task hash).
+  difficulty, a content-addressed **replay seed** (the task hash), and the
+  **investigation specification** (see below).
+
+## Investigation specification (EFIC-3)
+Every scenario defines not only the correct answer but the **expected
+investigation process**, in `efic.investigation_spec`. It is derived
+deterministically from the scenario's declared fields and lives only in the
+hidden `efic` block — the `task` (and therefore the task hash and EB-0 grading)
+is unchanged. It records:
+- **`evidence_attribution`** — each signal classified `primary` / `supporting` /
+  `red_herring` / `negative`, with *why*.
+- **`hypothesis_graph`** — initial hypotheses, which were strengthened/weakened,
+  which were eliminated (and *by what*), and the surviving `final` hypothesis.
+- **`confidence_evolution`** — how confidence should move through triage →
+  necessary evidence → red-herring doubt → decisive proof → elimination →
+  confirmation, always **bounded to the expected confidence range** (never
+  overclaims).
+- **`mcp_investigation_contract`** — per required MCP: purpose, expected query,
+  expected contribution (decisive vs corroborating), and query ordering.
+- **`business_context` / `operational_context` / `blast_radius` /
+  `escalation_boundary` / `recovery_verification` / `postmortem_summary`** — how
+  the incident is bounded, owned, remediated, verified, and closed.
 
 ## Design rules
 - **Distinct reasoning per scenario** — deduplicated by
@@ -57,4 +78,4 @@ knowledge base poses well-formed, distinct, cross-MCP reasoning problems** — i
 does **not** prove real operator outcomes (those remain `NOT_MEASURED` until the
 supervised pilot).
 
-Tests: `tests/efic/test_efic_corpus.py` (16).
+Tests: `tests/efic/test_efic_corpus.py` (22).

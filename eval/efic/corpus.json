@@ -29,6 +29,140 @@
           "db slowness (DB fast)",
           "network (TE green)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "pricing-service",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "pricing-service"
+          },
+          "business_context": {
+            "impact": "intermittent pricing latency",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (pricing p99 latency spikes without errors); cause not yet established",
+              "confidence": 62,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: dynatrace, sysdig",
+              "confidence": 69,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "intermittent DB latency that coincides \u2014 considered and set aside",
+              "confidence": 67,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: dynatrace",
+              "confidence": 82,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: db slowness, network",
+              "confidence": 84,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "long stop-the-world GC pauses in pricing-service (JVM heap under-sized for load)",
+              "confidence": 84,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond pricing-service",
+            "owning_team": "pricing-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "dynatrace",
+              "why": "decisive signal proving the root cause: long stop-the-world GC pauses in pricing-service (JVM heap under-sized for load)"
+            },
+            {
+              "class": "supporting",
+              "evidence": "sysdig",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "latency spikes align to GC pause windows",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "no OOMKill and DB fast \u2014 rules out OOM and db slowness",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "DB fast",
+                "hypothesis": "db slowness"
+              },
+              {
+                "eliminated_by": "TE green",
+                "hypothesis": "network"
+              }
+            ],
+            "final": "gc pause",
+            "initial": [
+              "gc pause",
+              "db slowness",
+              "network"
+            ],
+            "strengthened": [
+              "gc pause"
+            ],
+            "weakened": [
+              "db slowness",
+              "network"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query application_runtime/gc_pause signals for pricing-service",
+              "mcp": "sysdig",
+              "purpose": "gather application_runtime/gc_pause evidence from sysdig for pricing-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query application_runtime/gc_pause signals for pricing-service",
+              "mcp": "dynatrace",
+              "purpose": "gather application_runtime/gc_pause evidence from dynatrace for pricing-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "pricing p99 latency spikes without errors",
+          "operational_context": {
+            "affected_service": "pricing-service",
+            "contributing_factors": [
+              "heap sizing + allocation rate mismatch"
+            ],
+            "dependencies": [],
+            "owning_team": "pricing-team",
+            "root_cause_service": "pricing-service"
+          },
+          "postmortem_summary": "pricing-service incident (gc_pause_latency): long stop-the-world GC pauses in pricing-service (JVM heap under-sized for load). Confirmed via dynatrace; ruled out db slowness, network. Remediation: tune heap/GC; reduce allocation; scale out. Owner: pricing-team.",
+          "recovery_verification": {
+            "remediation": "tune heap/GC; reduce allocation; scale out",
+            "verify": "confirm the gc_pause signal clears and pricing-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -155,6 +289,140 @@
           "cpu saturation (CPU low)",
           "gc (no pauses)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "gateway-bff",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "gateway-bff"
+          },
+          "business_context": {
+            "impact": "BFF request stalls",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (BFF requests hang then time out); cause not yet established",
+              "confidence": 66,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: dynatrace, splunk",
+              "confidence": 73,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "low CPU makes it look 'not overloaded' \u2014 considered and set aside",
+              "confidence": 71,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: dynatrace",
+              "confidence": 86,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: cpu saturation, gc",
+              "confidence": 88,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "thread-pool exhaustion in gateway-bff: all worker threads blocked on a slow downstream",
+              "confidence": 88,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond gateway-bff",
+            "owning_team": "platform-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "dynatrace",
+              "why": "decisive signal proving the root cause: thread-pool exhaustion in gateway-bff: all worker threads blocked on a slow downstream"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "kubernetes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "CPU is low while all threads are blocked (not CPU-bound)",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "low CPU + no GC pauses \u2014 rules out cpu saturation and gc",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "CPU low",
+                "hypothesis": "cpu saturation"
+              },
+              {
+                "eliminated_by": "no pauses",
+                "hypothesis": "gc"
+              }
+            ],
+            "final": "thread-pool exhaustion",
+            "initial": [
+              "thread-pool exhaustion",
+              "cpu saturation",
+              "gc"
+            ],
+            "strengthened": [
+              "thread-pool exhaustion"
+            ],
+            "weakened": [
+              "cpu saturation",
+              "gc"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query application_runtime/thread_pool_exhaustion signals for gateway-bff",
+              "mcp": "splunk",
+              "purpose": "gather application_runtime/thread_pool_exhaustion evidence from splunk for gateway-bff",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query application_runtime/thread_pool_exhaustion signals for gateway-bff",
+              "mcp": "dynatrace",
+              "purpose": "gather application_runtime/thread_pool_exhaustion evidence from dynatrace for gateway-bff",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "BFF requests hang then time out",
+          "operational_context": {
+            "affected_service": "gateway-bff",
+            "contributing_factors": [
+              "synchronous calls to a slow dependency without a bulkhead"
+            ],
+            "dependencies": [],
+            "owning_team": "platform-team",
+            "root_cause_service": "gateway-bff"
+          },
+          "postmortem_summary": "gateway-bff incident (thread_pool_saturation): thread-pool exhaustion in gateway-bff: all worker threads blocked on a slow downstream. Confirmed via dynatrace; ruled out cpu saturation, gc. Remediation: add timeouts/bulkheads; make downstream calls async. Owner: platform-team.",
+          "recovery_verification": {
+            "remediation": "add timeouts/bulkheads; make downstream calls async",
+            "verify": "confirm the thread_pool_exhaustion signal clears and gateway-bff returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -282,6 +550,140 @@
           "bad deploy (no change)",
           "app bug (other AZs healthy)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "fulfillment-service",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "fulfillment-service"
+          },
+          "business_context": {
+            "impact": "partial fulfillment outage",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (a third of fulfillment requests failing); cause not yet established",
+              "confidence": 66,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: aws_cloudwatch, dynatrace",
+              "confidence": 74,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a benign config edit hours earlier \u2014 considered and set aside",
+              "confidence": 72,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: aws_cloudwatch",
+              "confidence": 88,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: bad deploy, app bug",
+              "confidence": 90,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "AWS AZ impairment degrading fulfillment nodes in one availability zone",
+              "confidence": 90,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond fulfillment-service",
+            "owning_team": "cloud-platform-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "aws_cloudwatch",
+              "why": "decisive signal proving the root cause: AWS AZ impairment degrading fulfillment nodes in one availability zone"
+            },
+            {
+              "class": "supporting",
+              "evidence": "dynatrace",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "servicenow",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "failures isolate to one AZ; other AZs are healthy",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "no change in the window \u2014 rules out bad deploy",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "no change",
+                "hypothesis": "bad deploy"
+              },
+              {
+                "eliminated_by": "other AZs healthy",
+                "hypothesis": "app bug"
+              }
+            ],
+            "final": "AZ impairment",
+            "initial": [
+              "AZ impairment",
+              "bad deploy",
+              "app bug"
+            ],
+            "strengthened": [
+              "AZ impairment"
+            ],
+            "weakened": [
+              "bad deploy",
+              "app bug"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query cloud_aws/regional_impairment signals for fulfillment-service",
+              "mcp": "dynatrace",
+              "purpose": "gather cloud_aws/regional_impairment evidence from dynatrace for fulfillment-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query cloud_aws/regional_impairment signals for fulfillment-service",
+              "mcp": "aws_cloudwatch",
+              "purpose": "gather cloud_aws/regional_impairment evidence from aws_cloudwatch for fulfillment-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "a third of fulfillment requests failing",
+          "operational_context": {
+            "affected_service": "fulfillment-service",
+            "contributing_factors": [
+              "no cross-AZ failover for the affected tier"
+            ],
+            "dependencies": [],
+            "owning_team": "cloud-platform-team",
+            "root_cause_service": "fulfillment-service"
+          },
+          "postmortem_summary": "fulfillment-service incident (regional_failover): AWS AZ impairment degrading fulfillment nodes in one availability zone. Confirmed via aws_cloudwatch; ruled out bad deploy, app bug. Remediation: drain the impaired AZ; enable cross-AZ failover. Owner: cloud-platform-team.",
+          "recovery_verification": {
+            "remediation": "drain the impaired AZ; enable cross-AZ failover",
+            "verify": "confirm the regional_impairment signal clears and fulfillment-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -410,6 +812,130 @@
           "disk full (disk normal)",
           "network (S3-specific errors)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "media-service",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "media-service"
+          },
+          "business_context": {
+            "impact": "media upload failures",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (media uploads failing intermittently); cause not yet established",
+              "confidence": 68,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: aws_cloudwatch, splunk",
+              "confidence": 75,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a disk-usage alert on a sibling host \u2014 considered and set aside",
+              "confidence": 73,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: aws_cloudwatch",
+              "confidence": 88,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: disk full, network",
+              "confidence": 90,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "S3 request-rate throttling on the media upload prefix",
+              "confidence": 90,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond media-service",
+            "owning_team": "media-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "aws_cloudwatch",
+              "why": "decisive signal proving the root cause: S3 request-rate throttling on the media upload prefix"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "node disk usage normal \u2014 rules out disk full",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "disk normal",
+                "hypothesis": "disk full"
+              },
+              {
+                "eliminated_by": "S3-specific errors",
+                "hypothesis": "network"
+              }
+            ],
+            "final": "s3 throttling",
+            "initial": [
+              "s3 throttling",
+              "disk full",
+              "network"
+            ],
+            "strengthened": [
+              "s3 throttling"
+            ],
+            "weakened": [
+              "disk full",
+              "network"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query cloud_aws/s3_request_throttling signals for media-service",
+              "mcp": "splunk",
+              "purpose": "gather cloud_aws/s3_request_throttling evidence from splunk for media-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query cloud_aws/s3_request_throttling signals for media-service",
+              "mcp": "aws_cloudwatch",
+              "purpose": "gather cloud_aws/s3_request_throttling evidence from aws_cloudwatch for media-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "media uploads failing intermittently",
+          "operational_context": {
+            "affected_service": "media-service",
+            "contributing_factors": [
+              "hot key prefix; no request-rate sharding"
+            ],
+            "dependencies": [],
+            "owning_team": "media-team",
+            "root_cause_service": "media-service"
+          },
+          "postmortem_summary": "media-service incident (cloud_service_limit): S3 request-rate throttling on the media upload prefix. Confirmed via aws_cloudwatch; ruled out disk full, network. Remediation: shard S3 key prefixes; add request-rate backoff. Owner: media-team.",
+          "recovery_verification": {
+            "remediation": "shard S3 key prefixes; add request-rate backoff",
+            "verify": "confirm the s3_request_throttling signal clears and media-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -529,6 +1055,153 @@
           "db outage (reachable elsewhere)",
           "dns (resolves fine)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "orders-service",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "orders-service"
+          },
+          "business_context": {
+            "impact": "orders cannot reach the database",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (orders-service cannot reach its database); cause not yet established",
+              "confidence": 74,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: aws_cloudwatch, servicenow, splunk",
+              "confidence": 80,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a DNS TTL change that is unrelated \u2014 considered and set aside",
+              "confidence": 78,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: servicenow",
+              "confidence": 91,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: db outage, dns",
+              "confidence": 93,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "a security-group rule change removed DB port 5432 ingress for orders-service",
+              "confidence": 93,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond orders-service",
+            "owning_team": "cloud-platform-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "servicenow",
+              "why": "decisive signal proving the root cause: a security-group rule change removed DB port 5432 ingress for orders-service"
+            },
+            {
+              "class": "supporting",
+              "evidence": "aws_cloudwatch",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "VPC flow logs show REJECT on 5432 exactly post-change",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "DB accepts connections from other SGs \u2014 rules out db outage",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "reachable elsewhere",
+                "hypothesis": "db outage"
+              },
+              {
+                "eliminated_by": "resolves fine",
+                "hypothesis": "dns"
+              }
+            ],
+            "final": "SG misconfig",
+            "initial": [
+              "SG misconfig",
+              "db outage",
+              "dns"
+            ],
+            "strengthened": [
+              "SG misconfig"
+            ],
+            "weakened": [
+              "db outage",
+              "dns"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query cloud_aws/security_group_misconfig signals for orders-service",
+              "mcp": "aws_cloudwatch",
+              "purpose": "gather cloud_aws/security_group_misconfig evidence from aws_cloudwatch for orders-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query cloud_aws/security_group_misconfig signals for orders-service",
+              "mcp": "splunk",
+              "purpose": "gather cloud_aws/security_group_misconfig evidence from splunk for orders-service",
+              "step": 2
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query cloud_aws/security_group_misconfig signals for orders-service",
+              "mcp": "servicenow",
+              "purpose": "gather cloud_aws/security_group_misconfig evidence from servicenow for orders-service",
+              "step": 3
+            }
+          ],
+          "observed_symptoms": "orders-service cannot reach its database",
+          "operational_context": {
+            "affected_service": "orders-service",
+            "contributing_factors": [
+              "a broad SG cleanup removed a still-needed rule"
+            ],
+            "dependencies": [],
+            "owning_team": "cloud-platform-team",
+            "root_cause_service": "orders-service"
+          },
+          "postmortem_summary": "orders-service incident (network_authz_blast): a security-group rule change removed DB port 5432 ingress for orders-service. Confirmed via servicenow; ruled out db outage, dns. Remediation: restore the 5432 ingress rule; add SG change review. Owner: cloud-platform-team.",
+          "recovery_verification": {
+            "remediation": "restore the 5432 ingress rule; add SG change review",
+            "verify": "confirm the security_group_misconfig signal clears and orders-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -660,6 +1333,135 @@
           "s3 latency (normal)",
           "db (job never reached DB stage)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "settlement-batch",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "settlement-batch"
+          },
+          "business_context": {
+            "impact": "delayed financial settlement",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (nightly settlement did not run); cause not yet established",
+              "confidence": 62,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: autosys, splunk",
+              "confidence": 69,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a benign S3 latency metric \u2014 considered and set aside",
+              "confidence": 67,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: autosys",
+              "confidence": 83,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: s3 latency, db",
+              "confidence": 85,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "Autosys job SETTLE_EOD terminated on a missing upstream file dependency",
+              "confidence": 85,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond settlement-batch",
+            "owning_team": "treasury-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "autosys",
+              "why": "decisive signal proving the root cause: Autosys job SETTLE_EOD terminated on a missing upstream file dependency"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "aws_cloudwatch",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "S3 latency normal \u2014 rules out s3 slowness",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "normal",
+                "hypothesis": "s3 latency"
+              },
+              {
+                "eliminated_by": "job never reached DB stage",
+                "hypothesis": "db"
+              }
+            ],
+            "final": "autosys dependency",
+            "initial": [
+              "autosys dependency",
+              "s3 latency",
+              "db"
+            ],
+            "strengthened": [
+              "autosys dependency"
+            ],
+            "weakened": [
+              "s3 latency",
+              "db"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query batch/autosys_dependency_failure signals for settlement-batch",
+              "mcp": "splunk",
+              "purpose": "gather batch/autosys_dependency_failure evidence from splunk for settlement-batch",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query batch/autosys_dependency_failure signals for settlement-batch",
+              "mcp": "autosys",
+              "purpose": "gather batch/autosys_dependency_failure evidence from autosys for settlement-batch",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "nightly settlement did not run",
+          "operational_context": {
+            "affected_service": "settlement-batch",
+            "contributing_factors": [
+              "upstream extract job slipped its SLA"
+            ],
+            "dependencies": [],
+            "owning_team": "treasury-team",
+            "root_cause_service": "settlement-batch"
+          },
+          "postmortem_summary": "settlement-batch incident (batch_dependency_chain): Autosys job SETTLE_EOD terminated on a missing upstream file dependency. Confirmed via autosys; ruled out s3 latency, db. Remediation: add upstream-file dependency gate + SLA alert to SETTLE_EOD. Owner: treasury-team.",
+          "recovery_verification": {
+            "remediation": "add upstream-file dependency gate + SLA alert to SETTLE_EOD",
+            "verify": "confirm the autosys_dependency_failure signal clears and settlement-batch returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "required",
@@ -785,6 +1587,137 @@
           "network (TE green)",
           "storefront bug (no change; upstream slow)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "inventory-service",
+            "propagation": "cross-service cascade",
+            "scope": "critical (P1)",
+            "symptom_service": "storefront"
+          },
+          "business_context": {
+            "impact": "storefront degraded for all shoppers",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (storefront degraded, multiple services alerting); cause not yet established",
+              "confidence": 60,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: dynatrace, database",
+              "confidence": 68,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "storefront is where the symptom surfaces, not the cause \u2014 considered and set aside",
+              "confidence": 66,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: database",
+              "confidence": 84,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: network, storefront bug",
+              "confidence": 86,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "inventory-service DB saturation cascading to storefront",
+              "confidence": 86,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond storefront",
+            "owning_team": "catalog-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "database",
+              "why": "decisive signal proving the root cause: inventory-service DB saturation cascading to storefront"
+            },
+            {
+              "class": "supporting",
+              "evidence": "dynatrace",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "storefront code unchanged \u2014 weakens 'storefront bug'",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "TE green",
+                "hypothesis": "network"
+              },
+              {
+                "eliminated_by": "no change; upstream slow",
+                "hypothesis": "storefront bug"
+              }
+            ],
+            "final": "inventory saturation",
+            "initial": [
+              "inventory saturation",
+              "network",
+              "storefront bug"
+            ],
+            "strengthened": [
+              "inventory saturation"
+            ],
+            "weakened": [
+              "network",
+              "storefront bug"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query database/connection_pool_exhaustion signals for storefront",
+              "mcp": "dynatrace",
+              "purpose": "gather database/connection_pool_exhaustion evidence from dynatrace for storefront",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query database/connection_pool_exhaustion signals for storefront",
+              "mcp": "database",
+              "purpose": "gather database/connection_pool_exhaustion evidence from database for storefront",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "storefront degraded, multiple services alerting",
+          "operational_context": {
+            "affected_service": "storefront",
+            "contributing_factors": [
+              "no bulkhead between inventory and storefront"
+            ],
+            "dependencies": [
+              "inventory-service"
+            ],
+            "owning_team": "catalog-team",
+            "root_cause_service": "inventory-service"
+          },
+          "postmortem_summary": "storefront incident (cascade_localization): inventory-service DB saturation cascading to storefront. Confirmed via database; ruled out network, storefront bug. Remediation: shed load + scale inventory DB pool; add bulkhead. Owner: catalog-team.",
+          "recovery_verification": {
+            "remediation": "shed load + scale inventory DB pool; add bulkhead",
+            "verify": "confirm the connection_pool_exhaustion signal clears and storefront returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "optional",
           "autosys": "not_applicable",
@@ -919,6 +1852,135 @@
           "network (reachable, TLS-only failure)",
           "lb (config stable)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "billing-gateway",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "billing-gateway"
+          },
+          "business_context": {
+            "impact": "billing clients cannot connect",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (clients cannot establish TLS to billing); cause not yet established",
+              "confidence": 78,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: certificates, splunk",
+              "confidence": 83,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a recent LB config touch that is unrelated \u2014 considered and set aside",
+              "confidence": 82,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: certificates",
+              "confidence": 93,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: network, lb",
+              "confidence": 95,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "expired TLS certificate on billing-gateway",
+              "confidence": 95,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond billing-gateway",
+            "owning_team": "platform-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "certificates",
+              "why": "decisive signal proving the root cause: expired TLS certificate on billing-gateway"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "routing/LB config unchanged \u2014 rules out lb misconfig",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "reachable, TLS-only failure",
+                "hypothesis": "network"
+              },
+              {
+                "eliminated_by": "config stable",
+                "hypothesis": "lb"
+              }
+            ],
+            "final": "cert expiry",
+            "initial": [
+              "cert expiry",
+              "network",
+              "lb misconfig"
+            ],
+            "strengthened": [
+              "cert expiry"
+            ],
+            "weakened": [
+              "network",
+              "lb"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query certificates/certificate_expiry signals for billing-gateway",
+              "mcp": "splunk",
+              "purpose": "gather certificates/certificate_expiry evidence from splunk for billing-gateway",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query certificates/certificate_expiry signals for billing-gateway",
+              "mcp": "certificates",
+              "purpose": "gather certificates/certificate_expiry evidence from certificates for billing-gateway",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "clients cannot establish TLS to billing",
+          "operational_context": {
+            "affected_service": "billing-gateway",
+            "contributing_factors": [
+              "cert auto-renewal job silently failed"
+            ],
+            "dependencies": [],
+            "owning_team": "platform-team",
+            "root_cause_service": "billing-gateway"
+          },
+          "postmortem_summary": "billing-gateway incident (lifecycle_expiry): expired TLS certificate on billing-gateway. Confirmed via certificates; ruled out network, lb. Remediation: rotate certificate; fix renewal automation + alert. Owner: platform-team.",
+          "recovery_verification": {
+            "remediation": "rotate certificate; fix renewal automation + alert",
+            "verify": "confirm the certificate_expiry signal clears and billing-gateway returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -1043,6 +2105,135 @@
           "bad deploy (old nodes healthy)",
           "network (node-local errors)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "search-service",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "search-service"
+          },
+          "business_context": {
+            "impact": "degraded search for a fraction of traffic",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (a subset of search nodes return errors); cause not yet established",
+              "confidence": 64,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: splunk, cmdb",
+              "confidence": 71,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a recent deploy that actually succeeded \u2014 considered and set aside",
+              "confidence": 69,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: cmdb",
+              "confidence": 84,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: bad deploy, network",
+              "confidence": 86,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "new search-service nodes came up with drifted (old) config",
+              "confidence": 86,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond search-service",
+            "owning_team": "search-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "cmdb",
+              "why": "decisive signal proving the root cause: new search-service nodes came up with drifted (old) config"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "only new nodes affected \u2014 weakens 'bad deploy' (all would fail)",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "old nodes healthy",
+                "hypothesis": "bad deploy"
+              },
+              {
+                "eliminated_by": "node-local errors",
+                "hypothesis": "network"
+              }
+            ],
+            "final": "config drift",
+            "initial": [
+              "config drift",
+              "bad deploy",
+              "network"
+            ],
+            "strengthened": [
+              "config drift"
+            ],
+            "weakened": [
+              "bad deploy",
+              "network"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query deployment/config_drift signals for search-service",
+              "mcp": "splunk",
+              "purpose": "gather deployment/config_drift evidence from splunk for search-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query deployment/config_drift signals for search-service",
+              "mcp": "cmdb",
+              "purpose": "gather deployment/config_drift evidence from cmdb for search-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "a subset of search nodes return errors",
+          "operational_context": {
+            "affected_service": "search-service",
+            "contributing_factors": [
+              "autoscaler used a stale launch template"
+            ],
+            "dependencies": [],
+            "owning_team": "search-team",
+            "root_cause_service": "search-service"
+          },
+          "postmortem_summary": "search-service incident (partial_fleet_inconsistency): new search-service nodes came up with drifted (old) config. Confirmed via cmdb; ruled out bad deploy, network. Remediation: reconcile launch template; enforce config parity check. Owner: search-team.",
+          "recovery_verification": {
+            "remediation": "reconcile launch template; enforce config parity check",
+            "verify": "confirm the config_drift signal clears and search-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -1169,6 +2360,130 @@
           "pool exhaustion (pool healthy)",
           "slow query (unrelated)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "order-service",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "order-service"
+          },
+          "business_context": {
+            "impact": "order write failures",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (intermittent order write failures); cause not yet established",
+              "confidence": 68,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: database, splunk",
+              "confidence": 74,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a slow query on an unrelated report \u2014 considered and set aside",
+              "confidence": 73,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: database",
+              "confidence": 86,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: pool exhaustion, slow query",
+              "confidence": 88,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "lock-order inversion causing database deadlocks in order-service",
+              "confidence": 88,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond order-service",
+            "owning_team": "commerce-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "database",
+              "why": "decisive signal proving the root cause: lock-order inversion causing database deadlocks in order-service"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "pool utilization normal \u2014 rules out pool exhaustion",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "pool healthy",
+                "hypothesis": "pool exhaustion"
+              },
+              {
+                "eliminated_by": "unrelated",
+                "hypothesis": "slow query"
+              }
+            ],
+            "final": "deadlock",
+            "initial": [
+              "deadlock",
+              "pool exhaustion",
+              "slow query"
+            ],
+            "strengthened": [
+              "deadlock"
+            ],
+            "weakened": [
+              "pool exhaustion",
+              "slow query"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query database/deadlock signals for order-service",
+              "mcp": "splunk",
+              "purpose": "gather database/deadlock evidence from splunk for order-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query database/deadlock signals for order-service",
+              "mcp": "database",
+              "purpose": "gather database/deadlock evidence from database for order-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "intermittent order write failures",
+          "operational_context": {
+            "affected_service": "order-service",
+            "contributing_factors": [
+              "new code path acquires locks in reverse order"
+            ],
+            "dependencies": [],
+            "owning_team": "commerce-team",
+            "root_cause_service": "order-service"
+          },
+          "postmortem_summary": "order-service incident (concurrency_correctness): lock-order inversion causing database deadlocks in order-service. Confirmed via database; ruled out pool exhaustion, slow query. Remediation: normalize lock acquisition order; add retry. Owner: commerce-team.",
+          "recovery_verification": {
+            "remediation": "normalize lock acquisition order; add retry",
+            "verify": "confirm the deadlock signal clears and order-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -1290,6 +2605,135 @@
           "network (TE green)",
           "deployment (no change window)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "checkout-service",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "checkout-service"
+          },
+          "business_context": {
+            "impact": "checkout degraded at peak",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (checkout latency + 5xx spike); cause not yet established",
+              "confidence": 70,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: splunk, database",
+              "confidence": 76,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "dynatrace flags latency without a cause \u2014 considered and set aside",
+              "confidence": 75,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: database",
+              "confidence": 88,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: network, deployment",
+              "confidence": 90,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "database connection pool exhaustion from unclosed connections",
+              "confidence": 90,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond checkout-service",
+            "owning_team": "commerce-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "database",
+              "why": "decisive signal proving the root cause: database connection pool exhaustion from unclosed connections"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "no recent deploy \u2014 weakens 'bad deployment'",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "TE green",
+                "hypothesis": "network"
+              },
+              {
+                "eliminated_by": "no change window",
+                "hypothesis": "deployment"
+              }
+            ],
+            "final": "pool exhaustion",
+            "initial": [
+              "pool exhaustion",
+              "network",
+              "bad deployment"
+            ],
+            "strengthened": [
+              "pool exhaustion"
+            ],
+            "weakened": [
+              "network",
+              "deployment"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query database/connection_pool_exhaustion signals for checkout-service",
+              "mcp": "splunk",
+              "purpose": "gather database/connection_pool_exhaustion evidence from splunk for checkout-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query database/connection_pool_exhaustion signals for checkout-service",
+              "mcp": "database",
+              "purpose": "gather database/connection_pool_exhaustion evidence from database for checkout-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "checkout latency + 5xx spike",
+          "operational_context": {
+            "affected_service": "checkout-service",
+            "contributing_factors": [
+              "traffic surge exposed a connection leak"
+            ],
+            "dependencies": [],
+            "owning_team": "commerce-team",
+            "root_cause_service": "checkout-service"
+          },
+          "postmortem_summary": "checkout-service incident (resource_saturation_leak): database connection pool exhaustion from unclosed connections. Confirmed via database; ruled out network, deployment. Remediation: fix connection leak; size pool to load. Owner: commerce-team.",
+          "recovery_verification": {
+            "remediation": "fix connection leak; size pool to load",
+            "verify": "confirm the connection_pool_exhaustion signal clears and checkout-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -1418,6 +2862,140 @@
           "cache staleness (TTL short)",
           "app bug (data correct on primary)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "profile-service",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "profile-service"
+          },
+          "business_context": {
+            "impact": "stale profile data shown to users",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (users see stale profile data after updates); cause not yet established",
+              "confidence": 62,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: database, splunk",
+              "confidence": 69,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a cache warm-up event that looks related \u2014 considered and set aside",
+              "confidence": 67,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: database",
+              "confidence": 82,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: cache staleness, app bug",
+              "confidence": 84,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "read replica lag serving stale reads after a bulk write on the primary",
+              "confidence": 84,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond profile-service",
+            "owning_team": "profile-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "database",
+              "why": "decisive signal proving the root cause: read replica lag serving stale reads after a bulk write on the primary"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "staleness magnitude matches the replica lag window",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "cache TTL short and hit-rate normal \u2014 weakens cache staleness",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "TTL short",
+                "hypothesis": "cache staleness"
+              },
+              {
+                "eliminated_by": "data correct on primary",
+                "hypothesis": "app bug"
+              }
+            ],
+            "final": "replica lag",
+            "initial": [
+              "replica lag",
+              "cache staleness",
+              "app bug"
+            ],
+            "strengthened": [
+              "replica lag"
+            ],
+            "weakened": [
+              "cache staleness",
+              "app bug"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query database/replica_lag signals for profile-service",
+              "mcp": "splunk",
+              "purpose": "gather database/replica_lag evidence from splunk for profile-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query database/replica_lag signals for profile-service",
+              "mcp": "database",
+              "purpose": "gather database/replica_lag evidence from database for profile-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "users see stale profile data after updates",
+          "operational_context": {
+            "affected_service": "profile-service",
+            "contributing_factors": [
+              "reads routed to a lagging replica during a bulk job"
+            ],
+            "dependencies": [],
+            "owning_team": "profile-team",
+            "root_cause_service": "profile-service"
+          },
+          "postmortem_summary": "profile-service incident (replica_lag_staleness): read replica lag serving stale reads after a bulk write on the primary. Confirmed via database; ruled out cache staleness, app bug. Remediation: route critical reads to primary during bulk jobs; monitor lag. Owner: profile-team.",
+          "recovery_verification": {
+            "remediation": "route critical reads to primary during bulk jobs; monitor lag",
+            "verify": "confirm the replica_lag signal clears and profile-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -1544,6 +3122,140 @@
           "pool exhaustion (pool idle)",
           "deploy (no change window)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "account-service",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "account-service"
+          },
+          "business_context": {
+            "impact": "slow account reads",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (account reads slow after nightly stats update); cause not yet established",
+              "confidence": 64,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: database, dynatrace",
+              "confidence": 71,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a routine pod restart around the same time \u2014 considered and set aside",
+              "confidence": 69,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: database",
+              "confidence": 84,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: pool exhaustion, deploy",
+              "confidence": 86,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "query plan regression: a stale/updated statistic flipped the optimizer to a full scan",
+              "confidence": 86,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond account-service",
+            "owning_team": "account-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "database",
+              "why": "decisive signal proving the root cause: query plan regression: a stale/updated statistic flipped the optimizer to a full scan"
+            },
+            {
+              "class": "supporting",
+              "evidence": "dynatrace",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "kubernetes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "latency began exactly at the stats-refresh window",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "no code deploy in the window \u2014 rules out deploy regression",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "pool idle",
+                "hypothesis": "pool exhaustion"
+              },
+              {
+                "eliminated_by": "no change window",
+                "hypothesis": "deploy"
+              }
+            ],
+            "final": "plan regression",
+            "initial": [
+              "plan regression",
+              "pool exhaustion",
+              "deploy regression"
+            ],
+            "strengthened": [
+              "plan regression"
+            ],
+            "weakened": [
+              "pool exhaustion",
+              "deploy"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query database/slow_query signals for account-service",
+              "mcp": "dynatrace",
+              "purpose": "gather database/slow_query evidence from dynatrace for account-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query database/slow_query signals for account-service",
+              "mcp": "database",
+              "purpose": "gather database/slow_query evidence from database for account-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "account reads slow after nightly stats update",
+          "operational_context": {
+            "affected_service": "account-service",
+            "contributing_factors": [
+              "auto-stats job changed cardinality estimates"
+            ],
+            "dependencies": [],
+            "owning_team": "account-team",
+            "root_cause_service": "account-service"
+          },
+          "postmortem_summary": "account-service incident (query_plan_regression): query plan regression: a stale/updated statistic flipped the optimizer to a full scan. Confirmed via database; ruled out pool exhaustion, deploy. Remediation: pin/refresh the plan; add a plan-regression guard. Owner: account-team.",
+          "recovery_verification": {
+            "remediation": "pin/refresh the plan; add a plan-regression guard",
+            "verify": "confirm the slow_query signal clears and account-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -1670,6 +3382,130 @@
           "db exhaustion (pool healthy)",
           "network (internal error)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "checkout-service",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "checkout-service"
+          },
+          "business_context": {
+            "impact": "checkout error spike",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (error rate jumped right after release); cause not yet established",
+              "confidence": 74,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: splunk, servicenow",
+              "confidence": 80,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a routine DB failover minutes earlier \u2014 considered and set aside",
+              "confidence": 78,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: servicenow",
+              "confidence": 90,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: db exhaustion, network",
+              "confidence": 92,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "null-pointer regression introduced in checkout-service v8.4",
+              "confidence": 92,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond checkout-service",
+            "owning_team": "commerce-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "servicenow",
+              "why": "decisive signal proving the root cause: null-pointer regression introduced in checkout-service v8.4"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "DB pool healthy \u2014 rules out db exhaustion",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "pool healthy",
+                "hypothesis": "db exhaustion"
+              },
+              {
+                "eliminated_by": "internal error",
+                "hypothesis": "network"
+              }
+            ],
+            "final": "release regression",
+            "initial": [
+              "release regression",
+              "db exhaustion",
+              "network"
+            ],
+            "strengthened": [
+              "release regression"
+            ],
+            "weakened": [
+              "db exhaustion",
+              "network"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query deployment/regression signals for checkout-service",
+              "mcp": "splunk",
+              "purpose": "gather deployment/regression evidence from splunk for checkout-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query deployment/regression signals for checkout-service",
+              "mcp": "servicenow",
+              "purpose": "gather deployment/regression evidence from servicenow for checkout-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "error rate jumped right after release",
+          "operational_context": {
+            "affected_service": "checkout-service",
+            "contributing_factors": [
+              "insufficient pre-prod coverage for the changed path"
+            ],
+            "dependencies": [],
+            "owning_team": "commerce-team",
+            "root_cause_service": "checkout-service"
+          },
+          "postmortem_summary": "checkout-service incident (change_correlation_temporal): null-pointer regression introduced in checkout-service v8.4. Confirmed via servicenow; ruled out db exhaustion, network. Remediation: roll back checkout-service to v8.3. Owner: commerce-team.",
+          "recovery_verification": {
+            "remediation": "roll back checkout-service to v8.3",
+            "verify": "confirm the regression signal clears and checkout-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -1792,6 +3628,135 @@
           "datastore outage (new endpoint healthy)",
           "cert (unrelated)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "catalog-service",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "catalog-service"
+          },
+          "business_context": {
+            "impact": "catalog unavailable",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (catalog cannot reach its datastore); cause not yet established",
+              "confidence": 70,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: route53_dns, splunk",
+              "confidence": 76,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "an expired cert on a sibling service \u2014 considered and set aside",
+              "confidence": 75,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: route53_dns",
+              "confidence": 88,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: datastore outage, cert",
+              "confidence": 90,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "stale Route53 record points catalog-service to a decommissioned endpoint",
+              "confidence": 90,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond catalog-service",
+            "owning_team": "platform-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "route53_dns",
+              "why": "decisive signal proving the root cause: stale Route53 record points catalog-service to a decommissioned endpoint"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "dynatrace",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "new datastore is healthy \u2014 rules out datastore outage",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "new endpoint healthy",
+                "hypothesis": "datastore outage"
+              },
+              {
+                "eliminated_by": "unrelated",
+                "hypothesis": "cert"
+              }
+            ],
+            "final": "stale DNS",
+            "initial": [
+              "stale DNS",
+              "datastore outage",
+              "certificate"
+            ],
+            "strengthened": [
+              "stale DNS"
+            ],
+            "weakened": [
+              "datastore outage",
+              "cert"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query dns/stale_record signals for catalog-service",
+              "mcp": "splunk",
+              "purpose": "gather dns/stale_record evidence from splunk for catalog-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query dns/stale_record signals for catalog-service",
+              "mcp": "route53_dns",
+              "purpose": "gather dns/stale_record evidence from route53_dns for catalog-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "catalog cannot reach its datastore",
+          "operational_context": {
+            "affected_service": "catalog-service",
+            "contributing_factors": [
+              "migration left the old record in place"
+            ],
+            "dependencies": [],
+            "owning_team": "platform-team",
+            "root_cause_service": "catalog-service"
+          },
+          "postmortem_summary": "catalog-service incident (misconfig_reference): stale Route53 record points catalog-service to a decommissioned endpoint. Confirmed via route53_dns; ruled out datastore outage, cert. Remediation: update Route53 record; add post-migration DNS check. Owner: platform-team.",
+          "recovery_verification": {
+            "remediation": "update Route53 record; add post-migration DNS check",
+            "verify": "confirm the stale_record signal clears and catalog-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -1917,6 +3882,155 @@
           "app bugs (too broad, simultaneous)",
           "db outage (reachable by IP)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "dns-resolver",
+            "propagation": "cross-service cascade",
+            "scope": "critical (P1)",
+            "symptom_service": "multiple"
+          },
+          "business_context": {
+            "impact": "estate-wide name-resolution failures",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (many services failing to resolve internal names); cause not yet established",
+              "confidence": 72,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: route53_dns, splunk, thousandeyes",
+              "confidence": 79,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "individual app errors look like independent bugs \u2014 considered and set aside",
+              "confidence": 77,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: route53_dns",
+              "confidence": 91,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: app bugs, db outage",
+              "confidence": 93,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "internal DNS resolver outage causing NXDOMAIN/timeout across services",
+              "confidence": 93,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond multiple",
+            "owning_team": "network-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "route53_dns",
+              "why": "decisive signal proving the root cause: internal DNS resolver outage causing NXDOMAIN/timeout across services"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "thousandeyes",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "database",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "failures span many unrelated services simultaneously",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "DB reachable by IP \u2014 rules out DB outage; issue is name resolution",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "too broad, simultaneous",
+                "hypothesis": "app bugs"
+              },
+              {
+                "eliminated_by": "reachable by IP",
+                "hypothesis": "db outage"
+              }
+            ],
+            "final": "DNS resolver outage",
+            "initial": [
+              "DNS resolver outage",
+              "app bugs",
+              "db outage"
+            ],
+            "strengthened": [
+              "DNS resolver outage"
+            ],
+            "weakened": [
+              "app bugs",
+              "db outage"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query dns/resolution_failure signals for multiple",
+              "mcp": "splunk",
+              "purpose": "gather dns/resolution_failure evidence from splunk for multiple",
+              "step": 1
+            },
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query dns/resolution_failure signals for multiple",
+              "mcp": "thousandeyes",
+              "purpose": "gather dns/resolution_failure evidence from thousandeyes for multiple",
+              "step": 2
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query dns/resolution_failure signals for multiple",
+              "mcp": "route53_dns",
+              "purpose": "gather dns/resolution_failure evidence from route53_dns for multiple",
+              "step": 3
+            }
+          ],
+          "observed_symptoms": "many services failing to resolve internal names",
+          "operational_context": {
+            "affected_service": "multiple",
+            "contributing_factors": [
+              "resolver fleet lost quorum; no fallback resolver"
+            ],
+            "dependencies": [
+              "dns-resolver"
+            ],
+            "owning_team": "network-team",
+            "root_cause_service": "dns-resolver"
+          },
+          "postmortem_summary": "multiple incident (resolver_outage): internal DNS resolver outage causing NXDOMAIN/timeout across services. Confirmed via route53_dns; ruled out app bugs, db outage. Remediation: restore resolver quorum; configure fallback resolvers. Owner: network-team.",
+          "recovery_verification": {
+            "remediation": "restore resolver quorum; configure fallback resolvers",
+            "verify": "confirm the resolution_failure signal clears and multiple returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -2049,6 +4163,140 @@
           "backend saturation (backend idle)",
           "outage (2xx still flowing)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "public-api",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "public-api"
+          },
+          "business_context": {
+            "impact": "partner API rejections",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (partners receiving 429 Too Many Requests); cause not yet established",
+              "confidence": 64,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: dynatrace, splunk",
+              "confidence": 71,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a backend metric blip that suggests overload \u2014 considered and set aside",
+              "confidence": 69,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: dynatrace",
+              "confidence": 84,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: backend saturation, outage",
+              "confidence": 86,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "a partner's traffic surge saturated the shared gateway rate-limit bucket",
+              "confidence": 86,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond public-api",
+            "owning_team": "api-platform-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "dynatrace",
+              "why": "decisive signal proving the root cause: a partner's traffic surge saturated the shared gateway rate-limit bucket"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "database",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "backend latency normal while 429s spike",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "DB and backend healthy \u2014 rules out backend saturation",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "backend idle",
+                "hypothesis": "backend saturation"
+              },
+              {
+                "eliminated_by": "2xx still flowing",
+                "hypothesis": "outage"
+              }
+            ],
+            "final": "rate-limit saturation",
+            "initial": [
+              "rate-limit saturation",
+              "backend saturation",
+              "outage"
+            ],
+            "strengthened": [
+              "rate-limit saturation"
+            ],
+            "weakened": [
+              "backend saturation",
+              "outage"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query api_gateway/rate_limit_saturation signals for public-api",
+              "mcp": "splunk",
+              "purpose": "gather api_gateway/rate_limit_saturation evidence from splunk for public-api",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query api_gateway/rate_limit_saturation signals for public-api",
+              "mcp": "dynatrace",
+              "purpose": "gather api_gateway/rate_limit_saturation evidence from dynatrace for public-api",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "partners receiving 429 Too Many Requests",
+          "operational_context": {
+            "affected_service": "public-api",
+            "contributing_factors": [
+              "shared bucket with no per-consumer quota"
+            ],
+            "dependencies": [],
+            "owning_team": "api-platform-team",
+            "root_cause_service": "public-api"
+          },
+          "postmortem_summary": "public-api incident (rate_limit_saturation): a partner's traffic surge saturated the shared gateway rate-limit bucket. Confirmed via dynatrace; ruled out backend saturation, outage. Remediation: add per-consumer quotas; isolate partnerX's bucket. Owner: api-platform-team.",
+          "recovery_verification": {
+            "remediation": "add per-consumer quotas; isolate partnerX's bucket",
+            "verify": "confirm the rate_limit_saturation signal clears and public-api returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -2176,6 +4424,135 @@
           "s3 outage (health green)",
           "network (TE green)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "reporting-batch",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "reporting-batch"
+          },
+          "business_context": {
+            "impact": "delayed nightly reporting",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (nightly reporting job fails to read S3); cause not yet established",
+              "confidence": 72,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: identity, aws_cloudwatch",
+              "confidence": 78,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "S3 latency metric noise \u2014 considered and set aside",
+              "confidence": 77,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: identity",
+              "confidence": 90,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: s3 outage, network",
+              "confidence": 92,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "IAM policy change revoked reporting-batch S3 read permission",
+              "confidence": 92,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond reporting-batch",
+            "owning_team": "data-platform-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "identity",
+              "why": "decisive signal proving the root cause: IAM policy change revoked reporting-batch S3 read permission"
+            },
+            {
+              "class": "supporting",
+              "evidence": "aws_cloudwatch",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "S3 service health green \u2014 rules out S3 outage",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "health green",
+                "hypothesis": "s3 outage"
+              },
+              {
+                "eliminated_by": "TE green",
+                "hypothesis": "network"
+              }
+            ],
+            "final": "iam revocation",
+            "initial": [
+              "iam revocation",
+              "s3 outage",
+              "network"
+            ],
+            "strengthened": [
+              "iam revocation"
+            ],
+            "weakened": [
+              "s3 outage",
+              "network"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query identity/iam_permission_denied signals for reporting-batch",
+              "mcp": "aws_cloudwatch",
+              "purpose": "gather identity/iam_permission_denied evidence from aws_cloudwatch for reporting-batch",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query identity/iam_permission_denied signals for reporting-batch",
+              "mcp": "identity",
+              "purpose": "gather identity/iam_permission_denied evidence from identity for reporting-batch",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "nightly reporting job fails to read S3",
+          "operational_context": {
+            "affected_service": "reporting-batch",
+            "contributing_factors": [
+              "a least-privilege cleanup over-pruned the policy"
+            ],
+            "dependencies": [],
+            "owning_team": "data-platform-team",
+            "root_cause_service": "reporting-batch"
+          },
+          "postmortem_summary": "reporting-batch incident (authorization_change): IAM policy change revoked reporting-batch S3 read permission. Confirmed via identity; ruled out s3 outage, network. Remediation: restore s3:GetObject on the batch role; add policy review. Owner: data-platform-team.",
+          "recovery_verification": {
+            "remediation": "restore s3:GetObject on the batch role; add policy review",
+            "verify": "confirm the iam_permission_denied signal clears and reporting-batch returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -2303,6 +4680,130 @@
           "ldap outage (directory healthy)",
           "network (auth reachable)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "auth-service",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "auth-service"
+          },
+          "business_context": {
+            "impact": "estate-wide authentication outage",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (JWT validation failing estate-wide); cause not yet established",
+              "confidence": 76,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: identity, splunk",
+              "confidence": 82,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a transient LDAP latency blip \u2014 considered and set aside",
+              "confidence": 80,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: identity",
+              "confidence": 93,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: ldap outage, network",
+              "confidence": 95,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "expired token signing key in auth-service",
+              "confidence": 95,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond auth-service",
+            "owning_team": "identity-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "identity",
+              "why": "decisive signal proving the root cause: expired token signing key in auth-service"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "LDAP directory reachable \u2014 rules out LDAP outage",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "directory healthy",
+                "hypothesis": "ldap outage"
+              },
+              {
+                "eliminated_by": "auth reachable",
+                "hypothesis": "network"
+              }
+            ],
+            "final": "signing key expiry",
+            "initial": [
+              "signing key expiry",
+              "ldap outage",
+              "network"
+            ],
+            "strengthened": [
+              "signing key expiry"
+            ],
+            "weakened": [
+              "ldap outage",
+              "network"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query identity/token_signing_key_expiry signals for auth-service",
+              "mcp": "splunk",
+              "purpose": "gather identity/token_signing_key_expiry evidence from splunk for auth-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query identity/token_signing_key_expiry signals for auth-service",
+              "mcp": "identity",
+              "purpose": "gather identity/token_signing_key_expiry evidence from identity for auth-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "JWT validation failing estate-wide",
+          "operational_context": {
+            "affected_service": "auth-service",
+            "contributing_factors": [
+              "key rotation calendar lapsed"
+            ],
+            "dependencies": [],
+            "owning_team": "identity-team",
+            "root_cause_service": "auth-service"
+          },
+          "postmortem_summary": "auth-service incident (lifecycle_expiry): expired token signing key in auth-service. Confirmed via identity; ruled out ldap outage, network. Remediation: rotate signing key; automate expiry alerting. Owner: identity-team.",
+          "recovery_verification": {
+            "remediation": "rotate signing key; automate expiry alerting",
+            "verify": "confirm the token_signing_key_expiry signal clears and auth-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -2425,6 +4926,135 @@
           "network (TE green)",
           "app bug (TLS-layer errors)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "orders-mesh",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "orders-mesh"
+          },
+          "business_context": {
+            "impact": "internal order flow failing",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (east-west 503s after mesh upgrade); cause not yet established",
+              "confidence": 66,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: kubernetes, splunk",
+              "confidence": 73,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "healthy external probes suggest 'not a real outage' \u2014 considered and set aside",
+              "confidence": 71,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: splunk",
+              "confidence": 86,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: network, app bug",
+              "confidence": 88,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "istio mTLS failure: sidecar cert not rotated after CA change",
+              "confidence": 88,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond orders-mesh",
+            "owning_team": "platform-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "splunk",
+              "why": "decisive signal proving the root cause: istio mTLS failure: sidecar cert not rotated after CA change"
+            },
+            {
+              "class": "supporting",
+              "evidence": "kubernetes",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "north-south (TE) healthy \u2014 isolates to east-west mesh",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "TE green",
+                "hypothesis": "network"
+              },
+              {
+                "eliminated_by": "TLS-layer errors",
+                "hypothesis": "app bug"
+              }
+            ],
+            "final": "mtls failure",
+            "initial": [
+              "mtls failure",
+              "network",
+              "app bug"
+            ],
+            "strengthened": [
+              "mtls failure"
+            ],
+            "weakened": [
+              "network",
+              "app bug"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query api_gateway/istio_mtls_failure signals for orders-mesh",
+              "mcp": "kubernetes",
+              "purpose": "gather api_gateway/istio_mtls_failure evidence from kubernetes for orders-mesh",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query api_gateway/istio_mtls_failure signals for orders-mesh",
+              "mcp": "splunk",
+              "purpose": "gather api_gateway/istio_mtls_failure evidence from splunk for orders-mesh",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "east-west 503s after mesh upgrade",
+          "operational_context": {
+            "affected_service": "orders-mesh",
+            "contributing_factors": [
+              "mesh CA rotated without sidecar restart"
+            ],
+            "dependencies": [],
+            "owning_team": "platform-team",
+            "root_cause_service": "orders-mesh"
+          },
+          "postmortem_summary": "orders-mesh incident (mesh_security_rotation): istio mTLS failure: sidecar cert not rotated after CA change. Confirmed via splunk; ruled out network, app bug. Remediation: restart sidecars to reload certs; automate on CA rotation. Owner: platform-team.",
+          "recovery_verification": {
+            "remediation": "restart sidecars to reload certs; automate on CA rotation",
+            "verify": "confirm the istio_mtls_failure signal clears and orders-mesh returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -2552,6 +5182,135 @@
           "image pull (digest OK)",
           "oom (no OOMKill reason)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "auth-service",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "auth-service"
+          },
+          "business_context": {
+            "impact": "estate-wide login failures",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (auth pods crash looping); cause not yet established",
+              "confidence": 75,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: kubernetes, splunk",
+              "confidence": 81,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "OOM-looking restart count \u2014 considered and set aside",
+              "confidence": 79,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: splunk",
+              "confidence": 91,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: image pull, oom",
+              "confidence": 93,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "invalid config map key crashes auth-service on startup",
+              "confidence": 93,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond auth-service",
+            "owning_team": "identity-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "splunk",
+              "why": "decisive signal proving the root cause: invalid config map key crashes auth-service on startup"
+            },
+            {
+              "class": "supporting",
+              "evidence": "kubernetes",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "image digest resolves \u2014 rules out image pull",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "digest OK",
+                "hypothesis": "image pull"
+              },
+              {
+                "eliminated_by": "no OOMKill reason",
+                "hypothesis": "oom"
+              }
+            ],
+            "final": "config error",
+            "initial": [
+              "config error",
+              "image pull",
+              "oom"
+            ],
+            "strengthened": [
+              "config error"
+            ],
+            "weakened": [
+              "image pull",
+              "oom"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query kubernetes/crashloopbackoff signals for auth-service",
+              "mcp": "kubernetes",
+              "purpose": "gather kubernetes/crashloopbackoff evidence from kubernetes for auth-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query kubernetes/crashloopbackoff signals for auth-service",
+              "mcp": "splunk",
+              "purpose": "gather kubernetes/crashloopbackoff evidence from splunk for auth-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "auth pods crash looping",
+          "operational_context": {
+            "affected_service": "auth-service",
+            "contributing_factors": [
+              "config change merged without validation"
+            ],
+            "dependencies": [],
+            "owning_team": "identity-team",
+            "root_cause_service": "auth-service"
+          },
+          "postmortem_summary": "auth-service incident (config_startup_failure): invalid config map key crashes auth-service on startup. Confirmed via splunk; ruled out image pull, oom. Remediation: revert configmap; add startup config validation. Owner: identity-team.",
+          "recovery_verification": {
+            "remediation": "revert configmap; add startup config validation",
+            "verify": "confirm the crashloopbackoff signal clears and auth-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -2675,6 +5434,140 @@
           "oom (no OOMKill)",
           "startup crash (containers never start)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "cart-service",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "cart-service"
+          },
+          "business_context": {
+            "impact": "cart rollout stalled; capacity not scaling",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (new cart pods never become ready); cause not yet established",
+              "confidence": 74,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: kubernetes, servicenow",
+              "confidence": 80,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a registry TLS warning that is unrelated \u2014 considered and set aside",
+              "confidence": 78,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: kubernetes",
+              "confidence": 90,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: oom, startup crash",
+              "confidence": 92,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "ImagePullBackOff: cart-service image tag v9 missing in the registry",
+              "confidence": 92,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond cart-service",
+            "owning_team": "commerce-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "kubernetes",
+              "why": "decisive signal proving the root cause: ImagePullBackOff: cart-service image tag v9 missing in the registry"
+            },
+            {
+              "class": "supporting",
+              "evidence": "servicenow",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "old pods on v8 still healthy \u2014 only new ones fail",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "registry reachable \u2014 rules out registry outage",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "no OOMKill",
+                "hypothesis": "oom"
+              },
+              {
+                "eliminated_by": "containers never start",
+                "hypothesis": "startup crash"
+              }
+            ],
+            "final": "missing image tag",
+            "initial": [
+              "missing image tag",
+              "oom",
+              "crash on startup"
+            ],
+            "strengthened": [
+              "missing image tag"
+            ],
+            "weakened": [
+              "oom",
+              "startup crash"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query kubernetes/imagepullbackoff signals for cart-service",
+              "mcp": "servicenow",
+              "purpose": "gather kubernetes/imagepullbackoff evidence from servicenow for cart-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query kubernetes/imagepullbackoff signals for cart-service",
+              "mcp": "kubernetes",
+              "purpose": "gather kubernetes/imagepullbackoff evidence from kubernetes for cart-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "new cart pods never become ready",
+          "operational_context": {
+            "affected_service": "cart-service",
+            "contributing_factors": [
+              "image build/publish step skipped for v9"
+            ],
+            "dependencies": [],
+            "owning_team": "commerce-team",
+            "root_cause_service": "cart-service"
+          },
+          "postmortem_summary": "cart-service incident (image_pull_supply_chain): ImagePullBackOff: cart-service image tag v9 missing in the registry. Confirmed via kubernetes; ruled out oom, startup crash. Remediation: publish the v9 image or roll back the deployment. Owner: commerce-team.",
+          "recovery_verification": {
+            "remediation": "publish the v9 image or roll back the deployment",
+            "verify": "confirm the imagepullbackoff signal clears and cart-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -2804,6 +5697,140 @@
           "oom (DiskPressure, not memory)",
           "app crash (evicted, not crashed)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "search-service",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "search-service"
+          },
+          "business_context": {
+            "impact": "search capacity loss from evictions",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (search pods evicted across a node pool); cause not yet established",
+              "confidence": 66,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: kubernetes, sysdig",
+              "confidence": 73,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "search latency looks like an app problem \u2014 considered and set aside",
+              "confidence": 71,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: kubernetes",
+              "confidence": 86,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: oom, app crash",
+              "confidence": 88,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "node disk pressure evicting pods; a log-heavy neighbor filled ephemeral storage",
+              "confidence": 88,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond search-service",
+            "owning_team": "platform-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "kubernetes",
+              "why": "decisive signal proving the root cause: node disk pressure evicting pods; a log-heavy neighbor filled ephemeral storage"
+            },
+            {
+              "class": "supporting",
+              "evidence": "sysdig",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "dynatrace",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "evictions correlate with the node, not the workload",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "pods have no OOMKill and no crash \u2014 rules out oom/app crash",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "DiskPressure, not memory",
+                "hypothesis": "oom"
+              },
+              {
+                "eliminated_by": "evicted, not crashed",
+                "hypothesis": "app crash"
+              }
+            ],
+            "final": "node disk pressure",
+            "initial": [
+              "node disk pressure",
+              "oom",
+              "app crash"
+            ],
+            "strengthened": [
+              "node disk pressure"
+            ],
+            "weakened": [
+              "oom",
+              "app crash"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query kubernetes/node_pressure_eviction signals for search-service",
+              "mcp": "sysdig",
+              "purpose": "gather kubernetes/node_pressure_eviction evidence from sysdig for search-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query kubernetes/node_pressure_eviction signals for search-service",
+              "mcp": "kubernetes",
+              "purpose": "gather kubernetes/node_pressure_eviction evidence from kubernetes for search-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "search pods evicted across a node pool",
+          "operational_context": {
+            "affected_service": "search-service",
+            "contributing_factors": [
+              "no ephemeral-storage limits on a noisy neighbor"
+            ],
+            "dependencies": [],
+            "owning_team": "platform-team",
+            "root_cause_service": "search-service"
+          },
+          "postmortem_summary": "search-service incident (node_capacity_eviction): node disk pressure evicting pods; a log-heavy neighbor filled ephemeral storage. Confirmed via kubernetes; ruled out oom, app crash. Remediation: set ephemeral-storage limits; cap the noisy neighbor. Owner: platform-team.",
+          "recovery_verification": {
+            "remediation": "set ephemeral-storage limits; cap the noisy neighbor",
+            "verify": "confirm the node_pressure_eviction signal clears and search-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -2929,6 +5956,135 @@
           "node failure (other pods healthy)",
           "network (TE green)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "payment-service",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "payment-service"
+          },
+          "business_context": {
+            "impact": "checkout failures for paying customers",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (payment pods restarting, 5xx rising); cause not yet established",
+              "confidence": 72,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: kubernetes, sysdig",
+              "confidence": 78,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a concurrent DNS blip on an unrelated service \u2014 considered and set aside",
+              "confidence": 77,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: kubernetes",
+              "confidence": 90,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: node failure, network",
+              "confidence": 92,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "memory leak in payment-service v8.2 causing OOMKill",
+              "confidence": 92,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond payment-service",
+            "owning_team": "payments-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "kubernetes",
+              "why": "decisive signal proving the root cause: memory leak in payment-service v8.2 causing OOMKill"
+            },
+            {
+              "class": "supporting",
+              "evidence": "sysdig",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "thousandeyes shows healthy network \u2014 rules out network",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "other pods healthy",
+                "hypothesis": "node failure"
+              },
+              {
+                "eliminated_by": "TE green",
+                "hypothesis": "network"
+              }
+            ],
+            "final": "memory leak",
+            "initial": [
+              "memory leak",
+              "node failure",
+              "network"
+            ],
+            "strengthened": [
+              "memory leak"
+            ],
+            "weakened": [
+              "node failure",
+              "network"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query kubernetes/oomkilled signals for payment-service",
+              "mcp": "sysdig",
+              "purpose": "gather kubernetes/oomkilled evidence from sysdig for payment-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query kubernetes/oomkilled signals for payment-service",
+              "mcp": "kubernetes",
+              "purpose": "gather kubernetes/oomkilled evidence from kubernetes for payment-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "payment pods restarting, 5xx rising",
+          "operational_context": {
+            "affected_service": "payment-service",
+            "contributing_factors": [
+              "heap sizing unchanged for new workload"
+            ],
+            "dependencies": [],
+            "owning_team": "payments-team",
+            "root_cause_service": "payment-service"
+          },
+          "postmortem_summary": "payment-service incident (resource_saturation_temporal): memory leak in payment-service v8.2 causing OOMKill. Confirmed via kubernetes; ruled out node failure, network. Remediation: raise memory limit + patch leak in v8.3. Owner: payments-team.",
+          "recovery_verification": {
+            "remediation": "raise memory limit + patch leak in v8.3",
+            "verify": "confirm the oomkilled signal clears and payment-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -3056,6 +6212,140 @@
           "orders-api bug (healthy)",
           "network (TE green)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "orders-api",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "orders-api"
+          },
+          "business_context": {
+            "impact": "order capacity flaps under load",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (orders-api pods flapping out of the load balancer); cause not yet established",
+              "confidence": 62,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: kubernetes, dynatrace",
+              "confidence": 69,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "orders-api is where the symptom shows, pricing is the cause \u2014 considered and set aside",
+              "confidence": 67,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: kubernetes",
+              "confidence": 83,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: orders-api bug, network",
+              "confidence": 85,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "readiness probe fails because it checks a slow downstream (pricing) \u2014 pods marked NotReady",
+              "confidence": 85,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond orders-api",
+            "owning_team": "platform-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "kubernetes",
+              "why": "decisive signal proving the root cause: readiness probe fails because it checks a slow downstream (pricing) \u2014 pods marked NotReady"
+            },
+            {
+              "class": "supporting",
+              "evidence": "dynatrace",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "orders-api itself is healthy (low CPU, no errors)",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "orders-api throws no errors \u2014 weakens 'orders-api bug'",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "healthy",
+                "hypothesis": "orders-api bug"
+              },
+              {
+                "eliminated_by": "TE green",
+                "hypothesis": "network"
+              }
+            ],
+            "final": "readiness misconfig on slow dependency",
+            "initial": [
+              "readiness misconfig on slow dependency",
+              "orders-api bug",
+              "network"
+            ],
+            "strengthened": [
+              "readiness misconfig on slow dependency"
+            ],
+            "weakened": [
+              "orders-api bug",
+              "network"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query kubernetes/readiness_probe_failure signals for orders-api",
+              "mcp": "dynatrace",
+              "purpose": "gather kubernetes/readiness_probe_failure evidence from dynatrace for orders-api",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query kubernetes/readiness_probe_failure signals for orders-api",
+              "mcp": "kubernetes",
+              "purpose": "gather kubernetes/readiness_probe_failure evidence from kubernetes for orders-api",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "orders-api pods flapping out of the load balancer",
+          "operational_context": {
+            "affected_service": "orders-api",
+            "contributing_factors": [
+              "readiness probe over-scoped to include a dependency"
+            ],
+            "dependencies": [],
+            "owning_team": "platform-team",
+            "root_cause_service": "orders-api"
+          },
+          "postmortem_summary": "orders-api incident (readiness_gate_dependency): readiness probe fails because it checks a slow downstream (pricing) \u2014 pods marked NotReady. Confirmed via kubernetes; ruled out orders-api bug, network. Remediation: scope readiness to local health; fix pricing latency separately. Owner: platform-team.",
+          "recovery_verification": {
+            "remediation": "scope readiness to local health; fix pricing latency separately",
+            "verify": "confirm the readiness_probe_failure signal clears and orders-api returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -3181,6 +6471,135 @@
           "broker outage (brokers healthy)",
           "network (TE green)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "notification-service",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "notification-service"
+          },
+          "business_context": {
+            "impact": "delayed customer notifications",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (notifications delayed by hours); cause not yet established",
+              "confidence": 66,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: splunk, dynatrace",
+              "confidence": 72,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "one broker restarted hours earlier, unrelated \u2014 considered and set aside",
+              "confidence": 71,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: splunk",
+              "confidence": 84,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: broker outage, network",
+              "confidence": 86,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "notification-service consumer stuck on a poison message, lag growing",
+              "confidence": 86,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond notification-service",
+            "owning_team": "platform-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "splunk",
+              "why": "decisive signal proving the root cause: notification-service consumer stuck on a poison message, lag growing"
+            },
+            {
+              "class": "supporting",
+              "evidence": "dynatrace",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "broker metrics healthy \u2014 rules out broker outage",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "brokers healthy",
+                "hypothesis": "broker outage"
+              },
+              {
+                "eliminated_by": "TE green",
+                "hypothesis": "network"
+              }
+            ],
+            "final": "poison message",
+            "initial": [
+              "poison message",
+              "broker outage",
+              "network"
+            ],
+            "strengthened": [
+              "poison message"
+            ],
+            "weakened": [
+              "broker outage",
+              "network"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query messaging/kafka_consumer_lag signals for notification-service",
+              "mcp": "dynatrace",
+              "purpose": "gather messaging/kafka_consumer_lag evidence from dynatrace for notification-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query messaging/kafka_consumer_lag signals for notification-service",
+              "mcp": "splunk",
+              "purpose": "gather messaging/kafka_consumer_lag evidence from splunk for notification-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "notifications delayed by hours",
+          "operational_context": {
+            "affected_service": "notification-service",
+            "contributing_factors": [
+              "no dead-letter handling for malformed messages"
+            ],
+            "dependencies": [],
+            "owning_team": "platform-team",
+            "root_cause_service": "notification-service"
+          },
+          "postmortem_summary": "notification-service incident (stuck_processing): notification-service consumer stuck on a poison message, lag growing. Confirmed via splunk; ruled out broker outage, network. Remediation: add dead-letter queue; skip+alert on poison message. Owner: platform-team.",
+          "recovery_verification": {
+            "remediation": "add dead-letter queue; skip+alert on poison message",
+            "verify": "confirm the kafka_consumer_lag signal clears and notification-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -3305,6 +6724,135 @@
           "db exhaustion (pool idle)",
           "deploy (no change)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "api-gateway",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "api-gateway"
+          },
+          "business_context": {
+            "impact": "intermittent API failures across services",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (intermittent gateway 504s); cause not yet established",
+              "confidence": 64,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: thousandeyes, network",
+              "confidence": 72,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "healthy-looking DB metrics invite a wrong hypothesis \u2014 considered and set aside",
+              "confidence": 70,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: thousandeyes",
+              "confidence": 86,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: db exhaustion, deploy",
+              "confidence": 88,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "packet loss on edge->core path causing gateway upstream timeouts",
+              "confidence": 88,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond api-gateway",
+            "owning_team": "network-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "thousandeyes",
+              "why": "decisive signal proving the root cause: packet loss on edge->core path causing gateway upstream timeouts"
+            },
+            {
+              "class": "supporting",
+              "evidence": "network",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "database",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "negative",
+              "evidence": "DB pool underutilized \u2014 rules out db exhaustion",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "pool idle",
+                "hypothesis": "db exhaustion"
+              },
+              {
+                "eliminated_by": "no change",
+                "hypothesis": "deploy"
+              }
+            ],
+            "final": "network loss",
+            "initial": [
+              "network loss",
+              "db exhaustion",
+              "bad deploy"
+            ],
+            "strengthened": [
+              "network loss"
+            ],
+            "weakened": [
+              "db exhaustion",
+              "deploy"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query networking/packet_loss signals for api-gateway",
+              "mcp": "network",
+              "purpose": "gather networking/packet_loss evidence from network for api-gateway",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query networking/packet_loss signals for api-gateway",
+              "mcp": "thousandeyes",
+              "purpose": "gather networking/packet_loss evidence from thousandeyes for api-gateway",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "intermittent gateway 504s",
+          "operational_context": {
+            "affected_service": "api-gateway",
+            "contributing_factors": [
+              "a flapping optic on an edge link"
+            ],
+            "dependencies": [],
+            "owning_team": "network-team",
+            "root_cause_service": "api-gateway"
+          },
+          "postmortem_summary": "api-gateway incident (infra_network_path): packet loss on edge->core path causing gateway upstream timeouts. Confirmed via thousandeyes; ruled out db exhaustion, deploy. Remediation: engage network on edge->core; fail over the link. Owner: network-team.",
+          "recovery_verification": {
+            "remediation": "engage network on edge->core; fail over the link",
+            "verify": "confirm the packet_loss signal clears and api-gateway returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -3435,6 +6983,153 @@
           "false alarm (logs+tickets real)",
           "client-side (server logs show failures)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "wallet-service",
+            "propagation": "contained to the origin service",
+            "scope": "high (P2)",
+            "symptom_service": "wallet-service"
+          },
+          "business_context": {
+            "impact": "wallet debits failing; under-reported",
+            "severity": 2,
+            "severity_label": "high (P2)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (customers report failures but dashboards look green); cause not yet established",
+              "confidence": 60,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: dynatrace, splunk, servicenow",
+              "confidence": 68,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "the green Dynatrace dashboard invites 'no incident' \u2014 considered and set aside",
+              "confidence": 66,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: splunk",
+              "confidence": 82,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: false alarm, client-side",
+              "confidence": 84,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "a metrics-pipeline gap hid a real wallet-service error rate; the failure is genuine but under-reported",
+              "confidence": 84,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond wallet-service",
+            "owning_team": "wallet-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "splunk",
+              "why": "decisive signal proving the root cause: a metrics-pipeline gap hid a real wallet-service error rate; the failure is genuine but under-reported"
+            },
+            {
+              "class": "supporting",
+              "evidence": "dynatrace",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "servicenow",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "dynatrace",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "log volume + customer tickets contradict the green dashboard",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "logs + tickets confirm real failures \u2014 rules out 'false alarm'",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "logs+tickets real",
+                "hypothesis": "false alarm"
+              },
+              {
+                "eliminated_by": "server logs show failures",
+                "hypothesis": "client-side"
+              }
+            ],
+            "final": "real failure hidden by metrics gap",
+            "initial": [
+              "real failure hidden by metrics gap",
+              "false alarm",
+              "client-side"
+            ],
+            "strengthened": [
+              "real failure hidden by metrics gap"
+            ],
+            "weakened": [
+              "false alarm",
+              "client-side"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query observability/metrics_gap signals for wallet-service",
+              "mcp": "dynatrace",
+              "purpose": "gather observability/metrics_gap evidence from dynatrace for wallet-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query observability/metrics_gap signals for wallet-service",
+              "mcp": "servicenow",
+              "purpose": "gather observability/metrics_gap evidence from servicenow for wallet-service",
+              "step": 2
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query observability/metrics_gap signals for wallet-service",
+              "mcp": "splunk",
+              "purpose": "gather observability/metrics_gap evidence from splunk for wallet-service",
+              "step": 3
+            }
+          ],
+          "observed_symptoms": "customers report failures but dashboards look green",
+          "operational_context": {
+            "affected_service": "wallet-service",
+            "contributing_factors": [
+              "metrics agent OOMed; dashboards silently went stale"
+            ],
+            "dependencies": [],
+            "owning_team": "wallet-team",
+            "root_cause_service": "wallet-service"
+          },
+          "postmortem_summary": "wallet-service incident (observability_blindspot): a metrics-pipeline gap hid a real wallet-service error rate; the failure is genuine but under-reported. Confirmed via splunk; ruled out false alarm, client-side. Remediation: restore metrics ingestion; alert on ingest lag; trust logs/tickets. Owner: wallet-team.",
+          "recovery_verification": {
+            "remediation": "restore metrics ingestion; alert on ingest lag; trust logs/tickets",
+            "verify": "confirm the metrics_gap signal clears and wallet-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -3563,6 +7258,140 @@
           "db pool primary (pool fills only after cache collapse)",
           "traffic spike (ingress flat)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "catalog-service",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "catalog-service"
+          },
+          "business_context": {
+            "impact": "catalog degraded from DB overload",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (catalog DB overloaded after a cache flush); cause not yet established",
+              "confidence": 64,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: dynatrace, database",
+              "confidence": 71,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "DB pool saturation is a SYMPTOM, not the root cause \u2014 considered and set aside",
+              "confidence": 69,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: dynatrace",
+              "confidence": 84,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: db pool primary, traffic spike",
+              "confidence": 86,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "Redis maxmemory eviction caused a cache-miss stampede onto the catalog DB",
+              "confidence": 86,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond catalog-service",
+            "owning_team": "catalog-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "dynatrace",
+              "why": "decisive signal proving the root cause: Redis maxmemory eviction caused a cache-miss stampede onto the catalog DB"
+            },
+            {
+              "class": "supporting",
+              "evidence": "database",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "DB QPS spike coincides with the cache hit-rate collapse",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "front-door traffic flat \u2014 rules out an external traffic spike",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "pool fills only after cache collapse",
+                "hypothesis": "db pool primary"
+              },
+              {
+                "eliminated_by": "ingress flat",
+                "hypothesis": "traffic spike"
+              }
+            ],
+            "final": "cache eviction stampede",
+            "initial": [
+              "cache eviction stampede",
+              "db pool exhaustion (primary)",
+              "traffic spike"
+            ],
+            "strengthened": [
+              "cache eviction stampede"
+            ],
+            "weakened": [
+              "db pool primary",
+              "traffic spike"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query messaging/redis_eviction signals for catalog-service",
+              "mcp": "database",
+              "purpose": "gather messaging/redis_eviction evidence from database for catalog-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query messaging/redis_eviction signals for catalog-service",
+              "mcp": "dynatrace",
+              "purpose": "gather messaging/redis_eviction evidence from dynatrace for catalog-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "catalog DB overloaded after a cache flush",
+          "operational_context": {
+            "affected_service": "catalog-service",
+            "contributing_factors": [
+              "maxmemory reached; no request coalescing on miss"
+            ],
+            "dependencies": [],
+            "owning_team": "catalog-team",
+            "root_cause_service": "catalog-service"
+          },
+          "postmortem_summary": "catalog-service incident (cache_eviction_stampede): Redis maxmemory eviction caused a cache-miss stampede onto the catalog DB. Confirmed via dynatrace; ruled out db pool primary, traffic spike. Remediation: raise Redis memory / tune eviction; add request coalescing. Owner: catalog-team.",
+          "recovery_verification": {
+            "remediation": "raise Redis memory / tune eviction; add request coalescing",
+            "verify": "confirm the redis_eviction signal clears and catalog-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",
@@ -3689,6 +7518,140 @@
           "db outage (writes are local disk)",
           "permission (perms unchanged)"
         ],
+        "investigation_spec": {
+          "blast_radius": {
+            "origin_service": "audit-service",
+            "propagation": "contained to the origin service",
+            "scope": "critical (P1)",
+            "symptom_service": "audit-service"
+          },
+          "business_context": {
+            "impact": "audit records dropped (compliance risk)",
+            "severity": 1,
+            "severity_label": "critical (P1)"
+          },
+          "confidence_evolution": [
+            {
+              "basis": "symptom observed (audit writes failing; disk full errors); cause not yet established",
+              "confidence": 72,
+              "stage": "initial_triage"
+            },
+            {
+              "basis": "necessary sources consulted: sysdig, splunk",
+              "confidence": 78,
+              "stage": "necessary_evidence_gathered"
+            },
+            {
+              "basis": "a recent RBAC change that looks like a permission issue \u2014 considered and set aside",
+              "confidence": 77,
+              "stage": "red_herring_considered"
+            },
+            {
+              "basis": "decisive source(s) confirm: sysdig",
+              "confidence": 90,
+              "stage": "decisive_evidence_found"
+            },
+            {
+              "basis": "ruled out: db outage, permission",
+              "confidence": 92,
+              "stage": "alternatives_eliminated"
+            },
+            {
+              "basis": "audit-service data volume full \u2014 log/retention growth filled the PVC",
+              "confidence": 92,
+              "stage": "root_cause_confirmed"
+            }
+          ],
+          "escalation_boundary": {
+            "escalate_if": "root cause not confirmed within SLA, or impact spreads beyond audit-service",
+            "owning_team": "platform-team"
+          },
+          "evidence_attribution": [
+            {
+              "class": "primary",
+              "evidence": "sysdig",
+              "why": "decisive signal proving the root cause: audit-service data volume full \u2014 log/retention growth filled the PVC"
+            },
+            {
+              "class": "supporting",
+              "evidence": "splunk",
+              "why": "necessary corroboration to confirm the root cause"
+            },
+            {
+              "class": "red_herring",
+              "evidence": "thousandeyes",
+              "why": "superficially relevant; does not bear on the root cause"
+            },
+            {
+              "class": "supporting",
+              "evidence": "ENOSPC errors align exactly with the volume hitting 100%",
+              "why": "corroborates the root cause without being decisive"
+            },
+            {
+              "class": "negative",
+              "evidence": "service has write permission \u2014 rules out a permission error",
+              "why": "absence/normality that eliminates a competing hypothesis"
+            }
+          ],
+          "hypothesis_graph": {
+            "eliminated": [
+              {
+                "eliminated_by": "writes are local disk",
+                "hypothesis": "db outage"
+              },
+              {
+                "eliminated_by": "perms unchanged",
+                "hypothesis": "permission"
+              }
+            ],
+            "final": "volume full",
+            "initial": [
+              "volume full",
+              "db outage",
+              "permission"
+            ],
+            "strengthened": [
+              "volume full"
+            ],
+            "weakened": [
+              "db outage",
+              "permission"
+            ]
+          },
+          "mcp_investigation_contract": [
+            {
+              "evidence_importance": "supporting",
+              "expected_contribution": "necessary_corroboration",
+              "expected_query": "query storage/volume_full signals for audit-service",
+              "mcp": "splunk",
+              "purpose": "gather storage/volume_full evidence from splunk for audit-service",
+              "step": 1
+            },
+            {
+              "evidence_importance": "primary",
+              "expected_contribution": "decisive_proof",
+              "expected_query": "query storage/volume_full signals for audit-service",
+              "mcp": "sysdig",
+              "purpose": "gather storage/volume_full evidence from sysdig for audit-service",
+              "step": 2
+            }
+          ],
+          "observed_symptoms": "audit writes failing; disk full errors",
+          "operational_context": {
+            "affected_service": "audit-service",
+            "contributing_factors": [
+              "retention/cleanup job disabled during a migration"
+            ],
+            "dependencies": [],
+            "owning_team": "platform-team",
+            "root_cause_service": "audit-service"
+          },
+          "postmortem_summary": "audit-service incident (volume_full_write_failure): audit-service data volume full \u2014 log/retention growth filled the PVC. Confirmed via sysdig; ruled out db outage, permission. Remediation: expand the volume; re-enable retention pruning. Owner: platform-team.",
+          "recovery_verification": {
+            "remediation": "expand the volume; re-enable retention pruning",
+            "verify": "confirm the volume_full signal clears and audit-service returns to its healthy baseline"
+          }
+        },
         "mcp_utilization": {
           "application": "not_applicable",
           "autosys": "not_applicable",

@@ -69,6 +69,145 @@ TAXONOMY: dict[str, list[str]] = {
 }
 
 
+_SEV_LABEL = {1: "critical (P1)", 2: "high (P2)", 3: "moderate (P3)"}
+
+
+def _split_elim(item: str) -> tuple[str, str]:
+    """Parse an eliminated-hypothesis string ``"name (reason)"``."""
+    if " (" in item and item.endswith(")"):
+        name = item.split(" (", 1)[0]
+        return name, item[len(name) + 2:-1]
+    return item, ""
+
+
+def _investigation_spec(*, mode, family, service, rc_service, severity, summary,
+                        root_cause, necessary, decisive, distractors,
+                        negative_evidence, red_herrings, considered, eliminated,
+                        conf, owner, recommendation, business_impact, mcp,
+                        expected_queries, contributing, reasoning_category,
+                        supporting_evidence):
+    """Derive the Enterprise Investigation Specification for one scenario.
+
+    EFIC-3: every reasoning case defines not only the correct answer but the
+    expected *investigation process* — how evidence should be attributed, how
+    hypotheses rise and fall, how confidence should evolve, what each MCP is
+    expected to contribute, and how the incident is bounded and closed. It is
+    derived DETERMINISTICALLY from fields already declared on the scenario and
+    lives only in the hidden ``efic`` block — the engine never sees it (the
+    EIC ``task`` is unchanged, so task hashes and EB-0 grading are untouched).
+    """
+    lo, hi = conf
+    span = hi - lo
+
+    # --- evidence attribution: what each signal is, and why -----------------
+    attribution = []
+    for m in decisive:
+        attribution.append({"evidence": m, "class": "primary",
+                            "why": f"decisive signal proving the root cause: {root_cause}"})
+    for m in necessary:
+        if m not in decisive:
+            attribution.append({"evidence": m, "class": "supporting",
+                                "why": "necessary corroboration to confirm the root cause"})
+    for m in distractors:
+        attribution.append({"evidence": m, "class": "red_herring",
+                            "why": "superficially relevant; does not bear on the root cause"})
+    for s in supporting_evidence:
+        attribution.append({"evidence": s, "class": "supporting",
+                            "why": "corroborates the root cause without being decisive"})
+    for s in negative_evidence:
+        attribution.append({"evidence": s, "class": "negative",
+                            "why": "absence/normality that eliminates a competing hypothesis"})
+
+    # --- hypothesis graph: initial -> strengthened/weakened -> final --------
+    elim = [dict(zip(("hypothesis", "eliminated_by"), _split_elim(e))) for e in eliminated]
+    elim_names = [d["hypothesis"] for d in elim]
+    survivors = [h for h in considered if h not in elim_names]
+    final = survivors[0] if survivors else considered[0]
+    hypothesis_graph = {
+        "initial": list(considered),
+        "strengthened": [final],
+        "weakened": elim_names,
+        "eliminated": elim,
+        "final": final,
+    }
+
+    # --- confidence evolution: bounded to [lo, hi], never overclaims --------
+    confidence_evolution = [
+        {"stage": "initial_triage", "confidence": lo,
+         "basis": f"symptom observed ({summary}); cause not yet established"},
+        {"stage": "necessary_evidence_gathered", "confidence": lo + span // 3,
+         "basis": f"necessary sources consulted: {', '.join(necessary)}"},
+        {"stage": "red_herring_considered", "confidence": lo + span // 4,
+         "basis": (red_herrings[0] if red_herrings else "a distractor")
+                  + " — considered and set aside"},
+        {"stage": "decisive_evidence_found", "confidence": hi - 2,
+         "basis": f"decisive source(s) confirm: {', '.join(decisive)}"},
+        {"stage": "alternatives_eliminated", "confidence": hi,
+         "basis": f"ruled out: {', '.join(elim_names) or 'no competing hypotheses'}"},
+        {"stage": "root_cause_confirmed", "confidence": hi,
+         "basis": root_cause},
+    ]
+
+    # --- per-MCP investigation contract (supporting queried, decisive last) --
+    required = [m for m, u in mcp.items() if u == "required"]
+    ordered = sorted(m for m in required if m not in decisive) + \
+        sorted(m for m in required if m in decisive)
+    mcp_contract = []
+    for i, m in enumerate(ordered, 1):
+        dec = m in decisive
+        mcp_contract.append({
+            "mcp": m,
+            "step": i,
+            "purpose": f"gather {family}/{mode} evidence from {m} for {service}",
+            "expected_query": expected_queries[m],
+            "expected_contribution": "decisive_proof" if dec else "necessary_corroboration",
+            "evidence_importance": "primary" if dec else "supporting",
+        })
+
+    cross_service = rc_service != service
+    return {
+        "observed_symptoms": summary,
+        "evidence_attribution": attribution,
+        "hypothesis_graph": hypothesis_graph,
+        "confidence_evolution": confidence_evolution,
+        "mcp_investigation_contract": mcp_contract,
+        "business_context": {
+            "impact": business_impact,
+            "severity": severity,
+            "severity_label": _SEV_LABEL.get(severity, "unknown"),
+        },
+        "operational_context": {
+            "owning_team": owner,
+            "affected_service": service,
+            "root_cause_service": rc_service,
+            "dependencies": [rc_service] if cross_service else [],
+            "contributing_factors": list(contributing),
+        },
+        "blast_radius": {
+            "origin_service": rc_service,
+            "symptom_service": service,
+            "propagation": "cross-service cascade" if cross_service
+                           else "contained to the origin service",
+            "scope": _SEV_LABEL.get(severity, "unknown"),
+        },
+        "escalation_boundary": {
+            "owning_team": owner,
+            "escalate_if": (f"root cause not confirmed within SLA, or impact spreads "
+                            f"beyond {service}"),
+        },
+        "recovery_verification": {
+            "remediation": recommendation,
+            "verify": (f"confirm the {mode} signal clears and {service} returns to "
+                       f"its healthy baseline"),
+        },
+        "postmortem_summary": (
+            f"{service} incident ({reasoning_category}): {root_cause}. "
+            f"Confirmed via {', '.join(decisive)}; ruled out "
+            f"{', '.join(elim_names) or 'no competing hypotheses'}. "
+            f"Remediation: {recommendation}. Owner: {owner}."),
+    }
+
+
 def _scn(*, sid, title, family, mode, service, severity, summary, root_cause,
          keywords, rc_service, necessary, decisive, distractors, false_hyps,
          telemetry, mcp, contributing, negative_evidence, red_herrings,
@@ -90,6 +229,19 @@ def _scn(*, sid, title, family, mode, service, severity, summary, root_cause,
                       "necessary_evidence": necessary,
                       "decisive_evidence": decisive},
         traps={"distractor_evidence": distractors, "false_hypotheses": false_hyps})
+    supporting = supporting_evidence or []
+    expected_queries = {
+        m: f"query {family}/{mode} signals for {service}"
+        for m, u in mcp.items() if u == "required"}
+    spec = _investigation_spec(
+        mode=mode, family=family, service=service, rc_service=rc_service,
+        severity=severity, summary=summary, root_cause=root_cause,
+        necessary=necessary, decisive=decisive, distractors=distractors,
+        negative_evidence=negative_evidence, red_herrings=red_herrings,
+        considered=considered, eliminated=eliminated, conf=conf, owner=owner,
+        recommendation=recommendation, business_impact=business_impact, mcp=mcp,
+        expected_queries=expected_queries, contributing=contributing,
+        reasoning_category=reasoning_category, supporting_evidence=supporting)
     return {
         "task": task,
         "expected": {"owner": owner, "confidence_min": conf[0],
@@ -107,11 +259,10 @@ def _scn(*, sid, title, family, mode, service, severity, summary, root_cause,
             "expected_owner": owner, "expected_recommendation": recommendation,
             "reasoning_category": reasoning_category, "difficulty": difficulty,
             "replay_seed": task["task_hash"],
-            "supporting_evidence": supporting_evidence or [],
+            "supporting_evidence": supporting,
             "coverage_contribution": coverage_contribution or reasoning_category,
-            "expected_queries": {
-                m: f"query {family}/{mode} signals for {service}"
-                for m, u in mcp.items() if u == "required"},
+            "expected_queries": expected_queries,
+            "investigation_spec": spec,
         },
     }
 

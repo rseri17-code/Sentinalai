@@ -122,3 +122,74 @@ class TestCoverage:
             required = {m for m, u in ef["mcp_utilization"].items() if u == "required"}
             assert set(ef["expected_queries"]) == required
             assert "supporting_evidence" in ef
+
+
+class TestInvestigationSpec:
+    """EFIC-3: every reasoning case defines the expected investigation process,
+    not just the answer. The spec is derived deterministically and lives only in
+    the hidden efic block (task hashes / EB-0 grading are unaffected)."""
+
+    _SPEC_KEYS = {
+        "observed_symptoms", "evidence_attribution", "hypothesis_graph",
+        "confidence_evolution", "mcp_investigation_contract", "business_context",
+        "operational_context", "blast_radius", "escalation_boundary",
+        "recovery_verification", "postmortem_summary",
+    }
+
+    def test_every_scenario_has_full_spec(self):
+        for e in build_corpus()["corpus"]:
+            spec = e["efic"]["investigation_spec"]
+            assert self._SPEC_KEYS.issubset(spec), e["efic"]["scenario_id"]
+            # symptom mirrors the incident the operator actually sees
+            assert spec["observed_symptoms"] == e["task"]["incident"]["summary"]
+
+    def test_evidence_attribution_classified(self):
+        allowed = {"primary", "supporting", "red_herring", "negative"}
+        for e in build_corpus()["corpus"]:
+            attr = e["efic"]["investigation_spec"]["evidence_attribution"]
+            assert attr, e["efic"]["scenario_id"]
+            assert {a["class"] for a in attr} <= allowed
+            # the decisive signal is attributed as primary
+            assert any(a["class"] == "primary" for a in attr), e["efic"]["scenario_id"]
+
+    def test_hypothesis_graph_resolves_to_a_survivor(self):
+        for e in build_corpus()["corpus"]:
+            g = e["efic"]["investigation_spec"]["hypothesis_graph"]
+            considered = e["efic"]["hypotheses_considered"]
+            elim_names = [d["hypothesis"] for d in g["eliminated"]]
+            assert g["final"] in considered, e["efic"]["scenario_id"]
+            assert g["final"] not in elim_names, e["efic"]["scenario_id"]
+            assert set(g["initial"]) == set(considered)
+            for d in g["eliminated"]:
+                assert d["hypothesis"] and "eliminated_by" in d
+
+    def test_confidence_evolution_bounded_and_terminal(self):
+        for e in build_corpus()["corpus"]:
+            lo, hi = e["efic"]["expected_confidence_range"]
+            evo = e["efic"]["investigation_spec"]["confidence_evolution"]
+            assert len(evo) >= 4, e["efic"]["scenario_id"]
+            assert all(lo <= s["confidence"] <= hi for s in evo), e["efic"]["scenario_id"]
+            # never overclaims: starts at the low bound, ends confirmed at the high bound
+            assert evo[0]["confidence"] == lo
+            assert evo[-1]["confidence"] == hi
+
+    def test_mcp_contract_covers_required_sources(self):
+        for e in build_corpus()["corpus"]:
+            required = {m for m, u in e["efic"]["mcp_utilization"].items()
+                        if u == "required"}
+            contract = e["efic"]["investigation_spec"]["mcp_investigation_contract"]
+            assert {c["mcp"] for c in contract} == required, e["efic"]["scenario_id"]
+            # the decisive source carries primary importance
+            assert any(c["evidence_importance"] == "primary" for c in contract)
+
+    def test_operational_and_blast_context_consistent(self):
+        for e in build_corpus()["corpus"]:
+            spec = e["efic"]["investigation_spec"]
+            gt = e["task"]["ground_truth"]
+            oc = spec["operational_context"]
+            assert oc["root_cause_service"] == gt["root_cause_service"]
+            # cross-service incidents record the origin as a dependency
+            cross = oc["affected_service"] != oc["root_cause_service"]
+            assert bool(oc["dependencies"]) == cross, e["efic"]["scenario_id"]
+            assert spec["blast_radius"]["origin_service"] == gt["root_cause_service"]
+            assert spec["postmortem_summary"] and spec["recovery_verification"]["remediation"]

@@ -58,6 +58,8 @@ def _route(server: str, action: str) -> str | None:
         return None
     if server == "route53":                       # IE-2 (flag-gated at render)
         return "route53.check_resolver" if "resolver" in a else "route53.get_record"
+    if server == "identity":                      # IE-3 (flag-gated at render)
+        return "identity.get_policy_changes" if "policy" in a else "identity.check_token_signing"
     return None
 
 
@@ -72,12 +74,15 @@ class BenchMCPSource:
 
     # -- McpGateway interface -------------------------------------------------
     def discover_tools(self) -> frozenset[str]:
-        # IE-2: advertise route53 only when the pilot flag is on, so the engine
-        # registers the DNS worker only in that mode (flag-off is unchanged).
+        # IE-2/IE-3: advertise a pilot server only when its flag is on, so the
+        # engine registers that worker only in that mode (flag-off is unchanged).
         import os
+        extra = set()
         if os.environ.get("IE_DNS_ENABLED", "false").lower() in ("1", "true", "yes"):
-            return _ADVERTISED_SERVERS | {"route53"}
-        return _ADVERTISED_SERVERS
+            extra.add("route53")
+        if os.environ.get("IE_IDENTITY_ENABLED", "false").lower() in ("1", "true", "yes"):
+            extra.add("identity")
+        return _ADVERTISED_SERVERS | extra if extra else _ADVERTISED_SERVERS
 
     def invoke(self, mcp_tool_name: str, tool_action: str,
                params: Mapping[str, Any] | None = None,

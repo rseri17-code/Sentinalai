@@ -352,6 +352,9 @@ _TOOL_TO_SERVER: dict[str, str] = {
     # Route53 / DNS (IE-2 pilot; only queried when IE_DNS_ENABLED)
     "route53.get_record": "route53",
     "route53.check_resolver": "route53",
+    # Identity / IAM (IE-3 pilot; only queried when IE_IDENTITY_ENABLED)
+    "identity.check_token_signing": "identity",
+    "identity.get_policy_changes": "identity",
     # Moogsoft (AIOPS)
     "moogsoft.get_incident_by_id": "moogsoft",
     "moogsoft.get_incidents": "moogsoft",
@@ -1275,8 +1278,17 @@ def _stub_route53(action: str, params: dict) -> dict:
     return {"record": None}
 
 
+def _stub_identity(action: str, params: dict) -> dict:
+    # No real Identity/IAM MCP connected → production-shaped empty (safe no-op
+    # even with IE_IDENTITY_ENABLED).
+    if "policy" in action:
+        return {"policy_changes": []}
+    return {"signing_key": None}
+
+
 _STUB_DISPATCH: dict[str, Any] = {
     "route53": _stub_route53,
+    "identity": _stub_identity,
     "moogsoft": _stub_moogsoft,
     "splunk": _stub_splunk,
     "sysdig": _stub_sysdig,

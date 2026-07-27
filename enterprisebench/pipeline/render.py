@@ -251,6 +251,39 @@ def _dns_flag_on() -> bool:
     return os.environ.get("IE_DNS_ENABLED", "false").lower() in ("1", "true", "yes")
 
 
+def _identity_flag_on() -> bool:
+    import os
+    return os.environ.get("IE_IDENTITY_ENABLED", "false").lower() in ("1", "true", "yes")
+
+
+def _identity_channels(telemetry: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """IE-3: render Identity/IAM telemetry into the identity MCP channels. Neutral
+    facts only (IdP signing-key status, recent policy changes) — the authN-vs-authZ
+    verdict is left to the engine's `_analyze_identity` reasoning."""
+    payload = telemetry.get("identity")
+    if not isinstance(payload, Mapping):
+        return {}
+    ch: dict[str, dict[str, Any]] = {}
+    err = str(payload.get("error", "")).lower()
+    if "kid" in payload or any(t in err for t in ("signing", "key", "token")):
+        status = ("expired" if "expired" in err
+                  else "invalid" if "invalid" in err else "healthy")
+        ch["identity.check_token_signing"] = {
+            "signing_key": {"kid": payload.get("kid", ""), "status": status}}
+    else:
+        ch["identity.check_token_signing"] = {"signing_key": None}
+    if "policy_change" in payload:
+        pc = payload["policy_change"]
+        effect = ("deny" if any(t in str(pc).lower()
+                                for t in ("remove", "revoke", "deny", "delete"))
+                  else "allow")
+        ch["identity.get_policy_changes"] = {
+            "policy_changes": [{"change": pc, "effect": effect}]}
+    else:
+        ch["identity.get_policy_changes"] = {"policy_changes": []}
+    return ch
+
+
 def render(task: Mapping[str, Any]) -> "RenderedScenario":
     """Render one EFIC task's PUBLIC telemetry into per-channel MCP responses.
 
@@ -290,17 +323,21 @@ def render(task: Mapping[str, Any]) -> "RenderedScenario":
     te = thousandeyes_responses(telemetry.get("thousandeyes")) \
         if "thousandeyes" in telemetry else None
 
-    # IE-2: Route53/DNS is engine-reachable ONLY when IE_DNS_ENABLED. Flag off ⇒
-    # route53_dns stays engine-unreachable and no route53 channel is rendered, so
-    # the flag-off report is byte-identical to the EB-3 baseline.
-    dns_on = _dns_flag_on()
-    if dns_on:
+    # IE-2/IE-3: a source is engine-reachable only when its pilot flag is on. Flag
+    # off ⇒ the source stays engine-unreachable and no channel is rendered, so the
+    # flag-off report is byte-identical to the EB-3 baseline.
+    now_reachable: set[str] = set()
+    if _dns_flag_on():
         channels.update(_route53_channels(telemetry))
+        now_reachable.add("route53_dns")
+    if _identity_flag_on():
+        channels.update(_identity_channels(telemetry))
+        now_reachable.add("identity")
 
     unreachable = sorted(s for s in telemetry if s in ENGINE_UNREACHABLE
-                         and not (dns_on and s == "route53_dns"))
+                         and s not in now_reachable)
     native = sorted([s for s in telemetry if s in NATIVE_CHANNELS]
-                    + (["route53_dns"] if dns_on and "route53_dns" in telemetry else []))
+                    + [s for s in now_reachable if s in telemetry])
     provenance = {
         "native_channel": native,
         "engine_unreachable": unreachable,

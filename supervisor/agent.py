@@ -111,6 +111,7 @@ from workers.code_worker import CodeWorker
 from workers.git_worker import GitWorker
 from workers.network_worker import ThousandEyesWorker
 from workers.dns_worker import DnsWorker
+from workers.identity_worker import IdentityWorker
 from supervisor.cmdb_traversal import CMDBTraversal, build_change_summary
 from supervisor.fix_engine import get_fix_engine, ProposedFix
 from supervisor.evidence_citation import annotate_citations
@@ -155,6 +156,22 @@ def _ie_dns_enabled() -> bool:
     worker registration, the proof-gated probe, and the DNS analyzer — is inert,
     and investigation behavior is byte-identical to today's engine."""
     return os.environ.get("IE_DNS_ENABLED", "false").lower() in ("1", "true", "yes")
+
+
+def _ie_identity_enabled() -> bool:
+    """IE-3 Identity/IAM vertical-slice flag (default OFF). Same discipline as
+    IE-2: when OFF the entire identity path is inert and behavior is byte-identical
+    to today's engine."""
+    return os.environ.get("IE_IDENTITY_ENABLED", "false").lower() in ("1", "true", "yes")
+
+
+def _first_permission(desc: str) -> str:
+    """Pull a permission-like token (e.g. 's3:GetObject') from a change string,
+    else return 'the affected'. Deterministic; used only for hypothesis text."""
+    for tok in desc.replace(",", " ").split():
+        if ":" in tok and not tok.endswith(":"):
+            return tok
+    return "the affected"
 
 
 # Institutional knowledge layer (opt-in via env var, graceful degradation)
@@ -261,6 +278,7 @@ class SentinalAISupervisor:
         "change_worker":    frozenset({"github"}),                  # → DevopsWorker
         "network_worker":   frozenset(),  # always available; ENABLE_THOUSANDEYES_RCA gates internally
         "dns_worker":       frozenset({"route53"}),  # IE-2; only registered when IE_DNS_ENABLED
+        "identity_worker":  frozenset({"identity"}),  # IE-3; only registered when IE_IDENTITY_ENABLED
     }
 
     def __init__(
@@ -298,6 +316,9 @@ class SentinalAISupervisor:
         # flag-off worker set is byte-identical to today's engine.
         if _ie_dns_enabled():
             _worker_factory["dns_worker"] = lambda: DnsWorker(gateway=gw)
+        # IE-3: Identity worker — same discipline.
+        if _ie_identity_enabled():
+            _worker_factory["identity_worker"] = lambda: IdentityWorker(gateway=gw)
 
         self.workers: dict[str, Any] = {}
         for name, factory in _worker_factory.items():
@@ -1694,6 +1715,104 @@ class SentinalAISupervisor:
                    and h in str(e.get("message", "")).lower() for e in logs)
 
     # ------------------------------------------------------------------ #
+    # IE-3: Identity / IAM vertical slice (additive; gated by IE_IDENTITY_ENABLED)
+    # ------------------------------------------------------------------ #
+
+    _IDENTITY_LOG_HINTS = (
+        "jwt", "signature validation", "signing key", "access denied",
+        "accessdenied", "not authorized", "unauthorized", "forbidden",
+        "permission", "401", "403", "invalid token", "token expired",
+        "oauth", "oidc", "saml",
+    )
+
+    def _identity_probe_warranted(self, evidence: dict) -> bool:
+        """Proof-gate: only probe Identity when logs show an authN/authZ symptom
+        (JWT / signature / access-denied / not-authorized / 401 / 403 / token)."""
+        for entry in self._extract_logs(evidence):
+            msg = str(entry.get("message", "")).lower()
+            if any(h in msg for h in self._IDENTITY_LOG_HINTS):
+                return True
+        return False
+
+    def _maybe_fetch_identity_evidence(
+        self, service: str, evidence: dict,
+        receipts: Any | None = None, budget: Any | None = None,
+        circuits: Any | None = None,
+    ) -> dict | None:
+        """Proof-gated Identity/IAM probe (Step 3h). Additive; None unless
+        IE_IDENTITY_ENABLED and an auth symptom is present."""
+        if not _ie_identity_enabled():
+            return None
+        worker = self.workers.get("identity_worker")
+        if worker is None or not self._identity_probe_warranted(evidence):
+            return None
+        if budget and not budget.can_call():
+            return None
+        result: dict[str, Any] = {}
+        sig = self._call_worker(worker, "check_token_signing", {"service": service},
+                                receipts, budget, worker_name="identity_worker",
+                                circuits=circuits)
+        if sig.get("signing_key"):
+            result["signing_key"] = sig["signing_key"]
+        pol = self._call_worker(worker, "get_policy_changes", {"service": service},
+                                receipts, budget, worker_name="identity_worker",
+                                circuits=circuits)
+        if pol.get("policy_changes"):
+            result["policy_changes"] = pol["policy_changes"]
+        return result or None
+
+    def _extract_identity_evidence(self, evidence: dict) -> dict:
+        idv = evidence.get("identity_evidence")
+        return idv if isinstance(idv, dict) else {}
+
+    def _analyze_identity(self, service: str, id_ev: dict) -> list:
+        """Emit Identity hypotheses, distinguishing authentication (expired token
+        signing key) from authorization (revoked IAM permission). Fires only on a
+        real identity problem, so clean/empty identity evidence contributes
+        nothing — identity evidence changes the diagnosis only when appropriate."""
+        hyps: list = []
+        if not id_ev:
+            return hyps
+
+        # Authentication: expired / invalid token signing key.
+        key = id_ev.get("signing_key") or {}
+        if str(key.get("status", "")).lower() in ("expired", "invalid", "revoked"):
+            hyps.append(Hypothesis(
+                name="signing_key_expiry",
+                root_cause=(f"expired token signing key ({key.get('kid', '')}) in "
+                            f"{service} causing JWT signature validation failures"),
+                base_score=85,
+                evidence_refs=["identity:signing_key_expired", "logs:jwt_failure"],
+                reasoning=(
+                    f"The identity provider reports signing key '{key.get('kid', '?')}' "
+                    f"status '{key.get('status')}'; logs show JWT signature validation "
+                    "failures across services — an authentication (not authorization) "
+                    "failure."),
+            ))
+
+        # Authorization: an IAM/permission policy change that denies/revokes access.
+        for ch in (id_ev.get("policy_changes") or []):
+            desc = str(ch.get("change", ch.get("description", ""))).lower()
+            effect = str(ch.get("effect", "")).lower()
+            if effect in ("deny", "revoke") or any(
+                    t in desc for t in ("remove", "revoke", "deny", "delete")):
+                perm = ch.get("permission", "") or _first_permission(
+                    str(ch.get("change", ch.get("description", ""))))
+                hyps.append(Hypothesis(
+                    name="iam_permission_revoked",
+                    root_cause=(f"IAM policy change revoked {service} permission "
+                                f"({perm} denied)"),
+                    base_score=83,
+                    evidence_refs=["identity:policy_change", "logs:access_denied"],
+                    reasoning=(
+                        f"An IAM policy change ({ch.get('change', ch.get('description', '?'))}) "
+                        f"removed a required permission; logs show AccessDenied / not-"
+                        "authorized — an authorization (not authentication) failure."),
+                ))
+                break
+        return hyps
+
+    # ------------------------------------------------------------------ #
     # Internal: Code diff analysis (AI-powered — Phase 3e)
     # ------------------------------------------------------------------ #
 
@@ -2443,6 +2562,16 @@ class SentinalAISupervisor:
                 service, self._extract_dns_evidence(evidence), logs)
             if dns_hyps:
                 hypotheses.extend(dns_hyps)
+
+        # IE-3: Identity/IAM reasoning (additive, flag-gated). Same injection
+        # discipline as DNS — identity hypotheses join the pool and compete in
+        # scoring, elimination, and winner selection. Inert when the flag is off
+        # or no identity problem was found.
+        if _ie_identity_enabled():
+            id_hyps = self._analyze_identity(
+                service, self._extract_identity_evidence(evidence))
+            if id_hyps:
+                hypotheses.extend(id_hyps)
 
         # W3: Evidence-weighted confidence for each hypothesis
         # R2: capture each hypothesis's pre-scoring prior so the winner's

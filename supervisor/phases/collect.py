@@ -454,6 +454,17 @@ class CollectPhase:
                 if _shadow is not None:
                     _shadow.set("dns_evidence", dns_context)
 
+        # --- Step 3h: Identity/IAM enrichment (proof-gated; IE-3) ---
+        # Gated at the call site by IE_IDENTITY_ENABLED so flag-off is byte-identical.
+        if os.environ.get("IE_IDENTITY_ENABLED", "false").lower() in ("1", "true", "yes"):
+            identity_context = sup._maybe_fetch_identity_evidence(
+                service, evidence, receipts, budget, circuits,
+            )
+            if identity_context:
+                evidence["identity_evidence"] = identity_context
+                if _shadow is not None:
+                    _shadow.set("identity_evidence", identity_context)
+
         # --- Await trace correlation ---
         try:
             trace_corr = _trace_future.result(timeout=5)

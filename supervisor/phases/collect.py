@@ -465,6 +465,16 @@ class CollectPhase:
                 if _shadow is not None:
                     _shadow.set("identity_evidence", identity_context)
 
+        # --- Step 3i: AWS/CloudWatch enrichment (proof-gated; IE-4) ---
+        if os.environ.get("IE_AWS_ENABLED", "false").lower() in ("1", "true", "yes"):
+            aws_context = sup._maybe_fetch_aws_evidence(
+                service, evidence, receipts, budget, circuits,
+            )
+            if aws_context:
+                evidence["aws_evidence"] = aws_context
+                if _shadow is not None:
+                    _shadow.set("aws_evidence", aws_context)
+
         # --- Await trace correlation ---
         try:
             trace_corr = _trace_future.result(timeout=5)

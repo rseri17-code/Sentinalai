@@ -355,6 +355,8 @@ _TOOL_TO_SERVER: dict[str, str] = {
     # Identity / IAM (IE-3 pilot; only queried when IE_IDENTITY_ENABLED)
     "identity.check_token_signing": "identity",
     "identity.get_policy_changes": "identity",
+    # AWS / CloudWatch (IE-4; only queried when IE_AWS_ENABLED)
+    "aws_cloudwatch.get_error_metrics": "aws_cloudwatch",
     # Moogsoft (AIOPS)
     "moogsoft.get_incident_by_id": "moogsoft",
     "moogsoft.get_incidents": "moogsoft",
@@ -1286,9 +1288,16 @@ def _stub_identity(action: str, params: dict) -> dict:
     return {"signing_key": None}
 
 
+def _stub_aws_cloudwatch(action: str, params: dict) -> dict:
+    # No real CloudWatch MCP connected → production-shaped empty (safe no-op
+    # even with IE_AWS_ENABLED).
+    return {"metrics": {}}
+
+
 _STUB_DISPATCH: dict[str, Any] = {
     "route53": _stub_route53,
     "identity": _stub_identity,
+    "aws_cloudwatch": _stub_aws_cloudwatch,
     "moogsoft": _stub_moogsoft,
     "splunk": _stub_splunk,
     "sysdig": _stub_sysdig,

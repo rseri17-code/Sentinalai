@@ -112,6 +112,7 @@ from workers.git_worker import GitWorker
 from workers.network_worker import ThousandEyesWorker
 from workers.dns_worker import DnsWorker
 from workers.identity_worker import IdentityWorker
+from workers.aws_worker import AwsWorker
 from supervisor.cmdb_traversal import CMDBTraversal, build_change_summary
 from supervisor.fix_engine import get_fix_engine, ProposedFix
 from supervisor.evidence_citation import annotate_citations
@@ -163,6 +164,24 @@ def _ie_identity_enabled() -> bool:
     IE-2: when OFF the entire identity path is inert and behavior is byte-identical
     to today's engine."""
     return os.environ.get("IE_IDENTITY_ENABLED", "false").lower() in ("1", "true", "yes")
+
+
+def _ie_aws_enabled() -> bool:
+    """IE-4 AWS/CloudWatch vertical-slice flag (default OFF)."""
+    return os.environ.get("IE_AWS_ENABLED", "false").lower() in ("1", "true", "yes")
+
+
+def _ie_active_domains() -> list[str]:
+    """The IE domains enabled this run. Cross-domain correlation activates only
+    when two or more are on."""
+    active = []
+    if _ie_dns_enabled():
+        active.append("dns")
+    if _ie_identity_enabled():
+        active.append("identity")
+    if _ie_aws_enabled():
+        active.append("aws")
+    return active
 
 
 def _first_permission(desc: str) -> str:
@@ -279,6 +298,7 @@ class SentinalAISupervisor:
         "network_worker":   frozenset(),  # always available; ENABLE_THOUSANDEYES_RCA gates internally
         "dns_worker":       frozenset({"route53"}),  # IE-2; only registered when IE_DNS_ENABLED
         "identity_worker":  frozenset({"identity"}),  # IE-3; only registered when IE_IDENTITY_ENABLED
+        "aws_worker":       frozenset({"aws_cloudwatch"}),  # IE-4; only when IE_AWS_ENABLED
     }
 
     def __init__(
@@ -319,6 +339,9 @@ class SentinalAISupervisor:
         # IE-3: Identity worker — same discipline.
         if _ie_identity_enabled():
             _worker_factory["identity_worker"] = lambda: IdentityWorker(gateway=gw)
+        # IE-4: AWS worker — same discipline.
+        if _ie_aws_enabled():
+            _worker_factory["aws_worker"] = lambda: AwsWorker(gateway=gw)
 
         self.workers: dict[str, Any] = {}
         for name, factory in _worker_factory.items():
@@ -1813,6 +1836,142 @@ class SentinalAISupervisor:
         return hyps
 
     # ------------------------------------------------------------------ #
+    # IE-4: AWS / CloudWatch vertical slice (additive; gated by IE_AWS_ENABLED)
+    # ------------------------------------------------------------------ #
+
+    _AWS_LOG_HINTS = (
+        "accessdenied", "access denied", "not authorized", "403", "503",
+        "slowdown", "throttl", "s3", "cloudwatch", "availability zone",
+        "reject", "conn_reset", "connection reset",
+    )
+
+    def _aws_probe_warranted(self, evidence: dict) -> bool:
+        """Proof-gate: probe CloudWatch only when logs show a cloud symptom."""
+        for entry in self._extract_logs(evidence):
+            msg = str(entry.get("message", "")).lower()
+            if any(h in msg for h in self._AWS_LOG_HINTS):
+                return True
+        return False
+
+    def _maybe_fetch_aws_evidence(
+        self, service: str, evidence: dict,
+        receipts: Any | None = None, budget: Any | None = None,
+        circuits: Any | None = None,
+    ) -> dict | None:
+        """Proof-gated CloudWatch probe (Step 3i). Additive; None unless
+        IE_AWS_ENABLED and a cloud symptom is present."""
+        if not _ie_aws_enabled():
+            return None
+        worker = self.workers.get("aws_worker")
+        if worker is None or not self._aws_probe_warranted(evidence):
+            return None
+        if budget and not budget.can_call():
+            return None
+        res = self._call_worker(worker, "get_error_metrics", {"service": service},
+                                receipts, budget, worker_name="aws_worker",
+                                circuits=circuits)
+        metrics = res.get("metrics") or {}
+        return {"metrics": metrics} if metrics else None
+
+    def _extract_aws_evidence(self, evidence: dict) -> dict:
+        aws = evidence.get("aws_evidence")
+        return aws.get("metrics", {}) if isinstance(aws, dict) else {}
+
+    def _analyze_aws(self, service: str, m: dict) -> list:
+        """Emit AWS hypotheses. S3 throttling / AZ impairment / SG block are
+        AWS-primary root causes; an S3 403 spike is scored LOW because a 403 is
+        usually the *symptom* of an authorization change (the identity domain owns
+        the root cause) — this lets cross-domain correlation defer to identity."""
+        hyps: list = []
+        if not m:
+            return hyps
+        if m.get("throttled") or m.get("s3_503_slowdown"):
+            hyps.append(Hypothesis(
+                name="s3_throttling",
+                root_cause=(f"S3 request-rate throttling (SlowDown/503) on {service}"),
+                base_score=82, evidence_refs=["aws:s3_503_slowdown"],
+                reasoning="CloudWatch shows S3 SlowDown/503 throttling responses."))
+        if str(m.get("status", "")).lower() == "degraded" and m.get("az"):
+            hyps.append(Hypothesis(
+                name="az_impairment",
+                root_cause=(f"AWS availability-zone impairment ({m.get('az')}) "
+                            f"degrading {service}"),
+                base_score=82, evidence_refs=["aws:az_degraded"],
+                reasoning=(f"CloudWatch reports AZ {m.get('az')} degraded, "
+                           f"~{m.get('affected_pct','?')}% of requests affected.")))
+        if str(m.get("flow_log", "")).upper().startswith("REJECT") or m.get("conn_reset"):
+            hyps.append(Hypothesis(
+                name="security_group_block",
+                root_cause=(f"security-group rule change blocking connectivity for "
+                            f"{service} (VPC flow-log REJECT)"),
+                base_score=80, evidence_refs=["aws:flow_log_reject"],
+                reasoning="VPC flow logs show REJECT + connection resets."))
+        if m.get("s3_403"):
+            hyps.append(Hypothesis(
+                name="aws_access_denied",
+                root_cause=(f"S3 access denied (403) on {service}"),
+                base_score=55,  # low: 403 is a symptom of an authz change (identity)
+                evidence_refs=["aws:s3_403"],
+                reasoning=(f"CloudWatch shows {m.get('s3_403')} S3 403 AccessDenied "
+                           "responses — an authorization denial, not a 5xx outage.")))
+        return hyps
+
+    # ------------------------------------------------------------------ #
+    # IE-4: Cross-domain correlation (active only with >=2 IE domains on)
+    # ------------------------------------------------------------------ #
+
+    def _correlate_cross_domain(self, hypotheses: list, evidence: dict) -> dict:
+        """Correlate evidence across IE domains into one coherent investigation.
+
+        When two independent domains agree on the same causal chain, the shared
+        hypothesis is strengthened (bounded, deterministic boost + a cross-domain
+        evidence_ref) and the generic competing hypothesis is further weakened —
+        so confidence reflects cross-domain evidence and the false/undifferentiated
+        alternative is eliminated. Returns a correlation record for the trace.
+
+        Deterministic; runs BEFORE evidence-weighted scoring so the effect flows
+        through the normal confidence machinery. Only mutates IE-owned hypotheses.
+        """
+        record: dict[str, Any] = {"correlations": [], "contradictions": []}
+        by_name = {h.name: h for h in hypotheses}
+        aws = self._extract_aws_evidence(evidence)
+        identity = self._extract_identity_evidence(evidence)
+        dns = self._extract_dns_evidence(evidence)
+
+        def _boost(h, ref, delta, reason):
+            if ref not in h.evidence_refs:
+                h.evidence_refs = list(h.evidence_refs) + [ref]
+            h.base_score = min(97, h.base_score + delta)
+            record["correlations"].append(
+                {"hypothesis": h.name, "corroborated_by": ref, "reason": reason})
+
+        # Identity (authZ) corroborated by AWS S3 403s → the policy change explains
+        # the observed denials. The 403-not-5xx pattern also contradicts an outage.
+        if "iam_permission_revoked" in by_name and aws.get("s3_403"):
+            _boost(by_name["iam_permission_revoked"], "aws:s3_403_corroboration", 6,
+                   "IAM policy denial corroborated by CloudWatch S3 403 count")
+            record["contradictions"].append(
+                {"eliminated": "s3_outage", "by": "aws:403_not_5xx",
+                 "reason": "403 AccessDenied indicates authorization, not a service outage"})
+
+        # DNS resolver outage corroborated by AWS connectivity resets / rejects.
+        if "dns_resolver_outage" in by_name and (aws.get("conn_reset")
+                                                 or dns.get("resolver")):
+            if aws.get("conn_reset"):
+                _boost(by_name["dns_resolver_outage"], "aws:conn_reset_corroboration",
+                       4, "DNS resolver failure corroborated by connection resets")
+
+        # Cross-domain confirmation weakens the undifferentiated generic hypothesis.
+        if record["correlations"] and "error_spike_generic" in by_name:
+            g = by_name["error_spike_generic"]
+            g.base_score = max(1, g.base_score - 15)
+            record["contradictions"].append(
+                {"eliminated": "error_spike_generic", "by": "cross_domain_confirmation",
+                 "reason": "a cross-domain-confirmed specific root cause outranks the "
+                           "undifferentiated error-spike hypothesis"})
+        return record
+
+    # ------------------------------------------------------------------ #
     # Internal: Code diff analysis (AI-powered — Phase 3e)
     # ------------------------------------------------------------------ #
 
@@ -2572,6 +2731,21 @@ class SentinalAISupervisor:
                 service, self._extract_identity_evidence(evidence))
             if id_hyps:
                 hypotheses.extend(id_hyps)
+
+        # IE-4: AWS/CloudWatch reasoning (additive, flag-gated).
+        if _ie_aws_enabled():
+            aws_hyps = self._analyze_aws(
+                service, self._extract_aws_evidence(evidence))
+            if aws_hyps:
+                hypotheses.extend(aws_hyps)
+
+        # IE-4: cross-domain correlation — runs only when >=2 IE domains are on,
+        # so single-domain (IE-2/IE-3) and all-off behavior are unchanged. Mutates
+        # only IE-owned hypothesis scores/refs before evidence-weighted scoring.
+        if len(_ie_active_domains()) >= 2:
+            _xdomain = self._correlate_cross_domain(hypotheses, evidence)
+            if _xdomain.get("correlations") or _xdomain.get("contradictions"):
+                evidence["_cross_domain_correlation"] = _xdomain
 
         # W3: Evidence-weighted confidence for each hypothesis
         # R2: capture each hypothesis's pre-scoring prior so the winner's

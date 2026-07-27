@@ -256,6 +256,19 @@ def _identity_flag_on() -> bool:
     return os.environ.get("IE_IDENTITY_ENABLED", "false").lower() in ("1", "true", "yes")
 
 
+def _aws_flag_on() -> bool:
+    import os
+    return os.environ.get("IE_AWS_ENABLED", "false").lower() in ("1", "true", "yes")
+
+
+def _aws_channels(telemetry: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """IE-4: render AWS/CloudWatch telemetry into the cloudwatch MCP channel."""
+    payload = telemetry.get("aws_cloudwatch")
+    if not isinstance(payload, Mapping):
+        return {}
+    return {"aws_cloudwatch.get_error_metrics": {"metrics": dict(payload)}}
+
+
 def _identity_channels(telemetry: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
     """IE-3: render Identity/IAM telemetry into the identity MCP channels. Neutral
     facts only (IdP signing-key status, recent policy changes) — the authN-vs-authZ
@@ -333,6 +346,9 @@ def render(task: Mapping[str, Any]) -> "RenderedScenario":
     if _identity_flag_on():
         channels.update(_identity_channels(telemetry))
         now_reachable.add("identity")
+    if _aws_flag_on():
+        channels.update(_aws_channels(telemetry))
+        now_reachable.add("aws_cloudwatch")
 
     unreachable = sorted(s for s in telemetry if s in ENGINE_UNREACHABLE
                          and s not in now_reachable)

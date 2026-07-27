@@ -60,6 +60,8 @@ def _route(server: str, action: str) -> str | None:
         return "route53.check_resolver" if "resolver" in a else "route53.get_record"
     if server == "identity":                      # IE-3 (flag-gated at render)
         return "identity.get_policy_changes" if "policy" in a else "identity.check_token_signing"
+    if server == "aws_cloudwatch":                # IE-4 (flag-gated at render)
+        return "aws_cloudwatch.get_error_metrics"
     return None
 
 
@@ -82,6 +84,8 @@ class BenchMCPSource:
             extra.add("route53")
         if os.environ.get("IE_IDENTITY_ENABLED", "false").lower() in ("1", "true", "yes"):
             extra.add("identity")
+        if os.environ.get("IE_AWS_ENABLED", "false").lower() in ("1", "true", "yes"):
+            extra.add("aws_cloudwatch")
         return _ADVERTISED_SERVERS | extra if extra else _ADVERTISED_SERVERS
 
     def invoke(self, mcp_tool_name: str, tool_action: str,

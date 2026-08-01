@@ -13409,3 +13409,1625 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-07-27T23:37:47.176Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T00:00:51.859Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T00:12:50.298Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T00:19:53.088Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T00:34:10.180Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T00:41:07.379Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T01:06:10.251Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T01:24:57.136Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T02:50:14.149Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T03:05:33.033Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T03:13:23.079Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T05:16:07.126Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T07:41:32.490Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T09:42:40.666Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T10:06:26.229Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T10:34:22.519Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T12:34:54.861Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T13:11:25.066Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T13:26:38.580Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T15:22:32.855Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T17:25:25.476Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T18:11:47.755Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T18:42:25.078Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T20:30:21.365Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T20:48:41.190Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T22:27:22.806Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T23:00:44.307Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T23:08:20.371Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T23:22:50.179Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T23:28:35.662Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T23:34:17.542Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-28T23:53:20.543Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T00:12:04.186Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T00:21:20.323Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T00:27:49.390Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T00:34:05.626Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T00:48:06.457Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T01:05:53.434Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T01:35:03.460Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T02:06:55.814Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T02:20:46.042Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T04:21:33.024Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T07:23:15.281Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T08:21:27.175Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T10:06:47.980Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T11:38:31.021Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T11:55:09.936Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T12:10:02.804Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T12:23:55.475Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T12:32:49.975Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T12:39:07.226Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T12:45:02.441Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T12:53:04.924Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T13:03:13.919Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T13:13:19.961Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T13:45:53.789Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T14:28:09.840Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-07-29T16:15:35.807Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `ce49d5f feat(investigation): IE-4 multi-domain cross-domain reasoning (AWS slice + correlator)`
+- `3c0d847 chore: update hot memory (stop hook auto-commit)`
+- `241b4a8 feat(investigation): IE-3 Identity/IAM vertical slice (IE_IDENTITY_ENABLED, default off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

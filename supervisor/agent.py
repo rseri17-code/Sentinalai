@@ -171,6 +171,14 @@ def _ie_aws_enabled() -> bool:
     return os.environ.get("IE_AWS_ENABLED", "false").lower() in ("1", "true", "yes")
 
 
+def _ii_reclassify_enabled() -> bool:
+    """II-1 evidence-driven reclassification flag (default OFF). When ON, the
+    engine trusts an unambiguous decisive-evidence signal over the summary-based
+    incident classification (expert behavior: read the evidence, not just the
+    alert title). Flag OFF ⇒ byte-identical to today."""
+    return os.environ.get("II_RECLASSIFY_ENABLED", "false").lower() in ("1", "true", "yes")
+
+
 def _ie_active_domains() -> list[str]:
     """The IE domains enabled this run. Cross-domain correlation activates only
     when two or more are on."""
@@ -2622,6 +2630,14 @@ class SentinalAISupervisor:
         events = self._extract_events(evidence)
         changes = self._extract_changes(evidence)
 
+        # II-1: evidence-driven reclassification (additive, flag-gated). An
+        # unambiguous decisive signal in the collected evidence overrides a
+        # summary-based misclassification, so the correct analyzer runs. Inert
+        # when II_RECLASSIFY_ENABLED is off.
+        if _ii_reclassify_enabled():
+            incident_type = self._reclassify_from_evidence(
+                incident_type, logs, events)
+
         # ITSM + DevOps context (stored in thread-local — safe for concurrent investigations)
         self._tls.itsm_evidence = self._extract_itsm_context(evidence)
         self._tls.devops_evidence = self._extract_devops_context(evidence)
@@ -3223,6 +3239,28 @@ class SentinalAISupervisor:
         ))
 
         return hypotheses
+
+    # -- II-1: evidence-driven reclassification ------------------------- #
+
+    @staticmethod
+    def _reclassify_from_evidence(incident_type: str, logs: list, events: list) -> str:
+        """Override the summary-based classification when the collected evidence
+        carries an UNAMBIGUOUS decisive signal for a different incident type — the
+        way an expert SRE reads the telemetry, not just the alert title.
+
+        Conservative: only fires on definitive, universal production markers, and
+        only re-routes to an incident type whose analyzer already exists. Returns
+        the (possibly updated) incident_type; never raises.
+        """
+        def _text(items: list) -> str:
+            return " ".join(str(e.get("message", "")).lower() for e in (items or []))
+
+        blob = _text(events) + " " + _text(logs)
+        # An OOMKill is definitionally memory exhaustion regardless of the alert
+        # wording (e.g. a "5xx rising" alert whose pods were actually OOMKilled).
+        if "oomkilled" in blob and incident_type != "oomkill":
+            return "oomkill"
+        return incident_type
 
     # -- OOMKill -------------------------------------------------------- #
 

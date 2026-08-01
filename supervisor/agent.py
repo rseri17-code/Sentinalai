@@ -2755,6 +2755,20 @@ class SentinalAISupervisor:
             if aws_hyps:
                 hypotheses.extend(aws_hyps)
 
+        # Phase 6: Domain Intelligence Engine — enabled modules contribute domain
+        # hypotheses that flow through the SAME confidence/elimination machinery.
+        # No-op (byte-identical) when no module flag is on.
+        from supervisor.domain_intelligence import enabled_modules, run_domain_modules
+        if enabled_modules():
+            from supervisor.domain_intelligence import EvidenceView
+            _dview = EvidenceView(service, logs, metrics, events, changes)
+            for _d in run_domain_modules(_dview):
+                hypotheses.append(Hypothesis(
+                    name=_d["name"], root_cause=_d["root_cause"],
+                    base_score=_d["base_score"],
+                    evidence_refs=_d.get("evidence_refs", []),
+                    reasoning=_d.get("reasoning", "")))
+
         # IE-4: cross-domain correlation — runs only when >=2 IE domains are on,
         # so single-domain (IE-2/IE-3) and all-off behavior are unchanged. Mutates
         # only IE-owned hypothesis scores/refs before evidence-weighted scoring.

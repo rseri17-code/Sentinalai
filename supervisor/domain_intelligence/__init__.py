@@ -9,10 +9,13 @@ from __future__ import annotations
 
 from supervisor.domain_intelligence.base import DomainModule, EvidenceView
 from supervisor.domain_intelligence.database import DatabaseIntelligence
+from supervisor.domain_intelligence.kubernetes import KubernetesIntelligence
 
 # Registered modules (one per operational domain). Order is stable → deterministic.
+# Adding a domain = one line here; no engine or framework change.
 _MODULES: list[DomainModule] = [
     DatabaseIntelligence(),
+    KubernetesIntelligence(),
 ]
 
 

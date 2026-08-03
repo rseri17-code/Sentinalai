@@ -199,9 +199,16 @@ def _sysdig_events(telemetry: Mapping[str, Any]) -> dict[str, Any] | None:
         if not isinstance(payload, Mapping):
             continue
         reason = payload.get("reason") or payload.get("event") or payload.get("msg")
+        # A readiness/liveness probe failure is a k8s condition, not a "reason"
+        # field — surface it as an event so the engine can observe it. Gated by the
+        # Kubernetes DIM flag so flag-off rendering (and the trace) is unchanged.
+        if (reason is None and src == "kubernetes" and "readiness" in payload
+                and _k8s_di_flag_on()):
+            reason = "readiness probe failing"
         if reason:
             events.append({"message": f"{_flatten(reason)} :: {_flatten(payload)}",
-                           "type": str(reason).lower(), "timestamp": BASE_TS})
+                           "type": str(reason).lower().replace(" ", "_"),
+                           "timestamp": BASE_TS})
     if not events:
         return None
     return {"events": events}
@@ -259,6 +266,11 @@ def _identity_flag_on() -> bool:
 def _aws_flag_on() -> bool:
     import os
     return os.environ.get("IE_AWS_ENABLED", "false").lower() in ("1", "true", "yes")
+
+
+def _k8s_di_flag_on() -> bool:
+    import os
+    return os.environ.get("DI_KUBERNETES_ENABLED", "false").lower() in ("1", "true", "yes")
 
 
 def _aws_channels(telemetry: Mapping[str, Any]) -> dict[str, dict[str, Any]]:

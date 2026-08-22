@@ -15111,3 +15111,85 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-08-07T17:47:28.395Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 490f896 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `490f896 chore: update hot memory (stop hook auto-commit)`
+- `a078751 feat(investigation): Phase 6 DIE API Gateway module (DI_API_GATEWAY_ENABLED, off)`
+- `7a7e39a feat(investigation): Phase 6 DIE Kubernetes module — framework reuse proof (DI_KUBERNETES_ENABLED, off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-07T21:45:47.620Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 490f896 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `490f896 chore: update hot memory (stop hook auto-commit)`
+- `a078751 feat(investigation): Phase 6 DIE API Gateway module (DI_API_GATEWAY_ENABLED, off)`
+- `7a7e39a feat(investigation): Phase 6 DIE Kubernetes module — framework reuse proof (DI_KUBERNETES_ENABLED, off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-08T02:56:14.030Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: 490f896 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `490f896 chore: update hot memory (stop hook auto-commit)`
+- `a078751 feat(investigation): Phase 6 DIE API Gateway module (DI_API_GATEWAY_ENABLED, off)`
+- `7a7e39a feat(investigation): Phase 6 DIE Kubernetes module — framework reuse proof (DI_KUBERNETES_ENABLED, off)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

@@ -15193,3 +15193,253 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-08-22T12:30:41.050Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)`
+- `71ce46c chore: update hot memory (stop hook auto-commit)`
+- `490f896 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-22T12:58:23.619Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)`
+- `71ce46c chore: update hot memory (stop hook auto-commit)`
+- `490f896 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-22T13:09:20.674Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)`
+- `71ce46c chore: update hot memory (stop hook auto-commit)`
+- `490f896 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-22T13:14:24.264Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)`
+- `71ce46c chore: update hot memory (stop hook auto-commit)`
+- `490f896 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-22T14:37:55.163Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)`
+- `71ce46c chore: update hot memory (stop hook auto-commit)`
+- `490f896 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-22T14:45:48.194Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)`
+- `71ce46c chore: update hot memory (stop hook auto-commit)`
+- `490f896 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-22T16:11:17.739Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)`
+- `71ce46c chore: update hot memory (stop hook auto-commit)`
+- `490f896 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-22T16:19:35.227Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)`
+- `71ce46c chore: update hot memory (stop hook auto-commit)`
+- `490f896 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-22T16:32:18.151Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `e16e35b feat(investigation): Phase 6 DIE Application Runtime module (DI_APPLICATION_RUNTIME_ENABLED, off)`
+- `71ce46c chore: update hot memory (stop hook auto-commit)`
+- `490f896 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+yes (cache mtime: 2026-07-26T04:03:08.116Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

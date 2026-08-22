@@ -61,6 +61,25 @@ class DatabaseIntelligence(DomainModule):
                 "statistics refresh), collapsing query latency.",
                 "pin or refresh the query plan; add a plan-regression guard"))
 
+        # --- cascade: origin-service DB saturation propagating downstream ---
+        # Distinct from pool exhaustion: the DB is near (not at) max AND the logs
+        # show one service timing out with a downstream 5xx — a propagating cascade.
+        active = _num(view.metric_value("active"))
+        pool_max = _num(view.metric_value("max"))
+        near_max = (active is not None and pool_max is not None
+                    and pool_max > 0 and active >= 0.9 * pool_max and active < pool_max)
+        downstream_5xx = "503" in text or "5xx" in text or "cascad" in text
+        if near_max and downstream_5xx:
+            origin = _origin_service(view.logs) or svc
+            hyps.append(_hyp(
+                "database_saturation_cascade",
+                f"{origin} database saturation cascading to downstream services",
+                81, ["metrics:db_near_max", "logs:cascade_chain"],
+                f"The {origin} database pool is near saturation and its timeouts "
+                "cascade to downstream services (their 5xx surface the upstream "
+                "saturation, not their own fault).",
+                f"shed load + scale the {origin} DB pool; add a bulkhead"))
+
         # --- replica lag: stale reads / read-after-write mismatch ---
         if ("read-after-write" in text or "replication lag" in text
                 or ("replica" in text and ("lag" in text or "stale" in text))):
@@ -80,3 +99,15 @@ def _num(v):
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+def _origin_service(logs: list) -> str:
+    """The service named in a '<service> timeout' log line (the cascade origin),
+    excluding generic upstream/504 timeouts."""
+    for e in logs or []:
+        msg = str(e.get("message", "")).lower()
+        if "timeout" in msg and "upstream" not in msg and "504" not in msg:
+            tok = msg.split()[0] if msg.split() else ""
+            if tok and tok.isalpha():
+                return tok
+    return ""

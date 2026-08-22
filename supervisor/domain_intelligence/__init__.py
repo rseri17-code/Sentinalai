@@ -14,6 +14,11 @@ from supervisor.domain_intelligence.api_gateway import ApiGatewayIntelligence
 from supervisor.domain_intelligence.application_runtime import (
     ApplicationRuntimeIntelligence)
 from supervisor.domain_intelligence.deployment import DeploymentIntelligence
+from supervisor.domain_intelligence.messaging import MessagingIntelligence
+from supervisor.domain_intelligence.certificates import CertificateIntelligence
+from supervisor.domain_intelligence.batch import BatchIntelligence
+from supervisor.domain_intelligence.storage import StorageIntelligence
+from supervisor.domain_intelligence.network import NetworkIntelligence
 
 # Registered modules (one per operational domain). Order is stable → deterministic.
 # Adding a domain = one line here; no engine or framework change.
@@ -23,6 +28,11 @@ _MODULES: list[DomainModule] = [
     ApiGatewayIntelligence(),
     ApplicationRuntimeIntelligence(),
     DeploymentIntelligence(),
+    MessagingIntelligence(),
+    CertificateIntelligence(),
+    BatchIntelligence(),
+    StorageIntelligence(),
+    NetworkIntelligence(),
 ]
 
 

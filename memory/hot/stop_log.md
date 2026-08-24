@@ -12497,3 +12497,141 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-08-24T13:07:40.826Z
+
+**Branch**: claude/seri-ai-platform-upgrade-opl7nk
+**Head commit**: 8cd65e6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `8cd65e6 chore: update hot memory (stop hook auto-commit)`
+- `e178d67 chore: update hot memory (stop hook auto-commit)`
+- `63db2ef chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-24T13:46:27.739Z
+
+**Branch**: claude/seri-ai-platform-upgrade-opl7nk
+**Head commit**: 8cd65e6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8cd65e6 chore: update hot memory (stop hook auto-commit)`
+- `e178d67 chore: update hot memory (stop hook auto-commit)`
+- `63db2ef chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-24T14:43:43.826Z
+
+**Branch**: claude/seri-ai-platform-upgrade-opl7nk
+**Head commit**: 8cd65e6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8cd65e6 chore: update hot memory (stop hook auto-commit)`
+- `e178d67 chore: update hot memory (stop hook auto-commit)`
+- `63db2ef chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-24T16:06:58.733Z
+
+**Branch**: claude/seri-ai-platform-upgrade-opl7nk
+**Head commit**: 8cd65e6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8cd65e6 chore: update hot memory (stop hook auto-commit)`
+- `e178d67 chore: update hot memory (stop hook auto-commit)`
+- `63db2ef chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-24T18:51:13.655Z
+
+**Branch**: claude/seri-ai-platform-upgrade-opl7nk
+**Head commit**: 8cd65e6 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `8cd65e6 chore: update hot memory (stop hook auto-commit)`
+- `e178d67 chore: update hot memory (stop hook auto-commit)`
+- `63db2ef chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

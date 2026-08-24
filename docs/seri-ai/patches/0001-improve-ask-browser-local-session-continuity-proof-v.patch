@@ -1,0 +1,224 @@
+From 5a9428cce3b638b5f96533f1d9bb6a67bd8444c7 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 24 Aug 2026 01:50:47 +0000
+Subject: [PATCH 1/2] =?UTF-8?q?improve(ask):=20browser-local=20session=20c?=
+ =?UTF-8?q?ontinuity=20=E2=80=94=20proof:=20validate:api=20functional=20ch?=
+ =?UTF-8?q?ecks?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Restore, persist, and clear Ask conversations per browser via localStorage only:
+bounded to 20 messages / 2000 chars, mode-scoped keys, versioned payloads,
+invalid-role and garbage payload rejection, no server-side storage. Sessions
+restore on return visits unless a prompted question is being auto-submitted.
+---
+ WORLD_CLASS_SCORECARD.md           |  2 +-
+ components/chat.tsx                | 50 ++++++++++++++++++++++++++++
+ lib/ask-session.ts                 | 53 ++++++++++++++++++++++++++++++
+ scripts/validate-api-contracts.mjs | 34 ++++++++++++++++++-
+ 4 files changed, 137 insertions(+), 2 deletions(-)
+ create mode 100644 lib/ask-session.ts
+
+diff --git a/WORLD_CLASS_SCORECARD.md b/WORLD_CLASS_SCORECARD.md
+index 4ebbdc1..a36bae0 100644
+--- a/WORLD_CLASS_SCORECARD.md
++++ b/WORLD_CLASS_SCORECARD.md
+@@ -21,7 +21,7 @@ Scale: `0-10`, evidence-based and non-inflated. A `10` means current evidence sh
+ | Evidence Quality | 7.9 | Resume provenance, public-code boundaries, doctrine citations, eval fixtures, proof backlog, First-Time Visitor Review Kit, Practitioner Review Packet, and evidence-led pages reduce unsupported claims. | Strongest evidence is still external: completed reviews, benchmarks, telemetry, and visual QA artifacts. | Execute the proof backlog and review packets, then revise claims only when evidence supports them. |
+ | Work / Project Proof | 8.2 | Work, Projects, Artifacts, GitHub references, Sentinalai context, public-code review rubric, Operations Room, and the Public Project Proof Ledger now state what each project proves, what can be inspected, what it does not prove, and the next proof needed. | Public repositories now have inspection rules, but still need deeper runnable examples, reviewer walkthroughs, or independent implementation feedback. | Improve the representative public repository README and run the project proof review questions against external reviewers without inventing private metrics. |
+ | Knowledge-Graph Health | 8.6 | Content registry, professional graph, publishing index, related assets, search, and `validate:knowledge-graph` now check 63 assets, 8038 relationships, 10 layers, 15 registry items, 10 patterns, and 10 principles. | Needs periodic editorial review under real corpus growth and external evidence changes. | Run the graph health gate after every publishing change and encode stale-fact or redundancy findings when discovered. |
+-| Ask Ravi | 8.3 | Ask has public-safety refusal, citations, related routes, deterministic fallback, answer metadata, project-proof routing, public-code rubric routing, visitor-review routing, practitioner-review routing, visual-QA routing, credential-evidence routing, identity-asset and portrait-intake routing, mobile-touch evidence routing, keyboard-accessibility evidence routing, Ask live review packet routing, and 106 passing fixtures. | A controlled Ask live review packet exists, but no live reviewer-labeled quality baseline exists. | Run the Ask live review packet and publish qualitative labels without raw prompts or aggregate model-quality scores. |
++| Ask Ravi | 8.3 | Ask has public-safety refusal, citations, related routes, deterministic fallback, answer metadata, project-proof routing, public-code rubric routing, visitor-review routing, practitioner-review routing, visual-QA routing, credential-evidence routing, identity-asset and portrait-intake routing, mobile-touch evidence routing, keyboard-accessibility evidence routing, Ask live review packet routing, 106 passing fixtures, and browser-local session continuity (restore, bounded persistence, clear control) verified by functional checks in validate:api. | A controlled Ask live review packet exists, but no live reviewer-labeled quality baseline exists. | Run the Ask live review packet and publish qualitative labels without raw prompts or aggregate model-quality scores. |
+ | Search / Discoverability | 8.5 | Search covers registry, wiki, articles, patterns, projects, reference assets, resume credential evidence, public-code review rubric, project proof, proof backlog, visitor review, practitioner review, visual QA, identity asset, portrait intake, mobile touch walkthroughs, keyboard accessibility walkthroughs, Ask live review packet, and 66 canonical retrieval checks. | Live search-console evidence and real query behavior are missing. | Review crawler visibility and query impressions after deployment. |
+ | Visual Design | 8.1 | Restrained dark system, proof-led cards, diagram surfaces, performance-guarded rendered routes, 27 durable first-viewport screenshots, and source-validated mobile touch walkthrough notes for Ask, Operations Room, Doctrine, Radar, and Work exist. | No page-level horizontal overflow was found, and touch notes now exist, but dense technical surfaces still need external hierarchy and density review. | Fix hierarchy, density, touch-comfort, and graph framing findings from external or physical-device review. |
+ | UX | 8.1 | Start Here, primary CTAs, proof paths, Ask prompts, related reading, reference assets, First-Time Visitor Review Kit, and Practitioner Review Packet guide navigation. | Operations Room and long reference pages need observed user-review evidence. | Run a 10-20 minute first-time visitor walkthrough with the Practitioner Review Packet. |
+diff --git a/components/chat.tsx b/components/chat.tsx
+index 41bbb1a..a2e0410 100644
+--- a/components/chat.tsx
++++ b/components/chat.tsx
+@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
+ import { ProfileMark } from "@/components/profile-mark";
+ import type { ChatMessage } from "@/lib/ai";
+ import { captureSafeEvent, categorizeQuestion } from "@/lib/analytics-events";
++import { askSessionKey, deserializeAskSession, serializeAskSession } from "@/lib/ask-session";
+ 
+ type ApiResponse = {
+   answer: string;
+@@ -55,9 +56,48 @@ export function Chat({
+   const [sources, setSources] = useState<Array<{ title: string; url: string; excerpt: string }>>([]);
+   const [responseMeta, setResponseMeta] = useState<ApiResponse["meta"]>();
+   const [isLoading, setIsLoading] = useState(false);
++  const [sessionRestored, setSessionRestored] = useState(false);
+   const initialPromptRef = useRef(initialPrompt);
+   const autoSubmittedRef = useRef(false);
+ 
++  useEffect(() => {
++    if (initialPromptRef.current.trim()) {
++      return;
++    }
++    try {
++      const restored = deserializeAskSession(window.localStorage.getItem(askSessionKey(mode)));
++      if (restored) {
++        setMessages(restored);
++        setSessionRestored(true);
++      }
++    } catch {
++      // Storage unavailable (private mode, blocked): start fresh.
++    }
++  }, [mode]);
++
++  useEffect(() => {
++    try {
++      const serialized = serializeAskSession(messages);
++      if (serialized) {
++        window.localStorage.setItem(askSessionKey(mode), serialized);
++      }
++    } catch {
++      // Storage unavailable: session continuity is best-effort only.
++    }
++  }, [messages, mode]);
++
++  function clearSession() {
++    try {
++      window.localStorage.removeItem(askSessionKey(mode));
++    } catch {
++      // Storage unavailable: nothing persisted to clear.
++    }
++    setMessages([{ role: "assistant", content: initialAssistantMessage }]);
++    setSources([]);
++    setResponseMeta(undefined);
++    setSessionRestored(false);
++  }
++
+   async function sendMessage(question = input) {
+     if (!question.trim() || isLoading) {
+       return;
+@@ -228,6 +268,16 @@ export function Chat({
+             </div>
+           ) : null}
+         </div>
++        {hasAskedQuestion || sessionRestored ? (
++          <div className="flex items-center justify-between gap-3 border-t border-white/10 bg-black/15 px-4 py-2">
++            <p className="text-[0.68rem] leading-4 text-slate-500">
++              {sessionRestored ? "Session restored from this browser. Nothing is stored on the server." : "Session saved in this browser only. Nothing is stored on the server."}
++            </p>
++            <button type="button" onClick={clearSession} className="shrink-0 rounded border border-white/10 px-2 py-1 text-[0.68rem] font-semibold text-slate-300 hover:border-mint/40 hover:text-mint">
++              Clear session
++            </button>
++          </div>
++        ) : null}
+         <form
+           className="flex gap-2 border-t border-white/10 p-3"
+           onSubmit={(event) => {
+diff --git a/lib/ask-session.ts b/lib/ask-session.ts
+new file mode 100644
+index 0000000..96b467b
+--- /dev/null
++++ b/lib/ask-session.ts
+@@ -0,0 +1,53 @@
++import type { ChatMessage } from "@/lib/ai";
++
++export const ASK_SESSION_VERSION = "v1";
++export const ASK_SESSION_MAX_MESSAGES = 20;
++export const ASK_SESSION_MAX_CONTENT_LENGTH = 2000;
++
++export function askSessionKey(mode: "ask" | "interview") {
++  return `seri.ai:ask-session:${ASK_SESSION_VERSION}:${mode}`;
++}
++
++function isChatRole(value: unknown): value is ChatMessage["role"] {
++  return value === "user" || value === "assistant";
++}
++
++export function serializeAskSession(messages: ChatMessage[]): string | null {
++  const bounded = messages
++    .filter((message) => isChatRole(message.role) && typeof message.content === "string" && message.content.trim().length > 0)
++    .map((message) => ({ role: message.role, content: message.content.slice(0, ASK_SESSION_MAX_CONTENT_LENGTH) }))
++    .slice(-ASK_SESSION_MAX_MESSAGES);
++  if (!bounded.some((message) => message.role === "user")) {
++    return null;
++  }
++  return JSON.stringify({ version: ASK_SESSION_VERSION, messages: bounded });
++}
++
++export function deserializeAskSession(raw: string | null): ChatMessage[] | null {
++  if (!raw) {
++    return null;
++  }
++  try {
++    const parsed = JSON.parse(raw) as { version?: unknown; messages?: unknown };
++    if (parsed?.version !== ASK_SESSION_VERSION || !Array.isArray(parsed.messages)) {
++      return null;
++    }
++    const messages = parsed.messages
++      .filter(
++        (message): message is ChatMessage =>
++          typeof message === "object" &&
++          message !== null &&
++          isChatRole((message as ChatMessage).role) &&
++          typeof (message as ChatMessage).content === "string" &&
++          (message as ChatMessage).content.trim().length > 0
++      )
++      .map((message) => ({ role: message.role, content: message.content.slice(0, ASK_SESSION_MAX_CONTENT_LENGTH) }))
++      .slice(-ASK_SESSION_MAX_MESSAGES);
++    if (!messages.some((message) => message.role === "user")) {
++      return null;
++    }
++    return messages;
++  } catch {
++    return null;
++  }
++}
+diff --git a/scripts/validate-api-contracts.mjs b/scripts/validate-api-contracts.mjs
+index 2b43806..3e4f2af 100644
+--- a/scripts/validate-api-contracts.mjs
++++ b/scripts/validate-api-contracts.mjs
+@@ -138,6 +138,38 @@ try {
+   expect(practitionerReviewFallbackBody.ok === true, "/api/contact practitioner review fallback missing ok:true");
+   expect(practitionerReviewFallbackBody.stored === false, "/api/contact practitioner review fallback should report stored:false without Supabase");
+ 
++  const { askSessionKey, serializeAskSession, deserializeAskSession, ASK_SESSION_MAX_MESSAGES, ASK_SESSION_MAX_CONTENT_LENGTH } = jiti("../lib/ask-session.ts");
++  expect(askSessionKey("ask") !== askSessionKey("interview"), "ask-session keys must be mode-scoped");
++  const sessionMessages = [
++    { role: "assistant", content: "Greeting." },
++    { role: "user", content: "What is Operational Intelligence?" },
++    { role: "assistant", content: "A cited answer." }
++  ];
++  const sessionRoundTrip = deserializeAskSession(serializeAskSession(sessionMessages));
++  expect(
++    Array.isArray(sessionRoundTrip) && sessionRoundTrip.length === 3 && sessionRoundTrip[1].content === sessionMessages[1].content,
++    "ask-session round trip must preserve bounded messages"
++  );
++  expect(serializeAskSession([{ role: "assistant", content: "Greeting only." }]) === null, "ask-session must not persist sessions without a user message");
++  expect(deserializeAskSession("not json") === null, "ask-session must reject unparseable payloads");
++  expect(deserializeAskSession(JSON.stringify({ version: "v0", messages: sessionMessages })) === null, "ask-session must reject unknown versions");
++  expect(
++    deserializeAskSession(JSON.stringify({ version: "v1", messages: [{ role: "system", content: "injected" }, ...sessionMessages] }))?.length === 3,
++    "ask-session must drop messages with invalid roles"
++  );
++  const oversizedSession = deserializeAskSession(
++    serializeAskSession(
++      Array.from({ length: ASK_SESSION_MAX_MESSAGES + 10 }, (_, index) => ({
++        role: index % 2 ? "assistant" : "user",
++        content: "x".repeat(ASK_SESSION_MAX_CONTENT_LENGTH + 500)
++      }))
++    )
++  );
++  expect(
++    oversizedSession?.length === ASK_SESSION_MAX_MESSAGES && oversizedSession.every((message) => message.content.length <= ASK_SESSION_MAX_CONTENT_LENGTH),
++    "ask-session must cap message count and content length"
++  );
++
+   const contactInvalid = await contactPost(request("http://localhost/api/contact", { kind: "contact", name: "", topic: "Contact", message: "" }));
+   expect(contactInvalid.status === 400, `/api/contact invalid payload returned ${contactInvalid.status}`);
+ 
+@@ -163,4 +195,4 @@ if (errors.length) {
+   process.exit(1);
+ }
+ 
+-console.log("Validated API contracts for Ask fallback, public-safety refusal, contact fallback, validation, and rate limiting.");
++console.log("Validated API contracts for Ask fallback, public-safety refusal, browser session continuity, contact fallback, validation, and rate limiting.");
+-- 
+2.43.0
+

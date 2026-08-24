@@ -1,0 +1,72 @@
+From a1115195d3fa45900a0b6f7ab6d3e51e1c51b485 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 24 Aug 2026 01:53:34 +0000
+Subject: [PATCH 2/2] =?UTF-8?q?improve(ask):=20promise=20what=20the=20surf?=
+ =?UTF-8?q?ace=20delivers=20=E2=80=94=20proof:=20validate:coherence=20cont?=
+ =?UTF-8?q?ract?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+H1 'Ask the public record to defend the thesis.' read cold and evasive: the page
+is named Ask Ravikanth but immediately substituted 'the public record'. Reframed
+H1, metadata, and intro to state plainly what this is: an AI assistant over
+Ravikanth's public work that cites what it knows and names what it doesn't.
+Replaces the 14-noun metadata inventory with one clear sentence.
+---
+ app/ask/page.tsx                       | 8 ++++----
+ scripts/validate-content-coherence.mjs | 2 +-
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/app/ask/page.tsx b/app/ask/page.tsx
+index d5a89b2..db0db9c 100644
+--- a/app/ask/page.tsx
++++ b/app/ask/page.tsx
+@@ -9,11 +9,11 @@ import type { Metadata } from "next";
+ 
+ export const metadata: Metadata = {
+   title: "Ask Ravikanth | Operational Intelligence Public Research Interface",
+-  description: "Question Ravikanth Seri's Operational Intelligence thesis, architecture judgment, projects, background, writing, GitHub, LinkedIn signal, and AI systems through cited public evidence.",
++  description: "Ask an AI grounded in Ravikanth Seri's public work on Operational Intelligence. Every answer cites its sources.",
+   alternates: { canonical: "/ask" },
+   openGraph: {
+     title: "Ask Ravikanth | Operational Intelligence Public Research Interface",
+-    description: "A cited, public-safe AI research interface over Ravikanth Seri's Operational Intelligence work and approved public sources.",
++    description: "An AI assistant over Ravikanth Seri's public work. It cites what it knows, names what it doesn't, and won't discuss non-public work.",
+     url: "/ask",
+     type: "website"
+   }
+@@ -38,7 +38,7 @@ export default async function AskPage({
+ 
+   return (
+     <>
+-      <Section eyebrow="Ask Ravikanth" title="Ask the public record to defend the thesis." level="h1">
++      <Section eyebrow="Ask Ravikanth" title="Ask about Ravikanth's work." level="h1">
+         <Chat initialPrompt={initialPrompt} suggestedPrompts={askRaviPrompts} />
+         <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.1fr]">
+           <Card className="border-mint/25 bg-mint/[0.055] p-5">
+@@ -51,7 +51,7 @@ export default async function AskPage({
+             </div>
+             <h2 className="text-3xl font-semibold leading-tight text-white">A serious idea should answer questions with receipts.</h2>
+             <p className="mt-4 leading-7 text-slate-300">
+-              Ask Ravikanth about the doctrine, architecture, Operations Room, projects, background, and public work. The assistant cites approved sources, names uncertainty, and stops at the public-safe boundary.
++              An AI assistant over Ravikanth&apos;s public writing, architecture, and evidence. It cites what it knows, names what it doesn&apos;t, and won&apos;t discuss non-public work.
+             </p>
+             <div className="mt-6 grid gap-2 sm:grid-cols-2">
+               {["Ground claims", "Expose sources", "Separate inference", "Stop at evidence"].map((step) => (
+diff --git a/scripts/validate-content-coherence.mjs b/scripts/validate-content-coherence.mjs
+index ef9b34b..cdea270 100644
+--- a/scripts/validate-content-coherence.mjs
++++ b/scripts/validate-content-coherence.mjs
+@@ -633,7 +633,7 @@ for (const required of [
+ 	  "askRaviPrompts",
+ 	  "askThesisLenses",
+ 	  "signalName",
+-	  "Ask the public record to defend the thesis.",
++	  "Ask about Ravikanth's work.",
+ 	  "A serious idea should answer questions with receipts.",
+ 	  "public evidence only; uncertainty stays visible",
+ 	  "Public research interface",
+-- 
+2.43.0
+

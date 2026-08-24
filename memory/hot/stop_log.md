@@ -12443,3 +12443,57 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-08-24T03:33:21.632Z
+
+**Branch**: claude/seri-ai-platform-upgrade-opl7nk
+**Head commit**: e178d67 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `e178d67 chore: update hot memory (stop hook auto-commit)`
+- `63db2ef chore: update hot memory (stop hook auto-commit)`
+- `827b07c docs(seri-ai): add homepage person-first patch (0003) to series`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-24T09:19:08.697Z
+
+**Branch**: claude/seri-ai-platform-upgrade-opl7nk
+**Head commit**: e178d67 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `e178d67 chore: update hot memory (stop hook auto-commit)`
+- `63db2ef chore: update hot memory (stop hook auto-commit)`
+- `827b07c docs(seri-ai): add homepage person-first patch (0003) to series`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

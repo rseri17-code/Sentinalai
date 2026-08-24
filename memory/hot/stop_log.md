@@ -12391,3 +12391,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-08-24T02:11:33.178Z
+
+**Branch**: claude/seri-ai-platform-upgrade-opl7nk
+**Head commit**: 827b07c docs(seri-ai): add homepage person-first patch (0003) to series
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `827b07c docs(seri-ai): add homepage person-first patch (0003) to series`
+- `b3ed82b docs(seri-ai): validated patch series for seri-ai (push access blocked)`
+- `e9e8901 docs(seri-ai): adversarial editorial review of site copy at 629b358`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

@@ -1,0 +1,165 @@
+From e8c26d7df1df8e807c3594ca9c744ae81e04973f Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 24 Aug 2026 01:59:40 +0000
+Subject: [PATCH 3/3] =?UTF-8?q?improve(home):=20first-person=20identity,?=
+ =?UTF-8?q?=20subtract=20duplicated=20thesis=20statements=20=E2=80=94=20pr?=
+ =?UTF-8?q?oof:=20coherence/rendered/viewport=20contracts?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The homepage stated the thesis six ways and never let Ravikanth speak. The
+identity card now carries a first-person paragraph grounded in resume facts
+(15+ years, regulated financial services, context-loss failure pattern).
+Removed three restatements to pay for it under the rendered budget: the hero
+public-safe disclaimer (the boundary lives on /ask and in the doctrine), the
+'narrow on purpose' self-description, and the field-origin duplicate of the
+same failure-pattern sentence. Replaced the homepage CI-count proof item with
+a pointer to /evals: the site's test suite is evidence about the site, not
+about the work. Validators re-anchored to the surviving copy.
+---
+ app/page.tsx                            | 19 +++++++------------
+ scripts/validate-content-coherence.mjs  |  6 ++----
+ scripts/validate-rendered-routes.mjs    |  6 +++---
+ scripts/validate-viewport-contracts.mjs |  8 --------
+ 4 files changed, 12 insertions(+), 27 deletions(-)
+
+diff --git a/app/page.tsx b/app/page.tsx
+index c3d3591..5a716e3 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -12,7 +12,7 @@ const proofStrip = [
+   ["Doctrine", "Definition, boundaries, ten-layer model, glossary, and references."],
+   ["Architecture", "Contracts, schemas, state machines, approval gates, and conformance levels."],
+   ["Operations Room", "A public-safe investigation instrument for evidence, replay, hypotheses, and review."],
+-  [`${homeEvalReport.fixtures.length}/${homeEvalReport.fixtures.length}`, "Ask Ravi trust fixtures currently passing."]
++  ["Ask Ravi", "An AI assistant over the public work; how it is tested is itself public at /evals."]
+ ];
+ 
+ 
+@@ -74,19 +74,20 @@ export default function Home() {
+                 Read the doctrine
+               </TrackedLink>
+             </div>
+-            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base sm:leading-7">
+-              The material is public-safe by design: synthetic cases, cited sources, explicit uncertainty, and no private operational details.
+-            </p>
+             <div className="mt-5 rounded-lg border border-white/10 bg-black/25 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.24)]">
+               <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                 <ProfileMark />
+                 <div>
+                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-signal">Ravikanth Seri</p>
+                   <h2 className="mt-2 text-2xl font-semibold leading-7 text-white">
+-                    Enterprise infrastructure to AI-native operations, expressed as reusable public architecture.
++                    I build the part of operations that keeps context alive when judgment matters most.
+                   </h2>
+                   <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+-                    {professionalGraph.identity.currentFocus}
++                    Fifteen-plus years running distributed systems in regulated financial services showed the same failure on repeat: at the worst moment, the team is rebuilding who owns this,
++                    what changed, and what depends on it. seri.ai is where I work out, in public, how to fix that before AI is allowed to act.
++                  </p>
++                  <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500">
++                    Current focus: {professionalGraph.identity.currentFocus}
+                   </p>
+                   <div className="mt-4 flex flex-wrap gap-2">
+                     {professionalGraph.proofLinks.slice(0, 3).map((item) => (
+@@ -107,9 +108,6 @@ export default function Home() {
+                   </div>
+                   <div className="mt-5 border-t border-white/10 pt-4">
+                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-signal">Field origin</p>
+-                  <h2 className="mt-2 text-xl font-semibold leading-7 text-white">
+-                    The thesis is grounded in a practical failure pattern: teams lose shared context at the exact moment operational judgment matters most.
+-                  </h2>
+                   <div className="mt-4 grid gap-3 md:grid-cols-3">
+                     {homeOperatorOriginProof.map(([label, proof]) => (
+                       <div key={label} className="rounded border border-white/10 bg-white/[0.035] p-3">
+@@ -146,9 +144,6 @@ export default function Home() {
+                   </span>
+                 ))}
+               </div>
+-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+-                The thesis is narrow on purpose: AI should help operators reason from evidence, preserve uncertainty, and keep consequential change under accountable human control.
+-              </p>
+             </div>
+             <div className="mt-5 hidden gap-2 lg:grid lg:grid-cols-3">
+               {homeHeroBuilderProof.map(([label, proof]) => (
+diff --git a/scripts/validate-content-coherence.mjs b/scripts/validate-content-coherence.mjs
+index cdea270..34095d6 100644
+--- a/scripts/validate-content-coherence.mjs
++++ b/scripts/validate-content-coherence.mjs
+@@ -233,12 +233,12 @@ for (const required of [
+   "homeMobileArtifactSignals",
+   "Operational Intelligence reference system by Ravikanth Seri",
+   "Ravikanth Seri",
+-  "Enterprise infrastructure to AI-native operations, expressed as reusable public architecture.",
++  "I build the part of operations that keeps context alive when judgment matters most.",
+   "professionalGraph.identity.currentFocus",
+   "professionalGraph.proofLinks.slice(0, 3)",
+   "homepage_hero_identity",
+   "Field origin",
+-  "teams lose shared context at the exact moment operational judgment matters most",
++  "the team is rebuilding who owns this,",
+   "Operator-first",
+   "Context loss",
+   "Public proof",
+@@ -247,10 +247,8 @@ for (const required of [
+   "Operations should explain themselves before AI acts.",
+   "Ravikanth Seri is building a public operating model for AI-native operations",
+   "preserve context, separate evidence from inference, expose uncertainty, and keep human judgment in control",
+-  "The material is public-safe by design",
+   "15+ years across distributed platforms, reliability, and operational workflows",
+   "agent architecture, evaluation, retrieval, and runtime governance",
+-  "The thesis is narrow on purpose",
+   "Reference system",
+   "The proof path is part of the work, not a separate credibility layer.",
+   "Inspection is part of the product contract.",
+diff --git a/scripts/validate-rendered-routes.mjs b/scripts/validate-rendered-routes.mjs
+index ca6bb60..f9d9bf2 100644
+--- a/scripts/validate-rendered-routes.mjs
++++ b/scripts/validate-rendered-routes.mjs
+@@ -17,7 +17,7 @@ const routeContracts = [
+       "Operational Intelligence reference system",
+       "public operating model for AI-native operations",
+       "Field origin",
+-      "teams lose shared context",
++      "the team is rebuilding who owns this,",
+       "Begin with the thesis",
+       "Open the Operations Room",
+       "Visitor Proof Map",
+@@ -26,8 +26,8 @@ const routeContracts = [
+     ],
+     before: [
+       ["Begin with the thesis", "Open the Operations Room"],
+-      ["Begin with the thesis", "The material is public-safe by design"],
+-      ["Open the Operations Room", "The material is public-safe by design"]
++      ["Begin with the thesis", "Field origin"],
++      ["Open the Operations Room", "Field origin"]
+     ]
+   },
+   {
+diff --git a/scripts/validate-viewport-contracts.mjs b/scripts/validate-viewport-contracts.mjs
+index f48fe5b..4bf0c51 100644
+--- a/scripts/validate-viewport-contracts.mjs
++++ b/scripts/validate-viewport-contracts.mjs
+@@ -148,18 +148,10 @@ expect(
+   homePage.indexOf("Begin with the thesis") < homePage.indexOf("Open the Operations Room"),
+   "/: homepage should present the thesis before deeper technical paths for first-time visitors"
+ );
+-expect(
+-  homePage.indexOf("Begin with the thesis") < homePage.indexOf("The material is public-safe by design"),
+-  "/: homepage primary thesis CTA must render before the inspection/trust paragraph"
+-);
+ expect(
+   homePage.indexOf("Begin with the thesis") < homePage.indexOf("Field origin"),
+   "/: homepage primary thesis CTA must render before the field-origin proof module"
+ );
+-expect(
+-  homePage.indexOf("Open the Operations Room") < homePage.indexOf("The material is public-safe by design"),
+-  "/: homepage primary CTAs must render before the inspection/trust paragraph so mobile visitors see an action in the first viewport"
+-);
+ expect(
+   homePage.indexOf("Open the Operations Room") < homePage.indexOf("Field origin"),
+   "/: homepage primary CTAs must render before the field-origin proof module so mobile visitors get an action before deeper explanation"
+-- 
+2.43.0
+

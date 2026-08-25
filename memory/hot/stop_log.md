@@ -12771,3 +12771,85 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-08-25T02:52:34.868Z
+
+**Branch**: claude/seri-ai-platform-upgrade-opl7nk
+**Head commit**: 1f7dc00 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `1f7dc00 chore: update hot memory (stop hook auto-commit)`
+- `2446ab9 chore: update hot memory (stop hook auto-commit)`
+- `75dc3be chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-25T06:32:23.476Z
+
+**Branch**: claude/seri-ai-platform-upgrade-opl7nk
+**Head commit**: 1f7dc00 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `1f7dc00 chore: update hot memory (stop hook auto-commit)`
+- `2446ab9 chore: update hot memory (stop hook auto-commit)`
+- `75dc3be chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-25T09:33:09.538Z
+
+**Branch**: claude/seri-ai-platform-upgrade-opl7nk
+**Head commit**: 1f7dc00 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `1f7dc00 chore: update hot memory (stop hook auto-commit)`
+- `2446ab9 chore: update hot memory (stop hook auto-commit)`
+- `75dc3be chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

@@ -13397,3 +13397,29 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-08-26T15:16:18.519Z
+
+**Branch**: claude/seri-ai-platform-upgrade-opl7nk
+**Head commit**: f2e1a77 chore: update hot memory (stop hook auto-commit)
+
+### Files Changed vs HEAD
+_(none)_
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `f2e1a77 chore: update hot memory (stop hook auto-commit)`
+- `e0284c2 chore: update hot memory (stop hook auto-commit)`
+- `c4d8166 chore: update hot memory (stop hook auto-commit)`
+
+### Tests Run
+not detected
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

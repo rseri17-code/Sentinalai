@@ -1,12 +1,12 @@
 # Active Task — Compaction Handoff
-<!-- Written by PreCompact hook at 2026-08-26T20:42:00.151Z -->
+<!-- Written by PreCompact hook at 2026-08-30T04:53:36.290Z -->
 <!-- Restored by SessionStart hook — also shown if .claude/session-state.json is present -->
 
 ## Objective
 [DECISION] <what was decided> — <why>
 
 ## Branch
-claude/seri-ai-platform-upgrade-opl7nk | fcc3746 chore: update hot memory (stop hook auto-commit)
+claude/seri-ai-platform-upgrade-opl7nk | 7e6b71d chore: update hot memory (stop hook auto-commit)
 
 ## Git Status at Compaction
 - `M  memory/hot/session_state.md`

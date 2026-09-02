@@ -23,4 +23,20 @@ class MessagingIntelligence(DomainModule):
                 "A malformed (poison) message paused the consumer with no dead-letter "
                 "handling, so consumer lag climbs while the broker stays healthy.",
                 "add a dead-letter queue; skip+alert on poison messages"))
+
+        # Redis maxmemory eviction -> cache-miss stampede onto the backing DB.
+        # (redis_evicted_keys + a cache-hit-ratio collapse are the APM signals.)
+        if ("redis" in text and ("evict" in text or "maxmemory" in text)) or (
+                "evicted_keys" in text or (
+                    "cache_hit" in text and ("0.4" in text or "stampede" in text
+                                             or "->" in text))):
+            hyps.append(_hyp(
+                "redis_eviction_stampede",
+                f"Redis maxmemory eviction caused a cache-miss stampede onto the "
+                f"{svc} database (cache hit ratio collapsed, DB QPS spiked)",
+                82, ["metrics:redis_evicted_keys", "metrics:cache_hit_drop"],
+                "Redis evicted keys under memory pressure; the cache-hit ratio "
+                "collapsed and the resulting cache-miss stampede overloaded the "
+                "backing database (the DB load is the symptom, eviction the cause).",
+                "raise Redis maxmemory / tune eviction; add request coalescing"))
         return hyps

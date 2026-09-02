@@ -19,6 +19,8 @@ from supervisor.domain_intelligence.certificates import CertificateIntelligence
 from supervisor.domain_intelligence.batch import BatchIntelligence
 from supervisor.domain_intelligence.storage import StorageIntelligence
 from supervisor.domain_intelligence.network import NetworkIntelligence
+from supervisor.domain_intelligence.observability import ObservabilityIntelligence
+from supervisor.domain_intelligence.cloud import CloudIntelligence
 
 # Registered modules (one per operational domain). Order is stable → deterministic.
 # Adding a domain = one line here; no engine or framework change.
@@ -33,6 +35,8 @@ _MODULES: list[DomainModule] = [
     BatchIntelligence(),
     StorageIntelligence(),
     NetworkIntelligence(),
+    ObservabilityIntelligence(),
+    CloudIntelligence(),
 ]
 
 

@@ -28,24 +28,40 @@ class EvidenceView:
 
     __slots__ = ("service", "logs", "metrics", "events", "changes", "_text")
 
+    __slots__ = ("service", "logs", "metrics", "events", "changes", "signals",
+                 "_text")
+
     def __init__(self, service: str, logs: list, metrics: Mapping[str, Any],
-                 events: list, changes: list) -> None:
+                 events: list, changes: list,
+                 signals: Mapping[str, Any] | None = None) -> None:
         self.service = str(service or "unknown")
         self.logs = logs or []
         self.metrics = metrics or {}
         self.events = events or []
         self.changes = changes or []
+        # APM (dynatrace/signalfx) signal detail — carries specific problem text
+        # (e.g. redis_evicted_keys, errors_by_az, ingest_lag) the golden-signals
+        # summary drops. Additive; older callers pass none.
+        self.signals = signals or {}
         self._text: str | None = None
 
     @property
     def text(self) -> str:
-        """Lowercased union of log messages, metric name=value pairs, and event
-        messages — the substrate for universal-signature matching."""
+        """Lowercased union of log messages, metric name=value pairs, event
+        messages, and APM problem detail — the substrate for signature matching."""
         if self._text is None:
             parts: list[str] = [str(e.get("message", "")) for e in self.logs]
             for m in (self.metrics.get("metrics") or []):
                 parts.append(f"{m.get('name', '')}={m.get('value', '')}")
             parts += [str(e.get("message", "")) for e in self.events]
+            # APM detail: the specific dynatrace signal (not the synthetic
+            # golden-signal magnitudes) that identifies the failure mode.
+            detail = self.signals.get("efic_context") or self.signals.get("detail")
+            if detail:
+                parts.append(str(detail))
+            gs = self.signals.get("golden_signals", {})
+            if isinstance(gs, Mapping):
+                parts.append(str(gs.get("anomaly_type", "")))
             self._text = " ".join(parts).lower()
         return self._text
 

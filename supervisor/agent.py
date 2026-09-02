@@ -2761,7 +2761,8 @@ class SentinalAISupervisor:
         from supervisor.domain_intelligence import enabled_modules, run_domain_modules
         if enabled_modules():
             from supervisor.domain_intelligence import EvidenceView
-            _dview = EvidenceView(service, logs, metrics, events, changes)
+            _dview = EvidenceView(service, logs, metrics, events, changes,
+                                  signals=signals)
             for _d in run_domain_modules(_dview):
                 hypotheses.append(Hypothesis(
                     name=_d["name"], root_cause=_d["root_cause"],

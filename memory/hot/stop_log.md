@@ -15469,3 +15469,176 @@ _(current_decisions.md not updated this session)_
 _(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
 
 ---
+## Session 2026-08-25T12:50:43.482Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d52b2f3 feat(investigation): Phase 6 DIE — messaging/certificates/batch/storage/network + DB cascade
+
+### Files Changed vs HEAD
+- supervisor/domain_intelligence/base.py
+
+### Staged for Commit
+_(none)_
+
+### Recent Commits This Session
+- `d52b2f3 feat(investigation): Phase 6 DIE — messaging/certificates/batch/storage/network + DB cascade`
+- `45d301c chore: update hot memory (stop hook auto-commit)`
+- `41b22f0 feat(investigation): Phase 6 DIE Deployment module (DI_DEPLOYMENT_ENABLED, off)`
+
+### Tests Run
+yes (cache mtime: 2026-08-25T12:43:53.223Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-28T03:19:55.377Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d52b2f3 feat(investigation): Phase 6 DIE — messaging/certificates/batch/storage/network + DB cascade
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+- supervisor/domain_intelligence/base.py
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d52b2f3 feat(investigation): Phase 6 DIE — messaging/certificates/batch/storage/network + DB cascade`
+- `45d301c chore: update hot memory (stop hook auto-commit)`
+- `41b22f0 feat(investigation): Phase 6 DIE Deployment module (DI_DEPLOYMENT_ENABLED, off)`
+
+### Tests Run
+yes (cache mtime: 2026-08-25T12:43:53.223Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-28T10:34:42.493Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d52b2f3 feat(investigation): Phase 6 DIE — messaging/certificates/batch/storage/network + DB cascade
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+- supervisor/domain_intelligence/base.py
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d52b2f3 feat(investigation): Phase 6 DIE — messaging/certificates/batch/storage/network + DB cascade`
+- `45d301c chore: update hot memory (stop hook auto-commit)`
+- `41b22f0 feat(investigation): Phase 6 DIE Deployment module (DI_DEPLOYMENT_ENABLED, off)`
+
+### Tests Run
+yes (cache mtime: 2026-08-25T12:43:53.223Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-28T11:16:14.832Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d52b2f3 feat(investigation): Phase 6 DIE — messaging/certificates/batch/storage/network + DB cascade
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+- supervisor/domain_intelligence/base.py
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d52b2f3 feat(investigation): Phase 6 DIE — messaging/certificates/batch/storage/network + DB cascade`
+- `45d301c chore: update hot memory (stop hook auto-commit)`
+- `41b22f0 feat(investigation): Phase 6 DIE Deployment module (DI_DEPLOYMENT_ENABLED, off)`
+
+### Tests Run
+yes (cache mtime: 2026-08-25T12:43:53.223Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-08-31T14:48:55.483Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d52b2f3 feat(investigation): Phase 6 DIE — messaging/certificates/batch/storage/network + DB cascade
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+- supervisor/domain_intelligence/base.py
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d52b2f3 feat(investigation): Phase 6 DIE — messaging/certificates/batch/storage/network + DB cascade`
+- `45d301c chore: update hot memory (stop hook auto-commit)`
+- `41b22f0 feat(investigation): Phase 6 DIE Deployment module (DI_DEPLOYMENT_ENABLED, off)`
+
+### Tests Run
+yes (cache mtime: 2026-08-25T12:43:53.223Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---
+## Session 2026-09-01T02:30:14.973Z
+
+**Branch**: claude/code-review-analysis-MelXd
+**Head commit**: d52b2f3 feat(investigation): Phase 6 DIE — messaging/certificates/batch/storage/network + DB cascade
+
+### Files Changed vs HEAD
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+- supervisor/agent.py
+- supervisor/domain_intelligence/base.py
+- supervisor/domain_intelligence/messaging.py
+
+### Staged for Commit
+- memory/hot/session_state.md
+- memory/hot/stop_log.md
+
+### Recent Commits This Session
+- `d52b2f3 feat(investigation): Phase 6 DIE — messaging/certificates/batch/storage/network + DB cascade`
+- `45d301c chore: update hot memory (stop hook auto-commit)`
+- `41b22f0 feat(investigation): Phase 6 DIE Deployment module (DI_DEPLOYMENT_ENABLED, off)`
+
+### Tests Run
+yes (cache mtime: 2026-08-25T12:43:53.223Z)
+
+### Decisions & Notes (from current_decisions.md)
+_(current_decisions.md not updated this session)_
+
+### Promotion Candidates
+_(none — add [PROMOTE: target] to current_decisions.md to flag candidates)_
+
+---

@@ -185,6 +185,7 @@ Deep detail lives under `docs/` (only directories that exist are linked):
 | Effectiveness / discovery (research) | [`docs/effectiveness/`](docs/effectiveness/), [`docs/ode/`](docs/ode/), [`docs/shadow_pilot/`](docs/shadow_pilot/) |
 | Engineering principles | [`CLAUDE.md`](CLAUDE.md) |
 | Clone / connect your tools | [`docs/clone/CONNECT_YOUR_ENVIRONMENT.md`](docs/clone/CONNECT_YOUR_ENVIRONMENT.md) — MCP URL alias, `AGENTCORE_TARGET_*`, YAML playbooks |
+| OSS live validation | [`docs/clone/OSS_VALIDATION.md`](docs/clone/OSS_VALIDATION.md) — Prometheus / Loki / Alertmanager name-shim (`GATEWAY_MODE=live`) |
 
 ---
 
@@ -240,6 +241,9 @@ python -c "from eval.enterprise.validate import validate; print(validate())"
 > (or `AGENTCORE_GATEWAY_URL`) before using SentinelAI on live incidents.
 > Map MCP targets with `AGENTCORE_TARGET_*` — see
 > [`docs/clone/CONNECT_YOUR_ENVIRONMENT.md`](docs/clone/CONNECT_YOUR_ENVIRONMENT.md).
+> To validate the live MCP path against Prometheus / Loki / Alertmanager
+> (no Moogsoft/Splunk), see
+> [`docs/clone/OSS_VALIDATION.md`](docs/clone/OSS_VALIDATION.md).
 > The investigation LLM overlay stays off unless `LLM_ENABLED=true` and
 > `LLM_PROVIDER` is `bedrock`, `anthropic`, or `openai`.
 

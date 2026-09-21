@@ -97,6 +97,24 @@ them. To add team-specific names, edit `config/worker_aliases.yaml` or set
 `WORKER_ALIASES_PATH` to your overlay. That is a different layer from
 `AGENTCORE_TARGET_*` (tool routing vs playbook step names).
 
+## 5. OSS validation (Prometheus / Loki / Alertmanager)
+
+`GATEWAY_MODE=live` still expects **AgentCore-shaped** tool names
+(`SplunkTarget___search_oneshot`). Pointing `MCP_GATEWAY_URL` at Grafana MCP
+or raw Prometheus/Loki HTTP does not work.
+
+For a clone that wants to validate the live MCP path against open-source
+backends (no Moogsoft/Splunk/Dynatrace), use the name-shim + compose stack:
+
+- Guide: [`OSS_VALIDATION.md`](OSS_VALIDATION.md)
+- Compose: `deploy/oss-validation/docker-compose.yaml`
+- Env: `.env.oss-validation.example` (`GATEWAY_MODE=live`,
+  `MCP_GATEWAY_URL=http://127.0.0.1:9080/mcp`)
+- Demo incident: `INC-OSS-001` (not the stub `INC12345`)
+
+Stubs remain the zero-infra proof. The OSS stack is **not** production
+AgentCore; ServiceNow/Confluence/GitHub stay skip/empty.
+
 ## Files
 
 - `workers/mcp_client.py` — URL alias, `AGENTCORE_TARGET_*`, `McpGateway.invoke()`
@@ -104,4 +122,6 @@ them. To add team-specific names, edit `config/worker_aliases.yaml` or set
 - `supervisor/tool_selector.py` — `YAML_PLAYBOOKS_ENABLED` gate, `INCIDENT_PLAYBOOKS`
 - `config/playbooks/*.yaml` — optional playbook source
 - `config/worker_aliases.yaml` — optional alias overlay
+- `oss_validation_gateway/` — OSS MCP name-shim (see `OSS_VALIDATION.md`)
 - `.env.example` — copy to `.env`
+- `.env.oss-validation.example` — live OSS shim env

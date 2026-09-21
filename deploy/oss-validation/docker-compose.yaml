@@ -1,0 +1,95 @@
+# OSS validation stack — Prometheus + Loki + Alertmanager + AgentCore name-shim.
+#
+# From the repo root:
+#   docker compose -f deploy/oss-validation/docker-compose.yaml up --build
+#
+# Full walkthrough: docs/clone/OSS_VALIDATION.md
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: sentinal-oss-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=6h
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - seed
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: sentinal-oss-alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.3.2
+    container_name: sentinal-oss-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+
+  seed:
+    build:
+      context: ./seed
+    container_name: sentinal-oss-seed
+    environment:
+      LOKI_URL: http://loki:3100
+      ALERTMANAGER_URL: http://alertmanager:9093
+      DEMO_SERVICE: payment-service
+      DEMO_INCIDENT_ID: INC-OSS-001
+      DEMO_DOWNSTREAM: payment-db
+    ports:
+      - "9100:9100"
+    depends_on:
+      - loki
+      - alertmanager
+    restart: unless-stopped
+
+  oss-gateway:
+    build:
+      context: ../..
+      dockerfile: deploy/oss-validation/Dockerfile
+    container_name: sentinal-oss-gateway
+    environment:
+      PROMETHEUS_URL: http://prometheus:9090
+      LOKI_URL: http://loki:3100
+      ALERTMANAGER_URL: http://alertmanager:9093
+      OSS_GATEWAY_HOST: 0.0.0.0
+      OSS_GATEWAY_PORT: 9080
+      OSS_KUBE_MUTATIONS: "false"
+    ports:
+      - "9080:9080"
+    depends_on:
+      - prometheus
+      - loki
+      - alertmanager
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: sentinal-oss-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    profiles:
+      - grafana
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped

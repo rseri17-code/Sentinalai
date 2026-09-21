@@ -43,7 +43,12 @@ aliases:
   # ops / events
   ops: ops_worker
   moogsoft: ops_worker
+  alertmanager: ops_worker
   events: event_worker
+
+  # kubernetes actions go through devops_worker
+  kubernetes: devops_worker
+  k8s: devops_worker
 
   # devops / git
   devops: devops_worker

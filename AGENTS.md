@@ -31,6 +31,8 @@ python3 -m pytest sentinalbench/ -q                # benchmark harness
 | `tests/` | pytest suite — one file per module |
 | `database/` | Persistence layer: `persistence.py` |
 | `knowledge/` | Institutional knowledge: `graph_store.py`, `retrieval_engine.py` |
+| `oss_validation_gateway/` | OSS MCP name-shim (Prometheus/Loki/Alertmanager) — `docs/clone/OSS_VALIDATION.md` |
+| `deploy/oss-validation/` | compose + seed for the OSS live-validation path |
 
 ## Adding a New Worker
 

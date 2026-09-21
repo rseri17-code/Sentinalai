@@ -28,9 +28,9 @@ def _no_hypothesis_priming():
     ``from M import f`` creates a separate binding per importing module
     that mock.patch on the agent namespace does not reach.
     """
-    with patch("supervisor.agent._retrieve_experiences", return_value=[]), \
-         patch("supervisor.agent._get_tool_recommendations", return_value={}), \
-         patch("supervisor.agent._kg_query_similar", return_value=[]), \
+    with patch("supervisor.agent._retrieve_experiences", return_value=[], create=True), \
+         patch("supervisor.agent._get_tool_recommendations", return_value={}, create=True), \
+         patch("supervisor.agent._kg_query_similar", return_value=[], create=True), \
          patch("supervisor.experience_store.retrieve_similar", return_value=[]), \
          patch("supervisor.experience_store.get_tool_recommendations", return_value={}), \
          patch("supervisor.knowledge_graph.query_similar", return_value=[]):

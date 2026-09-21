@@ -17,9 +17,12 @@ from supervisor.agent import SentinalAISupervisor
 @pytest.fixture(autouse=True)
 def _no_priming():
     """Suppress experience-replay priming so tests are hermetic."""
-    with patch("supervisor.agent._retrieve_experiences", return_value=[]), \
-         patch("supervisor.agent._get_tool_recommendations", return_value={}), \
-         patch("supervisor.agent._kg_query_similar", return_value=[]):
+    with patch("supervisor.agent._retrieve_experiences", return_value=[], create=True), \
+         patch("supervisor.agent._get_tool_recommendations", return_value={}, create=True), \
+         patch("supervisor.agent._kg_query_similar", return_value=[], create=True), \
+         patch("supervisor.experience_store.retrieve_similar", return_value=[]), \
+         patch("supervisor.experience_store.get_tool_recommendations", return_value={}), \
+         patch("supervisor.knowledge_graph.query_similar", return_value=[]):
         yield
 
 

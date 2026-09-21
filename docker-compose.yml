@@ -16,7 +16,8 @@ version: "3.9"
 #   stub-tools           → Stub MCP servers for all 8 integrations (port 9000)
 #
 # With real tools:
-#   Set GATEWAY_MODE=live and fill in all env vars in .env
+#   Set GATEWAY_MODE=live (honored by McpGateway) and fill in .env
+#   GATEWAY_MODE=stub forces in-process stubs even if AGENTCORE_GATEWAY_URL is set.
 # =============================================================================
 
 services:
@@ -37,10 +38,11 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - AGENTCORE_GATEWAY_URL=http://agentcore-runtime:8080
       - GATEWAY_MODE=${GATEWAY_MODE:-stub}
-      # LLM (required for AI-powered RCA)
+      # Investigation LLM overlay (OFF by default; keys alone do not enable it)
+      - LLM_ENABLED=${LLM_ENABLED:-false}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
-      - LLM_MODEL=${LLM_MODEL:-claude-sonnet-4-6}
+      - LLM_PROVIDER=${LLM_PROVIDER:-null}
+      - LLM_MODEL=${LLM_MODEL:-}
       # Auth
       - AGUI_JWT_SECRET=${AGUI_JWT_SECRET:-dev-secret-change-in-prod}
       - HONEYPOT_ENABLED=${HONEYPOT_ENABLED:-false}

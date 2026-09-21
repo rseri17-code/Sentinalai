@@ -20,10 +20,12 @@ services:
       AGUI_CORS_ORIGINS: "${AGUI_CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}"
       AGUI_ENABLED: "true"
       AGUI_DEV_RELOAD: "false"
-      # Explicit runtime data mode. 'stub' returns synthetic fixtures and must
-      # never be used in production; set AGENTCORE_GATEWAY_URL for real data.
+      # Explicit runtime data mode. GATEWAY_MODE=stub forces in-process
+      # fixtures even if AGENTCORE_GATEWAY_URL is set; live/agentcore uses
+      # the URL/ARNs. Default stub.
       GATEWAY_MODE: "${GATEWAY_MODE:-stub}"
       AGENTCORE_GATEWAY_URL: "${AGENTCORE_GATEWAY_URL:-}"
+      LLM_ENABLED: "${LLM_ENABLED:-false}"
 
       # Storage (optional — falls back to in-memory/local)
       AGUI_DYNAMODB_TABLE: "agui-state"

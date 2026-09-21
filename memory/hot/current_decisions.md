@@ -3,7 +3,8 @@
 <!-- Cleared after SessionEnd harvests it into stop_log.md -->
 <!-- Format: bullet list. Add [PROMOTE: target] to flag for promotion. -->
 
-_No decisions recorded for this session yet._
+- [DECISION] [PROMOTE: operational_decision_ledger] Slice 1: converse() facade over InferencePort; Bedrock stays in llm.py; LLM_ENABLED default false; unknown providers NullInference until Slice 2.
+- [DECISION] Follow-up PR from main (not the audit branch) so the docs audit stays docs-only.
 
 ## Format
 

@@ -22,5 +22,10 @@ session-level reasoning: why this approach over that one, what was rejected.
 
 ## Decisions
 
-_None recorded yet._
-_Update this file during session. Promote significant entries to tasks/decisions.md._
+### Decision 1 — 2026-09-21: converse() is an InferencePort facade
+- **Task context**: Slice 1 of the model-agnostic audit — make converse() resolve a port from env without SRE-domain edits.
+- **Decision**: Keep Bedrock Converse inside `BedrockInference` in `supervisor/llm.py`. `converse()` always calls `get_inference_port()`. `LLM_ENABLED` defaults false. `LLM_PROVIDER=null|none|disabled` → NullInference; `bedrock` (default when enabled) → Bedrock. Unknown providers (anthropic/openai) → NullInference + warning until Slice 2.
+- **Rejected alternative**: New `supervisor/providers/` package, LiteLLM, or changing agent.py to take a port.
+- **Why rejected**: Smallest boundary is the existing converse() dict; tests patch `_get_client` / `LLM_ENABLED` on llm.py. A new package can wait for Slice 2.
+- **Reversible**: yes
+- **Session**: `cursor/llm-inference-port-facade-7096`

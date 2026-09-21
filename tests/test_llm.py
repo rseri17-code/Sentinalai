@@ -294,3 +294,52 @@ class TestGenAIEvalMetrics:
             incident_type="timeout",
             scores={},
         )
+
+
+class TestInferencePortFacade:
+    """Slice 1: converse() resolves InferencePort from env."""
+
+    def test_llm_enabled_default_is_false_in_source(self):
+        import inspect
+        source = inspect.getsource(llm_module)
+        assert 'os.environ.get("LLM_ENABLED", "false")' in source
+
+    @patch.object(llm_module, "LLM_ENABLED", False)
+    def test_null_port_when_disabled(self):
+        from supervisor.inference_helpers import NullInference
+        port = llm_module.get_inference_port()
+        assert isinstance(port, NullInference)
+
+    @patch.object(llm_module, "LLM_PROVIDER", "null")
+    @patch.object(llm_module, "LLM_ENABLED", True)
+    @patch.object(llm_module, "MODEL_ID", "test-model")
+    @patch.object(llm_module, "_BOTO3_AVAILABLE", True)
+    def test_null_provider_disables_even_when_flag_on(self):
+        from supervisor.inference_helpers import NullInference
+        assert is_enabled() is False
+        port = llm_module.get_inference_port()
+        assert isinstance(port, NullInference)
+        result = converse("sys", "user")
+        assert result["stop_reason"] == "disabled"
+        assert result["text"] == ""
+        for key in ("text", "input_tokens", "output_tokens", "model_id", "latency_ms", "stop_reason"):
+            assert key in result
+
+    @patch.object(llm_module, "LLM_PROVIDER", "bedrock")
+    @patch.object(llm_module, "_BOTO3_AVAILABLE", True)
+    @patch.object(llm_module, "LLM_ENABLED", True)
+    @patch.object(llm_module, "MODEL_ID", "test-model")
+    def test_bedrock_port_when_enabled(self):
+        from sentinel_core.models.inference import InferencePort
+        port = llm_module.get_inference_port()
+        assert isinstance(port, llm_module.BedrockInference)
+        assert isinstance(port, InferencePort)
+
+    @patch.object(llm_module, "LLM_PROVIDER", "anthropic")
+    @patch.object(llm_module, "LLM_ENABLED", True)
+    @patch.object(llm_module, "MODEL_ID", "test-model")
+    @patch.object(llm_module, "_BOTO3_AVAILABLE", True)
+    def test_unimplemented_provider_uses_null(self):
+        from supervisor.inference_helpers import NullInference
+        assert is_enabled() is False
+        assert isinstance(llm_module.get_inference_port(), NullInference)

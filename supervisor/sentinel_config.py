@@ -73,6 +73,8 @@ def _str(key: str, default: str = "") -> str:
 class SupervisorConfig:
     # Feature flags
     llm_enabled: bool
+    llm_provider: str
+    llm_model: str
     agentic_planner: bool
     yaml_playbooks_enabled: bool
     loop_controller_enabled: bool
@@ -302,6 +304,11 @@ class SentinelConfig:
 
         supervisor = SupervisorConfig(
             llm_enabled=_bool("LLM_ENABLED", "false"),
+            llm_provider=_str("LLM_PROVIDER", "bedrock").strip().lower() or "bedrock",
+            llm_model=(
+                _str("LLM_MODEL", "")
+                or _str("BEDROCK_MODEL_ID", "anthropic.claude-sonnet-4-5-20250929-v1:0")
+            ),
             agentic_planner=_bool("AGENTIC_PLANNER", "false"),
             yaml_playbooks_enabled=_bool("YAML_PLAYBOOKS_ENABLED", "false"),
             loop_controller_enabled=_bool("LOOP_CONTROLLER_ENABLED", "false"),

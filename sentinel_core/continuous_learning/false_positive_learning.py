@@ -8,7 +8,6 @@ from typing import Any, Iterable
 from sentinel_core.continuous_learning.feedback_collector import (
     FeedbackCollector,
     FeedbackKind,
-    FeedbackSignal,
 )
 from sentinel_core.intel_memory import MemoryRecord
 

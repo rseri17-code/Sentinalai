@@ -21,7 +21,6 @@ Coverage per the mission spec:
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
 from unittest.mock import patch
 
@@ -30,7 +29,6 @@ import pytest
 from sentinel_core.runtime import (
     IntelligenceRuntime,
     IntelligenceStage,
-    ModuleSpec,
     RuntimeContext,
 )
 from supervisor.intelligence_modules import install_default_modules

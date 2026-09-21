@@ -59,7 +59,7 @@ EVIDENCE_STATES = ("used", "filtered", "suppressed", "unavailable", "error")
 
 
 def _record_unavailable(evidence: dict[str, Any], source: str,
-                        reason: str, *, state: str = "unavailable") -> None:
+                        reason: str | BaseException, *, state: str = "unavailable") -> None:
     """Record a non-``used`` terminal state for an evidence source so it is
     never silently swallowed. Appends a deterministic entry to
     ``_sources_unavailable`` (surfaced to operators in receipts + report) and
@@ -202,7 +202,7 @@ class CollectPhase:
 
         # --- Unpack fetch outputs ---
         incident   = fetch_out["incident"]
-        summary    = fetch_out["summary"]
+        fetch_out["summary"]
         service    = fetch_out["service"]
         receipts   = fetch_out["receipts"]
         circuits   = fetch_out["circuits"]

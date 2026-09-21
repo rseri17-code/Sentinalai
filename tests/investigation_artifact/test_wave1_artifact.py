@@ -18,7 +18,6 @@ from sentinel_core.investigation_artifact import (
     AdmissionController,
     ArtifactStore,
     ArtifactStoreError,
-    InvestigationArtifact,
     artifact_from_dict,
     artifact_to_dict,
     build_artifact,

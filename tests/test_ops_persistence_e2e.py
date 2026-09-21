@@ -14,11 +14,9 @@ from __future__ import annotations
 
 import os
 import sqlite3
-import tempfile
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -463,7 +461,7 @@ class TestSafetyEvents:
 
     def test_adaptive_thresholds_auto_damp_writes_safety_event(self, tmp_path):
         """Integration: auto_damp_drift() → safety_events row via ops store."""
-        import json, os
+        import json
         ops = _start_store(tmp_path)
 
         # Create a threshold file with extreme drift

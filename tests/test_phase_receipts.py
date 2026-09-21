@@ -304,7 +304,7 @@ class TestEndToEndAttachment:
     untouched. Uses the same mock-workers pattern as test_analyzer_branches."""
 
     def _make_supervisor(self):
-        from unittest.mock import MagicMock, Mock, patch
+        from unittest.mock import MagicMock, Mock
         from supervisor.agent import SentinalAISupervisor
 
         supervisor = SentinalAISupervisor()

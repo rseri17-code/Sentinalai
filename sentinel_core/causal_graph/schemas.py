@@ -3,8 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict, dataclass, field
-from enum import Enum
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from sentinel_core.causal_graph.causal_edge import CausalEdge

@@ -6,7 +6,6 @@ import os
 import tempfile
 import uuid
 
-import pytest
 
 from intelligence.episodic_memory import Episode, EpisodicMemory
 from intelligence.resolution_knowledge import ResolutionRecord, ResolutionKnowledge, ResolutionRecommendation
@@ -68,7 +67,7 @@ def test_seed_creates_episodes():
     assert os.path.exists(path)
     # Each line is valid JSON with required fields
     with open(path) as f:
-        lines = [l.strip() for l in f if l.strip()]
+        lines = [text_line.strip() for text_line in f if text_line.strip()]
     assert len(lines) == 20
     first = json.loads(lines[0])
     assert "episode_id" in first
@@ -95,7 +94,7 @@ def test_record_and_retrieve():
     assert mem._episodes[0].incident_id == "INC-NEW-1"
     # Verify it's persisted to disk
     with open(path) as f:
-        lines = [l.strip() for l in f if l.strip()]
+        lines = [text_line.strip() for text_line in f if text_line.strip()]
     assert len(lines) == 1
     data = json.loads(lines[0])
     assert data["incident_id"] == "INC-NEW-1"
@@ -223,7 +222,7 @@ def test_empty_store_no_crash():
     """All public methods on an empty store return sensible defaults, no exceptions."""
     path = _tmp_path()
     # Create a genuinely empty but existing file (prevents seeding)
-    with open(path, "w") as f:
+    with open(path, "w"):
         pass
 
     mem = EpisodicMemory(storage_path=path)
@@ -234,7 +233,7 @@ def test_empty_store_no_crash():
     assert summary["total_incidents"] == 0
 
     rk_path = _tmp_path()
-    with open(rk_path, "w") as f:
+    with open(rk_path, "w"):
         pass
     rk = ResolutionKnowledge(storage_path=rk_path)
     assert rk.recommend(failure_mode="unknown", incident_type="unknown") == []

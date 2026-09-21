@@ -8,12 +8,7 @@ Import directly from sub-modules for clarity:
 Or from this package for convenience:
     from sentinel_core.models import Incident, AGUIEvent, EventType
 """
-from sentinel_core.models.incident import (
-    Incident,
-    _normalize_severity,
-    _normalize_snow_state,
-    _extract_pd_assignee,
-)
+from sentinel_core.models.incident import Incident
 from sentinel_core.models.events import (
     AGUIEvent,
     EventType,

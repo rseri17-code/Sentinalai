@@ -1,19 +1,12 @@
 """LearningEngine — aggregate deterministic learning scores."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from statistics import mean
 from typing import Any, Iterable
 
-from sentinel_core.continuous_learning.causal_feedback import CausalFeedback
-from sentinel_core.continuous_learning.confidence_calibrator import (
-    ConfidenceCalibrator,
-)
 from sentinel_core.continuous_learning.evidence_quality import (
     EvidenceQualityScorer,
-)
-from sentinel_core.continuous_learning.false_positive_learning import (
-    FalsePositiveLearning,
 )
 from sentinel_core.continuous_learning.feedback_collector import (
     FeedbackCollector,

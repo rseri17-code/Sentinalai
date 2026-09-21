@@ -37,14 +37,11 @@ Configuration:
 """
 from __future__ import annotations
 
-import json
 import logging
 import os
 import threading
 from abc import ABC, abstractmethod
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
-from typing import Any
+from concurrent.futures import ThreadPoolExecutor
 
 try:
     import httpx

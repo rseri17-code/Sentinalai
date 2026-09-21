@@ -5,14 +5,13 @@ Zero side effects. Same input → byte-identical output.
 """
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from sentinel_core.hypotheses.schemas import (
     Hypothesis,
     HypothesisStatus,
     HYPOTHESIS_SCHEMA_VERSION,
-    _tuples_to_lists,
 )
 
 

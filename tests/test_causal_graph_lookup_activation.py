@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
 from unittest.mock import patch
 
@@ -17,7 +16,6 @@ from supervisor.intelligence_modules import install_default_modules
 from supervisor.intelligence_modules.causal_graph_lookup import (
     CAUSAL_GRAPH_LOOKUP_FEATURE_FLAG,
     CAUSAL_GRAPH_LOOKUP_SPEC,
-    LOOKUP_VERSION,
     _MAX_AFFECTED,
     causal_graph_lookup_runner,
 )

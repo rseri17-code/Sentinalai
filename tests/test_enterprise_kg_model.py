@@ -20,7 +20,6 @@ from sentinel_core.models.intel_context import (
 from sentinel_core.models.knowledge_graph import (
     EdgeType,
     KnowledgeEdge,
-    KnowledgeGraph,
     KnowledgeGraphBuilder,
     KnowledgeNode,
     NodeType,

@@ -31,7 +31,6 @@ import sqlite3
 import threading
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger("sentinalai.ops_persistence")

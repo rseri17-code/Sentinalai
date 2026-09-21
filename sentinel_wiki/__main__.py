@@ -24,7 +24,7 @@ def _cmd_ingest(args: list[str]) -> int:
     from sentinel_wiki.ingester import ingest
     base = args[0] if args else "sentinel_wiki"
     result = ingest(base)
-    print(f"Ingest complete.")
+    print("Ingest complete.")
     print(f"  Ingested : {len(result.ingested)}")
     print(f"  Skipped  : {len(result.skipped)}")
     print(f"  Errors   : {len(result.errors)}")

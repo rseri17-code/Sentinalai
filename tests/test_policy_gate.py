@@ -1,13 +1,9 @@
 """Tests for supervisor/policy_gate.py — pre-dispatch policy gate."""
 from __future__ import annotations
 
-import importlib
-import os
 from unittest.mock import MagicMock, patch
 
-import pytest
 
-import supervisor.policy_gate as pg
 from supervisor.policy_gate import PolicyDecision, PolicyGate, PolicyResult, evaluate
 
 

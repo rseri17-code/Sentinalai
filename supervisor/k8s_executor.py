@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import logging
 import os
-import shlex
 import subprocess
 import threading
 import time

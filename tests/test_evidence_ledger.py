@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import dataclasses
 import json
-import os
 
 import pytest
 
@@ -25,7 +24,6 @@ from sentinel_core.evidence import (
     EvidenceItem,
     EvidenceKind,
     EvidenceLedger,
-    EvidenceSnapshot,
     EvidenceSource,
     dict_to_ledger,
     infer_kind_for_key,
@@ -43,21 +41,21 @@ from sentinel_core.evidence import (
 
 class TestConstruction:
     def test_empty_ledger(self):
-        l = EvidenceLedger()
-        assert len(l) == 0
-        assert l.keys() == []
-        assert l.to_dict() == {}
+        ledger = EvidenceLedger()
+        assert len(ledger) == 0
+        assert ledger.keys() == []
+        assert ledger.to_dict() == {}
 
     def test_add_single_item(self):
-        l = EvidenceLedger()
-        l.add("logs", [{"line": "abc"}])
-        assert l.has("logs")
-        assert l.get("logs") == [{"line": "abc"}]
+        ledger = EvidenceLedger()
+        ledger.add("logs", [{"line": "abc"}])
+        assert ledger.has("logs")
+        assert ledger.get("logs") == [{"line": "abc"}]
 
     def test_empty_key_rejected(self):
-        l = EvidenceLedger()
+        ledger = EvidenceLedger()
         with pytest.raises(ValueError):
-            l.add("", "x")
+            ledger.add("", "x")
 
 
 # ---------------------------------------------------------------------------
@@ -66,62 +64,62 @@ class TestConstruction:
 
 class TestDictLikeSurface:
     def test_get_returns_raw_value(self):
-        l = EvidenceLedger()
-        l.add("metrics", {"cpu": 0.9})
+        ledger = EvidenceLedger()
+        ledger.add("metrics", {"cpu": 0.9})
         # get() returns the raw value, NOT the EvidenceItem
-        assert l.get("metrics") == {"cpu": 0.9}
-        assert not isinstance(l.get("metrics"), EvidenceItem)
+        assert ledger.get("metrics") == {"cpu": 0.9}
+        assert not isinstance(ledger.get("metrics"), EvidenceItem)
 
     def test_get_with_default(self):
-        l = EvidenceLedger()
-        assert l.get("missing", "fallback") == "fallback"
-        assert l.get("missing") is None
+        ledger = EvidenceLedger()
+        assert ledger.get("missing", "fallback") == "fallback"
+        assert ledger.get("missing") is None
 
     def test_has(self):
-        l = EvidenceLedger()
-        l.add("logs", [])
-        assert l.has("logs")
-        assert not l.has("nope")
+        ledger = EvidenceLedger()
+        ledger.add("logs", [])
+        assert ledger.has("logs")
+        assert not ledger.has("nope")
 
     def test_contains_operator(self):
-        l = EvidenceLedger()
-        l.add("x", 1)
-        assert "x" in l
-        assert "y" not in l
+        ledger = EvidenceLedger()
+        ledger.add("x", 1)
+        assert "x" in ledger
+        assert "y" not in ledger
 
     def test_keys_preserves_insertion_order(self):
-        l = EvidenceLedger()
-        l.add("c", 1)
-        l.add("a", 2)
-        l.add("b", 3)
-        assert l.keys() == ["c", "a", "b"]
+        ledger = EvidenceLedger()
+        ledger.add("c", 1)
+        ledger.add("a", 2)
+        ledger.add("b", 3)
+        assert ledger.keys() == ["c", "a", "b"]
 
     def test_values_in_order(self):
-        l = EvidenceLedger()
-        l.add("a", 1)
-        l.add("b", 2)
-        assert l.values() == [1, 2]
+        ledger = EvidenceLedger()
+        ledger.add("a", 1)
+        ledger.add("b", 2)
+        assert ledger.values() == [1, 2]
 
     def test_items_returns_key_rawvalue_tuples(self):
-        l = EvidenceLedger()
-        l.add("a", {"x": 1})
-        l.add("b", [1, 2, 3])
-        items = l.items()
+        ledger = EvidenceLedger()
+        ledger.add("a", {"x": 1})
+        ledger.add("b", [1, 2, 3])
+        items = ledger.items()
         assert items == [("a", {"x": 1}), ("b", [1, 2, 3])]
         # values must be raw, NOT EvidenceItem
         for _, v in items:
             assert not isinstance(v, EvidenceItem)
 
     def test_iteration_yields_keys(self):
-        l = EvidenceLedger()
-        l.add("a", 1)
-        l.add("b", 2)
-        assert list(l) == ["a", "b"]
+        ledger = EvidenceLedger()
+        ledger.add("a", 1)
+        ledger.add("b", 2)
+        assert list(ledger) == ["a", "b"]
 
     def test_full_items_preserves_provenance(self):
-        l = EvidenceLedger()
-        l.add("logs", [], source=EvidenceSource.WORKER, kind=EvidenceKind.LOGS)
-        full = l.full_items()
+        ledger = EvidenceLedger()
+        ledger.add("logs", [], source=EvidenceSource.WORKER, kind=EvidenceKind.LOGS)
+        full = ledger.full_items()
         assert full[0][0] == "logs"
         assert isinstance(full[0][1], EvidenceItem)
         assert full[0][1].source == EvidenceSource.WORKER
@@ -194,28 +192,28 @@ class TestRoundTrip:
 
 class TestDuplicateKey:
     def test_add_twice_replaces_value(self):
-        l = EvidenceLedger()
-        l.add("logs", [{"old": True}])
-        l.add("logs", [{"new": True}])
-        assert l.get("logs") == [{"new": True}]
-        assert len(l) == 1
+        ledger = EvidenceLedger()
+        ledger.add("logs", [{"old": True}])
+        ledger.add("logs", [{"new": True}])
+        assert ledger.get("logs") == [{"new": True}]
+        assert len(ledger) == 1
 
     def test_replace_updates_provenance(self):
-        l = EvidenceLedger()
-        l.add("metrics", {"v": 1}, source=EvidenceSource.UNKNOWN)
-        l.add("metrics", {"v": 2}, source=EvidenceSource.WORKER)
-        item = l.get_item("metrics")
+        ledger = EvidenceLedger()
+        ledger.add("metrics", {"v": 1}, source=EvidenceSource.UNKNOWN)
+        ledger.add("metrics", {"v": 2}, source=EvidenceSource.WORKER)
+        item = ledger.get_item("metrics")
         assert item.value == {"v": 2}
         assert item.source == EvidenceSource.WORKER
 
     def test_add_preserves_insertion_order_on_replace(self):
         """Replacing an existing key must NOT move it to the end."""
-        l = EvidenceLedger()
-        l.add("a", 1)
-        l.add("b", 2)
-        l.add("c", 3)
-        l.add("a", 99)  # replace a
-        assert l.keys() == ["a", "b", "c"]  # NOT ["b", "c", "a"]
+        ledger = EvidenceLedger()
+        ledger.add("a", 1)
+        ledger.add("b", 2)
+        ledger.add("c", 3)
+        ledger.add("a", 99)  # replace a
+        assert ledger.keys() == ["a", "b", "c"]  # NOT ["b", "c", "a"]
 
 
 # ---------------------------------------------------------------------------
@@ -224,39 +222,39 @@ class TestDuplicateKey:
 
 class TestProvenance:
     def test_default_provenance(self):
-        l = EvidenceLedger()
-        l.add("x", 1)
-        item = l.get_item("x")
+        ledger = EvidenceLedger()
+        ledger.add("x", 1)
+        item = ledger.get_item("x")
         assert item.source == EvidenceSource.UNKNOWN
         assert item.kind == EvidenceKind.OTHER
         assert item.confidence == 0.0
         assert item.metadata == {}
 
     def test_explicit_provenance(self):
-        l = EvidenceLedger()
-        l.add(
+        ledger = EvidenceLedger()
+        ledger.add(
             "logs", [{"line": "x"}],
             source=EvidenceSource.WORKER,
             kind=EvidenceKind.LOGS,
             confidence=0.9,
             metadata={"worker": "log_worker", "playbook_step": "search"},
         )
-        item = l.get_item("logs")
+        item = ledger.get_item("logs")
         assert item.source == EvidenceSource.WORKER
         assert item.kind == EvidenceKind.LOGS
         assert item.confidence == 0.9
         assert item.metadata["worker"] == "log_worker"
 
     def test_timestamp_auto_stamped(self):
-        l = EvidenceLedger()
-        l.add("x", 1)
-        item = l.get_item("x")
+        ledger = EvidenceLedger()
+        ledger.add("x", 1)
+        item = ledger.get_item("x")
         assert item.timestamp > 0
 
     def test_item_frozen(self):
-        l = EvidenceLedger()
-        l.add("x", 1)
-        item = l.get_item("x")
+        ledger = EvidenceLedger()
+        ledger.add("x", 1)
+        item = ledger.get_item("x")
         with pytest.raises(dataclasses.FrozenInstanceError):
             item.value = 2  # type: ignore[misc]
 
@@ -267,37 +265,37 @@ class TestProvenance:
 
 class TestSnapshot:
     def test_snapshot_freezes_state(self):
-        l = EvidenceLedger()
-        l.add("a", 1)
-        snap = l.snapshot()
+        ledger = EvidenceLedger()
+        ledger.add("a", 1)
+        snap = ledger.snapshot()
         # Mutate the source ledger after snapshot
-        l.add("b", 2)
-        l.add("a", 99)
+        ledger.add("b", 2)
+        ledger.add("a", 99)
         # Snapshot is unaffected
         assert snap.to_dict() == {"a": 1}
         assert len(snap) == 1
 
     def test_snapshot_is_frozen(self):
-        l = EvidenceLedger()
-        l.add("a", 1)
-        snap = l.snapshot()
+        ledger = EvidenceLedger()
+        ledger.add("a", 1)
+        snap = ledger.snapshot()
         with pytest.raises(dataclasses.FrozenInstanceError):
             snap.items = ()  # type: ignore[misc]
 
     def test_snapshot_to_full_dict_preserves_provenance(self):
-        l = EvidenceLedger()
-        l.add("logs", [{"x": 1}], source=EvidenceSource.WORKER, kind=EvidenceKind.LOGS)
-        snap = l.snapshot()
+        ledger = EvidenceLedger()
+        ledger.add("logs", [{"x": 1}], source=EvidenceSource.WORKER, kind=EvidenceKind.LOGS)
+        snap = ledger.snapshot()
         full = snap.to_full_dict()
         assert full["logs"]["value"] == [{"x": 1}]
         assert full["logs"]["source"] == "worker"
         assert full["logs"]["kind"] == "logs"
 
     def test_snapshot_keys(self):
-        l = EvidenceLedger()
-        l.add("a", 1)
-        l.add("b", 2)
-        snap = l.snapshot()
+        ledger = EvidenceLedger()
+        ledger.add("a", 1)
+        ledger.add("b", 2)
+        snap = ledger.snapshot()
         assert snap.keys() == ["a", "b"]
 
 
@@ -307,17 +305,17 @@ class TestSnapshot:
 
 class TestMergeDict:
     def test_merge_adds_new_keys(self):
-        l = EvidenceLedger()
-        l.add("a", 1)
-        l.merge_dict({"b": 2, "c": 3})
-        assert l.to_dict() == {"a": 1, "b": 2, "c": 3}
+        ledger = EvidenceLedger()
+        ledger.add("a", 1)
+        ledger.merge_dict({"b": 2, "c": 3})
+        assert ledger.to_dict() == {"a": 1, "b": 2, "c": 3}
 
     def test_merge_replaces_existing_keys(self):
-        l = EvidenceLedger()
-        l.add("a", 1)
-        l.merge_dict({"a": 99, "b": 2})
-        assert l.get("a") == 99
-        assert l.get("b") == 2
+        ledger = EvidenceLedger()
+        ledger.add("a", 1)
+        ledger.merge_dict({"a": 99, "b": 2})
+        assert ledger.get("a") == 99
+        assert ledger.get("b") == 2
 
 
 # ---------------------------------------------------------------------------
@@ -326,21 +324,21 @@ class TestMergeDict:
 
 class TestRemoveAndClear:
     def test_remove_returns_true_when_present(self):
-        l = EvidenceLedger()
-        l.add("x", 1)
-        assert l.remove("x") is True
-        assert not l.has("x")
+        ledger = EvidenceLedger()
+        ledger.add("x", 1)
+        assert ledger.remove("x") is True
+        assert not ledger.has("x")
 
     def test_remove_returns_false_when_absent(self):
-        l = EvidenceLedger()
-        assert l.remove("nope") is False
+        ledger = EvidenceLedger()
+        assert ledger.remove("nope") is False
 
     def test_clear_empties_ledger(self):
-        l = EvidenceLedger()
-        l.add("a", 1)
-        l.add("b", 2)
-        l.clear()
-        assert len(l) == 0
+        ledger = EvidenceLedger()
+        ledger.add("a", 1)
+        ledger.add("b", 2)
+        ledger.clear()
+        assert len(ledger) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -390,15 +388,15 @@ class TestEvidenceItemSerialization:
 
 class TestFullDictRoundTrip:
     def test_full_roundtrip_preserves_provenance(self):
-        l = EvidenceLedger()
-        l.add("logs", [1, 2], source=EvidenceSource.WORKER, kind=EvidenceKind.LOGS)
-        l.add("_meta", "x", source=EvidenceSource.POST_PROCESSING,
+        ledger = EvidenceLedger()
+        ledger.add("logs", [1, 2], source=EvidenceSource.WORKER, kind=EvidenceKind.LOGS)
+        ledger.add("_meta", "x", source=EvidenceSource.POST_PROCESSING,
               kind=EvidenceKind.PROVENANCE, confidence=0.7)
 
-        full = l.to_full_dict()
+        full = ledger.to_full_dict()
         restored = EvidenceLedger.from_full_dict(full)
 
-        assert restored.to_dict() == l.to_dict()
+        assert restored.to_dict() == ledger.to_dict()
         assert restored.get_item("logs").source == EvidenceSource.WORKER
         assert restored.get_item("logs").kind == EvidenceKind.LOGS
         assert restored.get_item("_meta").confidence == 0.7
@@ -447,22 +445,22 @@ class TestSourceInference:
 class TestAdapterFunctions:
     def test_dict_to_ledger_infers_provenance_by_default(self):
         d = {"logs": [], "_incident_type": "oom"}
-        l = dict_to_ledger(d)
-        assert l.get_item("logs").kind == EvidenceKind.LOGS
-        assert l.get_item("logs").source == EvidenceSource.WORKER
-        assert l.get_item("_incident_type").kind == EvidenceKind.PROVENANCE
-        assert l.get_item("_incident_type").source == EvidenceSource.POST_PROCESSING
+        ledger = dict_to_ledger(d)
+        assert ledger.get_item("logs").kind == EvidenceKind.LOGS
+        assert ledger.get_item("logs").source == EvidenceSource.WORKER
+        assert ledger.get_item("_incident_type").kind == EvidenceKind.PROVENANCE
+        assert ledger.get_item("_incident_type").source == EvidenceSource.POST_PROCESSING
 
     def test_dict_to_ledger_can_skip_inference(self):
-        l = dict_to_ledger({"logs": []}, infer_provenance=False)
-        assert l.get_item("logs").kind == EvidenceKind.OTHER
-        assert l.get_item("logs").source == EvidenceSource.UNKNOWN
+        ledger = dict_to_ledger({"logs": []}, infer_provenance=False)
+        assert ledger.get_item("logs").kind == EvidenceKind.OTHER
+        assert ledger.get_item("logs").source == EvidenceSource.UNKNOWN
 
     def test_ledger_to_dict(self):
-        l = EvidenceLedger()
-        l.add("a", 1)
-        l.add("b", {"nested": True})
-        assert ledger_to_dict(l) == {"a": 1, "b": {"nested": True}}
+        ledger = EvidenceLedger()
+        ledger.add("a", 1)
+        ledger.add("b", {"nested": True})
+        assert ledger_to_dict(ledger) == {"a": 1, "b": {"nested": True}}
 
 
 # ---------------------------------------------------------------------------
@@ -486,10 +484,10 @@ class TestEquality:
         assert a != b
 
     def test_ledger_not_equal_to_dict(self):
-        l = EvidenceLedger()
-        l.add("x", 1)
+        ledger = EvidenceLedger()
+        ledger.add("x", 1)
         # Not equal to a plain dict — NotImplemented falls back to False
-        assert (l == {"x": 1}) is False
+        assert (ledger == {"x": 1}) is False
 
 
 # ---------------------------------------------------------------------------

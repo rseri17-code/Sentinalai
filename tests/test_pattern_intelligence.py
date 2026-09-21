@@ -9,11 +9,9 @@ Covers:
 """
 from __future__ import annotations
 
-import math
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -273,7 +271,7 @@ class TestDetectAll:
 
     def test_results_sorted_by_severity_then_confidence(self):
         from intelligence.pattern_detector import PatternDetector, Detection
-        det = PatternDetector()
+        PatternDetector()
         detections = [
             Detection("s", "trend_drift", "WATCH", 0.9, "error_rate", 0.001, "x"),
             Detection("s", "rate_accel", "IMMINENT", 0.6, "error_rate", 0.01, "y"),
@@ -292,8 +290,8 @@ class TestDetectAll:
 
 class TestSLOEngine:
     def test_burn_rate_above_one_produces_hours_to_breach(self):
-        from intelligence.slo_engine import SLOEngine, SLODefinition
-        defn = SLODefinition(service="svc", metric="error_rate", target=0.999, window_days=30)
+        from intelligence.slo_engine import SLODefinition
+        SLODefinition(service="svc", metric="error_rate", target=0.999, window_days=30)
         # budget fraction = 0.001, current_value = 0.01 → burn_rate = 10
         budget_remaining = 5.0  # hours
         burn_rate = 10.0
@@ -432,11 +430,11 @@ class TestPredictionStore:
             w = store.store(FakeDetection(severity="WATCH"), baseline_ready=True)
             assert w is not None
             # second store — different pattern_type to avoid dedup
-            l = store.store(
+            likely = store.store(
                 FakeDetection(severity="LIKELY", pattern_type="rate_accel"),
                 baseline_ready=True
             )
-            assert l is not None
+            assert likely is not None
 
         active_watch = store.get_active_predictions("WATCH")
         active_likely = store.get_active_predictions("LIKELY")

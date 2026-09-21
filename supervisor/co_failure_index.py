@@ -20,7 +20,7 @@ import json
 import logging
 import os
 import threading
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from typing import Any
 
 logger = logging.getLogger("sentinalai.co_failure_index")

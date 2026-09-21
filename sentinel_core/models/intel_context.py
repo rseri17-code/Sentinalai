@@ -226,7 +226,8 @@ class IntelligenceContext:
                 # Use the "metadata" payload written by the runtime hook.
                 # ModuleResult.to_dict() puts the runner's returned dict under
                 # entry["metadata"].
-                payload = entry.get("metadata") if isinstance(entry.get("metadata"), dict) else {}
+                raw_meta = entry.get("metadata")
+                payload: dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
                 if name:
                     # Serialize payload deterministically for tie-break.
                     try:

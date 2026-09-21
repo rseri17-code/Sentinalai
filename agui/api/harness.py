@@ -160,5 +160,5 @@ async def get_safety_events(
     try:
         from database.ops_persistence import get_ops_store
         return {"events": get_ops_store().load_recent_safety_events(limit=limit)}
-    except Exception as exc:
+    except Exception:
         return {"events": []}

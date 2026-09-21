@@ -15,7 +15,6 @@ All tests are standalone — no external I/O, no fixtures from disk.
 """
 from __future__ import annotations
 
-import pytest
 
 from supervisor.blast_radius import (
     AffectedService,

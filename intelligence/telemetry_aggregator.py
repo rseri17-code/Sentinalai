@@ -231,8 +231,8 @@ class TelemetryAggregator:
     def _apply_metrics(self, snap: TelemetrySnapshot, service: str) -> None:
         """Fetch golden signals from metrics MCP."""
         try:
-            from workers.mcp_client import MCPClient
-            result = MCPClient().call("sysdig.golden_signals", {
+            from workers.mcp_client import call_tool
+            result = call_tool("sysdig.golden_signals", {
                 "service": service, "window_minutes": 5,
             })
             m = result.get("metrics", result)
@@ -252,8 +252,8 @@ class TelemetryAggregator:
     def _apply_logs(self, snap: TelemetrySnapshot, service: str) -> None:
         """Fetch error log rate from log MCP."""
         try:
-            from workers.mcp_client import MCPClient
-            result = MCPClient().call("splunk.get_health_status", {
+            from workers.mcp_client import call_tool
+            result = call_tool("splunk.get_health_status", {
                 "service": service, "window_minutes": 5,
             })
             snap.error_log_rate       = float(result.get("error_rate", 0) or 0)
@@ -265,8 +265,8 @@ class TelemetryAggregator:
     def _apply_deploy_context(self, snap: TelemetrySnapshot, service: str) -> None:
         """Check for recent deployments via GitHub MCP."""
         try:
-            from workers.mcp_client import MCPClient
-            result = MCPClient().call("github.get_recent_deployments", {
+            from workers.mcp_client import call_tool
+            result = call_tool("github.get_recent_deployments", {
                 "service": service, "limit": 1,
             })
             deploys = result.get("deployments", result.get("items", []))
@@ -294,9 +294,9 @@ class TelemetryAggregator:
         try:
             from supervisor.knowledge_graph import KnowledgeGraph
             kg = KnowledgeGraph.get_graph()
-            for node in kg.get("nodes", []):
-                if node.get("node_type") == "service":
-                    label = node.get("label", "")
+            for node in kg._nodes.values():
+                if node.node_type == "service":
+                    label = node.label
                     if label and label not in services:
                         services.append(label)
         except Exception:

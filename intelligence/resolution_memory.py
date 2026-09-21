@@ -13,7 +13,7 @@ import hashlib
 import json
 import logging
 import sqlite3
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
@@ -254,13 +254,16 @@ class ResolutionMemoryStore:
         clauses: list[str] = []
         params: list[Any] = []
         if service:
-            clauses.append("service=?"); params.append(service)
+            clauses.append("service=?")
+            params.append(service)
         if incident_type:
-            clauses.append("incident_type=?"); params.append(incident_type)
+            clauses.append("incident_type=?")
+            params.append(incident_type)
         if confirmed_only:
             clauses.append("is_confirmed=1")
         elif validation_status:
-            clauses.append("validation_status=?"); params.append(validation_status)
+            clauses.append("validation_status=?")
+            params.append(validation_status)
         where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
         sql = f"SELECT * FROM resolution_memories {where} ORDER BY recorded_at DESC LIMIT ?"
         params.append(limit)

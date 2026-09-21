@@ -207,7 +207,7 @@ def _build_stage1(incident_type: str, service: str, time_window: str) -> list[Sp
     # EKS / container logs — always high signal for K8s services
     queries.append(SplunkQuery(
         stage=1, worker="log_worker", action="search_logs",
-        params={"service": service, "query": f"container OR pod OR namespace",
+        params={"service": service, "query": "container OR pod OR namespace",
                 "source": _src("eks_logs"), "time_window": time_window},
         priority=5, signal_type="logs",
     ))

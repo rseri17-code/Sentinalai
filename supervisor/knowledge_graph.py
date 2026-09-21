@@ -99,6 +99,11 @@ class KnowledgeGraph:
         self._adj_out: dict[str, list[tuple[str, str]]] = {}
         self._adj_in:  dict[str, list[tuple[str, str]]] = {}
 
+    @classmethod
+    def get_graph(cls) -> KnowledgeGraph:
+        """Return the process-wide singleton graph."""
+        return get_graph()
+
     # ------------------------------------------------------------------ #
     # Mutation
     # ------------------------------------------------------------------ #

@@ -3,12 +3,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 from sentinel_core.continuous_learning.feedback_collector import (
     FeedbackCollector,
-    FeedbackSignal,
 )
 from sentinel_core.continuous_learning.learning_engine import (
     LEARNING_SCHEMA_VERSION,

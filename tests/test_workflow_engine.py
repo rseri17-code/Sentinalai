@@ -19,24 +19,20 @@ Covers:
 """
 from __future__ import annotations
 
-import os
 import time
 import pytest
-import tempfile
-from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from sentinel_core.models.workflow import (
     ExecutionMetadata,
     PhaseResult,
     PhaseStatus,
-    WorkflowCheckpoint,
     WorkflowPhase,
     WorkflowPort,
     WorkflowState,
     WorkflowStatus,
 )
-from supervisor.workflow_engine import WorkflowEngine, _dumps, _loads, _dumps_capped
+from supervisor.workflow_engine import WorkflowEngine
 from supervisor.workflow_middleware import WorkflowAwareInvestigator
 
 

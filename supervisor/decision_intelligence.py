@@ -168,7 +168,11 @@ def evidence_attribution(result: Mapping[str, Any]) -> dict[str, Any]:
 
     ranking = sorted(
         attributions,
-        key=lambda a: (-a["decision_influence"], a["evidence"]))
+        key=lambda a: (
+            -float(a["decision_influence"] if isinstance(a["decision_influence"], (int, float)) else 0),
+            str(a["evidence"]),
+        ),
+    )
     return {
         "attributions": sorted(attributions, key=lambda a: a["evidence"]),
         "importance_ranking": [a["evidence"] for a in ranking],

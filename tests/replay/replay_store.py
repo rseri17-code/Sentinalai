@@ -12,7 +12,6 @@ import json
 import os
 import uuid
 from pathlib import Path
-from typing import Any, Mapping
 
 from tests.replay.schemas import BenchmarkRun
 

@@ -41,7 +41,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import asdict, dataclass, field
 from enum import Enum
-from typing import Any, Iterable
+from typing import Any
 
 
 SCHEMA_VERSION = 1
@@ -524,7 +524,7 @@ class KnowledgeGraphBuilder:
         rm = _as_tuple(_getattr_safe(ic, "resolution_memory_matches", ()))
         inv = _as_tuple(_getattr_safe(ic, "investigation_matches", ()))
         patterns = _as_tuple(_getattr_safe(ic, "pattern_matches", ()))
-        related = _as_tuple(_getattr_safe(ic, "related_incident_ids", ()))
+        _as_tuple(_getattr_safe(ic, "related_incident_ids", ()))
         upstream = _as_tuple(_getattr_safe(ic, "upstream_dependencies", ()))
         downstream = _as_tuple(_getattr_safe(ic, "downstream_dependents", ()))
         episodes = _as_tuple(_getattr_safe(ic, "episode_matches", ()))

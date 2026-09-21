@@ -14,8 +14,12 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import TYPE_CHECKING
 
 from database.connection import get_engine
+
+if TYPE_CHECKING:
+    from supervisor.metrics_dashboard import InvestigationOutcome
 
 logger = logging.getLogger("sentinalai.persistence")
 
@@ -454,7 +458,7 @@ def evict_expired_kg_nodes() -> int:
         return 0
 
 
-def persist_investigation_outcome(outcome: "InvestigationOutcome") -> bool:  # type: ignore[name-defined]
+def persist_investigation_outcome(outcome: InvestigationOutcome) -> bool:
     """Upsert one InvestigationOutcome to the investigation_outcomes table.
 
     Uses ON CONFLICT DO UPDATE so that a subsequent update_outcome() call

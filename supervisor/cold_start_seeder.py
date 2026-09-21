@@ -32,7 +32,6 @@ import hashlib
 import logging
 import os
 import random
-import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -261,7 +260,7 @@ def seed_tenant(org_id: str = "default", force: bool = False) -> dict[str, int]:
 
 def _seed_example(archetype: dict[str, Any], variant: int, org_id: str) -> None:
     """Generate and store one synthetic experience for an archetype."""
-    rng = random.Random(hashlib.md5(f"{archetype['incident_type']}:{variant}:{org_id}".encode()).hexdigest())
+    rng = random.Random(hashlib.md5(f"{archetype['incident_type']}:{variant}:{org_id}".encode(), usedforsecurity=False).hexdigest())
 
     service = rng.choice(archetype["services"])
     root_cause_tpl = rng.choice(archetype["root_cause_templates"])
@@ -282,7 +281,7 @@ def _seed_example(archetype: dict[str, Any], variant: int, org_id: str) -> None:
     confidence = rng.randint(c_lo, c_hi)
 
     incident_id = f"SEED-{archetype['incident_type'].upper()[:8]}-{variant+1:02d}"
-    investigation_id = hashlib.md5(f"{incident_id}:{org_id}".encode()).hexdigest()[:12]
+    investigation_id = hashlib.md5(f"{incident_id}:{org_id}".encode(), usedforsecurity=False).hexdigest()[:12]
 
     experience = {
         "investigation_id": investigation_id,

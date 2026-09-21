@@ -1,7 +1,6 @@
 """SentinelReplay — ReplayRunner + ReplayStore + report tests."""
 from __future__ import annotations
 
-import copy
 import json
 
 import pytest
@@ -15,7 +14,7 @@ from tests.replay.replay_report import (
     render_trend_report,
     to_json,
 )
-from tests.replay.schemas import BenchmarkRun, ReplayResult, Verdict
+from tests.replay.schemas import Verdict
 
 
 # ---------------------------------------------------------------------------
@@ -30,7 +29,7 @@ class TestReplayStore:
     def test_save_and_load(self, tmp_path):
         s = ReplayStore(tmp_path / "runs")
         runner = ReplayRunner(store=s)
-        run = runner.capture_run(run_id="r1", generated_at="2026-07-01T00:00:00Z")
+        runner.capture_run(run_id="r1", generated_at="2026-07-01T00:00:00Z")
         assert s.has("r1")
         loaded = s.load("r1")
         assert loaded.run_id == "r1"

@@ -199,7 +199,7 @@ class LoopController:
         telemetry.pre_seeded_keys = [k for k in seed if not k.startswith("_")]
         evidence: dict[str, Any] = dict(seed)
 
-        from supervisor.planner import AgenticPlanner, PlannerStep
+        from supervisor.planner import AgenticPlanner
         planner = AgenticPlanner(
             workers=self._workers,
             llm_fn=self._llm_fn,

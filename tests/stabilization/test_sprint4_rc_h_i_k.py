@@ -10,22 +10,29 @@ No existing assertion elsewhere in the suite is weakened. Delete this
 file to roll back Sprint 4's test surface.
 """
 from __future__ import annotations
-
 import json
-
-import pytest
-
-
-# ---------------------------------------------------------------------------
-# RC-H — Coercion helper unit tests
-# ---------------------------------------------------------------------------
-
 from sentinel_core.models._coerce import (
     coerce_float,
     coerce_int,
     coerce_seq,
     coerce_str,
 )
+from sentinel_core.models.intel_context import IntelligenceContext
+from sentinel_core.intel_memory.schemas import MemoryRecord, MEMORY_SCHEMA_VERSION
+from supervisor.deterministic_planner.planner_rules import derive_goals
+from tests.synthetic.scoring import (
+    score_decision_trace_quality,
+    score_evidence_completeness,
+)
+
+
+
+
+
+# ---------------------------------------------------------------------------
+# RC-H — Coercion helper unit tests
+# ---------------------------------------------------------------------------
+
 
 
 class TestCoerceStr:
@@ -113,7 +120,6 @@ class TestCoerceSeq:
 # RC-H — IntelligenceContext.from_receipts ingest tolerance
 # ---------------------------------------------------------------------------
 
-from sentinel_core.models.intel_context import IntelligenceContext
 
 
 class TestIntelContextIngestTolerance:
@@ -182,7 +188,6 @@ class TestIntelContextIngestTolerance:
 # RC-I — Contract correctness
 # ---------------------------------------------------------------------------
 
-from sentinel_core.intel_memory.schemas import MemoryRecord, MEMORY_SCHEMA_VERSION
 
 
 class TestMemoryRecordSchemaVersionRoundTrip:
@@ -281,7 +286,6 @@ class TestDecisionContextTopServiceContract:
 # RC-K — Planner keyword token boundary matching
 # ---------------------------------------------------------------------------
 
-from supervisor.deterministic_planner.planner_rules import derive_goals
 
 
 class _PC:
@@ -360,10 +364,6 @@ class TestPlannerTokenBoundaryMatching:
 # RC-H — SentinelBench string-iteration hole
 # ---------------------------------------------------------------------------
 
-from tests.synthetic.scoring import (
-    score_decision_trace_quality,
-    score_evidence_completeness,
-)
 
 
 class TestBenchScoringStringSequenceGuard:

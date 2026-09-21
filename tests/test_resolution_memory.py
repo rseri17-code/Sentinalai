@@ -100,7 +100,7 @@ def test_from_investigation_deterministic_id():
         investigation_id="inv-x", incident_id="inc-x", service="svc",
         incident_type="crash", result=result,
     )
-    m2 = ResolutionMemory.from_investigation(
+    ResolutionMemory.from_investigation(
         investigation_id="inv-x", incident_id="inc-x", service="svc",
         incident_type="crash", result=result,
     )

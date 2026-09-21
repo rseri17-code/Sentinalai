@@ -1,5 +1,4 @@
 """Tests for supervisor.loop_controller."""
-import pytest
 from supervisor.loop_controller import (
     EvidenceQualityScorer,
     LoopTelemetry,

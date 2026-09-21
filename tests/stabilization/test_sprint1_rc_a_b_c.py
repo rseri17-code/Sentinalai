@@ -11,18 +11,26 @@ in the suite. New tests only. Delete this file to fully roll back Sprint 1's
 test surface.
 """
 from __future__ import annotations
-
-import pytest
-
-# ---------------------------------------------------------------------------
-# RC-A — Secrets redaction in UIReceipt.from_supervisor_receipt
-# ---------------------------------------------------------------------------
-
 from sentinel_core.models.receipts import (
     UIReceipt,
     _redact_params,
     _REDACTED_PLACEHOLDER,
 )
+from sentinel_core.continuous_learning.feedback_collector import (
+    FeedbackCollector, FeedbackKind, FeedbackSignal, FeedbackSource,
+)
+from sentinel_core.continuous_learning.learning_engine import LearningEngine
+from sentinel_core.intel_memory import MemoryRecord
+from sentinel_core.continuous_learning.confidence_calibrator import (
+    ConfidenceCalibrator,
+)
+
+
+
+# ---------------------------------------------------------------------------
+# RC-A — Secrets redaction in UIReceipt.from_supervisor_receipt
+# ---------------------------------------------------------------------------
+
 
 
 class _MockReceipt:
@@ -120,9 +128,16 @@ class TestRedactionBridge:
 
     def test_no_params_yields_empty_dict(self):
         class _NoParams:
-            trace_id = ""; correlation_id = ""; tool = "t"; action = "a"
-            wall_clock_start = ""; wall_clock_end = ""; elapsed_ms = 0.0
-            status = "success"; error = None; result_count = 0
+            trace_id = ""
+            correlation_id = ""
+            tool = "t"
+            action = "a"
+            wall_clock_start = ""
+            wall_clock_end = ""
+            elapsed_ms = 0.0
+            status = "success"
+            error = None
+            result_count = 0
         ui = UIReceipt.from_supervisor_receipt(
             receipt=_NoParams(), investigation_id="i", incident_id="inc",
             sequence_num=1, worker="w",
@@ -134,11 +149,6 @@ class TestRedactionBridge:
 # RC-B — Fallback logic must not overwrite legitimate zero-agreement
 # ---------------------------------------------------------------------------
 
-from sentinel_core.continuous_learning.feedback_collector import (
-    FeedbackCollector, FeedbackKind, FeedbackSignal, FeedbackSource,
-)
-from sentinel_core.continuous_learning.learning_engine import LearningEngine
-from sentinel_core.intel_memory import MemoryRecord
 
 
 def _reject_signal(mid: str, source: FeedbackSource) -> FeedbackSignal:
@@ -213,9 +223,6 @@ class TestReplayFallbackTruth:
 # RC-C — Numeric boundary enforcement
 # ---------------------------------------------------------------------------
 
-from sentinel_core.continuous_learning.confidence_calibrator import (
-    ConfidenceCalibrator,
-)
 
 
 class TestFalsePositiveRateClamp:

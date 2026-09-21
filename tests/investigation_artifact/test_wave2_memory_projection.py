@@ -18,7 +18,6 @@ import dataclasses
 import json
 
 from sentinel_core.intel_memory import MemoryRecord, MemoryStore, Retrieval
-from sentinel_core.investigation_artifact import build_artifact
 from supervisor.artifact_writer import maybe_write_investigation_artifact
 
 from tests.investigation_artifact.test_wave1_artifact import (

@@ -9,7 +9,6 @@ Storage: SQLite ops_intelligence.db (schema migration 3).
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import sqlite3
 from dataclasses import dataclass

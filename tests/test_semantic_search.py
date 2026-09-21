@@ -6,7 +6,6 @@ import os
 import tempfile
 import uuid
 
-import pytest
 
 from intelligence.semantic_search import SemanticIndex
 
@@ -125,7 +124,7 @@ def test_episodic_memory_get_similar_uses_semantic_search():
     from intelligence.episodic_memory import Episode, EpisodicMemory
 
     path = _tmp_path()
-    with open(path, "w") as f:
+    with open(path, "w"):
         pass  # empty — no seed
 
     mem = EpisodicMemory(storage_path=path)
@@ -165,7 +164,7 @@ def test_resolution_knowledge_semantic_recommend():
     from intelligence.resolution_knowledge import ResolutionKnowledge, ResolutionRecord, ResolutionRecommendation
 
     path = _tmp_path()
-    with open(path, "w") as f:
+    with open(path, "w"):
         pass
 
     rk = ResolutionKnowledge(storage_path=path)

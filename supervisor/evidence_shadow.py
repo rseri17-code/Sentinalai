@@ -105,7 +105,6 @@ class ShadowMirror:
         """Mirror a single ``evidence[key] = value`` write."""
         # Import here too keeps the symbol scope tight and avoids any
         # top-level cyclic-import surprise in the agent module.
-        from sentinel_core.evidence import EvidenceSource
         from sentinel_core.evidence.adapter import (
             infer_kind_for_key,
             infer_source_for_key,

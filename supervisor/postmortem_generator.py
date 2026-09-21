@@ -31,7 +31,6 @@ from __future__ import annotations
 import logging
 import os
 import re
-import textwrap
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -91,10 +90,14 @@ class PostmortemReport:
     def to_markdown(self) -> str:
         """Render the postmortem as a Markdown document."""
         lines: list[str] = []
-        _h1 = lambda t: lines.append(f"# {t}\n")
-        _h2 = lambda t: lines.append(f"\n## {t}\n")
-        _li = lambda t: lines.append(f"- {t}")
-        _nl = lambda: lines.append("")
+        def _h1(t):
+            return lines.append(f"# {t}\n")
+        def _h2(t):
+            return lines.append(f"\n## {t}\n")
+        def _li(t):
+            return lines.append(f"- {t}")
+        def _nl():
+            return lines.append("")
 
         _h1(f"Postmortem — {self.incident_id} — {self.affected_service}")
         lines.append(f"**Generated:** {self.generated_at}")
@@ -325,7 +328,7 @@ def _build_timeline(
 def _build_five_whys(root_cause: str, rca: dict) -> list[str]:
     """Construct a 5 Whys chain from the root cause and evidence."""
     service = rca.get("affected_service", "the service")
-    incident_type = rca.get("incident_type", "")
+    rca.get("incident_type", "")
 
     if not root_cause:
         return [
@@ -346,31 +349,31 @@ def _build_five_whys(root_cause: str, rca: dict) -> list[str]:
     # Detect common patterns and chain accordingly
     if "timeout" in root_cause.lower() or "latency" in root_cause.lower():
         whys += [
-            f"Why did timeouts occur? — Request processing exceeded configured limits under load.",
-            f"Why was the system under excessive load? — Insufficient capacity or upstream dependency failure.",
-            f"Why wasn't capacity adequate? — Autoscaling policy did not react fast enough.",
-            f"Why didn't autoscaling react fast enough? — Metrics lag or scale-up threshold too conservative.",
+            "Why did timeouts occur? — Request processing exceeded configured limits under load.",
+            "Why was the system under excessive load? — Insufficient capacity or upstream dependency failure.",
+            "Why wasn't capacity adequate? — Autoscaling policy did not react fast enough.",
+            "Why didn't autoscaling react fast enough? — Metrics lag or scale-up threshold too conservative.",
         ]
     elif "memory" in root_cause.lower() or "oom" in root_cause.lower():
         whys += [
-            f"Why did memory grow unbounded? — A memory leak prevented garbage collection.",
-            f"Why was the leak not caught earlier? — No memory growth alert was configured.",
-            f"Why was there no alert? — Memory alerting was not part of the onboarding checklist.",
-            f"Why not? — The runbook for new services lacked memory observability requirements.",
+            "Why did memory grow unbounded? — A memory leak prevented garbage collection.",
+            "Why was the leak not caught earlier? — No memory growth alert was configured.",
+            "Why was there no alert? — Memory alerting was not part of the onboarding checklist.",
+            "Why not? — The runbook for new services lacked memory observability requirements.",
         ]
     elif "deploy" in root_cause.lower() or "regression" in root_cause.lower():
         whys += [
-            f"Why did the deployment cause regression? — The change was not caught by pre-production testing.",
-            f"Why did testing miss it? — Load or integration tests did not cover the affected code path.",
-            f"Why was coverage missing? — Test suite was not updated when the feature was added.",
-            f"Why wasn't test coverage enforced? — No coverage gate exists in the deployment pipeline.",
+            "Why did the deployment cause regression? — The change was not caught by pre-production testing.",
+            "Why did testing miss it? — Load or integration tests did not cover the affected code path.",
+            "Why was coverage missing? — Test suite was not updated when the feature was added.",
+            "Why wasn't test coverage enforced? — No coverage gate exists in the deployment pipeline.",
         ]
     else:
         whys += [
-            f"Why did this condition exist? — The underlying system state allowed failure to propagate.",
-            f"Why did failure propagate? — No circuit breaker or fallback was in place.",
-            f"Why was there no circuit breaker? — The dependency was not classified as a failure domain.",
-            f"Why was it not classified? — Dependency mapping in CMDB was incomplete.",
+            "Why did this condition exist? — The underlying system state allowed failure to propagate.",
+            "Why did failure propagate? — No circuit breaker or fallback was in place.",
+            "Why was there no circuit breaker? — The dependency was not classified as a failure domain.",
+            "Why was it not classified? — Dependency mapping in CMDB was incomplete.",
         ]
 
     return whys[:5]

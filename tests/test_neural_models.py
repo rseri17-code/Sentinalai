@@ -12,11 +12,9 @@ Coverage:
 """
 
 import json
-import math
 import os
 import tempfile
 
-import pytest
 
 from supervisor.neural_quality_net import (
     _MLP,
@@ -25,7 +23,6 @@ from supervisor.neural_quality_net import (
     build_features_from_result,
     MIN_SAMPLES_FOR_BLEND,
     MAX_BLEND_WEIGHT,
-    _LAYER_SIZES,
 )
 from supervisor.neural_confidence_calibrator import (
     NeuralConfidenceCalibrator,
@@ -64,7 +61,7 @@ class TestMLP:
         mlp = _MLP([3, 8, 1], lr=0.05, seed=0)
         x = [1.0, 0.0, 1.0]
         target = 1.0
-        first = mlp.train_one(x, target)
+        mlp.train_one(x, target)
         for _ in range(99):
             mlp.train_one(x, target)
         last = mlp.predict(x)

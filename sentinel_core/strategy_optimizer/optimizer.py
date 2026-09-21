@@ -1,10 +1,8 @@
 """StrategyOptimizer — build one InvestigationStrategy per class."""
 from __future__ import annotations
 
-from collections import Counter
-from typing import Iterable, Mapping
+from typing import Mapping
 
-from sentinel_core.intel_memory import MemoryRecord
 from sentinel_core.strategy_optimizer.cost_model import CostModel
 from sentinel_core.strategy_optimizer.schemas import (
     InvestigationStrategy,
@@ -114,25 +112,30 @@ class StrategyOptimizer:
 
         # Sort per strategy class
         if strategy_class == "fastest":
-            sort_key = lambda s: (s.execution_cost, s.capability_id)
+            def sort_key(s):
+                return (s.execution_cost, s.capability_id, "")
         elif strategy_class == "highest_confidence":
-            sort_key = lambda s: (-s.expected_confidence_gain,
-                                    -s.historical_success_rate,
-                                    s.capability_id)
+            def sort_key(s):
+                return (-s.expected_confidence_gain,
+                        -s.historical_success_rate,
+                        s.capability_id)
         elif strategy_class == "lowest_cost":
-            sort_key = lambda s: (s.execution_cost + s.evidence_cost,
-                                    s.capability_id)
+            def sort_key(s):
+                return (s.execution_cost + s.evidence_cost, s.capability_id, "")
         elif strategy_class == "highest_success":
-            sort_key = lambda s: (-s.historical_success_rate,
-                                    -s.overall_expected_value,
-                                    s.capability_id)
+            def sort_key(s):
+                return (-s.historical_success_rate,
+                        -s.overall_expected_value,
+                        s.capability_id)
         elif strategy_class == "balanced":
-            sort_key = lambda s: (-s.overall_expected_value, s.capability_id)
+            def sort_key(s):
+                return (-s.overall_expected_value, s.capability_id, "")
         else:
             # "best" — default
-            sort_key = lambda s: (-s.overall_expected_value,
-                                    -s.historical_success_rate,
-                                    s.capability_id)
+            def sort_key(s):
+                return (-s.overall_expected_value,
+                        -s.historical_success_rate,
+                        s.capability_id)
 
         ordered = sorted(steps, key=sort_key)
         # Re-number

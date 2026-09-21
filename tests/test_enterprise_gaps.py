@@ -11,11 +11,7 @@ Coverage:
 from __future__ import annotations
 
 import json
-import os
-import sqlite3
 import threading
-import time
-import uuid
 
 import pytest
 
@@ -242,7 +238,7 @@ class TestColdStartSeeder:
         monkeypatch.setenv("SEED_MARKER_DIR", str(tmp_path))
 
         from supervisor.cold_start_seeder import seed_tenant
-        r1 = seed_tenant(org_id="idem-org", force=True)
+        seed_tenant(org_id="idem-org", force=True)
         r2 = seed_tenant(org_id="idem-org", force=False)
 
         # Second call should skip everything

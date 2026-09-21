@@ -2,13 +2,11 @@
 from __future__ import annotations
 
 import json
-import os
 
 import pytest
 
 from sentinel_core.continuous_learning import (
     CONTINUOUS_LEARNING_FEATURE_FLAG,
-    CalibrationBin,
     CausalFeedback,
     ConfidenceCalibrator,
     EvidenceQualityScorer,
@@ -20,7 +18,6 @@ from sentinel_core.continuous_learning import (
     HypothesisFeedback,
     LearningCycle,
     LearningEngine,
-    LearningScores,
     LearningSnapshot,
     OutcomeMemory,
     OutcomeRecord,

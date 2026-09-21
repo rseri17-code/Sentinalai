@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from collections import Counter
 from statistics import mean
-from typing import Any, Iterable
+from typing import Any
 
 from sentinel_core.causal_graph.chain_detector import ChainDetector
 from sentinel_core.causal_graph.graph_builder import CausalGraphBuilder

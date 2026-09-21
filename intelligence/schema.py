@@ -85,7 +85,7 @@ def new_id(*parts: str) -> str:
 
 def ts_bucket(timestamp_iso: str, bucket_seconds: int = 10) -> str:
     """Round ISO-8601 timestamp to a bucket to collapse near-simultaneous evidence."""
-    from datetime import datetime, timezone
+    from datetime import datetime
     try:
         dt = datetime.fromisoformat(timestamp_iso.replace("Z", "+00:00"))
         unix = dt.timestamp()

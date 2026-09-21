@@ -185,7 +185,8 @@ class IncidentGraphStore:
         clauses = ["service=?"]
         params: list[Any] = [service]
         if node_type:
-            clauses.append("node_type=?"); params.append(node_type)
+            clauses.append("node_type=?")
+            params.append(node_type)
         where = "WHERE " + " AND ".join(clauses)
         sql = f"""
             SELECT DISTINCT incident_id FROM incident_graph_nodes

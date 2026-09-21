@@ -392,7 +392,7 @@ def _run(result, evidence, incident_type, hypotheses_meta, sup, budget):
         refuted_by = sorted(e.key for e in h.refuting_evidence)
         tracker.rule_out(
             hid,
-            reason=(f"lower net support than winner"
+            reason=("lower net support than winner"
                      + (f"; refuted by {','.join(refuted_by)}"
                         if refuted_by else "")),
         )

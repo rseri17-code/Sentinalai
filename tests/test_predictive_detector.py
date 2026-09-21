@@ -1,18 +1,14 @@
 """Tests for supervisor.predictive_detector."""
 from __future__ import annotations
 
-import math
-import time
 import pytest
 
 from supervisor.predictive_detector import (
     AlertUrgency,
     TrendAnalysis,
-    PredictiveAlert,
     analyze_trend,
     detect_predictive_alerts,
     _metric_to_incident_type,
-    _recommended_action,
 )
 
 
@@ -277,7 +273,6 @@ class TestDetectPredictiveAlerts:
         assert isinstance(result, list)
 
     def test_sorted_most_urgent_first(self):
-        base = 1_700_000_000.0
         # BREACHED metric
         breached = _make_series(110.0, 1.0)
         # IMMINENT metric (slope=5, current≈93, threshold=100 → <15min)

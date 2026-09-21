@@ -41,11 +41,7 @@ Covers:
 
 from __future__ import annotations
 
-import json
-import os
 import tempfile
-from datetime import datetime, timezone
-from pathlib import Path
 
 import pytest
 
@@ -68,7 +64,7 @@ def _make_graph(investigation_id="INV-001", incident_id="INC-001", service="paym
 
 
 def _make_node(investigation_id="INV-001", source_type="golden_signals", entity_id="payment-service"):
-    from intelligence import EvidenceNode, NodeType, EntityType
+    from intelligence import EvidenceNode, NodeType
     return EvidenceNode.make(
         source_type=source_type,
         node_type=NodeType.METRIC,
@@ -140,7 +136,6 @@ def test_evidence_edge_serialization_roundtrip():
 # ===========================================================================
 
 def test_graph_add_get_o1():
-    from intelligence import EvidenceGraph, NodeType
     g = _make_graph()
     n = _make_node()
     g.add_node(n)
@@ -157,16 +152,19 @@ def test_graph_rejects_edge_with_missing_node():
 
 
 def test_graph_get_outgoing_filtered_by_relationship():
-    from intelligence import EvidenceEdge, EdgeRelationship, NodeType
+    from intelligence import EvidenceEdge, EdgeRelationship
     g = _make_graph()
     n1 = _make_node(source_type="logs",    entity_id="svc-a")
     n2 = _make_node(source_type="metrics", entity_id="svc-b")
     n3 = _make_node(source_type="events",  entity_id="svc-c")
-    g.add_node(n1); g.add_node(n2); g.add_node(n3)
+    g.add_node(n1)
+    g.add_node(n2)
+    g.add_node(n3)
 
     e_caused = EvidenceEdge.make(n1.node_id, n2.node_id, EdgeRelationship.CAUSED_BY,  "INV-001")
     e_corr   = EvidenceEdge.make(n1.node_id, n3.node_id, EdgeRelationship.CORRELATED, "INV-001")
-    g.add_edge(e_caused); g.add_edge(e_corr)
+    g.add_edge(e_caused)
+    g.add_edge(e_corr)
 
     caused_neighbors = g.get_outgoing(n1.node_id, EdgeRelationship.CAUSED_BY)
     assert len(caused_neighbors) == 1
@@ -225,7 +223,8 @@ def test_find_root_cause_candidates():
     g = _make_graph()
     effect = _make_node(source_type="alerts",  entity_id="oom-kill")
     cause  = _make_node(source_type="metrics", entity_id="heap-leak")
-    g.add_node(effect); g.add_node(cause)
+    g.add_node(effect)
+    g.add_node(cause)
     g.add_edge(EvidenceEdge.make(effect.node_id, cause.node_id, EdgeRelationship.CAUSED_BY, "INV-001"))
 
     candidates = g.find_root_cause_candidates()
@@ -242,7 +241,8 @@ def test_graph_serialization_roundtrip():
     g = _make_graph()
     n1 = _make_node(source_type="logs",    entity_id="svc-a")
     n2 = _make_node(source_type="metrics", entity_id="svc-b")
-    g.add_node(n1); g.add_node(n2)
+    g.add_node(n1)
+    g.add_node(n2)
     g.add_edge(EvidenceEdge.make(n1.node_id, n2.node_id, EdgeRelationship.CORRELATED, "INV-001"))
 
     data = g.to_dict()

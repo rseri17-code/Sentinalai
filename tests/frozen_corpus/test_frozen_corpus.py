@@ -1,9 +1,14 @@
 """R1 — Frozen Corpus & Hermetic Replay. Acceptance tests.
 
 Proves the product contract from source: same incident + same corpus_version →
-identical corpus reads; content-addressed version (no wall-clock/ordering);
-snapshot immutability; no read-your-own-write; replay hermeticity (missing
-snapshot fails, never reads live); concurrent isolation; learning preserved for
+identical corpus reads
+content-addressed version (no wall-clock/ordering)
+snapshot immutability
+no read-your-own-write
+replay hermeticity (missing
+snapshot fails, never reads live)
+concurrent isolation
+learning preserved for
 future investigations.
 """
 from __future__ import annotations
@@ -39,7 +44,8 @@ class TestContentAddressing:
         assert a.corpus_version == b.corpus_version
 
     def test_content_hash_changes_with_content(self, tmp_path):
-        (tmp_path / "a").mkdir(); (tmp_path / "b").mkdir()
+        (tmp_path / "a").mkdir()
+        (tmp_path / "b").mkdir()
         p1 = _write(tmp_path / "a", experience={"experiences": [{"rc": "db"}]})
         p2 = _write(tmp_path / "b", experience={"experiences": [{"rc": "dns"}]})
         assert fc.capture(paths=p1).corpus_version != \
@@ -47,7 +53,8 @@ class TestContentAddressing:
 
     def test_dict_ordering_stability(self, tmp_path):
         # same content, different key insertion order → same version (canonical)
-        (tmp_path / "x").mkdir(); (tmp_path / "y").mkdir()
+        (tmp_path / "x").mkdir()
+        (tmp_path / "y").mkdir()
         px = _write(tmp_path / "x",
                     evolved_strategy={"b": 2, "a": 1})
         py = _write(tmp_path / "y",
@@ -129,7 +136,8 @@ class TestActiveCorpus:
 
 class TestConcurrency:
     def test_concurrent_investigations_isolated(self, tmp_path):
-        (tmp_path / "a").mkdir(); (tmp_path / "b").mkdir()
+        (tmp_path / "a").mkdir()
+        (tmp_path / "b").mkdir()
         ca = fc.capture(paths=_write(tmp_path / "a",
                                      experience={"experiences": [{"rc": "A"}]}))
         cb = fc.capture(paths=_write(tmp_path / "b",
@@ -138,14 +146,16 @@ class TestConcurrency:
 
         def worker(name, corpus):
             fc.set_active_corpus(corpus)
-            import time
             for _ in range(50):
                 seen[name] = fc._frozen_or_live("experience")["experiences"][0]["rc"]
             fc.clear_active_corpus()
 
         ta = threading.Thread(target=worker, args=("a", ca))
         tb = threading.Thread(target=worker, args=("b", cb))
-        ta.start(); tb.start(); ta.join(); tb.join()
+        ta.start()
+        tb.start()
+        ta.join()
+        tb.join()
         assert seen == {"a": "A", "b": "B"}     # no cross-contamination
 
 

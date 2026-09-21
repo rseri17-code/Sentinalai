@@ -29,15 +29,14 @@ import logging
 import os
 import threading
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Any
 
 from intelligence.decision_trace import DecisionTrace, DecisionTraceLog
 from intelligence.evidence_graph import EvidenceGraph
-from intelligence.pattern_signature import PatternSignature, PatternSignatureIndex
+from intelligence.pattern_signature import PatternSignatureIndex
 from intelligence.replay_seed import ReplaySeed, ReplaySeedStore
 from intelligence.resolution_outcome import OutcomeStore, ResolutionOutcome
-from intelligence.service_profile import ServiceProfile, ServiceProfileIndex
+from intelligence.service_profile import ServiceProfileIndex
 
 logger = logging.getLogger("sentinalai.intelligence.investigation_store")
 

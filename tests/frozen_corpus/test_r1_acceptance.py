@@ -5,10 +5,8 @@ canonical investigation. Learning still persists for FUTURE investigations.
 """
 from __future__ import annotations
 
-import json
 import os
 
-import pytest
 
 from supervisor import frozen_corpus as fc
 from supervisor.agent import SentinalAISupervisor

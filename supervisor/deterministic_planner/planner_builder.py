@@ -23,7 +23,7 @@ Design principles
 """
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from typing import Optional
 
 from sentinel_core.models.capability import Capability
 from sentinel_core.models.goal import InvestigationGoal

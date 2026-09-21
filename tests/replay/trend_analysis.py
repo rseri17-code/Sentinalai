@@ -6,7 +6,7 @@ or a list of :class:`BenchmarkRun`. No randomness, no timestamps.
 from __future__ import annotations
 
 from statistics import mean
-from typing import Any, Mapping
+from typing import Any
 
 from tests.replay.schemas import BenchmarkRun
 

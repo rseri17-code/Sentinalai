@@ -5,7 +5,6 @@ systems; never touches production runtime.
 """
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from tests.replay.replay_store import ReplayStore
@@ -16,7 +15,6 @@ from tests.replay.schemas import (
 )
 from tests.synthetic.runner import (
     load_all_scenarios,
-    load_scenario,
     run_all_scenarios,
     run_scenario,
 )

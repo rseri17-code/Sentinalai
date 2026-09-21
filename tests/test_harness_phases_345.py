@@ -187,7 +187,7 @@ class TestPhase4HarnessPatternIntegration:
         reflection = MagicMock()
 
         with patch("supervisor.learning_loop.run_learning_step"), \
-             patch("supervisor.agent_harness._update_pattern_outcome", create=True) as mock_upo, \
+             patch("supervisor.agent_harness._update_pattern_outcome", create=True), \
              patch("supervisor.learning_loop._update_pattern_outcome") as mock_ll_upo:
             harness._post_flight_learning("INC-1", result, reflection)
 

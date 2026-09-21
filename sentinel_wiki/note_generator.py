@@ -275,9 +275,9 @@ def _derive_key_facts(suffix: str, parsed: dict, path: Path) -> list[str]:
 
     elif suffix in ("md", "txt"):
         text = parsed.get("text", "")
-        lines = [l for l in text.splitlines() if l.strip()]
+        lines = [text_line for text_line in text.splitlines() if text_line.strip()]
         facts.append(f"Line count: {len(lines)}")
-        headers = [l.lstrip("#").strip() for l in text.splitlines() if l.startswith("#")]
+        headers = [text_line.lstrip("#").strip() for text_line in text.splitlines() if text_line.startswith("#")]
         if headers:
             facts.append(f"Sections: {', '.join(headers[:8])}")
 

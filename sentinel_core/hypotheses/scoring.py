@@ -1,13 +1,12 @@
 """Deterministic scoring for Hypothesis Intelligence."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from sentinel_core.hypotheses.hypothesis_graph import HypothesisGraph
 from sentinel_core.hypotheses.schemas import (
     Hypothesis,
-    HypothesisStatus,
     HYPOTHESIS_SCHEMA_VERSION,
 )
 

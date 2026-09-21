@@ -6,7 +6,6 @@ import tempfile
 import os
 
 from intelligence.dependency_graph import (
-    ServiceDependency,
     DependencyGraphStore,
     _dep_id,
 )

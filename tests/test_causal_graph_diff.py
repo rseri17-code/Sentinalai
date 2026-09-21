@@ -20,7 +20,6 @@ from __future__ import annotations
 import time
 from datetime import datetime, timezone, timedelta
 
-import pytest
 
 from supervisor.causal_graph_diff import (
     CausalDiff,

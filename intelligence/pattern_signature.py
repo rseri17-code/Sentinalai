@@ -16,7 +16,7 @@ import logging
 import math
 import os
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 

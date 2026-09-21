@@ -12,11 +12,8 @@ Tests:
 from __future__ import annotations
 
 import json
-import os
-import time
 from pathlib import Path
 
-import pytest
 
 FIXTURES = Path(__file__).parent / "fixtures" / "retrieval"
 
@@ -265,7 +262,7 @@ def test_hybrid_score_fuses_bm25_and_cosine_within_expected_range():
     The fused score must be in [0, source_confidence] and must differ from
     both pure BM25 and pure cosine extremes.
     """
-    from supervisor.retrieval.hybrid_retriever import rank, ALPHA
+    from supervisor.retrieval.hybrid_retriever import rank
 
     obs = _load("observability_evidence.json")
     chg = _load("change_record.json")

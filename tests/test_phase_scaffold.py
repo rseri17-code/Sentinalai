@@ -30,7 +30,6 @@ class TestPackageImports:
         assert hasattr(supervisor.phases, "PhaseStatus")
 
     def test_helpers_package_importable(self):
-        import supervisor.helpers  # must not raise
         from supervisor.helpers.confidence import compute_confidence  # noqa: F401
 
     # All five phase modules are now live — no scaffolds remain.

@@ -332,7 +332,7 @@ def _get_active_playbooks() -> dict[str, list[dict]]:
     back to the hardcoded INCIDENT_PLAYBOOKS on any error. Set
     YAML_PLAYBOOKS_ENABLED=false (default) to use hardcoded playbooks.
     """
-    if not os.environ.get("YAML_PLAYBOOKS_ENABLED", "false").lower() in ("1", "true", "yes"):
+    if os.environ.get("YAML_PLAYBOOKS_ENABLED", "false").lower() not in ("1", "true", "yes"):
         return INCIDENT_PLAYBOOKS
 
     # Module-level cache — populated once, reset if env changes between tests

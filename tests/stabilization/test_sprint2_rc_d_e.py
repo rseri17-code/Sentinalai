@@ -11,21 +11,25 @@ elsewhere in the suite. Delete this file to fully roll back Sprint 2's
 test surface.
 """
 from __future__ import annotations
-
 import json
-
 import pytest
-
-# ---------------------------------------------------------------------------
-# RC-D — Frozen dataclass immutability
-# ---------------------------------------------------------------------------
-
 from sentinel_core.models._immutable import _FrozenDict, freeze_dict
 from sentinel_core.intel_memory import MemoryRecord
 from sentinel_core.intel_memory.schemas import SimilarityScore
 from sentinel_core.causal_graph.causal_node import CausalNode, CausalNodeType
 from sentinel_core.causal_graph.causal_edge import CausalEdge, CausalEdgeType
 from sentinel_core.continuous_learning.learning_cycle import LearningSnapshot
+from sentinel_core.intel_memory.memory_store import MemoryStore, MemoryStoreError
+from tests.replay.replay_store import ReplayStore
+from tests.replay.schemas import BenchmarkRun
+
+
+
+
+# ---------------------------------------------------------------------------
+# RC-D — Frozen dataclass immutability
+# ---------------------------------------------------------------------------
+
 
 
 class TestFrozenDictHelper:
@@ -214,7 +218,6 @@ class TestLearningSnapshotImmutable:
 # RC-E — Append-only ledger guarantees
 # ---------------------------------------------------------------------------
 
-from sentinel_core.intel_memory.memory_store import MemoryStore, MemoryStoreError
 
 
 class TestMemoryStoreAppendOnly:
@@ -289,8 +292,6 @@ class TestMemoryStoreAppendOnly:
 # RC-E — ReplayStore.save must preserve history
 # ---------------------------------------------------------------------------
 
-from tests.replay.replay_store import ReplayStore, ReplayStoreError
-from tests.replay.schemas import BenchmarkRun
 
 
 def _run(run_id: str, generated_at: str = "2026-01-01T00:00:00Z", **meta) -> BenchmarkRun:
@@ -347,8 +348,6 @@ class TestReplayStoreAppendOnly:
         path. We can't easily simulate concurrency without threads, but
         we can assert that the tmp filename includes PID + UUID so
         collisions are practically impossible."""
-        import os
-        import re
         # Introspect the save method's tmp construction indirectly by
         # inspecting the source and verifying uniqueness intent.
         import inspect

@@ -162,9 +162,11 @@ class PatternIntelligenceStore:
         clauses: list[str] = ["occurrence_count >= ?"]
         params: list[Any] = [min_occurrences]
         if incident_type:
-            clauses.append("incident_type=?"); params.append(incident_type)
+            clauses.append("incident_type=?")
+            params.append(incident_type)
         if service:
-            clauses.append("services LIKE ?"); params.append(f'%"{service}"%')
+            clauses.append("services LIKE ?")
+            params.append(f'%"{service}"%')
         where = "WHERE " + " AND ".join(clauses)
         sql = f"SELECT * FROM operational_patterns {where} ORDER BY occurrence_count DESC LIMIT ?"
         params.append(limit)

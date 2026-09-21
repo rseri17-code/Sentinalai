@@ -190,11 +190,11 @@ def _capture_change_impact(
             if not isinstance(ch, dict):
                 continue
             change = store.make_change(
-                service=ch.get("service", service),
-                change_type=ch.get("type", ch.get("change_type", "deployment")),
-                deployed_at=ch.get("deployed_at", ch.get("timestamp", incident_time)),
-                description=ch.get("description", ""),
-                deployed_by=ch.get("deployed_by", ch.get("author", "")),
+                service=str(ch.get("service", service) or service),
+                change_type=str(ch.get("type", ch.get("change_type", "deployment")) or "deployment"),
+                deployed_at=str(ch.get("deployed_at", ch.get("timestamp", incident_time)) or incident_time),
+                description=str(ch.get("description", "") or ""),
+                deployed_by=str(ch.get("deployed_by", ch.get("author", "")) or ""),
                 metadata={k: v for k, v in ch.items()
                           if k not in {"service", "type", "change_type", "deployed_at", "description", "deployed_by"}},
             )

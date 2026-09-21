@@ -149,18 +149,18 @@ def _determinism() -> dict:
              "2026-01-12"),
             ("D3", "billing", "invoicer", "cache eviction", "saturation",
              "2026-01-12")]
-    R, I = [], {}
+    R, incidents = [], {}
     for iid, app, svc, rc, itype, p in rows:
         R.append(_r(iid, svc, rc, itype))
-        I[iid] = _i(iid, app, svc, itype, p)
+        incidents[iid] = _i(iid, app, svc, itype, p)
 
     checks = {}
-    for name, fn in (("operational_health", lambda: operational_health(R, I)),
-                     ("incident_trends", lambda: incident_trends(R, I)),
-                     ("application_health", lambda: application_health(R, I)),
-                     ("service_reliability", lambda: service_reliability(R, I)),
+    for name, fn in (("operational_health", lambda: operational_health(R, incidents)),
+                     ("incident_trends", lambda: incident_trends(R, incidents)),
+                     ("application_health", lambda: application_health(R, incidents)),
+                     ("service_reliability", lambda: service_reliability(R, incidents)),
                      ("daily_operations_brief",
-                      lambda: daily_operations_brief(R, I))):
+                      lambda: daily_operations_brief(R, incidents))):
         a = json.dumps(fn(), sort_keys=True)
         b = json.dumps(fn(), sort_keys=True)
         checks[name] = (a == b)

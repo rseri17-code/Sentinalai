@@ -7,8 +7,6 @@ import os
 
 from intelligence.incident_graph import (
     IncidentGraphStore,
-    IncidentNode,
-    IncidentEdge,
     _node_id,
     _edge_id,
 )

@@ -652,6 +652,18 @@ def converse(
     return port(system_prompt, user_message, model_id, temperature, max_tokens)
 
 
+def call_llm(
+    prompt: str,
+    max_tokens: int = 200,
+    system_prompt: str = "You are a helpful SRE assistant.",
+) -> str:
+    """Return response text from ``converse()`` for callers that want a string."""
+    result = converse(system_prompt, prompt, max_tokens=max_tokens)
+    if isinstance(result, dict):
+        return str(result.get("text") or "")
+    return str(result)
+
+
 def _do_converse(
     client: Any,
     system_prompt: str,

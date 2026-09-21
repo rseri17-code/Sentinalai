@@ -1,6 +1,5 @@
 """Tests for duplicate-call suppression in McpGateway (MCP_DEDUP_ENABLED)."""
 import os
-import pytest
 from unittest.mock import patch
 
 
@@ -58,7 +57,7 @@ class TestDuplicateSuppression:
         """clear_call_signatures() allows re-execution of the same call."""
         gw = _make_gateway()
         with patch.dict(os.environ, {"MCP_DEDUP_ENABLED": "true"}):
-            r1 = gw.invoke("splunk.search_oneshot", "search_logs", {"query": "error"})
+            gw.invoke("splunk.search_oneshot", "search_logs", {"query": "error"})
             r2 = gw.invoke("splunk.search_oneshot", "search_logs", {"query": "error"})
             assert r2["status"] == "skipped"
             gw.clear_call_signatures()
@@ -70,7 +69,7 @@ class TestDuplicateSuppression:
         gw = _make_gateway()
         with patch.dict(os.environ, {"MCP_DEDUP_ENABLED": "true"}):
             # Same params in different key order should still be treated as duplicate
-            r1 = gw.invoke("sysdig.golden_signals", "get_metrics", {"service": "api", "window": "5m"})
+            gw.invoke("sysdig.golden_signals", "get_metrics", {"service": "api", "window": "5m"})
             r2 = gw.invoke("sysdig.golden_signals", "get_metrics", {"window": "5m", "service": "api"})
         assert r2["status"] == "skipped"
 

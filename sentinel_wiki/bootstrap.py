@@ -5,7 +5,6 @@ Creates directories and README files. Safe to call repeatedly.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 # Data subdirectories and their purpose descriptions

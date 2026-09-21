@@ -14,7 +14,7 @@ import os
 from eval.enterprise.build_corpus import (
     TOOL_SOURCES, build_corpus,
 )
-from eval.enterprise.validate import check_expected, load_corpus, validate
+from eval.enterprise.validate import check_expected, validate
 from sentinel_core.eic import make_submission
 
 _CORPUS_PATH = os.path.join(os.path.dirname(os.path.dirname(

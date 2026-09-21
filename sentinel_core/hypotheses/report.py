@@ -5,7 +5,6 @@ import json
 from typing import Any
 
 from sentinel_core.hypotheses.hypothesis_graph import HypothesisGraph
-from sentinel_core.hypotheses.schemas import Hypothesis, HypothesisStatus
 from sentinel_core.hypotheses.scoring import score_hypothesis_graph
 
 

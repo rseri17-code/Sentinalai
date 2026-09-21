@@ -12,7 +12,7 @@ import threading
 
 import pytest
 
-from sentinel_core.context import ContextBuilder, InvestigationContext
+from sentinel_core.context import ContextBuilder
 from sentinel_core.evidence import EvidenceLedger
 from supervisor.phases.contracts import PhaseResult, PhaseStatus
 from supervisor.phases.fetch import FetchPhase

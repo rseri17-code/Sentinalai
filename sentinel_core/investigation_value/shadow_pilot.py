@@ -36,7 +36,6 @@ from sentinel_core.investigation_value.readiness import (
 from sentinel_core.investigation_value.scientific_validation import (
     NOT_MEASURED,
     bootstrap_ci,
-    rca_correct,
 )
 
 SHADOW_PILOT_SCHEMA_VERSION = 1

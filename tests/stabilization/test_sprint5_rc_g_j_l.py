@@ -9,22 +9,31 @@ The final stabilization sprint. For each RC:
 Delete this file to fully roll back Sprint 5's test surface.
 """
 from __future__ import annotations
-
 import json
-
-import pytest
-
-
-# ---------------------------------------------------------------------------
-# RC-G — Identifier correctness
-# ---------------------------------------------------------------------------
-
 from sentinel_core.causal_graph.schemas import make_chain_id, make_path_id
 from sentinel_core.continuous_learning.learning_cycle import _make_snapshot_id
 from sentinel_core.intel_memory.fingerprint import (
     compute_planner_path_hash,
     compute_transaction_path_hash,
 )
+from sentinel_core.hypotheses.hypothesis_tracker import HypothesisTracker
+from sentinel_core.models.intel_context import IntelligenceContext
+from tests.synthetic.scoring import (
+    ScoreCard,
+    score_decision_trace_quality,
+    score_evidence_completeness,
+    score_investigation,
+)
+from tests.synthetic.schemas import Scenario
+
+
+
+
+
+# ---------------------------------------------------------------------------
+# RC-G — Identifier correctness
+# ---------------------------------------------------------------------------
+
 
 
 class TestSnapshotIdNoCollision:
@@ -99,7 +108,6 @@ class TestChainIdNoCollision:
 # RC-J — Data preservation
 # ---------------------------------------------------------------------------
 
-from sentinel_core.hypotheses.hypothesis_tracker import HypothesisTracker
 
 
 class TestHypothesisProposeRefinement:
@@ -168,7 +176,6 @@ class TestHypothesisProposeRefinement:
 # RC-J — IntelligenceContext duplicate module payload merge
 # ---------------------------------------------------------------------------
 
-from sentinel_core.models.intel_context import IntelligenceContext
 
 
 def _receipt(name: str, meta: dict) -> dict:
@@ -253,13 +260,6 @@ class TestIntelContextDuplicateModuleMerge:
 # RC-L — Benchmark integrity
 # ---------------------------------------------------------------------------
 
-from tests.synthetic.scoring import (
-    ScoreCard,
-    score_decision_trace_quality,
-    score_evidence_completeness,
-    score_investigation,
-)
-from tests.synthetic.schemas import Scenario
 
 
 def _minimal_scenario(**overrides) -> Scenario:

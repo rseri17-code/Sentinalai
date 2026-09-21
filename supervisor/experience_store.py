@@ -151,6 +151,21 @@ def store_experience(
         return False
 
 
+def retrieve_all(limit: int = 500) -> list[dict]:
+    """Return stored experiences, newest-first, capped at ``limit``."""
+    if not EXPERIENCE_STORE_ENABLED:
+        return []
+    try:
+        with _store_lock:
+            experiences = _load_raw()
+        if limit >= 0:
+            return list(experiences[:limit])
+        return list(experiences)
+    except Exception as exc:
+        logger.debug("retrieve_all failed: %s", exc)
+        return []
+
+
 def retrieve_similar(
     incident_type: str,
     service: str,
@@ -475,3 +490,35 @@ def _save_all_raw(all_data: dict) -> None:
     with open(tmp, "w") as f:
         json.dump(all_data, f, indent=2)
     os.replace(tmp, path)
+
+
+class ExperienceStore:
+    """Compatibility facade over the module-level experience functions."""
+
+    @classmethod
+    def load(cls) -> ExperienceStore:
+        return cls()
+
+    def store(
+        self,
+        incident_type: str,
+        service: str,
+        root_cause: str,
+        fix_applied: str = "",
+        outcome_quality: float = 0.0,
+        metadata: dict | None = None,
+    ) -> bool:
+        meta = metadata or {}
+        incident_id = str(meta.get("incident_id", f"{incident_type}:{service}"))
+        result = {"root_cause": root_cause, "fix_applied": fix_applied, **meta}
+        return store_experience(
+            incident_id, incident_type, service, result, outcome_quality,
+        )
+
+    def retrieve_similar(
+        self,
+        incident_type: str,
+        service: str,
+        top_k: int = EXPERIENCE_TOP_K,
+    ) -> list[dict]:
+        return retrieve_similar(incident_type, service, top_k)

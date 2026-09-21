@@ -155,9 +155,9 @@ class CausalGraphBuilder:
         for n in nodes.values():
             if n.node_type != inc_type:
                 continue
-            for e in list(edges.values()):
-                if e.source_id == n.node_id and e.edge_type == CausalEdgeType.CAUSED_BY.value:
-                    rc_to_incidents.setdefault(e.target_id, []).append(n.node_id)
+            for edge in list(edges.values()):
+                if edge.source_id == n.node_id and edge.edge_type == CausalEdgeType.CAUSED_BY.value:
+                    rc_to_incidents.setdefault(edge.target_id, []).append(n.node_id)
         for rc, incs in rc_to_incidents.items():
             if len(incs) < 2:
                 continue

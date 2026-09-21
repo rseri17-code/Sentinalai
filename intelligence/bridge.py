@@ -20,7 +20,6 @@ from intelligence.schema import (
     EntityType,
     InvestigationPhase,
     NodeType,
-    new_id,
 )
 
 logger = logging.getLogger("sentinalai.intelligence.bridge")

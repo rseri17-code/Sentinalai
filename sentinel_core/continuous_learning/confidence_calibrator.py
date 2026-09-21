@@ -1,7 +1,7 @@
 """Confidence calibration — bin predictions vs actual outcomes."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from statistics import mean
 from typing import Any, Iterable
 

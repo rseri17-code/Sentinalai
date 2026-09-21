@@ -186,7 +186,7 @@ def asdictish(obj: Any) -> dict[str, Any]:
     """Convert a frozen dataclass to a plain dict. Tolerates non-dataclass."""
     try:
         from dataclasses import asdict, is_dataclass
-        if is_dataclass(obj):
+        if is_dataclass(obj) and not isinstance(obj, type):
             return asdict(obj)
     except Exception:
         pass

@@ -81,6 +81,20 @@ class CannedBedrockPort:
         return _canned_dict(system_prompt)
 
 
+class CannedAnthropicPort:
+    """Different class, identical canned InferenceResponse."""
+
+    def __call__(
+        self,
+        system_prompt: str,
+        user_message: str,
+        model_id: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> dict[str, Any]:
+        return _canned_dict(system_prompt)
+
+
 class CannedOpenAIPort:
     """Third class, identical canned InferenceResponse."""
 

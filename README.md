@@ -184,6 +184,7 @@ Deep detail lives under `docs/` (only directories that exist are linked):
 | Validation program & pilot | [`docs/ovp/`](docs/ovp/), [`docs/pilot/`](docs/pilot/) |
 | Effectiveness / discovery (research) | [`docs/effectiveness/`](docs/effectiveness/), [`docs/ode/`](docs/ode/), [`docs/shadow_pilot/`](docs/shadow_pilot/) |
 | Engineering principles | [`CLAUDE.md`](CLAUDE.md) |
+| Clone / connect your tools | [`docs/clone/CONNECT_YOUR_ENVIRONMENT.md`](docs/clone/CONNECT_YOUR_ENVIRONMENT.md) — MCP URL alias, `AGENTCORE_TARGET_*`, YAML playbooks |
 
 ---
 
@@ -207,7 +208,8 @@ export LLM_ENABLED=false                 # investigation LLM overlay off (CI def
 export LLM_PROVIDER=null                 # null | bedrock | anthropic (openai not implemented)
 export GATEWAY_MODE=stub                 # honored: in-process fixtures even if a URL is set
 # export GATEWAY_MODE=live
-# export AGENTCORE_GATEWAY_URL=...       # required for live MCP tools
+# export MCP_GATEWAY_URL=...             # clone-facing; AGENTCORE_GATEWAY_URL still works
+# export YAML_PLAYBOOKS_ENABLED=false    # hardcoded playbooks unless true
 ```
 
 **Run the BFF (API + serves the built SPA):**
@@ -234,10 +236,12 @@ python -c "from eval.enterprise.validate import validate; print(validate())"
 
 > **Important:** `GATEWAY_MODE=stub` (compose default) is honored by
 > `McpGateway.invoke()` — investigations use in-process stubs even when
-> `AGENTCORE_GATEWAY_URL` is set. Set `GATEWAY_MODE=live` and a real
-> gateway URL before using SentinelAI on live incidents. The investigation
-> LLM overlay stays off unless `LLM_ENABLED=true` and `LLM_PROVIDER` is
-> `bedrock` or `anthropic`.
+> a gateway URL is set. Set `GATEWAY_MODE=live` and `MCP_GATEWAY_URL`
+> (or `AGENTCORE_GATEWAY_URL`) before using SentinelAI on live incidents.
+> Map MCP targets with `AGENTCORE_TARGET_*` — see
+> [`docs/clone/CONNECT_YOUR_ENVIRONMENT.md`](docs/clone/CONNECT_YOUR_ENVIRONMENT.md).
+> The investigation LLM overlay stays off unless `LLM_ENABLED=true` and
+> `LLM_PROVIDER` is `bedrock` or `anthropic`.
 
 ---
 

@@ -26,35 +26,35 @@ def build_tools_health() -> dict:
 
     tools = {
         "servicenow": {
-            "env_var": "AGENTCORE_GATEWAY_URL",
+            "env_var": "MCP_GATEWAY_URL / AGENTCORE_GATEWAY_URL",
             "description": "CMDB, change records, incident write-back",
         },
         "github": {
-            "env_var": "AGENTCORE_GATEWAY_URL",
+            "env_var": "MCP_GATEWAY_URL / AGENTCORE_GATEWAY_URL",
             "description": "Deployment history, code diffs, PR creation",
         },
         "splunk": {
-            "env_var": "AGENTCORE_GATEWAY_URL",
+            "env_var": "MCP_GATEWAY_URL / AGENTCORE_GATEWAY_URL",
             "description": "Log aggregation, error search",
         },
         "sysdig": {
-            "env_var": "AGENTCORE_GATEWAY_URL",
+            "env_var": "MCP_GATEWAY_URL / AGENTCORE_GATEWAY_URL",
             "description": "Infrastructure metrics, golden signals",
         },
         "dynatrace": {
-            "env_var": "AGENTCORE_GATEWAY_URL",
+            "env_var": "MCP_GATEWAY_URL / AGENTCORE_GATEWAY_URL",
             "description": "APM, distributed tracing, error sampling",
         },
         "moogsoft": {
-            "env_var": "AGENTCORE_GATEWAY_URL",
+            "env_var": "MCP_GATEWAY_URL / AGENTCORE_GATEWAY_URL",
             "description": "Alert correlation, incident intake",
         },
         "confluence": {
-            "env_var": "AGENTCORE_GATEWAY_URL",
+            "env_var": "MCP_GATEWAY_URL / AGENTCORE_GATEWAY_URL",
             "description": "Runbooks, post-mortems, knowledge base",
         },
         "kubernetes": {
-            "env_var": "AGENTCORE_GATEWAY_URL",
+            "env_var": "MCP_GATEWAY_URL / AGENTCORE_GATEWAY_URL",
             "description": "Pod management, rollback, scaling",
         },
     }
@@ -81,8 +81,9 @@ def build_tools_health() -> dict:
         "ready_for_production": gw_mode == "live",
         "tools": tools,
         "setup_instructions": (
-            "MCP tools follow GATEWAY_MODE + AGENTCORE_GATEWAY_URL "
-            "(see .env.example). Investigation LLM follows LLM_ENABLED + "
+            "MCP tools follow GATEWAY_MODE + MCP_GATEWAY_URL "
+            "(alias: AGENTCORE_GATEWAY_URL; see .env.example). "
+            "Investigation LLM follows LLM_ENABLED + "
             "LLM_PROVIDER (null | bedrock | anthropic)."
         ),
     }

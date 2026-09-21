@@ -248,10 +248,11 @@ try:
 
         # Check MCP gateway connectivity
         try:
-            from workers.mcp_client import AGENTCORE_GATEWAY_URL
-            if AGENTCORE_GATEWAY_URL:
+            from workers.mcp_client import resolved_gateway_url
+            gateway_url = resolved_gateway_url()
+            if gateway_url:
                 import urllib.request
-                req = urllib.request.Request(AGENTCORE_GATEWAY_URL, method="HEAD")
+                req = urllib.request.Request(gateway_url, method="HEAD")
                 urllib.request.urlopen(req, timeout=3)
                 health["gateway"] = "reachable"
             else:

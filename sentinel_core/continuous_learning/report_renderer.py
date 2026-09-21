@@ -3,14 +3,11 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from typing import Any, Iterable
+from typing import Any
 
 from sentinel_core.continuous_learning.causal_feedback import CausalFeedback
 from sentinel_core.continuous_learning.confidence_calibrator import (
     ConfidenceCalibrator,
-)
-from sentinel_core.continuous_learning.evidence_quality import (
-    EvidenceQualityScorer,
 )
 from sentinel_core.continuous_learning.false_positive_learning import (
     FalsePositiveLearning,

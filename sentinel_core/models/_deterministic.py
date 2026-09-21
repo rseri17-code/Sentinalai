@@ -70,7 +70,8 @@ def canonical_top(
     ``k`` (or the counter's own size).
     """
     if secondary is None:
-        secondary = lambda x: x
+        def secondary(x):
+            return x
     # Primary: -count so highest goes first. Secondary: the key itself.
     ordered = sorted(
         counter.items(),

@@ -1,18 +1,20 @@
 """Tests for the sentinel_wiki Phase 1 + Phase 2 implementation."""
-
 from __future__ import annotations
-
 import json
-import os
 from pathlib import Path
-
-import pytest
-
 from sentinel_wiki.bootstrap import bootstrap
 from sentinel_wiki.ingester import ingest
-from sentinel_wiki.note_generator import file_hash, generate_note, note_id_for
+from sentinel_wiki.note_generator import note_id_for
 from sentinel_wiki import indexer
 from sentinel_wiki.searcher import search, status
+from sentinel_wiki.receipt_writer import write_receipt, root_cause_hash
+from sentinel_wiki.pattern_promoter import promote, PROMOTE_THRESHOLD
+from sentinel_wiki.wiki_context import get_context
+
+
+
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -314,9 +316,6 @@ class TestNoteId:
 # Phase 2: Receipts, Pattern Promotion, Wiki Context
 # ===========================================================================
 
-from sentinel_wiki.receipt_writer import write_receipt, root_cause_hash
-from sentinel_wiki.pattern_promoter import promote, PROMOTE_THRESHOLD
-from sentinel_wiki.wiki_context import get_context
 
 
 def _make_result(

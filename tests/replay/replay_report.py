@@ -6,17 +6,14 @@ input → byte-identical output.
 from __future__ import annotations
 
 import json
-from statistics import mean
 from typing import Any, Iterable
 
-from tests.replay.heatmap import build_heatmap, build_heatmap_series
+from tests.replay.heatmap import build_heatmap_series
 from tests.replay.learning_engine import LearningEngine
 from tests.replay.recommendation_engine import RecommendationEngine
 from tests.replay.schemas import (
     BenchmarkRun,
-    Recommendation,
     ReplayResult,
-    WeaknessRecord,
 )
 from tests.replay.trend_analysis import (
     build_timeline,

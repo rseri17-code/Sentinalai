@@ -77,5 +77,6 @@ class TestEvidenceLifecycle:
     def test_deterministic(self):
         ev1 = {"b": {"error": "e"}, "a": {"x": 1}}
         ev2 = {"a": {"x": 1}, "b": {"error": "e"}}
-        _scan_worker_errors(ev1); _scan_worker_errors(ev2)
+        _scan_worker_errors(ev1)
+        _scan_worker_errors(ev2)
         assert _evidence_lifecycle(ev1) == _evidence_lifecycle(ev2)

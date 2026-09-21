@@ -1,5 +1,4 @@
 """Tests for stagnation detection in AgenticPlanner (PLANNER_STAGNATION_DETECTION)."""
-import os
 import pytest
 from unittest.mock import MagicMock
 
@@ -9,7 +8,7 @@ def _make_planner(steps, max_iterations=10):
 
     steps: list of (worker, action) tuples. When exhausted, returns done=True.
     """
-    from supervisor.planner import AgenticPlanner, PlannerStep
+    from supervisor.planner import AgenticPlanner
 
     step_iter = iter(steps)
 

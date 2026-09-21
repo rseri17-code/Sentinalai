@@ -251,6 +251,13 @@ class ConfidenceCalibrator:
         )
         return round(ece, 4)
 
+    def record_outcome(self, confidence: int, was_correct: bool) -> None:
+        """Record a single (raw confidence, correctness) observation."""
+        self.update([{
+            "predicted_confidence": confidence,
+            "actual_correct": was_correct,
+        }])
+
     def is_stale(self, max_ece: float = 0.15, min_samples: int = 20) -> bool:
         """Return True if the calibrator needs retraining.
 

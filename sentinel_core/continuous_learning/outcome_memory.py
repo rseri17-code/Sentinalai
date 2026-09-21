@@ -1,7 +1,7 @@
 """Append-only outcome ledger."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from typing import Any, Iterable
 
 from sentinel_core.continuous_learning.feedback_collector import FeedbackSignal

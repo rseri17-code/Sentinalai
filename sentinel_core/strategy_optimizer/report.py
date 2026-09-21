@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Iterable
+from typing import Any
 
 from sentinel_core.intel_memory import MemoryRecord
 from sentinel_core.strategy_optimizer.mtti_estimator import MttiEstimator

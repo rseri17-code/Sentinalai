@@ -1365,3 +1365,14 @@ def _stub_response(mcp_tool_name: str, tool_action: str, params: dict) -> dict:
     if handler is None:
         return {}
     return handler(tool_action.lower(), params)
+
+
+def call_tool(tool_name: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Invoke an MCP tool via ``McpGateway`` using the dotted tool name.
+
+    Optional intelligence / GitHub-automation paths historically constructed
+    the strands ``MCPClient`` with no transport and called ``.call()``. Route
+    those through the gateway so auth, stubs, and rate limits still apply.
+    """
+    action = tool_name.rsplit(".", 1)[-1]
+    return McpGateway.get_instance().invoke(tool_name, action, params or {})

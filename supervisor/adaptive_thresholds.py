@@ -215,7 +215,7 @@ def record_critique_outcome(
 
 def record_quality_observation(
     online_quality_score: float,
-    experience_stored: bool,
+    experience_stored: bool = False,
 ) -> None:
     """Update STORE_QUALITY_THRESHOLD based on store saturation signals.
 

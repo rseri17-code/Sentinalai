@@ -1,13 +1,11 @@
 """SentinelReplay — LearningEngine + RecommendationEngine tests."""
 from __future__ import annotations
 
-import pytest
 
 from tests.replay.learning_engine import LearningEngine
 from tests.replay.recommendation_engine import RecommendationEngine
 from tests.replay.schemas import (
     BenchmarkRun,
-    Recommendation,
     RecommendationKind,
     WeaknessRecord,
     WeaknessType,

@@ -12,7 +12,6 @@ from sentinel_core.models.intel_context import (
     AffectedService,
     DependencyEdge,
     EpisodeMatch,
-    InvestigationMatch,
     IntelligenceContext,
     PatternMatch,
     ResolutionMemoryMatch,

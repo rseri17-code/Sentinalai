@@ -6,23 +6,16 @@ import json
 import pytest
 
 from sentinel_core.causal_graph import (
-    CAUSAL_SCHEMA_VERSION,
-    CausalChain,
     CausalEdge,
     CausalEdgeType,
     CausalGraph,
     CausalGraphBuilder,
     CausalNode,
     CausalNodeType,
-    CausalPath,
-    CausalRecommendation,
     CausalRecommendationEngine,
     CausalRecommendationKind,
-    CausalRecurrence,
     ChainDetector,
-    MTTIPath,
     MTTIPathRanker,
-    RCAPath,
     RCAPathRanker,
     RecurrenceDetector,
     make_edge_id,
@@ -38,7 +31,6 @@ from sentinel_core.causal_graph import (
     to_json,
 )
 from sentinel_core.intel_memory import (
-    BlastRadiusSnapshot,
     MemoryRecord,
     TopologySnapshot,
 )

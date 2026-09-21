@@ -18,9 +18,10 @@ import re
 import threading
 import time
 import concurrent.futures
+from datetime import datetime
 from typing import Any
 
-from supervisor.tool_selector import classify_incident, get_evolved_playbook, is_meta_query
+from supervisor.tool_selector import get_evolved_playbook
 from supervisor.receipt import ReceiptCollector
 from supervisor.guardrails import (
     ExecutionBudget,
@@ -38,8 +39,6 @@ from supervisor.observability import (
     GENAI_REQUEST_MODEL,
     GENAI_USAGE_INPUT_TOKENS,
     GENAI_USAGE_OUTPUT_TOKENS,
-    EVAL_INCIDENT_TYPE,
-    EVAL_SERVICE,
     EVAL_CONFIDENCE,
     EVAL_ROOT_CAUSE,
     EVAL_TOOL_CALLS,
@@ -67,8 +66,6 @@ from supervisor.llm import (
     is_enabled as _llm_enabled,
 )
 from supervisor.llm_judge import judge_and_record as _judge_and_record
-from supervisor.severity import detect_severity, get_budget_for_severity
-from supervisor.remediation import generate_remediation
 from supervisor.incident_model import Incident
 from supervisor.rca_report import generate_rca_report, render_markdown
 from database.persistence import (
@@ -83,8 +80,6 @@ from supervisor.online_evaluator import evaluate as _online_evaluate, annotate_r
 from supervisor.experience_store import (
     store_experience as _store_experience,
     store_failed_experience as _store_failed_experience,
-    retrieve_similar as _retrieve_experiences,
-    get_tool_recommendations as _get_tool_recommendations,
 )
 from supervisor.strategy_evolver import (
     record_outcome as _record_strategy_outcome,
@@ -113,40 +108,22 @@ from workers.network_worker import ThousandEyesWorker
 from supervisor.cmdb_traversal import CMDBTraversal, build_change_summary
 from supervisor.fix_engine import get_fix_engine, ProposedFix
 from supervisor.evidence_citation import annotate_citations
-from supervisor.metrics_dashboard import record_investigation_outcome
-from supervisor.evidence_gates import check_post_collection, check_post_analysis
-from supervisor.knowledge_graph import ingest_to_graph as _ingest_to_kg, query_similar as _kg_query_similar
+from supervisor.knowledge_graph import ingest_to_graph as _ingest_to_kg
 from supervisor.memory_compression import compress_investigation as _compress_investigation
-from supervisor.llm_call_graph import CallGraph, set_current_graph
-from supervisor.progress_stream import get_stream, EventType
-from supervisor.incident_git_linker import link_incident_to_commit
-from supervisor.trace_correlation import correlate_traces
-from workers.visual_evidence_worker import collect_visual_evidence
+from supervisor.llm_call_graph import set_current_graph
 
 # Operational intelligence modules (graceful degradation if unavailable)
 try:
-    from supervisor.grounding_confidence import score as _grounding_score, GroundingResult as _GroundingResult
-    _GROUNDING_AVAILABLE = True
-except ImportError:
-    _GROUNDING_AVAILABLE = False
-
-try:
-    from supervisor.dependency_domain_detector import get_gap_queries as _domain_gap_queries, detect as _detect_domains
+    from supervisor.dependency_domain_detector import get_gap_queries as _domain_gap_queries
     _DOMAIN_DETECTOR_AVAILABLE = True
 except ImportError:
     _DOMAIN_DETECTOR_AVAILABLE = False
 
 try:
-    from supervisor.recurrence_tracker import check as _recurrence_check, record as _recurrence_record
+    from supervisor.recurrence_tracker import record as _recurrence_record
     _RECURRENCE_AVAILABLE = True
 except ImportError:
     _RECURRENCE_AVAILABLE = False
-
-try:
-    from supervisor.splunk_retrieval_planner import build_plan as _splunk_build_plan, get_stage_queries as _splunk_stage_queries
-    _SPLUNK_PLANNER_AVAILABLE = True
-except ImportError:
-    _SPLUNK_PLANNER_AVAILABLE = False
 
 # Institutional knowledge layer (opt-in via env var, graceful degradation)
 _KNOWLEDGE_ENABLED = os.environ.get("KNOWLEDGE_GRAPH_ENABLED", "").lower() in ("1", "true", "yes")
@@ -169,7 +146,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-def _parse_incident_ts(value: Any) -> "datetime | None":
+def _parse_incident_ts(value: Any) -> datetime | None:
     """Parse an immutable incident timestamp into an aware datetime, or None.
 
     Deterministic and wall-clock-free: used to anchor investigation features
@@ -180,7 +157,6 @@ def _parse_incident_ts(value: Any) -> "datetime | None":
     if not value or not isinstance(value, str):
         return None
     try:
-        from datetime import datetime
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except Exception:
         return None
@@ -398,7 +374,8 @@ class SentinalAISupervisor:
             (candidate-only; no-op unless INVESTIGATION_ARTIFACT_ENABLED).
             Stamps the corpus_version replay inputs and releases the
             investigation-scoped Frozen Corpus (universal exit path)."""
-            _res = attach_receipts(_res, _phase_receipts)
+            attached = attach_receipts(_res, _phase_receipts)
+            _res = attached if attached is not None else {}
             if isinstance(_res, dict):
                 _res["corpus_stamp"] = _frozen_corpus.stamp()
                 _res["_corpus_version"] = _frozen_corpus.corpus_version
@@ -407,6 +384,12 @@ class SentinalAISupervisor:
             )
             _fcorp.clear_active_corpus()
             return _res
+
+        def _phase_payload(phase_res: Any) -> Any:
+            output = phase_res.output
+            if output is None:
+                raise RuntimeError("phase produced no output")
+            return output.result
         # IntelligenceRuntime — zero-cost no-op when ENABLE_INTELLIGENCE_RUNTIME
         # is off (default). When enabled, install_default_modules() registers
         # the default intelligence modules (ResolutionMemory at POST_PERSIST
@@ -457,8 +440,8 @@ class SentinalAISupervisor:
                 _fetch_res = FetchPhase(self).execute(ctx)
                 _r.status = status_from_result(_fetch_res)
                 _intel_hook(_r, IntelligenceStage.POST_FETCH,
-                            fetch_out=_fetch_res.output.result)
-            fout = _fetch_res.output.result
+                            fetch_out=_phase_payload(_fetch_res))
+            fout = _phase_payload(_fetch_res)
             if fout["early_return"] is not None:
                 return _finish(fout["early_return"])
 
@@ -467,23 +450,23 @@ class SentinalAISupervisor:
                 _r.status = status_from_result(_classify_res)
                 _intel_hook(_r, IntelligenceStage.POST_CLASSIFY,
                             fetch_out=fout,
-                            cres=_classify_res.output.result["classification"])
-            cres = _classify_res.output.result["classification"]
+                            cres=_phase_payload(_classify_res)["classification"])
+            cres = _phase_payload(_classify_res)["classification"]
 
             with _phase_receipts.record("collect") as _r:
                 _collect_res = CollectPhase(self).execute(ctx, fout, cres)
                 _r.status = status_from_result(_collect_res)
-                _r.evidence_after = len(_collect_res.output.result["collect"].evidence)
+                _r.evidence_after = len(_phase_payload(_collect_res)["collect"].evidence)
                 _intel_hook(_r, IntelligenceStage.POST_COLLECT,
                             fetch_out=fout, cres=cres,
-                            cout=_collect_res.output.result["collect"])
-            cout = _collect_res.output.result["collect"]
+                            cout=_phase_payload(_collect_res)["collect"])
+            cout = _phase_payload(_collect_res)["collect"]
             if cout.early_return is not None:
                 return _finish(cout.early_return)
 
             with _phase_receipts.record("analyze", evidence_before=len(cout.evidence)) as _r:
                 _analyze_res = AnalyzePhase(self).execute(ctx, fout, cres, cout)
-                _aout_tmp = _analyze_res.output.result["analyze"]
+                _aout_tmp = _phase_payload(_analyze_res)["analyze"]
                 _r.status = status_from_result(_analyze_res)
                 _r.evidence_after = len(_aout_tmp.evidence)
                 # Decision trace (dormant intelligence.decision_trace module),
@@ -494,7 +477,7 @@ class SentinalAISupervisor:
                     _r.metadata["decision_trace"] = _aout_tmp.decision_trace_meta
                 _intel_hook(_r, IntelligenceStage.POST_ANALYZE,
                             fetch_out=fout, cres=cres, cout=cout, aout=_aout_tmp)
-            aout = _analyze_res.output.result["analyze"]
+            aout = _phase_payload(_analyze_res)["analyze"]
             if aout.early_return is not None:
                 return _finish(aout.early_return)
 
@@ -503,8 +486,8 @@ class SentinalAISupervisor:
                 _r.status = status_from_result(_persist_res)
                 _intel_hook(_r, IntelligenceStage.POST_PERSIST,
                             fetch_out=fout, cres=cres, cout=cout, aout=aout,
-                            result=_persist_res.output.result["persist"].result)
-            return _finish(_persist_res.output.result["persist"].result)
+                            result=_phase_payload(_persist_res)["persist"].result)
+            return _finish(_phase_payload(_persist_res)["persist"].result)
 
     # ------------------------------------------------------------------ #
     # Internal: self-critique refinement

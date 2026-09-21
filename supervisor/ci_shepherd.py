@@ -28,7 +28,7 @@ import os
 import time
 from typing import Any
 
-from sentinel_core.models.dev_task import DevTask, DevTaskStatus, CIRun
+from sentinel_core.models.dev_task import DevTask, CIRun
 from sentinel_core.models.events import AGUIEvent, EventType
 
 logger = logging.getLogger("sentinalai.ci_shepherd")
@@ -134,9 +134,8 @@ class CIShepherd:
     def _get_ci_status(self, task: DevTask) -> dict[str, Any]:
         """Fetch current CI status for the PR via GitHub MCP."""
         try:
-            from workers.mcp_client import MCPClient
-            client = MCPClient()
-            result = client.call(
+            from workers.mcp_client import call_tool
+            result = call_tool(
                 "github.get_workflow_runs",
                 {
                     "pr_number": task.pr_number,
@@ -183,9 +182,8 @@ class CIShepherd:
     def _fetch_ci_logs(self, task: DevTask, run: CIRun) -> str:
         """Fetch CI failure logs from GitHub."""
         try:
-            from workers.mcp_client import MCPClient
-            client = MCPClient()
-            result = client.call(
+            from workers.mcp_client import call_tool
+            result = call_tool(
                 "github.get_workflow_runs",
                 {
                     "run_id": run.run_id,
@@ -225,7 +223,7 @@ Do not explain. Just write the corrected code."""
                 max_tokens=3000,
                 messages=[{"role": "user", "content": prompt}],
             )
-            return response.content[0].text if response.content else ""
+            return getattr(response.content[0], "text", "") or ""
         except Exception as exc:
             logger.warning("CI fix LLM call failed: %s", exc)
             return f"[LLM unavailable: {exc}]"

@@ -256,7 +256,10 @@ class MetricsDashboard:
                 "fix_proposed_rate": round(sum(1 for o in group if o.fix_proposed) / n, 3),
             })
 
-        result.sort(key=lambda x: x["count"], reverse=True)
+        result.sort(
+            key=lambda x: int(x["count"] if isinstance(x["count"], (int, float)) else 0),
+            reverse=True,
+        )
         return result
 
     def get_mttr_trend_by_day(self, window_days: int = 30) -> list[dict]:

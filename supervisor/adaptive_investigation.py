@@ -33,7 +33,6 @@ from supervisor.hypothesis_engine import (
     SUPPORT_DELTA,
     _clamp,
     _tokens,
-    select_disconfirmation_probe,
 )
 
 logger = logging.getLogger("sentinalai.adaptive_investigation")

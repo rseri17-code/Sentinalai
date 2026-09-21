@@ -5,7 +5,6 @@ import json
 import time
 from pathlib import Path
 
-import pytest
 
 
 def _write_artifact(replay_dir: Path, case_id: str, age_seconds: float = 0) -> Path:
@@ -71,7 +70,6 @@ class TestReplayStorePurge:
 
     def test_purge_keeps_newest_on_count_limit(self, tmp_path):
         from supervisor.replay import ReplayStore
-        import os
 
         store = ReplayStore(str(tmp_path))
         files = []

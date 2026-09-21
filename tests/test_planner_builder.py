@@ -19,7 +19,6 @@ from supervisor.deterministic_planner.planner_registry import (
 )
 from supervisor.deterministic_planner.planner_rules import (
     catalog,
-    compute_dependencies,
     derive_goals,
     select_capabilities_for_goal,
 )

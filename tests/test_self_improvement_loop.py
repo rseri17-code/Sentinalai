@@ -2,20 +2,15 @@
 
 from __future__ import annotations
 
-import copy
 import json
 import os
-import tempfile
 from unittest.mock import patch
 
 import pytest
 
 from supervisor.self_improvement_loop import (
-    EvalCorpusScore,
-    Experiment,
     ImprovementReport,
     SelfImprovementLoop,
-    run_improvement_cycle,
 )
 
 

@@ -8,7 +8,6 @@ from datetime import datetime, timedelta, timezone
 
 from intelligence.change_tracker import (
     Change,
-    ChangeImpactLink,
     ChangeImpactStore,
     score_change_impact,
     _change_id,

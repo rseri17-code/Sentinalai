@@ -68,7 +68,7 @@ Usage:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
@@ -508,24 +508,24 @@ def _build_reasoning(
         return " ".join(lines)
 
     if isinstance(most_likely_trigger, GraphEdgeDiff):
-        trigger = most_likely_trigger
+        edge_trigger = most_likely_trigger
         lines.append(
             f"Most likely trigger (confidence={trigger_confidence:.2f}): "
-            f"Edge '{trigger.edge_type}' {trigger.change_type} between "
-            f"'{trigger.source_node}' → '{trigger.target_node}' "
-            f"at {trigger.timestamp}."
+            f"Edge '{edge_trigger.edge_type}' {edge_trigger.change_type} between "
+            f"'{edge_trigger.source_node}' → '{edge_trigger.target_node}' "
+            f"at {edge_trigger.timestamp}."
         )
     else:
-        trigger = most_likely_trigger
+        node_trigger = most_likely_trigger
         lines.append(
             f"Most likely trigger (confidence={trigger_confidence:.2f}): "
-            f"Node '{trigger.node_id}' ({trigger.node_type}) {trigger.change_type} "
-            f"at {trigger.timestamp}."
+            f"Node '{node_trigger.node_id}' ({node_trigger.node_type}) {node_trigger.change_type} "
+            f"at {node_trigger.timestamp}."
         )
-        if trigger.changed_properties:
+        if node_trigger.changed_properties:
             prop_summary = ", ".join(
                 f"{k}: {v[0]!r} → {v[1]!r}"
-                for k, v in list(trigger.changed_properties.items())[:3]
+                for k, v in list(node_trigger.changed_properties.items())[:3]
             )
             lines.append(f"Changed properties: {prop_summary}.")
 

@@ -19,7 +19,7 @@ class ChainDetector:
         self._min = max(1, int(min_count))
 
     def detect(self, records: Iterable[MemoryRecord]) -> tuple[CausalChain, ...]:
-        buckets: dict[tuple[str, ...], list[MemoryRecord]] = {}
+        buckets: dict[tuple[str, str, str, str], list[MemoryRecord]] = {}
         for r in records or ():
             key = (
                 r.service or "",

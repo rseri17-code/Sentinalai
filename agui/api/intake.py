@@ -125,9 +125,9 @@ async def _check_sig(request: Request, secret: str, header_name: str) -> None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=(
-                f"Webhook auth required (REQUIRE_WEBHOOK_AUTH=true) but "
-                f"no secret is configured for this source. "
-                f"Set the corresponding *_WEBHOOK_SECRET environment variable."
+                "Webhook auth required (REQUIRE_WEBHOOK_AUTH=true) but "
+                "no secret is configured for this source. "
+                "Set the corresponding *_WEBHOOK_SECRET environment variable."
             ),
         )
     if not secret:

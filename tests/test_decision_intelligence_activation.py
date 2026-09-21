@@ -6,11 +6,9 @@ DecisionContext at POST_COLLECT. All tests are pure — no store I/O.
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
 from unittest.mock import patch
 
-import pytest
 
 from sentinel_core.runtime import (
     IntelligenceRuntime,

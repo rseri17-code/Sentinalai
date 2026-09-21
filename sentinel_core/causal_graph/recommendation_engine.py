@@ -9,10 +9,7 @@ from sentinel_core.causal_graph.mtti_paths import MTTIPathRanker
 from sentinel_core.causal_graph.rca_paths import RCAPathRanker
 from sentinel_core.causal_graph.recurrence import RecurrenceDetector
 from sentinel_core.causal_graph.schemas import (
-    CausalChain,
     CausalRecommendation,
-    MTTIPath,
-    RCAPath,
 )
 from sentinel_core.intel_memory import MemoryRecord
 
@@ -34,7 +31,7 @@ class CausalRecommendationEngine:
         self, records: Iterable[MemoryRecord],
     ) -> tuple[CausalRecommendation, ...]:
         records = tuple(records or ())
-        chains = ChainDetector().detect(records)
+        ChainDetector().detect(records)
         rca_paths = RCAPathRanker().build(records)
         mtti_paths = MTTIPathRanker().build(records)
         recurrences = RecurrenceDetector().all_recurrences(records)

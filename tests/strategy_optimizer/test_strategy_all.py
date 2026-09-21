@@ -11,7 +11,6 @@ from sentinel_core.strategy_optimizer import (
     InvestigationStrategy,
     MttiEstimation,
     MttiEstimator,
-    StrategyClass,
     StrategyGraph,
     StrategyOptimizer,
     StrategyRanker,

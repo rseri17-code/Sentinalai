@@ -27,7 +27,7 @@ import re
 import subprocess
 from typing import Any
 
-from sentinel_core.models.dev_task import DevTask, DevTaskStatus, ReviewComment
+from sentinel_core.models.dev_task import DevTask
 from sentinel_core.models.events import AGUIEvent, EventType
 
 logger = logging.getLogger("sentinalai.review_responder")
@@ -61,7 +61,10 @@ class ReviewResponder:
         if not REVIEW_RESPONDER_ENABLED:
             return {"success": False, "blocker": "ReviewResponder disabled"}
 
-        pr_number = pr.get("number")
+        pr_number_raw = pr.get("number")
+        if pr_number_raw is None:
+            return {"success": False, "blocker": "missing PR number"}
+        pr_number = int(pr_number_raw)
         pr_branch = pr.get("head", {}).get("ref", "")
         reviewer = review.get("user", {}).get("login", "unknown")
 
@@ -113,7 +116,7 @@ class ReviewResponder:
                     code_changes[path] = content
 
             if result.get("reply"):
-                comment_replies.append((comment.get("id"), result["reply"]))
+                comment_replies.append((str(comment.get("id") or ""), result["reply"]))
 
             addressed += 1
 
@@ -226,7 +229,7 @@ class ReviewResponder:
             lines = file_content.split("\n")
             start = max(0, line - 10)
             end = min(len(lines), line + 10)
-            context = "\n".join(f"{i+1}: {l}" for i, l in enumerate(lines[start:end], start=start))
+            context = "\n".join(f"{i+1}: {text_line}" for i, text_line in enumerate(lines[start:end], start=start))
 
         return f"""You are responding to a code review comment on a pull request.
 
@@ -261,9 +264,8 @@ Do not explain your reasoning beyond the reply. Output: code block (if needed) +
     def _fetch_review_comments(self, pr_number: int, review_id: Any) -> list[dict]:
         """Fetch inline review comments from GitHub."""
         try:
-            from workers.mcp_client import MCPClient
-            client = MCPClient()
-            result = client.call(
+            from workers.mcp_client import call_tool
+            result = call_tool(
                 "github.get_pr_details",
                 {"pr_number": pr_number, "include_review_comments": True},
             )
@@ -281,8 +283,8 @@ Do not explain your reasoning beyond the reply. Output: code block (if needed) +
         if not comment_id or comment_id == "general":
             return
         try:
-            from workers.mcp_client import MCPClient
-            MCPClient().call(
+            from workers.mcp_client import call_tool
+            call_tool(
                 "github.reply_to_review_comment",
                 {"pr_number": pr_number, "comment_id": comment_id, "body": reply},
             )
@@ -292,8 +294,8 @@ Do not explain your reasoning beyond the reply. Output: code block (if needed) +
     def _request_re_review(self, pr_number: int, reviewer: str) -> None:
         """Re-request review from the original reviewer."""
         try:
-            from workers.mcp_client import MCPClient
-            MCPClient().call(
+            from workers.mcp_client import call_tool
+            call_tool(
                 "github.request_reviewers",
                 {"pr_number": pr_number, "reviewers": [reviewer]},
             )
@@ -350,7 +352,7 @@ Do not explain your reasoning beyond the reply. Output: code block (if needed) +
                 max_tokens=3000,
                 messages=[{"role": "user", "content": prompt}],
             )
-            return response.content[0].text if response.content else ""
+            return getattr(response.content[0], "text", "") or ""
         except Exception as exc:
             logger.warning("ReviewResponder LLM call failed: %s", exc)
             return f"[LLM unavailable: {exc}]"

@@ -204,7 +204,7 @@ def compute_confidence_v2(
     Weights sum to 1.0 (before contradiction penalty application).
     """
     root_cause = result.get("root_cause", "")
-    raw_conf   = result.get("confidence", 0)
+    result.get("confidence", 0)
     timeline   = result.get("evidence_timeline", [])
 
     # Count operational evidence sources

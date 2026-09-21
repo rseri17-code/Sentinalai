@@ -11,8 +11,6 @@ from sentinel_core.intel_memory.ranking import Ranker
 from sentinel_core.intel_memory.recommendation import GuidedInvestigation
 from sentinel_core.intel_memory.schemas import (
     MemoryRecord,
-    RecurringPattern,
-    SimilarityScore,
 )
 
 
@@ -51,8 +49,8 @@ def render_learning_report(
     canonical_evidence_set: Iterable[str] = (),
     loop: LearningLoop | None = None,
 ) -> dict[str, Any]:
-    l = loop or LearningLoop()
-    patterns = l.all_patterns(records, canonical_evidence_set=canonical_evidence_set)
+    learn = loop or LearningLoop()
+    patterns = learn.all_patterns(records, canonical_evidence_set=canonical_evidence_set)
     return {
         "schema_version": REPORT_SCHEMA_VERSION,
         "record_count":   len(records),
@@ -65,8 +63,8 @@ def render_recurring_patterns(
     records: tuple[MemoryRecord, ...],
     loop: LearningLoop | None = None,
 ) -> dict[str, Any]:
-    l = loop or LearningLoop()
-    patterns = l.all_patterns(records)
+    learn = loop or LearningLoop()
+    patterns = learn.all_patterns(records)
     grouped: dict[str, list[dict[str, Any]]] = {}
     for p in patterns:
         grouped.setdefault(p.kind, []).append(p.to_dict())

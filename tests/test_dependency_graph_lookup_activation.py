@@ -217,7 +217,6 @@ class TestFailureIsolation:
         _seed_dep(source="ui", target="checkout", strength=0.6)
         from intelligence import dependency_graph as _dg
 
-        original = _dg.DependencyGraphStore.get_upstream
 
         def broken(self, service):
             raise RuntimeError("boom")

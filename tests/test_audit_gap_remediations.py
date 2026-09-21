@@ -483,7 +483,6 @@ class TestFix5_SourceMapRouting:
 
     def test_src_unknown_key_returns_key(self):
         """_src() returns the key unchanged for unknown logical names."""
-        import importlib
         import supervisor.splunk_retrieval_planner as planner
 
         result = planner._src("some_unknown_source")

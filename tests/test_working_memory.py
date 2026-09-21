@@ -1,7 +1,6 @@
 """Tests for supervisor.working_memory.WorkingMemory."""
 from __future__ import annotations
 
-import pytest
 from supervisor.working_memory import WorkingMemory
 
 

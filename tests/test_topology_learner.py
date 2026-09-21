@@ -17,7 +17,6 @@ from __future__ import annotations
 import os
 import tempfile
 
-import pytest
 
 from intelligence.causal_graph import CausalGraph
 from intelligence.topology_learner import TopologyLearner
@@ -233,14 +232,13 @@ class TestLearnedEdgesEndpoint:
     def test_learned_edges_endpoint_structure(self):
         """GET /api/graph/learned-edges returns correct keys and types."""
         import sys
-        import os
         # Ensure the worktree root is on the path
         worktree = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if worktree not in sys.path:
             sys.path.insert(0, worktree)
 
         from fastapi.testclient import TestClient
-        from agui.api.graph import router, _graph
+        from agui.api.graph import router
         from fastapi import FastAPI
 
         app = FastAPI()
@@ -262,7 +260,6 @@ class TestLearnedEdgesEndpoint:
     def test_learned_edges_counts_add_up(self):
         """learned + seeded == total_edges."""
         import sys
-        import os
         worktree = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if worktree not in sys.path:
             sys.path.insert(0, worktree)
@@ -282,7 +279,6 @@ class TestLearnedEdgesEndpoint:
     def test_seeded_edges_have_observed_count_zero(self):
         """All edges in seeded_edges list have observed_count == 0."""
         import sys
-        import os
         worktree = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if worktree not in sys.path:
             sys.path.insert(0, worktree)
@@ -303,7 +299,6 @@ class TestLearnedEdgesEndpoint:
     def test_learned_edges_have_observed_count_positive(self):
         """All edges in learned_edges list have observed_count > 0."""
         import sys
-        import os
         worktree = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if worktree not in sys.path:
             sys.path.insert(0, worktree)

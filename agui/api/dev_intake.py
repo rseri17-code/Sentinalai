@@ -25,7 +25,6 @@ import hmac
 import logging
 import os
 import time
-import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, status
@@ -223,8 +222,8 @@ async def linear_webhook(request: Request):
         return {"status": "ok", "note": "non-issue event ignored"}
 
     # Only trigger on create/update with agent label
-    labels = [l.get("name", "").lower() for l in data.get("labels", [])]
-    if not any(l in ("agent", "sentinal", "sentinalai", "auto") for l in labels):
+    labels = [lbl.get("name", "").lower() for lbl in data.get("labels", [])]
+    if not any(lbl in ("agent", "sentinal", "sentinalai", "auto") for lbl in labels):
         if action not in ("create",):
             return {"status": "ok", "note": "no agent label, skipped"}
 
@@ -274,8 +273,8 @@ async def github_webhook(request: Request):
             return {"status": "ok", "note": f"action '{action}' ignored"}
 
         issue = payload.get("issue", {})
-        labels = [l.get("name", "").lower() for l in issue.get("labels", [])]
-        if not any(l in ("agent", "sentinal", "sentinalai", "auto") for l in labels):
+        labels = [lbl.get("name", "").lower() for lbl in issue.get("labels", [])]
+        if not any(lbl in ("agent", "sentinal", "sentinalai", "auto") for lbl in labels):
             return {"status": "ok", "note": "no agent label"}
 
         task = DevTask(

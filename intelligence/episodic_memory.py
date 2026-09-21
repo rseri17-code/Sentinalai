@@ -174,6 +174,8 @@ class EpisodicMemory:
                 idx = self._index
                 ep_by_id = {ep.episode_id: ep for ep in self._episodes}
 
+            if idx is None:
+                return []
             hits = idx.search(failure_signature, top_k=limit)
             return [ep_by_id[id] for id, score in hits if score > 0 and id in ep_by_id]
         except Exception as exc:

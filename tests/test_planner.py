@@ -4,9 +4,8 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
-import pytest
 
-from supervisor.planner import AgenticPlanner, PlannerStep, PlannerTrace
+from supervisor.planner import AgenticPlanner, PlannerStep
 
 
 # ---------------------------------------------------------------------------

@@ -241,7 +241,8 @@ class ChangeImpactStore:
         clauses = ["unixepoch(deployed_at) >= ?"]
         params: list[Any] = [cutoff_unix]
         if service:
-            clauses.append("service=?"); params.append(service)
+            clauses.append("service=?")
+            params.append(service)
         where = "WHERE " + " AND ".join(clauses)
         sql = f"SELECT * FROM changes {where} ORDER BY deployed_at DESC LIMIT ?"
         params.append(limit)

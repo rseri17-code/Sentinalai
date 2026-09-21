@@ -1,7 +1,7 @@
 """Causal chain feedback — reuse cross-incident causal graph."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any, Iterable
 
 from sentinel_core.causal_graph import ChainDetector

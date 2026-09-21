@@ -1,7 +1,6 @@
 """Fingerprint tests."""
 from __future__ import annotations
 
-import pytest
 
 from sentinel_core.intel_memory import (
     FingerprintInput,

@@ -19,16 +19,13 @@ Explicit coverage per the mission spec:
 from __future__ import annotations
 
 import json
-import os
 import threading
 from dataclasses import dataclass
-from pathlib import Path
 
 import pytest
 
 from sentinel_core.context import ContextBuilder
 from supervisor.phases.analyze import AnalyzePhase, AnalyzeResult
-from supervisor.phases.contracts import PhaseStatus
 
 
 # ---------------------------------------------------------------------------

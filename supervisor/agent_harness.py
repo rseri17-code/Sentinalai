@@ -400,7 +400,10 @@ class InvestigationHarness:
         # Experience store matches (top-3 similar incidents)
         try:
             from supervisor.experience_store import retrieve_similar
-            matches = retrieve_similar(incident_id=incident_id) or []
+            matches = retrieve_similar(
+                incident_type=str(meta.get("incident_type", "")),
+                service=str(meta.get("service", "")),
+            ) or []
             meta["experience_matches"] = len(matches)
             meta["similar_types"] = list({m.get("incident_type", "") for m in matches[:5] if m.get("incident_type")})
         except Exception as exc:

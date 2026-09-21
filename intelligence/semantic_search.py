@@ -7,6 +7,7 @@ SEMANTIC_BACKEND env var:
 from __future__ import annotations
 
 import os
+from typing import Any
 
 _BACKEND = os.environ.get("SEMANTIC_BACKEND", "tfidf")
 
@@ -16,8 +17,8 @@ class SemanticIndex:
         self._ids: list[str] = []
         self._texts: list[str] = []
         self._dirty = False
-        self._vectorizer = None
-        self._matrix = None
+        self._vectorizer: Any = None
+        self._matrix: Any = None
 
     def add(self, id: str, text: str) -> None:
         self._ids.append(id)
@@ -55,4 +56,8 @@ class SemanticIndex:
         return ranked[:top_k]
 
     def clear(self) -> None:
-        self.__init__()
+        self._ids = []
+        self._texts = []
+        self._dirty = False
+        self._vectorizer = None
+        self._matrix = None

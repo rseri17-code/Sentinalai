@@ -13,13 +13,15 @@ Endpoints:
   GET  /api/v1/intelligence/health               — runner health / last cycle info
 """
 from __future__ import annotations
-
 import logging
 from datetime import datetime, timezone
 from typing import Any
-
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
+import os as _os
+
+
+
 
 logger = logging.getLogger("sentinalai.api.intelligence")
 
@@ -563,7 +565,6 @@ def get_neural_architecture() -> dict[str, Any]:
 # Phase 4: Resolution Memory
 # ------------------------------------------------------------------
 
-import os as _os
 _INTEL_DB = _os.environ.get("OPS_DB_PATH", "eval/ops_intelligence.db")
 
 

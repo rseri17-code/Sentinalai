@@ -21,7 +21,7 @@ import json
 import logging
 import os
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger("sentinalai.cascade_tracker")
@@ -187,7 +187,7 @@ class CascadeTracker:
         if not already_failed:
             return []
 
-        prefix_key = _chain_key(already_failed)
+        _chain_key(already_failed)
         candidates: dict[str, int] = {}
 
         with self._lock:

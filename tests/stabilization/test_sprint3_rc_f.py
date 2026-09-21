@@ -13,23 +13,39 @@ No existing test is weakened or contradicted. Delete this file to fully
 roll back Sprint 3's test surface.
 """
 from __future__ import annotations
-
 import hashlib
 import json
 import random
 from collections import Counter
-
-import pytest
-
-# ---------------------------------------------------------------------------
-# 1. Deterministic helper — unit tests
-# ---------------------------------------------------------------------------
-
 from sentinel_core.models._deterministic import (
     canonical_max,
     canonical_sort,
     canonical_top,
 )
+from sentinel_core.strategy_optimizer.strategy_graph import StrategyGraph
+from sentinel_core.intel_memory import MemoryRecord
+from sentinel_core.models.intel_context import (
+    AffectedService,
+    DependencyEdge,
+    IntelligenceContext,
+    PatternMatch,
+)
+from sentinel_core.models.decision_context import DecisionContext
+from sentinel_core.continuous_learning.feedback_collector import (
+    FeedbackKind,
+    FeedbackSignal,
+    FeedbackSource,
+)
+from sentinel_core.continuous_learning.outcome_memory import OutcomeRecord
+from sentinel_core.causal_graph.graph_builder import CausalGraphBuilder
+
+
+
+
+# ---------------------------------------------------------------------------
+# 1. Deterministic helper — unit tests
+# ---------------------------------------------------------------------------
+
 
 
 class TestCanonicalHelpers:
@@ -87,8 +103,6 @@ class TestCanonicalHelpers:
 # 2. Per-site regression: Counter.most_common → canonical_top
 # ---------------------------------------------------------------------------
 
-from sentinel_core.strategy_optimizer.strategy_graph import StrategyGraph
-from sentinel_core.intel_memory import MemoryRecord
 
 
 def _rec(mid: str, **kw) -> MemoryRecord:
@@ -138,13 +152,6 @@ class TestStrategyGraphDeterministic:
 # 3. DecisionContext determinism
 # ---------------------------------------------------------------------------
 
-from sentinel_core.models.intel_context import (
-    AffectedService,
-    DependencyEdge,
-    IntelligenceContext,
-    PatternMatch,
-)
-from sentinel_core.models.decision_context import DecisionContext
 
 
 class TestDecisionContextDeterministic:
@@ -250,12 +257,6 @@ class TestIntelContextDuplicateModules:
 # 5. OutcomeRecord.to_dict signal serialization
 # ---------------------------------------------------------------------------
 
-from sentinel_core.continuous_learning.feedback_collector import (
-    FeedbackKind,
-    FeedbackSignal,
-    FeedbackSource,
-)
-from sentinel_core.continuous_learning.outcome_memory import OutcomeRecord
 
 
 class TestOutcomeRecordSerializationOrder:
@@ -278,7 +279,6 @@ class TestOutcomeRecordSerializationOrder:
 # 6. CausalGraph builder order-independence
 # ---------------------------------------------------------------------------
 
-from sentinel_core.causal_graph.graph_builder import CausalGraphBuilder
 
 
 class TestCausalGraphBuilderDeterministic:
@@ -311,7 +311,8 @@ class TestPropertyPermutation:
     """Shuffle logically-identical inputs and assert byte-identical outputs.
 
     The RC-F contract in one place. Each function under test is
-    exercised across N random permutations; every hash must equal the
+    exercised across N random permutations
+    every hash must equal the
     hash produced by the seed permutation.
     """
 
@@ -362,8 +363,10 @@ class TestPropertyPermutation:
         ]
         first = None
         for i in range(self.N_SHUFFLES + 1):
-            pats = list(base_patterns); rng.shuffle(pats)
-            affected = list(base_affected); rng.shuffle(affected)
+            pats = list(base_patterns)
+            rng.shuffle(pats)
+            affected = list(base_affected)
+            rng.shuffle(affected)
             ic = IntelligenceContext(
                 pattern_matches=tuple(pats),
                 blast_radius_severity="high",

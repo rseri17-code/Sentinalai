@@ -240,7 +240,7 @@ def boundary_analysis(results: Iterable[Mapping[str, Any]],
     #  - highest_leverage: where the shadow could move outcomes MOST (benefit-first)
     #  - safe_first_promotion: what to promote FIRST at LOWEST risk (risk-first
     #    among additive boundaries that never change the winner)
-    row_by_key = {r["decision_boundary"]: r for r in rows}
+    {r["decision_boundary"]: r for r in rows}
     safe_candidates = sorted(
         (b for b in BOUNDARIES if b["type"] in ("additive_gate", "net_new")),
         key=lambda b: (risk_rank.get(b["base_risk"], 9), b["key"]))

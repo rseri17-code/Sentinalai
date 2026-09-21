@@ -5,9 +5,6 @@ All tests are hermetic — each creates an isolated temp file for the graph.
 from __future__ import annotations
 
 import os
-import tempfile
-from dataclasses import asdict
-from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient

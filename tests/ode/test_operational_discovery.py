@@ -162,7 +162,7 @@ class TestDQS:
 
     def test_known_signature_zero_novelty(self):
         d = mine_topology(_history(5), declared_dependencies=[["checkout", "api"]])
-        sig_id = d[0]["discovery_id"]
+        d[0]["discovery_id"]
         # feed the discovery's own signature-id as known -> novelty 0
         from sentinel_core.ode.discovery import _sha16
         known = _sha16([d[0]["discovery_type"], d[0]["signature"]])

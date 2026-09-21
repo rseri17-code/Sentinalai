@@ -6,7 +6,6 @@ import tempfile
 import os
 
 from intelligence.pattern_intelligence import (
-    OperationalPattern,
     PatternIntelligenceStore,
     _canonical_tokens,
     _symptom_signature,

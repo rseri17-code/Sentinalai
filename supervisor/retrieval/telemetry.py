@@ -113,8 +113,8 @@ def load_events(path: str = _DEFAULT_PATH, last_n: int = 100) -> list[dict[str, 
     """Load the last N telemetry events from the log file."""
     try:
         with open(path) as f:
-            lines = [l.strip() for l in f if l.strip()]
-        return [json.loads(l) for l in lines[-last_n:]]
+            lines = [text_line.strip() for text_line in f if text_line.strip()]
+        return [json.loads(text_line) for text_line in lines[-last_n:]]
     except (FileNotFoundError, json.JSONDecodeError):
         return []
 

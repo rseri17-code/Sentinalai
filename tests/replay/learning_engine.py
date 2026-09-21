@@ -7,7 +7,6 @@ instances.
 from __future__ import annotations
 
 from statistics import mean
-from typing import Any
 
 from tests.replay.schemas import (
     BenchmarkRun,

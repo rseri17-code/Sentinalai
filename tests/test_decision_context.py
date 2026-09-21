@@ -12,7 +12,6 @@ import pytest
 
 from sentinel_core.models.decision_context import (
     BlastRadiusProjection,
-    ConfidenceAdjustment,
     DecisionContext,
     _EXPECTED_MODULES,
 )

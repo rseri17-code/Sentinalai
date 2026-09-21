@@ -13,7 +13,6 @@ from sentinel_core.hypotheses import (
     Hypothesis,
     HypothesisEvidence,
     HypothesisGraph,
-    HypothesisScore,
     HypothesisStatus,
     HypothesisTracker,
     HypothesisTransition,

@@ -37,7 +37,8 @@ except ImportError:
     _ClientError = None
 
 try:
-    import anthropic as _anthropic_sdk
+    import anthropic as _anthropic_mod
+    _anthropic_sdk: Any = _anthropic_mod
     _ANTHROPIC_AVAILABLE = True
 except ImportError:
     _anthropic_sdk = None
@@ -613,7 +614,10 @@ def refine_hypothesis(
     # Parse LLM response
     from supervisor.inference_helpers import parse_llm_json
     _parsed = parse_llm_json(result["text"])
-    refined = _parsed.data.get("hypotheses", hypotheses) if _parsed.ok else hypotheses
+    refined = (
+        (_parsed.data or {}).get("hypotheses", hypotheses)
+        if _parsed.ok else hypotheses
+    )
 
     return {
         "refined_hypotheses": refined,

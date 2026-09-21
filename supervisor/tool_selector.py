@@ -328,8 +328,9 @@ def _get_active_playbooks() -> dict[str, list[dict]]:
     """Return the active playbook registry.
 
     When YAML_PLAYBOOKS_ENABLED=true, loads from config/playbooks/*.yaml on first
-    call and caches the result. Falls back to the hardcoded INCIDENT_PLAYBOOKS on
-    any error. Set YAML_PLAYBOOKS_ENABLED=false (default) to use hardcoded playbooks.
+    call (worker aliases applied on that path only) and caches the result. Falls
+    back to the hardcoded INCIDENT_PLAYBOOKS on any error. Set
+    YAML_PLAYBOOKS_ENABLED=false (default) to use hardcoded playbooks.
     """
     if not os.environ.get("YAML_PLAYBOOKS_ENABLED", "false").lower() in ("1", "true", "yes"):
         return INCIDENT_PLAYBOOKS

@@ -10,10 +10,10 @@ or HTTP.  The gateway handles authentication, tool routing, transport,
 response parsing, structured logging, and stub fallback for local dev/tests.
 
 Requires (production):
-    - GATEWAY_MODE=live (or unset with AGENTCORE_GATEWAY_URL set)
+    - GATEWAY_MODE=live (or unset with a gateway URL set)
     - strands-agents SDK  (strands.tools.mcp.MCPClient)
     - mcp SDK             (mcp.client.streamable_http)
-    - AGENTCORE_GATEWAY_URL env var set to the gateway endpoint
+    - MCP_GATEWAY_URL (clone-facing) or AGENTCORE_GATEWAY_URL (legacy alias)
     - OAuth2 client credentials (GATEWAY_OAUTH2_CLIENT_ID + token URL), OR
     - GATEWAY_ACCESS_TOKEN env var for static CUSTOM_JWT auth, OR
       AWS credentials for AWS_IAM (SigV4) auth
@@ -105,11 +105,26 @@ except ImportError:
 
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
 
-# AgentCore Gateway URL — single endpoint for all MCP targets
-AGENTCORE_GATEWAY_URL = os.environ.get("AGENTCORE_GATEWAY_URL", "")
+def _env_gateway_url() -> str:
+    """Read the MCP gateway URL from env.
+
+    ``AGENTCORE_GATEWAY_URL`` wins when both are set (existing deploys).
+    ``MCP_GATEWAY_URL`` is the clone-facing alias.
+    """
+    return (
+        os.environ.get("AGENTCORE_GATEWAY_URL", "").strip()
+        or os.environ.get("MCP_GATEWAY_URL", "").strip()
+    )
+
+
+# Gateway URL — single endpoint for all MCP targets.
+# Import-time snapshot so AGENTCORE_GATEWAY_URL remains patchable by tests
+# and existing compose that sets only that name. MCP_GATEWAY_URL is accepted
+# at import when the AgentCore name is unset.
+AGENTCORE_GATEWAY_URL = _env_gateway_url()
 
 # GATEWAY_MODE is the real stub-vs-live switch (compose sets a URL even in stub).
-#   stub | fixtures  — always in-process stubs, even if AGENTCORE_GATEWAY_URL is set
+#   stub | fixtures  — always in-process stubs, even if a gateway URL is set
 #   live | agentcore — use URL / MCP_*_TOOL_ARN as today
 #   unset / other    — auto: live if URL or ARN is set, else stub (backward compatible)
 GATEWAY_MODE = os.environ.get("GATEWAY_MODE", "").strip().lower()
@@ -154,10 +169,22 @@ def _has_any_arn() -> bool:
     return any(arn for arn in MCP_TOOL_ARNS.values())
 
 
+def resolved_gateway_url() -> str:
+    """Effective MCP gateway URL.
+
+    Prefers the module-level ``AGENTCORE_GATEWAY_URL`` so tests that patch
+    ``workers.mcp_client.AGENTCORE_GATEWAY_URL`` keep working. When that
+    value is empty, falls back to ``MCP_GATEWAY_URL``.
+    """
+    if AGENTCORE_GATEWAY_URL:
+        return AGENTCORE_GATEWAY_URL
+    return os.environ.get("MCP_GATEWAY_URL", "").strip()
+
+
 def force_stub_gateway() -> bool:
     """True when GATEWAY_MODE explicitly requests in-process stubs.
 
-    Compose sets AGENTCORE_GATEWAY_URL even in stub; this flag wins.
+    Compose may set a gateway URL even in stub; this flag wins.
     """
     return GATEWAY_MODE in _STUB_GATEWAY_MODES
 
@@ -168,11 +195,12 @@ def resolved_gateway_mode() -> str:
     ``GATEWAY_MODE=stub`` forces stubs. ``live``/``agentcore`` uses URL/ARNs
     when present. Unset keeps today's auto behavior (URL or ARN → live).
     """
+    url = resolved_gateway_url()
     if force_stub_gateway():
         return "stub"
     if GATEWAY_MODE in _LIVE_GATEWAY_MODES:
-        return "live" if (AGENTCORE_GATEWAY_URL or _has_any_arn()) else "stub"
-    if AGENTCORE_GATEWAY_URL or _has_any_arn():
+        return "live" if (url or _has_any_arn()) else "stub"
+    if url or _has_any_arn():
         return "live"
     return "stub"
 
@@ -647,7 +675,7 @@ class McpGateway:
         # OAuth2 provider (lazy-init from env if not injected)
         self._oauth2_provider = oauth2_provider
         # Fast-path: skip rate limiting for in-process stubs
-        stub_mode = force_stub_gateway() or not AGENTCORE_GATEWAY_URL
+        stub_mode = force_stub_gateway() or not resolved_gateway_url()
         self._rate_limiter = rate_limiter or RateLimiterRegistry(
             unlimited=stub_mode,
         )
@@ -747,7 +775,7 @@ class McpGateway:
             return _stub_response(mcp_tool_name, tool_action, params)
 
         # Priority 1: AgentCore gateway (MCP protocol — production path)
-        if AGENTCORE_GATEWAY_URL and _MCP_SDK_AVAILABLE:
+        if resolved_gateway_url() and _MCP_SDK_AVAILABLE:
             return self._invoke_via_gateway(mcp_tool_name, tool_action, params)
 
         # Priority 2: Legacy per-server ARNs (invoke_inline_agent)
@@ -879,10 +907,10 @@ class McpGateway:
         if not _MCP_SDK_AVAILABLE:
             logger.debug("strands/mcp SDK not installed — MCP gateway disabled")
             return None
-        if not AGENTCORE_GATEWAY_URL:
+        gateway_url = resolved_gateway_url()
+        if not gateway_url:
             return None
         try:
-            gateway_url = AGENTCORE_GATEWAY_URL
             if not gateway_url.endswith("/mcp"):
                 gateway_url = f"{gateway_url}/mcp"
 
@@ -1030,14 +1058,14 @@ class McpGateway:
         if explicit_url:
             discovery_url = explicit_url
         elif force_stub_gateway():
-            # Do not probe AGENTCORE_GATEWAY_URL while the process is in stub mode.
+            # Do not probe the gateway URL while the process is in stub mode.
             if stub_url:
                 discovery_url = stub_url.rstrip("/") + "/tools"
             else:
                 logger.debug("GATEWAY_MODE=stub — assuming all in-process stub tools")
                 return self._ALL_KNOWN_SERVERS
-        elif AGENTCORE_GATEWAY_URL:
-            discovery_url = AGENTCORE_GATEWAY_URL.rstrip("/") + "/tools"
+        elif resolved_gateway_url():
+            discovery_url = resolved_gateway_url().rstrip("/") + "/tools"
         elif stub_url:
             discovery_url = stub_url.rstrip("/") + "/tools"
         else:
@@ -1257,7 +1285,8 @@ def _stub_github(action: str, params: dict) -> dict:
             "stub": True,
             "error": "github_gateway_not_configured",
             "detail": ("No PR was created — GitHub gateway is not configured "
-                       "(stub mode). Configure AGENTCORE_GATEWAY_URL to enable "
+                       "(stub mode). Configure MCP_GATEWAY_URL (or "
+                       "AGENTCORE_GATEWAY_URL) to enable "
                        "real remediation."),
         }
     if "pr" in action or "pull" in action:

@@ -1,0 +1,66 @@
+# Vendor-neutral YAML playbook worker aliases (Slice 4).
+#
+# Applied only when YAML_PLAYBOOKS_ENABLED=true. Overlay is merged on top of
+# supervisor.playbook_loader.DEFAULT_WORKER_ALIASES. Canonical names
+# (log_worker, apm_worker, …) always pass through.
+#
+# Map your team's names here instead of rewriting config/playbooks/*.yaml.
+# Override the file path with WORKER_ALIASES_PATH.
+#
+# MCP target names (SplunkTarget, …) are a different layer — set
+# AGENTCORE_TARGET_* so McpGateway rewrites dotted tool names. See
+# docs/clone/CONNECT_YOUR_ENVIRONMENT.md.
+
+aliases:
+  # logs → log_worker (MCP server: splunk)
+  logs: log_worker
+  log: log_worker
+  splunk: log_worker
+  elasticsearch: log_worker
+  elk: log_worker
+  loki: log_worker
+
+  # metrics → metrics_worker (MCP server: sysdig)
+  metrics: metrics_worker
+  prometheus: metrics_worker
+  sysdig: metrics_worker
+  datadog: metrics_worker
+  cloudwatch: metrics_worker
+
+  # apm → apm_worker (MCP servers: dynatrace, signalfx)
+  apm: apm_worker
+  dynatrace: apm_worker
+  signalfx: apm_worker
+  newrelic: apm_worker
+  traces: apm_worker
+
+  # itsm → itsm_worker (MCP server: servicenow)
+  itsm: itsm_worker
+  servicenow: itsm_worker
+  jira: itsm_worker
+  pagerduty: itsm_worker
+
+  # ops / events
+  ops: ops_worker
+  moogsoft: ops_worker
+  events: event_worker
+
+  # devops / git
+  devops: devops_worker
+  github: devops_worker
+  gitlab: devops_worker
+  ci: devops_worker
+  git: git_worker
+
+  # docs / knowledge
+  confluence: confluence_worker
+  wiki: confluence_worker
+  docs: confluence_worker
+  knowledge: knowledge_worker
+
+  # network / code / planner aliases
+  network: network_worker
+  thousandeyes: network_worker
+  code: code_worker
+  signals: signal_worker
+  changes: change_worker

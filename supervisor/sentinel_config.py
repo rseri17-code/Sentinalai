@@ -405,7 +405,9 @@ class SentinelConfig:
 
         workers = WorkersConfig(
             aws_region=_str("AWS_REGION", "us-east-1"),
-            agentcore_gateway_url=_str("AGENTCORE_GATEWAY_URL", ""),
+            agentcore_gateway_url=(
+                _str("AGENTCORE_GATEWAY_URL", "") or _str("MCP_GATEWAY_URL", "")
+            ),
             gateway_mode=_str("GATEWAY_MODE", "").strip().lower(),
             gateway_token_refresh_buffer_seconds=_int("GATEWAY_TOKEN_REFRESH_BUFFER_SECONDS", 600),
             mcp_call_timeout_seconds=_int("MCP_CALL_TIMEOUT_SECONDS", 30),

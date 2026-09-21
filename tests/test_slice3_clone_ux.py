@@ -8,7 +8,7 @@ import pytest
 
 import supervisor.llm as llm_module
 import workers.mcp_client as mc
-from agui.main import build_tools_health
+from agui.tools_health import build_tools_health
 from workers.mcp_client import McpGateway, force_stub_gateway, resolved_gateway_mode
 
 
@@ -108,9 +108,8 @@ class TestSingleEnvTemplate:
         assert "GATEWAY_MODE=stub" in text
         assert "AGENTCORE_GATEWAY_URL" in text
         assert "NOT implemented" in text
-        assert "openai" in text.lower()
-        # no first-class OpenAI as a live investigation provider
-        assert "LLM_PROVIDER=openai" not in text
+        assert "do not set LLM_PROVIDER=openai" in text
+        assert not any(line.strip() == "LLM_PROVIDER=openai" for line in text.splitlines())
 
     def test_template_is_pointer_not_second_source(self):
         text = (ROOT / ".env.template").read_text()

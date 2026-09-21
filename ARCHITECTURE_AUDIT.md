@@ -1,5 +1,12 @@
 # SentinalAI — Architectural Capability Assessment
 
+> **2026-09-21:** For the model-agnostic / clone-and-run SRE-agent audit (current-state
+> architecture, coupling map, target InferencePort boundary, and migration plan), see
+> [`docs/architecture/model_agnostic_sre_agent.md`](docs/architecture/model_agnostic_sre_agent.md)
+> and [`docs/architecture/model_coupling_table.md`](docs/architecture/model_coupling_table.md).
+> This March 2026 assessment is retained as historical context; the live investigation
+> pipeline is `supervisor/agent.py::investigate` (FETCH → CLASSIFY → COLLECT → ANALYZE → PERSIST).
+
 **Audit Date:** 2026-03-07 (updated 2026-03-08)
 **Auditor Role:** Principal Infrastructure Engineer
 **Scope:** Enterprise AI Agent for Production SRE Operations — Automated Incident Root Cause Analysis

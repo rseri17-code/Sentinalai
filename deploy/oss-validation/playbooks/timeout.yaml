@@ -1,0 +1,18 @@
+name: timeout
+description: >
+  Optional OSS-oriented timeout playbook. Loaded only when
+  YAML_PLAYBOOKS_ENABLED=true and PLAYBOOKS_DIR points here.
+  Worker aliases (loki, prometheus, ops) resolve on this path only —
+  hardcoded INCIDENT_PLAYBOOKS are unchanged when the flag is off.
+steps:
+  - worker: loki
+    action: search_logs
+    label: search_timeout_logs
+    query_hint: "timeout {service}"
+  - worker: prometheus
+    action: query_metrics
+    label: check_latency_metrics
+    metric_hint: response_time_ms
+  - worker: logs
+    action: get_change_data
+    label: check_changes

@@ -331,9 +331,9 @@ class TestEndToEndAttachment:
         from unittest.mock import patch
         supervisor = self._make_supervisor()
         # Suppress hypothesis priming for a deterministic run
-        with patch("supervisor.agent._retrieve_experiences", return_value=[]), \
-             patch("supervisor.agent._get_tool_recommendations", return_value={}), \
-             patch("supervisor.agent._kg_query_similar", return_value=[]), \
+        with patch("supervisor.agent._retrieve_experiences", return_value=[], create=True), \
+             patch("supervisor.agent._get_tool_recommendations", return_value={}, create=True), \
+             patch("supervisor.agent._kg_query_similar", return_value=[], create=True), \
              patch("supervisor.experience_store.retrieve_similar", return_value=[]), \
              patch("supervisor.experience_store.get_tool_recommendations", return_value={}), \
              patch("supervisor.knowledge_graph.query_similar", return_value=[]):
@@ -350,9 +350,9 @@ class TestEndToEndAttachment:
     def test_existing_result_fields_still_present(self):
         from unittest.mock import patch
         supervisor = self._make_supervisor()
-        with patch("supervisor.agent._retrieve_experiences", return_value=[]), \
-             patch("supervisor.agent._get_tool_recommendations", return_value={}), \
-             patch("supervisor.agent._kg_query_similar", return_value=[]), \
+        with patch("supervisor.agent._retrieve_experiences", return_value=[], create=True), \
+             patch("supervisor.agent._get_tool_recommendations", return_value={}, create=True), \
+             patch("supervisor.agent._kg_query_similar", return_value=[], create=True), \
              patch("supervisor.experience_store.retrieve_similar", return_value=[]), \
              patch("supervisor.experience_store.get_tool_recommendations", return_value={}), \
              patch("supervisor.knowledge_graph.query_similar", return_value=[]):

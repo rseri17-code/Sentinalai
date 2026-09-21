@@ -29,7 +29,7 @@ session-level reasoning: why this approach over that one, what was rejected.
 - **Why rejected**: Playbooks already call MCP workers; planner already asks for JSON `{worker, action, params}`. SRE analyzers are deterministic and CI-proven with `LLM_ENABLED=false`. A new framework would touch SRE-domain code and break `tests/test_inference_contracts.py` / `tests/test_determinism.py`.
 - **Reversible**: yes (adapters are additive)
 - **Session**: `cursor/model-agnostic-sre-audit-7096`
-- **Evidence**: `supervisor/llm.py`, `sentinel_core/models/inference.py`, `supervisor/planner.py`, `.github/workflows/ci.yml`
+- **Evidence**: `supervisor/llm.py`, `sentinel_core/models.inference.py`, `supervisor/planner.py`, `.github/workflows/ci.yml`
 
 ### Decision 2 — 2026-09-21: LLM is an overlay; clone-and-run path is stubs + LLM off
 - **Task context**: Distinguish true architectural dependencies from config.
@@ -47,5 +47,13 @@ session-level reasoning: why this approach over that one, what was rejected.
 - **Why rejected**: `rg GATEWAY_MODE --glob '*.py'` is empty.
 - **Reversible**: yes (implement the env var later or delete it from docs)
 - **Session**: `cursor/model-agnostic-sre-audit-7096`
+
+### Decision 4 — 2026-09-21: converse() is an InferencePort facade
+- **Task context**: Slice 1 of the model-agnostic audit — make converse() resolve a port from env without SRE-domain edits.
+- **Decision**: Keep Bedrock Converse inside `BedrockInference` in `supervisor/llm.py`. `converse()` always calls `get_inference_port()`. `LLM_ENABLED` defaults false. `LLM_PROVIDER=null|none|disabled` → NullInference; `bedrock` (default when enabled) → Bedrock. Unknown providers (anthropic/openai) → NullInference + warning until Slice 2.
+- **Rejected alternative**: New `supervisor/providers/` package, LiteLLM, or changing agent.py to take a port.
+- **Why rejected**: Smallest boundary is the existing converse() dict; tests patch `_get_client` / `LLM_ENABLED` on llm.py. A new package can wait for Slice 2.
+- **Reversible**: yes
+- **Session**: `cursor/llm-inference-port-facade-7096`
 
 _Update this file during session. Promote significant entries to tasks/decisions.md._

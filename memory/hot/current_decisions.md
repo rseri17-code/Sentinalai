@@ -10,6 +10,8 @@
 - [DECISION] Document vs source: `GATEWAY_MODE` and `.env.example` LLM_PROVIDER are unused by Python. Live MCP switch is `AGENTCORE_GATEWAY_URL`; live LLM is Bedrock only (`supervisor/llm.py`).
 - [DECISION] Dev-loop `anthropic.Anthropic().messages.create` in review_responder/ci_shepherd/dev_loop_agent is out of scope for SRE model-agnosticism.
 - [PATTERN] [PROMOTE: rca_patterns] When adding LLM providers, keep `tests/test_determinism.py`, converse() dict-shape tests, INC12345 expected RCA, and MCP stub path unchanged.
+- [DECISION] [PROMOTE: operational_decision_ledger] Slice 1: converse() facade over InferencePort; Bedrock stays in llm.py; LLM_ENABLED default false; unknown providers NullInference until Slice 2.
+- [DECISION] Follow-up PR from main (not the audit branch) so the docs audit stays docs-only.
 
 ## Format
 

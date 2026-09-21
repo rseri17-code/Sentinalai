@@ -48,13 +48,16 @@ class TestDefaults:
 
     def test_supervisor_defaults(self, monkeypatch):
         for key in (
-            "LLM_ENABLED", "AGENTIC_PLANNER", "YAML_PLAYBOOKS_ENABLED",
+            "LLM_ENABLED", "LLM_PROVIDER", "LLM_MODEL", "BEDROCK_MODEL_ID",
+            "AGENTIC_PLANNER", "YAML_PLAYBOOKS_ENABLED",
             "LOOP_CONTROLLER_ENABLED", "STRATEGY_EVOLVER_ENABLED",
             "ALERT_DEDUP_ENABLED", "AGUI_ENABLED",
         ):
             monkeypatch.delenv(key, raising=False)
         cfg = SentinelConfig.from_env()
         assert cfg.supervisor.llm_enabled is False
+        assert cfg.supervisor.llm_provider == "bedrock"
+        assert cfg.supervisor.llm_model == "anthropic.claude-sonnet-4-5-20250929-v1:0"
         assert cfg.supervisor.agentic_planner is False
         assert cfg.supervisor.yaml_playbooks_enabled is False
         assert cfg.supervisor.loop_controller_enabled is False
@@ -167,6 +170,23 @@ class TestEnvOverrides:
         monkeypatch.setenv("SLACK_RCA_CHANNEL", "#custom-channel")
         cfg = SentinelConfig.from_env()
         assert cfg.integrations.slack_rca_channel == "#custom-channel"
+
+    def test_llm_provider_override(self, monkeypatch):
+        monkeypatch.setenv("LLM_PROVIDER", "null")
+        cfg = SentinelConfig.from_env()
+        assert cfg.supervisor.llm_provider == "null"
+
+    def test_llm_model_prefers_llm_model_over_bedrock_id(self, monkeypatch):
+        monkeypatch.setenv("LLM_MODEL", "my-portable-model")
+        monkeypatch.setenv("BEDROCK_MODEL_ID", "anthropic.ignored")
+        cfg = SentinelConfig.from_env()
+        assert cfg.supervisor.llm_model == "my-portable-model"
+
+    def test_llm_model_falls_back_to_bedrock_id(self, monkeypatch):
+        monkeypatch.delenv("LLM_MODEL", raising=False)
+        monkeypatch.setenv("BEDROCK_MODEL_ID", "anthropic.custom-bedrock")
+        cfg = SentinelConfig.from_env()
+        assert cfg.supervisor.llm_model == "anthropic.custom-bedrock"
 
 
 # ---------------------------------------------------------------------------

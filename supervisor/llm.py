@@ -1,12 +1,14 @@
-"""Bedrock Converse API client for SentinalAI.
+"""Investigation LLM facade for SentinalAI.
 
-Uses Claude via Amazon Bedrock's Converse API for:
-- Hypothesis refinement: given evidence, refine and re-rank hypotheses
-- Reasoning generation: produce human-readable explanations
-- Confidence calibration: LLM-assisted confidence adjustment
+``converse()`` is the SRE-facing API. It resolves an ``InferencePort`` from
+env and returns the same dict shape as the original Bedrock Converse client:
 
-Falls back gracefully when Bedrock is unavailable or BEDROCK_MODEL_ID is unset.
-All calls emit GenAI semantic convention attributes for OTEL tracing.
+- ``LLM_ENABLED=false`` or ``LLM_PROVIDER=null`` → ``NullInference``
+- ``LLM_PROVIDER=bedrock`` (default when enabled) → Bedrock Converse
+
+Callers (hypothesis refine, reasoning, classify fallback, planner, judge)
+must not import a provider SDK. Slice 2 may add further adapters behind this
+same port; they are not implemented here.
 """
 
 from __future__ import annotations
@@ -38,13 +40,24 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
-MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "anthropic.claude-sonnet-4-5-20250929-v1:0")
+# LLM_MODEL is the portable name; BEDROCK_MODEL_ID remains the Bedrock alias.
+MODEL_ID = (
+    os.environ.get("LLM_MODEL")
+    or os.environ.get("BEDROCK_MODEL_ID")
+    or "anthropic.claude-sonnet-4-5-20250929-v1:0"
+)
 LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.0"))
 LLM_MAX_TOKENS = int(os.environ.get("LLM_MAX_TOKENS", "2048"))
-LLM_ENABLED = os.environ.get("LLM_ENABLED", "true").lower() in ("true", "1", "yes")
+# Default false — matches CI, SentinelConfig, and classify_incident.
+LLM_ENABLED = os.environ.get("LLM_ENABLED", "false").lower() in ("true", "1", "yes")
+# null | none | disabled → NullInference; bedrock (default) → Bedrock Converse.
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "bedrock").strip().lower() or "bedrock"
 # Token-bucket: max concurrent LLM calls and per-minute call cap
 LLM_MAX_CONCURRENT = int(os.environ.get("LLM_MAX_CONCURRENT", "5"))
 LLM_MAX_CALLS_PER_MIN = int(os.environ.get("LLM_MAX_CALLS_PER_MIN", "60"))
+
+_NULL_PROVIDERS = frozenset({"null", "none", "disabled"})
+_unknown_provider_warned = False
 
 # ---------------------------------------------------------------------------
 # Token-bucket rate limiter — prevents 429s under concurrent investigations
@@ -135,13 +148,97 @@ def _get_client():
             return None
 
 
+def _resolved_provider() -> str:
+    """Normalize LLM_PROVIDER. Empty/unset → bedrock."""
+    raw = (LLM_PROVIDER or "bedrock").strip().lower()
+    if raw in _NULL_PROVIDERS:
+        return "null"
+    return raw or "bedrock"
+
+
 def is_enabled() -> bool:
-    """Check whether LLM calls are enabled and configured."""
-    return bool(LLM_ENABLED and MODEL_ID and _BOTO3_AVAILABLE)
+    """Check whether a live (non-null) inference backend is configured.
+
+    True only when LLM_ENABLED is on, a model id is set, the provider is
+    bedrock, and boto3 is importable. Null/unknown providers and the
+    default-off flag keep the investigation path LLM-free.
+    """
+    if not LLM_ENABLED or not MODEL_ID:
+        return False
+    if _resolved_provider() != "bedrock":
+        return False
+    return bool(_BOTO3_AVAILABLE)
+
+
+def get_inference_port() -> Any:
+    """Resolve the InferencePort for this process env (no cache — test-safe).
+
+    Returns NullInference when disabled, provider=null, or the provider is
+    not yet implemented. Returns BedrockInference when bedrock is selected
+    and enabled.
+    """
+    global _unknown_provider_warned
+    from supervisor.inference_helpers import NullInference
+
+    provider = _resolved_provider()
+    if not LLM_ENABLED or not MODEL_ID or provider == "null":
+        return NullInference(model_id=MODEL_ID)
+    if provider != "bedrock":
+        if not _unknown_provider_warned:
+            logger.warning(
+                "LLM_PROVIDER=%r is not implemented; using NullInference "
+                "(supported: null, bedrock)",
+                LLM_PROVIDER,
+            )
+            _unknown_provider_warned = True
+        return NullInference(model_id=MODEL_ID)
+    if not _BOTO3_AVAILABLE:
+        return NullInference(model_id=MODEL_ID)
+    return _BEDROCK_PORT
 
 
 # ---------------------------------------------------------------------------
-# Core: Bedrock Converse API call
+# Bedrock InferencePort
+# ---------------------------------------------------------------------------
+
+class BedrockInference:
+    """InferencePort backed by Amazon Bedrock Converse.
+
+    Request/response translation stays in this adapter. SRE callers use
+    converse() and never construct this class themselves.
+    """
+
+    def __call__(
+        self,
+        system_prompt: str,
+        user_message: str,
+        model_id: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> dict[str, Any]:
+        client = _get_client()
+        if client is None:
+            return _disabled_response()
+
+        limiter = _get_rate_limiter()
+        if not limiter.acquire(timeout=30.0):
+            logger.warning(
+                "LLM rate limiter timeout — dropping call (too many concurrent requests)"
+            )
+            return {**_disabled_response(), "error": "rate_limited"}
+        try:
+            return _do_converse(
+                client, system_prompt, user_message, model_id, temperature, max_tokens
+            )
+        finally:
+            limiter.release()
+
+
+_BEDROCK_PORT = BedrockInference()
+
+
+# ---------------------------------------------------------------------------
+# Core: converse() facade
 # ---------------------------------------------------------------------------
 
 def converse(
@@ -151,12 +248,12 @@ def converse(
     temperature: float | None = None,
     max_tokens: int | None = None,
 ) -> dict[str, Any]:
-    """Call Bedrock Converse API with Claude.
+    """Run one inference call via the resolved InferencePort.
 
     Args:
         system_prompt: System-level instructions
         user_message: User message content
-        model_id: Override model ID (default: BEDROCK_MODEL_ID env var)
+        model_id: Override model ID (default: LLM_MODEL / BEDROCK_MODEL_ID)
         temperature: Override temperature (default: LLM_TEMPERATURE env var)
         max_tokens: Override max tokens (default: LLM_MAX_TOKENS env var)
 
@@ -169,22 +266,8 @@ def converse(
             latency_ms: Call duration in milliseconds
             stop_reason: Why generation stopped
     """
-    if not is_enabled():
-        return _disabled_response()
-
-    client = _get_client()
-    if client is None:
-        return _disabled_response()
-
-    # Rate-limit: block until a call slot is free (max 30s wait)
-    limiter = _get_rate_limiter()
-    if not limiter.acquire(timeout=30.0):
-        logger.warning("LLM rate limiter timeout — dropping call (too many concurrent requests)")
-        return {**_disabled_response(), "error": "rate_limited"}
-    try:
-        return _do_converse(client, system_prompt, user_message, model_id, temperature, max_tokens)
-    finally:
-        limiter.release()
+    port = get_inference_port()
+    return port(system_prompt, user_message, model_id, temperature, max_tokens)
 
 
 def _do_converse(
@@ -421,6 +504,7 @@ def converse_typed(
 
 
 def dispose() -> None:
-    """Release the boto3 client."""
-    global _client
+    """Release the boto3 client and unknown-provider warning latch."""
+    global _client, _unknown_provider_warned
     _client = None
+    _unknown_provider_warned = False

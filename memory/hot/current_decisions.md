@@ -4,7 +4,7 @@
 <!-- Format: bullet list. Add [PROMOTE: target] to flag for promotion. -->
 
 - [DECISION] [PROMOTE: operational_decision_ledger] Slice 1: converse() facade over InferencePort; Bedrock stays in llm.py; LLM_ENABLED default false; unknown providers NullInference until Slice 2.
-- [DECISION] Follow-up PR from main (not the audit branch) so the docs audit stays docs-only.
+- [DECISION] [PROMOTE: operational_decision_ledger] Slice 2: AnthropicInference behind converse()/get_inference_port(); LLM_PROVIDER=anthropic; credentials at call-time; set_inference_port for tests A–D. No SRE-domain edits.
 
 ## Format
 

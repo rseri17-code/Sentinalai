@@ -11,7 +11,7 @@
 - [DECISION] Dev-loop `anthropic.Anthropic().messages.create` in review_responder/ci_shepherd/dev_loop_agent is out of scope for SRE model-agnosticism.
 - [PATTERN] [PROMOTE: rca_patterns] When adding LLM providers, keep `tests/test_determinism.py`, converse() dict-shape tests, INC12345 expected RCA, and MCP stub path unchanged.
 - [DECISION] [PROMOTE: operational_decision_ledger] Slice 1: converse() facade over InferencePort; Bedrock stays in llm.py; LLM_ENABLED default false; unknown providers NullInference until Slice 2.
-- [DECISION] [PROMOTE: operational_decision_ledger] Slice 3: GATEWAY_MODE=stub forces MCP stubs even if AGENTCORE_GATEWAY_URL is set; unset keeps URL-auto. Single .env.example; health uses is_enabled()+port class. LICENSE left to owner.
+- [DECISION] [PROMOTE: operational_decision_ledger] Slice 5: OpenAI Chat Completions InferencePort in llm.py; same converse dict + Anthropic error taxonomy; OPENAI_API_KEY call-time never logged; factory warning lists openai.
 
 ## Format
 

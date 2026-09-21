@@ -3,6 +3,8 @@
 Companion to [`model_agnostic_sre_agent.md`](model_agnostic_sre_agent.md).  
 **Rule:** every row cites source. Kind is `architectural` (needs a substitute component or code) vs `config` (env/file can change it without SRE logic changes) vs `docs-drift` (documented but not implemented) vs `test-only`.
 
+**Status (2026-09-21):** Rows captured audit-time couplings at `0d625ec`. Slices 1–5 shipped: `converse()` factory (M12/M25), Anthropic + OpenAI adapters (M14/M18), `GATEWAY_MODE` honored (T2), YAML aliases (T17). Remaining: LICENSE (O6), AgentCore Memory (R1), CI lint debt UNKNOWN/pre-existing. Kind values below are **audit-time**; see the architecture doc banner for current status.
+
 SRE-domain files (`supervisor/agent.py` analyzers, `supervisor/tool_selector.py` playbooks, `supervisor/helpers/confidence.py`, evidence gates) should not appear as *model* couplings unless they call `converse()` / `is_enabled()`.
 
 ---
@@ -162,15 +164,17 @@ Changing P1–P5 is **not** required for model-agnosticism. Adapters must tolera
 
 ## H. Docs that contradict source (fix in slice 0–3)
 
-| Doc | Claim | Source reality |
+Audit-time contradictions. Slice 0–5 status:
+
+| Doc | Audit-time claim | Now |
 |---|---|---|
-| `.env.example` §1 | Anthropic/OpenAI/Bedrock selectable | Only Bedrock `converse()` |
-| `README.md` live data | `GATEWAY_MODE=stub` default | Env var unused; URL/ARN decide |
-| `docs/certification/PRODUCT_READINESS_AUDIT.md` | same GATEWAY_MODE claim | same |
-| `supervisor/phases/__init__.py` | phases are scaffolds | `investigate()` runs them |
-| `ARCHITECTURE_AUDIT.md` (2026-03) | pre-phase agent flow | superseded |
-| `agui` health | LLM ready if any vendor key set | Keys unused by `llm.py` |
-| `Dockerfile` comments | `cp .env.template` | `.env.example` is the other template |
+| `.env.example` §1 | Anthropic/OpenAI/Bedrock selectable | **True** for null/bedrock/anthropic/openai behind `converse()` |
+| `README.md` live data | `GATEWAY_MODE=stub` default | **Honored** (Slice 3) |
+| `docs/certification/PRODUCT_READINESS_AUDIT.md` | same GATEWAY_MODE claim | Aligns with Slice 3 if still listed |
+| `supervisor/phases/__init__.py` | phases are scaffolds | still stale comment vs live `investigate()` |
+| `ARCHITECTURE_AUDIT.md` (2026-03) | pre-phase agent flow | superseded by this document |
+| `agui` health | LLM ready if any vendor key set | **Fixed** Slice 3 — reports port class |
+| `Dockerfile` comments | `cp .env.template` | `.env.template` points at `.env.example` |
 
 ---
 

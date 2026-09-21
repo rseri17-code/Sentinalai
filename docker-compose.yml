@@ -41,6 +41,7 @@ services:
       # Investigation LLM overlay (OFF by default; keys alone do not enable it)
       - LLM_ENABLED=${LLM_ENABLED:-false}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - LLM_PROVIDER=${LLM_PROVIDER:-null}
       - LLM_MODEL=${LLM_MODEL:-}
       # Auth

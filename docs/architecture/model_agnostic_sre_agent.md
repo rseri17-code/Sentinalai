@@ -1,9 +1,26 @@
 # Model-Agnostic SRE Investigation Agent — Architecture Audit
 
-**Status:** AUDIT ONLY. No provider abstraction implemented in this change.  
-**Date:** 2026-09-21  
-**Source of truth:** this repository as of commit `0d625ec` (branch `main` at audit time).  
-**Method:** OBSERVE → REASON → ACT → VERIFY → LEARN. Claims cite source, config, tests, or runtime artifacts. Anything not provable from the repo is marked **UNKNOWN**.
+**Status:** Slices 0–4 SHIPPED on `main` (#76–#80). Slice 5 (OpenAI Chat Completions `InferencePort`) is this PR.  
+**Date:** 2026-09-21 (audit at `25579b6` / `0d625ec`; implementation through Slice 5)  
+**Source of truth:** this repository on `main` after #80, plus this PR for OpenAI.  
+**Method:** OBSERVE → REASON → ACT → VERIFY → LEARN. Original audit claims cited source at commit `0d625ec`. Implementation status in the banner and §1.11 / §2 / §5 / §8 / §9 **supersedes** audit-time “Bedrock-only / GATEWAY_MODE unread” statements.
+
+**Shipped on main**
+| Slice | PR | What |
+|---|---|---|
+| 0 | #76 | Docs/config honesty (this audit) |
+| 1 | #77 | `converse()` factory over `InferencePort`; `LLM_ENABLED` default false |
+| 2 | #78 | Anthropic Messages adapter; acceptance A–D |
+| 3 | #79 | `GATEWAY_MODE` honored; single `.env.example`; health reports real port |
+| 4 | #80 | `MCP_GATEWAY_URL` alias; YAML playbook worker aliases |
+| 5 | this PR | OpenAI Chat Completions adapter behind the same port |
+
+**Remaining (not this PR)**
+- LICENSE / OSS grant — **owner deciding separately**
+- AgentCore Memory portable replacement — **optional overlay**; JSON KG / experience store remain the clone path
+- Token streaming, native tool-use, routing dev-loop Anthropic clients through `InferencePort`
+- Whole-repo ruff / mypy / bandit cleanup — **UNKNOWN / pre-existing on `main`**; do not treat as Slice 5 debt
+- Equal live-provider RCA quality on production incidents — **UNKNOWN** (gold n=3)
 
 This document answers five questions:
 
@@ -23,7 +40,9 @@ Related existing docs (not replaced): [`README.md`](../../README.md), [`docs/arc
 
 **In scope:** evidence-backed current-state architecture; coupling map; target model-agnostic contract; gap analysis; smallest provider boundary; prioritized migration plan; acceptance tests.
 
-**Out of scope (this PR and this plan’s first implementation slice):** refactoring `supervisor/agent.py` SRE logic; changing production prompts; changing MCP integrations; implementing Anthropic/OpenAI/Bedrock adapters; enabling live writebacks; relicensing the repo.
+**Out of scope for the original audit PR and still out of scope for Slice 5:** refactoring `supervisor/agent.py` SRE logic; changing production prompts; changing MCP integrations; enabling live writebacks; relicensing the repo; token streaming; native LLM tool-use; AgentCore Memory replacement.
+
+Adapters (Null / Bedrock / Anthropic / OpenAI) are **implemented** behind `converse()` as of Slices 1–5. The original audit did not implement them.
 
 ---
 
@@ -77,9 +96,10 @@ There is **no** JSON Schema / OpenAPI artifact in-repo that defines a provider-a
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ 4. Model / provider layer                                       │
-│    supervisor/llm.py  (Bedrock Converse only)                   │
-│    InferencePort + NullInference (contract exists, unused live) │
-│    anthropic SDK in review_responder / ci_shepherd /            │
+│    supervisor/llm.py  converse() → InferencePort factory        │
+│    NullInference | BedrockInference | AnthropicInference |      │
+│    OpenAIInference (LLM_PROVIDER; default overlay OFF)          │
+│    anthropic SDK also in review_responder / ci_shepherd /       │
 │    dev_loop_agent (NOT on the SRE investigate() path)           │
 └────────────────────────────┬────────────────────────────────────┘
                              │ converse() / refine_hypothesis()
@@ -103,7 +123,7 @@ There is **no** JSON Schema / OpenAPI artifact in-repo that defines a provider-a
                                   └───────────────────────────────┘
 ```
 
-**Architectural fact:** SRE intelligence (concern 1) and MCP tools (concern 2) do not import Anthropic or OpenAI. They call `supervisor.llm.converse` / `is_enabled` or they do not call an LLM at all. The **live** provider implementation (concern 4) is Bedrock-only.
+**Architectural fact:** SRE intelligence (concern 1) and MCP tools (concern 2) do not import Anthropic or OpenAI. They call `supervisor.llm.converse` / `is_enabled` or they do not call an LLM at all. Live investigation providers are selected by `LLM_PROVIDER` behind `converse()` (null / bedrock / anthropic / openai).
 
 ### 1.4 Investigation / RCA flow (canonical)
 
@@ -172,7 +192,7 @@ Auth priority: OAuth2 client-credentials (Cognito-shaped) → static `GATEWAY_AC
 
 Hard-coded vendor servers in `_TOOL_TO_SERVER` / `_WORKER_SERVERS`: moogsoft, splunk, sysdig, signalfx, dynatrace, servicenow, github, confluence, kubernetes (`workers/mcp_client.py:351+`; `supervisor/agent.py:237-254`). Playbooks assume those workers exist (`supervisor/tool_selector.py:29-101`).
 
-**Stub fallback is the open-source-friendly path:** no gateway URL and no ARNs → `_stub_response` (`workers/mcp_client.py:713-715`). `GATEWAY_MODE` is **documented** in `.env.example`, README, compose, and certification docs, but **no Python file reads `GATEWAY_MODE`**. Live vs stub is decided solely by `AGENTCORE_GATEWAY_URL` / ARNs / MCP SDK availability.
+**Stub fallback is the open-source-friendly path:** `GATEWAY_MODE=stub` (compose default) forces `_stub_response` even if a gateway URL is set (Slice 3, #79). Unset `GATEWAY_MODE` still auto-selects live when `MCP_GATEWAY_URL` / `AGENTCORE_GATEWAY_URL` or ARNs are present. `MCP_GATEWAY_URL` aliases `AGENTCORE_GATEWAY_URL` (Slice 4, #80).
 
 ### 1.8 Evidence model
 
@@ -213,28 +233,28 @@ Structured output is **prompt-enforced JSON**, parsed by `parse_llm_json` (`supe
 
 **Investigation path (must remain provider-independent at the SRE layer):**
 
-- Single client: `supervisor/llm.py`.
-- Transport: `boto3.client("bedrock-runtime").converse(...)` (`supervisor/llm.py:122-131`, `:204-217`).
-- Default model id: `BEDROCK_MODEL_ID` or `anthropic.claude-sonnet-4-5-20250929-v1:0` (`supervisor/llm.py:41`).
-- `LLM_ENABLED` default **`"true"`** in `llm.py:44` — **conflicts** with `sentinel_config.py:304` default **false** and `classify_incident` default **false**.
-- `is_enabled()` requires `LLM_ENABLED` and boto3 installed (`supervisor/llm.py:138-140`). Unset `BEDROCK_MODEL_ID` still has a default, so “unset model → disabled” in the module docstring is **false**.
-- Call shape: system text + single user message; `inferenceConfig.temperature` + `maxTokens`. **No tools, no streaming, no response_format.**
-- Retries: botocore adaptive, `max_attempts: 2` (`supervisor/llm.py:126`).
-- Rate limit: in-process token bucket (`LLM_MAX_CONCURRENT`, `LLM_MAX_CALLS_PER_MIN`).
-- Typed contract already exists: `InferencePort`, `InferenceRequest`, `InferenceResponse`, `NullInference` (`sentinel_core/models/inference.py:109-124`; `supervisor/inference_helpers.py:62-105`). Live `converse()` is **not** selected through a factory; it always hits Bedrock.
-
-**Documented but not implemented on the investigation path:**
-
-- `.env.example` `LLM_PROVIDER=anthropic|openai|bedrock`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `LLM_MODEL=claude-sonnet-4-6`.
-- `agui/main.py:238-247` health endpoint reports `LLM_PROVIDER` and key presence; it does **not** select a client.
-- `requirements.txt` lists `anthropic` as a core dep; `openai` is commented optional. `pyproject.toml` lists both `anthropic` and `openai` plus `boto3`, `strands-agents`, `mcp`.
-- `docker-compose.yml:41-43` injects `ANTHROPIC_API_KEY` / `LLM_PROVIDER` / `LLM_MODEL` into the BFF. The BFF investigation still uses `supervisor.llm` (Bedrock) if the agent is in-process.
+- Single door: `supervisor/llm.py` `converse()` / `get_inference_port()` (Slice 1, #77). Tests inject a port via `set_inference_port`.
+- Factory (Slice 1 + 2 + 5):
+  - `LLM_ENABLED=false` (default, matches CI / `SentinelConfig` / `classify_incident`) or `LLM_PROVIDER=null|none|disabled` → `NullInference`
+  - `LLM_PROVIDER=bedrock` → `BedrockInference` (`boto3` Bedrock Converse)
+  - `LLM_PROVIDER=anthropic` → `AnthropicInference` (Anthropic Messages; `ANTHROPIC_API_KEY` at call time, never logged)
+  - `LLM_PROVIDER=openai` → `OpenAIInference` (OpenAI Chat Completions; `OPENAI_API_KEY` at call time, never logged)
+  - any other value → `NullInference` + warning listing `null, bedrock, anthropic, openai`
+- Portable model id: `LLM_MODEL` or `BEDROCK_MODEL_ID` (Bedrock-shaped default remains for Bedrock). Anthropic/OpenAI adapters map non-native ids to `claude-sonnet-4-6` / `gpt-4o`.
+- Call shape: system text + single user message; temperature + max tokens. **No tools, no streaming, no response_format.**
+- Retries: Bedrock botocore adaptive `max_attempts: 2`; Anthropic/OpenAI SDK `max_retries=2`, `timeout=60`. Shared in-process token bucket (`LLM_MAX_CONCURRENT`, `LLM_MAX_CALLS_PER_MIN`).
+- Error taxonomy on Anthropic/OpenAI: `rate_limited` / `timeout` / `unknown`. `bedrock_error:*` stays inside the Bedrock adapter.
+- Dict shape frozen: `text`, `input_tokens`, `output_tokens`, `model_id`, `latency_ms`, `stop_reason`, optional `error` (`tests/test_inference_contracts.py`).
+- Typed contract: `InferencePort`, `InferenceRequest`, `InferenceResponse`, `NullInference` (`sentinel_core/models/inference.py`; `supervisor/inference_helpers.py`).
+- Health: `GET /api/v1/health/tools` reports `is_enabled()`, `resolved_provider()`, and the port class — unused API keys do not mark LLM configured (Slice 3).
 
 **Off the SRE path (do not treat as investigation provider):**
 
-- `supervisor/review_responder.py:344-353`, `supervisor/ci_shepherd.py:221+`, `supervisor/dev_loop_agent.py:595+` call `anthropic.Anthropic().messages.create(model=DEV_LOOP_MODEL or "claude-sonnet-4-6")`. These are the auto-dev/review loop, not RCA.
+- `supervisor/review_responder.py`, `supervisor/ci_shepherd.py`, `supervisor/dev_loop_agent.py` still call `anthropic.Anthropic().messages.create` directly. Out of Slice 5.
 
-**Judge:** `EVAL_JUDGE_MODEL_ID` default `anthropic.claude-haiku-4-5-20251001-v1:0` via the same Bedrock `converse()` (`supervisor/llm_judge.py:31`).
+**Judge:** `EVAL_JUDGE_MODEL_ID` still defaults to a Bedrock Haiku id and goes through the same `converse()` door (`supervisor/llm_judge.py`).
+
+**Not implemented (still true):** token streaming; native tool-use / constrained decoding; LiteLLM / LangChain.
 
 ### 1.12 Configuration surface
 
@@ -262,10 +282,10 @@ CI: `.github/workflows/ci.yml` — ruff, mypy (`supervisor workers knowledge`), 
 
 ### 1.14 Deployment path
 
-- **Local:** `pip install -r requirements.txt`; `uvicorn agui.main:app --port 8081`; `GATEWAY_MODE` documented but unused; stub MCP if no `AGENTCORE_GATEWAY_URL`.
+- Local: `pip install -r requirements.txt`; `uvicorn agui.main:app --port 8081`; `GATEWAY_MODE=stub` (honored) uses in-process MCP fixtures.
 - **AgentCore image:** `Dockerfile` installs `requirements-agentcore.txt` (includes `bedrock-agentcore`, `boto3`, `strands-agents`, `mcp`), non-root user `bedrock_agentcore`, OTEL collector sidecar binary, `EXPOSE 8080`.
 - **BFF image:** `Dockerfile.bff` prefers `requirements-agentcore.txt`, serves AGUI on 8081.
-- **Compose:** BFF + `agentcore-runtime` + postgres + redis + jaeger + stub-tools (`docker-compose.yml`). Compose **sets** `AGENTCORE_GATEWAY_URL=http://agentcore-runtime:8080` on the BFF, which selects the live MCP client path even when `GATEWAY_MODE=stub` is set — because Python never reads `GATEWAY_MODE`.
+- **Compose:** BFF + `agentcore-runtime` + postgres + redis + jaeger + stub-tools (`docker-compose.yml`). `GATEWAY_MODE=stub` (default) forces stubs even though compose sets `AGENTCORE_GATEWAY_URL` (Slice 3).
 - **Render demo:** `render.yaml` (auth off, honeypot on).
 - AWS region default `us-east-1` in multiple modules.
 
@@ -275,37 +295,38 @@ CI: `.github/workflows/ci.yml` — ruff, mypy (`supervisor workers knowledge`), 
 
 Separate **true architectural dependencies** (require code or a substitute component) from **config that can be externalized**.
 
+**Post-Slices 1–5:** investigation LLM overlay is no longer Bedrock-only. Clone-and-run with stubs + `LLM_ENABLED=false` still works. Remaining blockers are legal (LICENSE), optional AWS fabric (AgentCore Memory / AgentCore-shaped MCP for *live* data), and eval power — not a missing OpenAI adapter.
+
 ### 2.1 Architectural (must change or wrap — not env-rename)
 
-| Coupling | Why it is architectural | Evidence |
+| Coupling | Status after Slices 1–5 | Evidence |
 |---|---|---|
-| Bedrock Converse is the only investigation LLM | `converse()` always constructs `bedrock-runtime` | `supervisor/llm.py:108-135`, `:204` |
-| Default model id is a Bedrock Claude ID | Hard-coded fallback | `supervisor/llm.py:41` |
-| Error taxonomy includes `bedrock_error` | `InferenceError.BEDROCK_ERROR`; `_do_converse` prefixes `bedrock_error:` | `sentinel_core/models/inference.py:19`; `supervisor/llm.py:252-254` |
-| AgentCore Memory | SDK + `BEDROCK_AGENTCORE_MEMORY_ID` | `supervisor/memory.py` |
-| AgentCore Gateway as MCP fabric | URL, Cognito OAuth, `{Target}___op` names, `strands-agents` | `workers/mcp_client.py` |
-| AgentCore HTTP runtime | `bedrock_agentcore.runtime.BedrockAgentCoreApp` preferred | `agentcore_runtime.py:106-112` |
-| Dockerfile / user `bedrock_agentcore` | Image is an AgentCore artifact | `Dockerfile:30-31` |
-| Vendor-shaped playbooks | Steps name Splunk/Dynatrace/ServiceNow/Moogsoft workers | `supervisor/tool_selector.py:29-101` |
-| `SUPERVISOR_SYSTEM_PROMPT` operational assumptions | “deployed inside a production environment”; PagerDuty; closed type list | `supervisor/system_prompt.py:7-14`, `:23` |
-| No LICENSE / Proprietary | Third parties cannot legally clone-and-run as OSS | `pyproject.toml:10`; missing `LICENSE` |
-| Dual prompt/SDK paths | Dev-loop uses Anthropic Messages API, not `InferencePort` | `review_responder.py:344-353` |
-| Cost table | Bedrock Anthropic + Titan prices only | `supervisor/eval_metrics.py:484-491` |
+| Investigation LLM door | **SHIPPED** — `converse()` factory + Null/Bedrock/Anthropic/OpenAI | `supervisor/llm.py` `get_inference_port()` |
+| Default model id is a Bedrock Claude ID | **Still true** for Bedrock fallback; Anthropic/OpenAI adapters map away | `supervisor/llm.py` `MODEL_ID`, `_to_anthropic_model`, `_to_openai_model` |
+| Error taxonomy includes `bedrock_error` | **Still true** inside Bedrock adapter only; Anthropic/OpenAI use `rate_limited` / `timeout` / `unknown` | `sentinel_core/models/inference.py`; `_map_anthropic_error` / `_map_openai_error` |
+| AgentCore Memory | **Unchanged** — optional overlay | `supervisor/memory.py`; `BEDROCK_AGENTCORE_MEMORY_ID` |
+| AgentCore Gateway as MCP fabric | **Unchanged** for live data; stub path + `GATEWAY_MODE` **SHIPPED** | `workers/mcp_client.py`; Slice 3–4 |
+| AgentCore HTTP runtime / Docker user | **Unchanged** (deployment artifact) | `agentcore_runtime.py`; `Dockerfile` |
+| Vendor-shaped playbooks | **Mitigated** — YAML aliases behind `YAML_PLAYBOOKS_ENABLED` (default false, Slice 4) | `config/worker_aliases.yaml`; `supervisor/playbook_loader.py` |
+| `SUPERVISOR_SYSTEM_PROMPT` operational assumptions | **Unchanged** (SRE content; out of scope) | `supervisor/system_prompt.py` |
+| No LICENSE / Proprietary | **Unchanged** — owner deciding separately | `pyproject.toml`; missing `LICENSE` |
+| Dual prompt/SDK paths | **Unchanged** — dev-loop still bypasses `InferencePort` | `review_responder.py` |
+| Cost table | **Unchanged** — Bedrock Anthropic + Titan prices | `supervisor/eval_metrics.py` |
 
 ### 2.2 Config that can be externalized (already mostly env)
 
-Region, model id, temperature, max tokens, `LLM_ENABLED`, gateway URL, OAuth client id, per-target names, playbook YAML (flag off), tenant config, feature flags, budget, deadlines, stub vs live MCP (via **URL presence**, not `GATEWAY_MODE`).
+Region, model id, temperature, max tokens, `LLM_ENABLED`, `LLM_PROVIDER`, gateway URL (`MCP_GATEWAY_URL` / `AGENTCORE_GATEWAY_URL`), `GATEWAY_MODE`, OAuth client id, per-target names, playbook YAML (flag off), tenant config, feature flags, budget, deadlines, stub vs live MCP.
 
 ### 2.3 Docs / config lies that block plug-and-play
 
-These are the highest-leverage **documentation and config** failures; they make a cloning team believe the product is already multi-provider.
+Audit-time clone-UX failures and their Slice status:
 
-1. **`.env.example` advertises Anthropic and OpenAI as first-class investigation providers.** Runtime `converse()` ignores `LLM_PROVIDER`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and `LLM_MODEL`.
-2. **`GATEWAY_MODE` is unused in Python.** Compose/README/certification treat it as the stub/live switch. Actual switch: `AGENTCORE_GATEWAY_URL` and ARNs (`workers/mcp_client.py:704-715`).
-3. **`LLM_ENABLED` defaults disagree:** `llm.py` true, `sentinel_config` / `classify_incident` / CI false. A clone with empty env may still attempt Bedrock if boto3 is installed (`is_enabled()`).
-4. **Health check is theater:** `/api/v1/health/tools` reports LLM configured if any of Anthropic/OpenAI/Bedrock keys exist (`agui/main.py:237-247`) even when investigation LLM cannot use those keys.
-5. **Compose injects Anthropic into BFF** (`docker-compose.yml:41-43`) while the agent image is Bedrock/AgentCore (`Dockerfile` + `requirements-agentcore.txt`).
-6. **`.env.example` vs `.env.template`** describe two different products (multi-cloud LLM vs Bedrock-only).
+1. **`.env.example` advertised unimplemented providers.** **SHIPPED** Slice 3 honesty + Slice 2/5 adapters. `.env.example` lists `null \| bedrock \| anthropic \| openai`. Unused keys still do not enable `investigate()`.
+2. **`GATEWAY_MODE` unused in Python.** **SHIPPED** Slice 3 — `GATEWAY_MODE=stub` forces stubs even if a URL is set.
+3. **`LLM_ENABLED` defaults disagreed (`llm.py` true vs CI false).** **SHIPPED** Slice 1 — `llm.py` default is `"false"`.
+4. **Health check theater (any vendor key ⇒ configured).** **SHIPPED** Slice 3 — reports `is_enabled()` + port class.
+5. **Compose injects Anthropic into BFF while agent image is Bedrock.** Partially honest: BFF env now includes Anthropic/OpenAI keys, but overlay stays off unless `LLM_ENABLED=true` and `LLM_PROVIDER` selects that adapter. AgentCore image remains AWS-shaped.
+6. **`.env.example` vs `.env.template` two products.** **SHIPPED** Slice 3 — `.env.template` is a pointer to `.env.example`.
 
 ### 2.4 Environment / org / data-source couplings (clone friction)
 
@@ -320,7 +341,7 @@ These are the highest-leverage **documentation and config** failures; they make 
 | Notification tokens `PD_TOKEN`, `SN_TOKEN`, … | credentials at call-time | `intelligence/itsm_writebacks.py`, `integrations/notification_router.py` |
 | `HONEYPOT_ENABLED` / invite tokens | product access control | `.env.example` §17 |
 
-MCP **stubs** mean a clone can run investigations without those vendors. Live RCA against *their* environment requires either AgentCore-shaped MCP targets or a new gateway adapter — that is a **tool-layer** problem, orthogonal to model-agnosticism, but it blocks “connect to its environment and run” for production data.
+MCP **stubs** mean a clone can run investigations without those vendors. Live RCA against *their* environment requires either AgentCore-shaped MCP targets or a new gateway adapter — that is a **tool-layer** problem, orthogonal to model-agnosticism, but it blocks “connect to its environment and run” for production data. Slice 4 documents `AGENTCORE_TARGET_*` and YAML worker aliases (`docs/clone/CONNECT_YOUR_ENVIRONMENT.md`).
 
 ### 2.5 What is already model-agnostic
 
@@ -330,12 +351,14 @@ Do not rebuild these:
 - `_analyze_*` deterministic analyzers and `compute_confidence`
 - Evidence dict + receipts + gates
 - `McpGateway` stub/live split (URL-based)
-- `InferencePort` / `NullInference` / `parse_llm_json`
+- `InferencePort` / `NullInference` / `parse_llm_json` **wired as the live factory** (Slices 1–5)
+- `GATEWAY_MODE` stub/live split (Slice 3)
+- MCP URL alias + YAML playbook worker aliases (Slice 4, flag off)
 - Frozen corpus + hermetic replay
 - SentinelBench / EIC scoring that does not call a provider
 - Feature flags defaulting off for planner, writebacks, YAML playbooks
 
-The default investigation is already an SRE engine that **can** run with no model. Model-agnosticism is blocked only when a team wants the **LLM overlay** (refine, narrate, classify fallback, planner, judge, code-worker) without Bedrock.
+The default investigation is already an SRE engine that **can** run with no model. Model-agnostic LLM overlay is **SHIPPED** for Bedrock, Anthropic, and OpenAI behind `converse()`. Remaining clone friction is LICENSE, live MCP fabric, and optional AgentCore Memory — not a missing third provider.
 
 ---
 
@@ -442,52 +465,52 @@ LLM overlay is **additive**: if `complete()` errors, current code already keeps 
 
 ## 5. Prioritized migration plan (smallest steps first)
 
-Do **not** implement these in the audit PR. Order is the shortest path that preserves SRE behavior.
+Do **not** change SRE-domain files (`investigate()` phases, playbooks, prompts, analyzers, evidence gates) in any remaining slice.
 
-### Slice 0 — Honesty (docs/config only, no behavior change if flags stay off)
+### Slice 0 — Honesty (docs/config only, no behavior change if flags stay off) — **SHIPPED #76**
 
-1. Document the real LLM client (Bedrock Converse) and the real MCP switch (`AGENTCORE_GATEWAY_URL`).
-2. Mark `.env.example` multi-provider block as **intended**, not implemented. *(This audit is slice 0.)*
+1. Document the real LLM client and the real MCP switch.
+2. Mark `.env.example` multi-provider block as **intended**, not implemented. *(Superseded by Slices 2–5 adapters + Slice 3 honesty.)*
 
-### Slice 1 — Unify the investigation LLM door (smallest code)
+### Slice 1 — Unify the investigation LLM door — **SHIPPED #77**
 
-1. Make `supervisor.llm.converse` a facade: resolve `InferencePort` from env (`null` / existing Bedrock function).
-2. Default `LLM_ENABLED` to false in `llm.py` to match CI and `SentinelConfig`.
-3. Put `llm_provider` / `llm_model` on `SentinelConfig`.
-4. Keep dict shape frozen (`tests/test_inference_contracts.py` must pass unchanged).
+1. `supervisor.llm.converse` is a facade: resolve `InferencePort` from env (`null` / Bedrock).
+2. `LLM_ENABLED` defaults false in `llm.py`.
+3. `llm_provider` / `llm_model` on `SentinelConfig`.
+4. Dict shape frozen.
 5. No SRE-domain edits.
 
-**Exit:** `LLM_PROVIDER=null` and `LLM_PROVIDER=bedrock` both run `investigate()`; with LLM off, INC12345 byte-identical to today.
+**Exit met:** `LLM_PROVIDER=null` and `LLM_PROVIDER=bedrock` both run `investigate()`; with LLM off, INC12345 matches expected RCA.
 
-### Slice 2 — Second provider behind the same door
+### Slice 2 — Second provider behind the same door — **SHIPPED #78**
 
-1. Add `AnthropicProvider` **or** `OpenAIProvider` (one, not both) implementing `InferencePort` only.
-2. Map credentials, max tokens, stop reasons, retries inside the adapter.
-3. Do **not** change prompts, planner, or analyzers.
-4. Add acceptance tests in §6.
+1. `AnthropicInference` implements `InferencePort` only.
+2. Credentials, max tokens, stop reasons, retries inside the adapter.
+3. No prompt / planner / analyzer changes.
+4. Acceptance tests §6.2 A–D.
 
-**Exit:** same investigation, two providers, no SRE file diff except possibly tests that inject the port.
+### Slice 3 — Config and clone UX — **SHIPPED #79** (LICENSE left to owner)
 
-### Slice 3 — Config and clone UX (still not SRE logic)
+1. `GATEWAY_MODE=stub` honored in `McpGateway`.
+2. Single `.env.example`; `.env.template` is a pointer.
+3. Health check reports the actual port class.
+4. LICENSE decision (owner) — **still open**.
 
-1. Implement `GATEWAY_MODE` **or** remove it from compose/README.
-2. Single `.env` template.
-3. Health check reports the **actual** client (`supervisor.llm.is_enabled()` + provider name), not unused API keys.
-4. LICENSE decision (owner).
+### Slice 4 — Connect-your-environment — **SHIPPED #80**
 
-### Slice 4 — Connect-your-environment (tool layer, still not model layer)
+1. `AGENTCORE_TARGET_*` documented.
+2. YAML playbooks + `config/worker_aliases.yaml` behind `YAML_PLAYBOOKS_ENABLED` (default false).
+3. `MCP_GATEWAY_URL` aliases `AGENTCORE_GATEWAY_URL`.
 
-1. Document MCP target mapping as configuration (`AGENTCORE_TARGET_*` already exists).
-2. Turn on YAML playbooks behind flag with a vendor-neutral worker alias file.
-3. Optional: rename `AGENTCORE_GATEWAY_URL` → `MCP_GATEWAY_URL` with alias.
+### Slice 5 — Third provider — **this PR**
 
-### Slice 5 — Only if needed (do not pre-build)
+- `OpenAIInference` Chat Completions behind the same `converse()` door.
+- Same taxonomy as Anthropic (`rate_limited` / `timeout` / `unknown`).
+- `OPENAI_API_KEY` at call time, never logged.
+- Factory warning list: `null, bedrock, anthropic, openai`.
+- Acceptance A–D extended (canned OpenAI port + factory D).
 
-- Native structured-output / tool-use in adapters
-- Token streaming
-- Portable LTM to replace AgentCore Memory
-- Routing dev-loop Anthropic clients through InferencePort
-- Third provider
+**Still out of scope (do not pre-build):** native structured-output / tool-use; token streaming; portable LTM to replace AgentCore Memory; routing dev-loop Anthropic clients through InferencePort; whole-repo ruff/mypy/bandit (pre-existing / UNKNOWN).
 
 **Anti-goals:** rewriting `investigate()`; introducing LangChain/LiteLLM as a new framework; making playbooks LLM-only; enabling writebacks.
 
@@ -513,7 +536,9 @@ These are **contracts**. Provider work that breaks them is a failed migration.
 | Scoring purity | `tests/test_scoring_purity.py` (cited by `memory/warm/rca_patterns.md`) | Unchanged |
 | Synthetic harness bans live SDKs | `tests/synthetic/test_synthetic_runner.py` bans `boto3`/`openai`/`anthropic` in that path | Unchanged |
 
-### 6.2 New acceptance tests (to be added **with** the provider implementation, not this audit)
+### 6.2 Acceptance tests (added with Slices 2 and 5; not the audit PR)
+
+**A–D SHIPPED** in `tests/test_slice2_inference_providers.py` (Anthropic Slice 2, OpenAI extended Slice 5). Inject via `set_inference_port` — do not patch boto3 in the SRE test.
 
 **A. Same investigation, two providers, no SRE-domain edits**
 
@@ -577,7 +602,10 @@ Recorded in `memory/warm/operational_decision_ledger.md` and summarized here:
 2. **`InferencePort` is the abstraction; do not add a new framework.** Implement providers behind `converse()`.
 3. **MCP tools ≠ LLM tools.** Planner JSON + `McpGateway` stays; native model tool-calling is not required for model-agnostic RCA.
 4. **Structured output stays parse-then-fallback.** Native JSON mode is an adapter optimization.
-5. **Do not implement `GATEWAY_MODE` as part of model-agnosticism** unless fixing clone UX; it is a tool-layer docs bug.
+5. **`GATEWAY_MODE` is clone UX, not model-agnosticism** — Slice 3 implemented it; do not couple it to provider adapters.
+6. **Third provider is copy-the-adapter, not a new door.** OpenAI Chat Completions maps to the same frozen converse dict and the same Anthropic error taxonomy. Keep credentials call-time and unlogged.
+7. **Do not “fix” pre-existing CI lint in a provider PR.** ruff/mypy/bandit debt on `main` is UNKNOWN / pre-existing; Slice 5 is not a whole-repo cleanup.
+8. **LICENSE and AgentCore Memory stay owner/optional.** Neither blocks claiming “investigation LLM overlay is model-agnostic.”
 
 ---
 
@@ -585,10 +613,11 @@ Recorded in `memory/warm/operational_decision_ledger.md` and summarized here:
 
 | Goal | Shortest path |
 |---|---|
-| Another team runs RCA tomorrow | Stubs + `LLM_ENABLED=false` + CLI/pytest (already true) |
-| Same RCA with LLM overlay, two models | Slice 1–2: factory + one new `InferencePort` adapter; tests A–D |
-| They connect *their* Splunk/ITSM | Slice 4 + real MCP gateway; **not** a model problem |
+| Another team runs RCA tomorrow | Stubs + `LLM_ENABLED=false` + CLI/pytest (**already true**) |
+| Same RCA with LLM overlay, two/three models | **SHIPPED** Slices 1–2 + 5: factory + Anthropic + OpenAI adapters; tests A–D |
+| They connect *their* Splunk/ITSM | **SHIPPED** Slice 3–4 docs/config; live data still needs a real MCP gateway |
 | They treat this as OSS | Owner adds LICENSE; **UNKNOWN** here |
 | Production-ready live ops | Still requires real gateway, secrets, and a powered eval — see certification docs; model-agnosticism does not unblock that |
+| Token streaming / native tool-use / AgentCore Memory replacement | Explicitly **out of scope** |
 
-**Minimum changes to claim “model-agnostic investigation LLM”:** Slice 1 + Slice 2 + tests A–D. No playbook, analyzer, MCP, or prompt rewrite.
+**Minimum changes to claim “model-agnostic investigation LLM”:** Slice 1 + Slice 2 + tests A–D — **met on main**. Slice 5 adds the third provider without touching SRE logic. No playbook, analyzer, MCP, or prompt rewrite.

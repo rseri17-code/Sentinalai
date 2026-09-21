@@ -6,6 +6,7 @@ env and returns the same dict shape as the original Bedrock Converse client:
 - ``LLM_ENABLED=false`` or ``LLM_PROVIDER=null`` → ``NullInference``
 - ``LLM_PROVIDER=bedrock`` (default when enabled) → Bedrock Converse
 - ``LLM_PROVIDER=anthropic`` → Anthropic Messages API
+- ``LLM_PROVIDER=openai`` → OpenAI Chat Completions
 - any other value → ``NullInference`` + warning
 
 Callers (hypothesis refine, reasoning, classify fallback, planner, judge)
@@ -44,6 +45,14 @@ except ImportError:
     _anthropic_sdk = None
     _ANTHROPIC_AVAILABLE = False
 
+try:
+    import openai as _openai_mod
+    _openai_sdk: Any = _openai_mod
+    _OPENAI_AVAILABLE = True
+except ImportError:
+    _openai_sdk = None
+    _OPENAI_AVAILABLE = False
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -60,14 +69,17 @@ LLM_MAX_TOKENS = int(os.environ.get("LLM_MAX_TOKENS", "2048"))
 # Default false — matches CI, SentinelConfig, and classify_incident.
 LLM_ENABLED = os.environ.get("LLM_ENABLED", "false").lower() in ("true", "1", "yes")
 # null | none | disabled → NullInference; bedrock (default) → Bedrock Converse;
-# anthropic → Anthropic Messages. Unknown values → NullInference + warning.
+# anthropic → Anthropic Messages; openai → OpenAI Chat Completions.
+# Unknown values → NullInference + warning.
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "bedrock").strip().lower() or "bedrock"
 # Token-bucket: max concurrent LLM calls and per-minute call cap
 LLM_MAX_CONCURRENT = int(os.environ.get("LLM_MAX_CONCURRENT", "5"))
 LLM_MAX_CALLS_PER_MIN = int(os.environ.get("LLM_MAX_CALLS_PER_MIN", "60"))
 
 _NULL_PROVIDERS = frozenset({"null", "none", "disabled"})
+_SUPPORTED_PROVIDERS = ("null", "bedrock", "anthropic", "openai")
 _DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6"
+_DEFAULT_OPENAI_MODEL = "gpt-4o"
 _unknown_provider_warned = False
 _port_override: Any | None = None
 
@@ -169,7 +181,7 @@ def _resolved_provider() -> str:
 
 
 def resolved_provider() -> str:
-    """Public alias of the normalized LLM_PROVIDER (null | bedrock | anthropic | …)."""
+    """Public alias of the normalized LLM_PROVIDER (null | bedrock | anthropic | openai | …)."""
     return _resolved_provider()
 
 
@@ -189,14 +201,16 @@ def is_enabled() -> bool:
         return bool(_BOTO3_AVAILABLE)
     if provider == "anthropic":
         return bool(_ANTHROPIC_AVAILABLE)
+    if provider == "openai":
+        return bool(_OPENAI_AVAILABLE)
     return False
 
 
 def set_inference_port(port: Any | None) -> None:
     """Inject an InferencePort, bypassing env factory resolution.
 
-    Tests use this to supply canned providers without patching boto3 or
-    Anthropic. Pass ``None`` to restore factory resolution.
+    Tests use this to supply canned providers without patching boto3,
+    Anthropic, or OpenAI. Pass ``None`` to restore factory resolution.
     """
     global _port_override
     _port_override = port
@@ -206,8 +220,8 @@ def get_inference_port() -> Any:
     """Resolve the InferencePort for this process env (no cache — test-safe).
 
     Returns NullInference when disabled, provider=null, or the provider is
-    unknown. Returns BedrockInference / AnthropicInference when that
-    provider is selected and its SDK is importable.
+    unknown. Returns BedrockInference / AnthropicInference / OpenAIInference
+    when that provider is selected and its SDK is importable.
     """
     global _unknown_provider_warned
     from supervisor.inference_helpers import NullInference
@@ -226,11 +240,16 @@ def get_inference_port() -> Any:
         if not _ANTHROPIC_AVAILABLE:
             return NullInference(model_id=MODEL_ID)
         return _ANTHROPIC_PORT
+    if provider == "openai":
+        if not _OPENAI_AVAILABLE:
+            return NullInference(model_id=MODEL_ID)
+        return _OPENAI_PORT
     if not _unknown_provider_warned:
         logger.warning(
             "LLM_PROVIDER=%r is not implemented; using NullInference "
-            "(supported: null, bedrock, anthropic)",
+            "(supported: %s)",
             LLM_PROVIDER,
+            ", ".join(_SUPPORTED_PROVIDERS),
         )
         _unknown_provider_warned = True
     return NullInference(model_id=MODEL_ID)
@@ -439,6 +458,165 @@ class AnthropicInference:
 
 
 _ANTHROPIC_PORT = AnthropicInference()
+
+
+# ---------------------------------------------------------------------------
+# OpenAI InferencePort
+# ---------------------------------------------------------------------------
+
+_OPENAI_STOP = {
+    "stop": "end_turn",
+    "length": "max_tokens",
+    "content_filter": "end_turn",
+    "tool_calls": "end_turn",
+    "function_call": "end_turn",
+}
+
+
+def _to_openai_model(model_id: str) -> str:
+    """Map a portable / Bedrock-style id to a native OpenAI Chat Completions id."""
+    if not model_id:
+        return _DEFAULT_OPENAI_MODEL
+    lower = model_id.lower()
+    if lower.startswith(("gpt-", "o1", "o3", "o4", "chatgpt-")):
+        return model_id
+    return _DEFAULT_OPENAI_MODEL
+
+
+def _openai_client() -> Any:
+    """Build an OpenAI client from call-time env. Never logs the key."""
+    if not _OPENAI_AVAILABLE or _openai_sdk is None:
+        logger.debug("openai SDK not installed — LLM calls disabled")
+        return None
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        logger.warning("OPENAI_API_KEY is not set — OpenAI calls disabled")
+        return None
+    return _openai_sdk.OpenAI(api_key=api_key, max_retries=2, timeout=60.0)
+
+
+def _map_openai_error(exc: BaseException) -> str:
+    """Map SDK exceptions to InferenceError values. Never include secrets."""
+    from sentinel_core.models.inference import InferenceError
+
+    if _OPENAI_AVAILABLE and _openai_sdk is not None:
+        if isinstance(exc, _openai_sdk.RateLimitError):
+            return InferenceError.RATE_LIMITED.value
+        if isinstance(exc, _openai_sdk.APITimeoutError):
+            return InferenceError.TIMEOUT.value
+        if isinstance(exc, _openai_sdk.APIConnectionError):
+            return InferenceError.TIMEOUT.value
+        if isinstance(exc, _openai_sdk.APIStatusError):
+            status = getattr(exc, "status_code", None)
+            if status == 429:
+                return InferenceError.RATE_LIMITED.value
+            if status == 408:
+                return InferenceError.TIMEOUT.value
+    return InferenceError.UNKNOWN.value
+
+
+def _openai_text(choice: Any) -> str:
+    message = getattr(choice, "message", None) if choice is not None else None
+    content = getattr(message, "content", None) if message is not None else None
+    if isinstance(content, str):
+        return content
+    return ""
+
+
+def _do_openai(
+    client: Any,
+    system_prompt: str,
+    user_message: str,
+    model_id: str | None,
+    temperature: float | None,
+    max_tokens: int | None,
+) -> dict[str, Any]:
+    native_model = _to_openai_model(model_id or MODEL_ID)
+    resolved_temp = temperature if temperature is not None else LLM_TEMPERATURE
+    resolved_max = max_tokens or LLM_MAX_TOKENS
+
+    start = time.monotonic()
+    try:
+        response = client.chat.completions.create(
+            model=native_model,
+            max_tokens=resolved_max,
+            temperature=resolved_temp,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+        )
+        latency_ms = (time.monotonic() - start) * 1000
+        choices = getattr(response, "choices", None) or []
+        choice = choices[0] if choices else None
+        text = _openai_text(choice)
+        usage = getattr(response, "usage", None)
+        input_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+        output_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
+        raw_stop = (getattr(choice, "finish_reason", None) if choice is not None else None) or "stop"
+        stop_reason = _OPENAI_STOP.get(raw_stop, "end_turn")
+
+        logger.info(
+            "LLM call: model=%s input_tokens=%d output_tokens=%d latency=%.0fms",
+            native_model, input_tokens, output_tokens, latency_ms,
+        )
+        return {
+            "text": text,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "model_id": native_model,
+            "latency_ms": round(latency_ms, 1),
+            "stop_reason": stop_reason,
+        }
+    except Exception as exc:
+        latency_ms = (time.monotonic() - start) * 1000
+        error = _map_openai_error(exc)
+        logger.error("OpenAI Chat Completions failed: %s (%.0fms)", error, latency_ms)
+        return {
+            "text": "",
+            "error": error,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "model_id": native_model,
+            "latency_ms": round(latency_ms, 1),
+            "stop_reason": "error",
+        }
+
+
+class OpenAIInference:
+    """InferencePort backed by the OpenAI Chat Completions API.
+
+    Credentials are read from OPENAI_API_KEY at call time and are never
+    logged. Request/response translation stays in this adapter.
+    """
+
+    def __call__(
+        self,
+        system_prompt: str,
+        user_message: str,
+        model_id: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> dict[str, Any]:
+        client = _openai_client()
+        if client is None:
+            return _disabled_response()
+
+        limiter = _get_rate_limiter()
+        if not limiter.acquire(timeout=30.0):
+            logger.warning(
+                "LLM rate limiter timeout — dropping call (too many concurrent requests)"
+            )
+            return {**_disabled_response(), "error": "rate_limited"}
+        try:
+            return _do_openai(
+                client, system_prompt, user_message, model_id, temperature, max_tokens
+            )
+        finally:
+            limiter.release()
+
+
+_OPENAI_PORT = OpenAIInference()
 
 
 # ---------------------------------------------------------------------------

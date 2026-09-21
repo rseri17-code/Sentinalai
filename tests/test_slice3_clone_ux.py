@@ -99,6 +99,19 @@ class TestHealthReportsRealPort:
         assert payload["gateway_mode"] == "live"
         assert payload["ready_for_production"] is True
 
+    def test_enabled_openai_reports_port_class(self):
+        with patch.object(llm_module, "LLM_ENABLED", True), \
+             patch.object(llm_module, "LLM_PROVIDER", "openai"), \
+             patch.object(llm_module, "MODEL_ID", "gpt-4o"), \
+             patch.object(llm_module, "_OPENAI_AVAILABLE", True), \
+             patch.object(mc, "GATEWAY_MODE", "live"), \
+             patch.object(mc, "AGENTCORE_GATEWAY_URL", "https://gateway.test"):
+            payload = build_tools_health()
+        assert payload["llm"]["enabled"] is True
+        assert payload["llm"]["provider"] == "openai"
+        assert payload["llm"]["port"] == "OpenAIInference"
+        assert "openai" in payload["setup_instructions"]
+
 
 class TestSingleEnvTemplate:
     def test_example_documents_implemented_providers(self):
@@ -107,8 +120,9 @@ class TestSingleEnvTemplate:
         assert "LLM_PROVIDER=null" in text
         assert "GATEWAY_MODE=stub" in text
         assert "AGENTCORE_GATEWAY_URL" in text
-        assert "NOT implemented" in text
-        assert "do not set LLM_PROVIDER=openai" in text
+        assert "OpenAI Chat Completions" in text
+        assert "OPENAI_API_KEY" in text
+        assert "do not set LLM_PROVIDER=openai" not in text
         assert not any(line.strip() == "LLM_PROVIDER=openai" for line in text.splitlines())
 
     def test_template_is_pointer_not_second_source(self):

@@ -16,11 +16,12 @@
 | 5 | this PR | OpenAI Chat Completions adapter behind the same port |
 
 **Remaining (not this PR)**
-- LICENSE / OSS grant — **owner deciding separately**
 - AgentCore Memory portable replacement — **optional overlay**; JSON KG / experience store remain the clone path
 - Token streaming, native tool-use, routing dev-loop Anthropic clients through `InferencePort`
 - Whole-repo ruff / mypy / bandit cleanup — **UNKNOWN / pre-existing on `main`**; do not treat as Slice 5 debt
 - Equal live-provider RCA quality on production incidents — **UNKNOWN** (gold n=3)
+
+**Shipped this PR (in addition to Slice 5 OpenAI):** Apache-2.0 LICENSE (owner-approved).
 
 This document answers five questions:
 
@@ -40,9 +41,9 @@ Related existing docs (not replaced): [`README.md`](../../README.md), [`docs/arc
 
 **In scope:** evidence-backed current-state architecture; coupling map; target model-agnostic contract; gap analysis; smallest provider boundary; prioritized migration plan; acceptance tests.
 
-**Out of scope for the original audit PR and still out of scope for Slice 5:** refactoring `supervisor/agent.py` SRE logic; changing production prompts; changing MCP integrations; enabling live writebacks; relicensing the repo; token streaming; native LLM tool-use; AgentCore Memory replacement.
+**Out of scope for the original audit PR and still out of scope for Slice 5:** refactoring `supervisor/agent.py` SRE logic; changing production prompts; changing MCP integrations; enabling live writebacks; token streaming; native LLM tool-use; AgentCore Memory replacement.
 
-Adapters (Null / Bedrock / Anthropic / OpenAI) are **implemented** behind `converse()` as of Slices 1–5. The original audit did not implement them.
+Adapters (Null / Bedrock / Anthropic / OpenAI) are **implemented** behind `converse()` as of Slices 1–5. The original audit did not implement them. LICENSE is **Apache-2.0** (owner-approved on this PR).
 
 ---
 
@@ -52,7 +53,7 @@ SentinalAI (package name `sentinalai` in `pyproject.toml`; README title “Senti
 
 It is **not**, in default configuration, an autonomous remediator. `ITSM_WRITEBACK_ENABLED` defaults false (`intelligence/itsm_writebacks.py`, `supervisor/sentinel_config.py`). Remediation is generated as guidance; HITL approval is the documented product posture (`README.md`).
 
-It is **not** currently licensed for third-party cloning. `pyproject.toml` sets `license = {text = "Proprietary"}`. There is **no `LICENSE` file**. Open-source grant is **UNKNOWN** beyond that declaration.
+It is **licensed Apache-2.0** for third-party cloning. `LICENSE` is the standard Apache License Version 2.0; `pyproject.toml` sets `license = {text = "Apache-2.0"}`. Copyright 2026 the SentinalAI authors.
 
 ### 1.1 Package / service map
 
@@ -295,7 +296,7 @@ CI: `.github/workflows/ci.yml` — ruff, mypy (`supervisor workers knowledge`), 
 
 Separate **true architectural dependencies** (require code or a substitute component) from **config that can be externalized**.
 
-**Post-Slices 1–5:** investigation LLM overlay is no longer Bedrock-only. Clone-and-run with stubs + `LLM_ENABLED=false` still works. Remaining blockers are legal (LICENSE), optional AWS fabric (AgentCore Memory / AgentCore-shaped MCP for *live* data), and eval power — not a missing OpenAI adapter.
+**Post-Slices 1–5 + Apache-2.0:** investigation LLM overlay is no longer Bedrock-only. Clone-and-run with stubs + `LLM_ENABLED=false` is both technically and legally unblocked. Remaining blockers are optional AWS fabric (AgentCore Memory / AgentCore-shaped MCP for *live* data) and eval power — not a missing OpenAI adapter or LICENSE.
 
 ### 2.1 Architectural (must change or wrap — not env-rename)
 
@@ -309,7 +310,7 @@ Separate **true architectural dependencies** (require code or a substitute compo
 | AgentCore HTTP runtime / Docker user | **Unchanged** (deployment artifact) | `agentcore_runtime.py`; `Dockerfile` |
 | Vendor-shaped playbooks | **Mitigated** — YAML aliases behind `YAML_PLAYBOOKS_ENABLED` (default false, Slice 4) | `config/worker_aliases.yaml`; `supervisor/playbook_loader.py` |
 | `SUPERVISOR_SYSTEM_PROMPT` operational assumptions | **Unchanged** (SRE content; out of scope) | `supervisor/system_prompt.py` |
-| No LICENSE / Proprietary | **Unchanged** — owner deciding separately | `pyproject.toml`; missing `LICENSE` |
+| No LICENSE / Proprietary | **SHIPPED** — Apache-2.0 (owner-approved) | `LICENSE`; `pyproject.toml` |
 | Dual prompt/SDK paths | **Unchanged** — dev-loop still bypasses `InferencePort` | `review_responder.py` |
 | Cost table | **Unchanged** — Bedrock Anthropic + Titan prices | `supervisor/eval_metrics.py` |
 
@@ -358,7 +359,7 @@ Do not rebuild these:
 - SentinelBench / EIC scoring that does not call a provider
 - Feature flags defaulting off for planner, writebacks, YAML playbooks
 
-The default investigation is already an SRE engine that **can** run with no model. Model-agnostic LLM overlay is **SHIPPED** for Bedrock, Anthropic, and OpenAI behind `converse()`. Remaining clone friction is LICENSE, live MCP fabric, and optional AgentCore Memory — not a missing third provider.
+The default investigation is already an SRE engine that **can** run with no model. Model-agnostic LLM overlay is **SHIPPED** for Bedrock, Anthropic, and OpenAI behind `converse()`. Remaining clone friction is live MCP fabric and optional AgentCore Memory — not a missing third provider or LICENSE.
 
 ---
 
@@ -368,7 +369,7 @@ The default investigation is already an SRE engine that **can** run with no mode
 
 A downstream team should be able to:
 
-1. Clone the repo under an OSS license (**currently blocked** by Proprietary / missing LICENSE — legal, not technical).
+1. Clone the repo under Apache-2.0 (`LICENSE`; owner-approved).
 2. `pip install -r requirements.txt` and run `pytest` with `LLM_ENABLED=false` (already works in CI).
 3. Run `python scripts/run_investigation.py INC12345` against MCP stubs (already works if boto3 missing or LLM disabled).
 4. Set **one** provider block in env (not three conflicting files) and run the **same** investigation with LLM overlay against provider A or B.
@@ -452,7 +453,7 @@ LLM overlay is **additive**: if `complete()` errors, current code already keeps 
 | `SentinelConfig` omits provider/model | Medium | 4 | Add `llm_provider`, `llm_model` to `SupervisorConfig` |
 | AgentCore Memory for LTM | Medium (optional feature) | 2 | Keep flag-off; document JSON KG as the portable memory |
 | Vendor-hardcoded playbooks | Medium (connect-your-env) | 1–2 | Enable/document `YAML_PLAYBOOKS_ENABLED` + worker alias map |
-| No OSS license | High (legal plug-and-play) | product | Add LICENSE (owner decision) — **UNKNOWN** which license |
+| No OSS license | High (legal plug-and-play) | product | **SHIPPED** Apache-2.0 (`LICENSE`) |
 | Dual Anthropic Messages clients | Low for RCA | 4 | Out of slice 1; later route through InferencePort or isolate package |
 | `code_worker` uses raw `json.loads` | Low | 4 | Use `parse_llm_json` (normalization only) |
 | Judge default Haiku Bedrock id | Low | 4 | `EVAL_JUDGE_MODEL_ID` already env-overridable |
@@ -489,12 +490,12 @@ Do **not** change SRE-domain files (`investigate()` phases, playbooks, prompts, 
 3. No prompt / planner / analyzer changes.
 4. Acceptance tests §6.2 A–D.
 
-### Slice 3 — Config and clone UX — **SHIPPED #79** (LICENSE left to owner)
+### Slice 3 — Config and clone UX — **SHIPPED #79** (LICENSE **SHIPPED** this PR as Apache-2.0)
 
 1. `GATEWAY_MODE=stub` honored in `McpGateway`.
 2. Single `.env.example`; `.env.template` is a pointer.
 3. Health check reports the actual port class.
-4. LICENSE decision (owner) — **still open**.
+4. LICENSE — **Apache-2.0** (owner-approved; this PR).
 
 ### Slice 4 — Connect-your-environment — **SHIPPED #80**
 
@@ -605,7 +606,7 @@ Recorded in `memory/warm/operational_decision_ledger.md` and summarized here:
 5. **`GATEWAY_MODE` is clone UX, not model-agnosticism** — Slice 3 implemented it; do not couple it to provider adapters.
 6. **Third provider is copy-the-adapter, not a new door.** OpenAI Chat Completions maps to the same frozen converse dict and the same Anthropic error taxonomy. Keep credentials call-time and unlogged.
 7. **Do not “fix” pre-existing CI lint in a provider PR.** ruff/mypy/bandit debt on `main` is UNKNOWN / pre-existing; Slice 5 is not a whole-repo cleanup.
-8. **LICENSE and AgentCore Memory stay owner/optional.** Neither blocks claiming “investigation LLM overlay is model-agnostic.”
+8. **LICENSE is Apache-2.0 (owner-approved).** AgentCore Memory stays optional. Neither blocks claiming “investigation LLM overlay is model-agnostic.”
 
 ---
 
@@ -616,7 +617,7 @@ Recorded in `memory/warm/operational_decision_ledger.md` and summarized here:
 | Another team runs RCA tomorrow | Stubs + `LLM_ENABLED=false` + CLI/pytest (**already true**) |
 | Same RCA with LLM overlay, two/three models | **SHIPPED** Slices 1–2 + 5: factory + Anthropic + OpenAI adapters; tests A–D |
 | They connect *their* Splunk/ITSM | **SHIPPED** Slice 3–4 docs/config; live data still needs a real MCP gateway |
-| They treat this as OSS | Owner adds LICENSE; **UNKNOWN** here |
+| They treat this as OSS | **SHIPPED** Apache-2.0 (`LICENSE`; owner-approved) |
 | Production-ready live ops | Still requires real gateway, secrets, and a powered eval — see certification docs; model-agnosticism does not unblock that |
 | Token streaming / native tool-use / AgentCore Memory replacement | Explicitly **out of scope** |
 

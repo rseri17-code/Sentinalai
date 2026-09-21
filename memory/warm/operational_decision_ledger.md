@@ -73,4 +73,13 @@ session-level reasoning: why this approach over that one, what was rejected.
 - **Session**: `cursor/openai-inference-port-d2fb`
 - **Evidence**: `supervisor/llm.py` `OpenAIInference`, `tests/test_llm.py` `TestOpenAIAdapter`, `tests/test_slice2_inference_providers.py` A–D
 
+### Decision 7 — 2026-09-21: Owner chose Apache-2.0 for OSS plug-and-play
+- **Task context**: Slice 0–5 left LICENSE to the owner. Owner approved adding Apache-2.0 on the Slice 5 branch.
+- **Decision**: Root `LICENSE` is the standard Apache License Version 2.0 text. Copyright 2026 the SentinalAI authors (`pyproject.toml` has no authors field). `pyproject.toml` `license = {text = "Apache-2.0"}`. README and model-agnostic audit docs state Apache-2.0 instead of Proprietary / owner-must-choose.
+- **Rejected alternative**: MIT, proprietary-only, or inventing a copyright holder beyond the fallback the owner specified.
+- **Why rejected**: Owner named Apache-2.0. No existing copyright notice in-repo; fallback matches the instruction.
+- **Reversible**: yes (license file + pyproject + docs)
+- **Session**: `cursor/openai-inference-port-d2fb`
+- **Evidence**: `LICENSE`, `pyproject.toml`, `README.md` License section
+
 _Update this file during session. Promote significant entries to tasks/decisions.md._

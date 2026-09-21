@@ -3,7 +3,7 @@
 Companion to [`model_agnostic_sre_agent.md`](model_agnostic_sre_agent.md).  
 **Rule:** every row cites source. Kind is `architectural` (needs a substitute component or code) vs `config` (env/file can change it without SRE logic changes) vs `docs-drift` (documented but not implemented) vs `test-only`.
 
-**Status (2026-09-21):** Rows captured audit-time couplings at `0d625ec`. Slices 1–5 shipped: `converse()` factory (M12/M25), Anthropic + OpenAI adapters (M14/M18), `GATEWAY_MODE` honored (T2), YAML aliases (T17). Remaining: LICENSE (O6), AgentCore Memory (R1), CI lint debt UNKNOWN/pre-existing. Kind values below are **audit-time**; see the architecture doc banner for current status.
+**Status (2026-09-21):** Rows captured audit-time couplings at `0d625ec`. Slices 1–5 shipped: `converse()` factory (M12/M25), Anthropic + OpenAI adapters (M14/M18), `GATEWAY_MODE` honored (T2), YAML aliases (T17), Apache-2.0 LICENSE (O6). Remaining: AgentCore Memory (R1), CI lint debt UNKNOWN/pre-existing. Kind values below are **audit-time**; see the architecture doc banner for current status.
 
 SRE-domain files (`supervisor/agent.py` analyzers, `supervisor/tool_selector.py` playbooks, `supervisor/helpers/confidence.py`, evidence gates) should not appear as *model* couplings unless they call `converse()` / `is_enabled()`.
 
@@ -118,7 +118,7 @@ None of these implement a second HTTP client except C8–C11 still using `conver
 | O3 | Opsgenie `https://api.opsgenie.com/v2` | config | `sentinel_config.py:432` |
 | O4 | `DEFAULT_ORG_ID=default` | config | `integrations/tenant_config.py:40`; `sentinel_config.py:434` |
 | O5 | `ENVIRONMENT` in {development, staging, production} | config | `sentinel_config.py:478-481` |
-| O6 | `pyproject.toml` license Proprietary; no LICENSE file | legal/architectural | `pyproject.toml:10` |
+| O6 | Apache-2.0 LICENSE (was Proprietary / missing file) | legal — **SHIPPED** | `LICENSE`; `pyproject.toml` `license = {text = "Apache-2.0"}` |
 | O7 | AGUI Cognito JWKS URL | config | `sentinel_config.py:370` |
 | O8 | `AUTH_REQUIRED` default false on AgentCore; `AGUI_AUTH_REQUIRED` default true | config | `agentcore_runtime.py:36`; `sentinel_config.py:368` |
 | O9 | Feature flags default off: planner, writebacks, YAML playbooks, intelligence runtime | config (good) | `sentinel_config.py`; AGENTS.md |
@@ -183,6 +183,5 @@ Audit-time contradictions. Slice 0–5 status:
 - Whether a live Anthropic/OpenAI investigation client existed on an unmerged branch
 - Whether `strands` MCPClient works against a generic MCP server without AgentCore naming
 - Production tenants, traffic, or Bedrock quotas
-- Intended open-source license
 - Current pytest count (README 5,982 not re-measured this audit)
 - Whether `LLM_MODEL` vs `BEDROCK_MODEL_ID` vs `LLM_MODEL_ID` was a planned rename

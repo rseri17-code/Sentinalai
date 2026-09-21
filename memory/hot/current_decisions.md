@@ -12,6 +12,7 @@
 - [PATTERN] [PROMOTE: rca_patterns] When adding LLM providers, keep `tests/test_determinism.py`, converse() dict-shape tests, INC12345 expected RCA, and MCP stub path unchanged.
 - [DECISION] [PROMOTE: operational_decision_ledger] Slice 1: converse() facade over InferencePort; Bedrock stays in llm.py; LLM_ENABLED default false; unknown providers NullInference until Slice 2.
 - [DECISION] [PROMOTE: operational_decision_ledger] Slice 5: OpenAI Chat Completions InferencePort in llm.py; same converse dict + Anthropic error taxonomy; OPENAI_API_KEY call-time never logged; factory warning lists openai.
+- [DECISION] [PROMOTE: operational_decision_ledger] Owner chose Apache-2.0 for OSS plug-and-play; LICENSE + pyproject + README updated.
 
 ## Format
 

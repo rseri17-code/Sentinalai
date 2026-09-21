@@ -7,7 +7,7 @@ name = "sentinalai"
 version = "0.1.0"
 description = "Autonomous incident RCA agent - deterministic, policy-governed SRE agent"
 requires-python = ">=3.11"
-license = {text = "Proprietary"}
+license = {text = "Apache-2.0"}
 keywords = ["sre", "observability", "rca", "incident-response", "bedrock", "agentcore"]
 dependencies = [
     "anthropic>=0.39.0,<1.0.0",

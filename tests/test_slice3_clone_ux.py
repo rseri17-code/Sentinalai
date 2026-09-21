@@ -132,10 +132,14 @@ class TestSingleEnvTemplate:
         assert "BEDROCK_MODEL_ID=" not in text.split("\n")[0]
 
 
-class TestLicenseLeftToOwner:
-    def test_no_license_file_invented(self):
-        assert not (ROOT / "LICENSE").exists()
+class TestLicenseApache20:
+    def test_license_file_is_apache_2(self):
+        text = (ROOT / "LICENSE").read_text()
+        assert "Apache License" in text
+        assert "Version 2.0" in text
+        assert "Copyright 2026 the SentinalAI authors" in text
 
-    def test_pyproject_stays_proprietary(self):
+    def test_pyproject_is_apache(self):
         text = (ROOT / "pyproject.toml").read_text()
-        assert 'license = {text = "Proprietary"}' in text
+        assert 'license = {text = "Apache-2.0"}' in text
+        assert "Proprietary" not in text

@@ -320,10 +320,8 @@ Engineering expectations (see [`CLAUDE.md`](CLAUDE.md)):
 
 ## License
 
-`pyproject.toml` declares `license = {text = "Proprietary"}`. There is **no
-`LICENSE` file**. This repository does not grant an open-source license by
-implication.
+Licensed under the **Apache License, Version 2.0**. See [`LICENSE`](LICENSE).
+Copyright 2026 the SentinalAI authors.
 
-**Owner decision required** for third-party clone / OSS plug-and-play: choose
-and commit a LICENSE text (or confirm proprietary-only). Do not change
-`license = Proprietary` without an explicit owner instruction.
+`pyproject.toml` declares `license = {text = "Apache-2.0"}`. Third-party
+clone / OSS plug-and-play is granted under Apache-2.0.

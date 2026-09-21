@@ -39,4 +39,8 @@ When changing **confidence scoring** (`compute_confidence`):
 
 ## Confirmed Patterns
 
-_None yet. Promote from stop_log.md using [PROMOTE: rca_patterns]._
+### Pattern 1 — 2026-09-21: LLM overlay vs deterministic RCA core
+- **Context**: Model-agnostic architecture audit. Needed a confirmed split so provider work does not retouch scoring/playbooks.
+- **Pattern**: With `LLM_ENABLED=false` (CI, `tests/test_determinism.py` autouse), RCA is keyword classify → playbook MCP calls → `_analyze_*` + `compute_confidence` → gates. `supervisor/llm.converse()` is used only for refine/reasoning/classify-fallback/planner/judge/code-worker when enabled, and fail-open keeps pre-LLM hypotheses. Provider adapters must sit behind `InferencePort` / `converse()` without editing `supervisor/tool_selector.py` playbooks or `supervisor/helpers/confidence.py`.
+- **What breaks if missed**: `tests/test_determinism.py`, `tests/test_scoring_purity.py`, INC12345 expected RCA (`tests/fixtures/expected_rca_outputs.py`), converse dict-shape tests (`tests/test_inference_contracts.py`).
+- **Confirmed by**: `tests/test_determinism.py`, `tests/test_inference_contracts.py`, `supervisor/agent.py` `_analyze_evidence` LLM block, `.github/workflows/ci.yml` `LLM_ENABLED=false`

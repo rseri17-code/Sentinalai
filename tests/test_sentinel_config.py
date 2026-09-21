@@ -108,10 +108,12 @@ class TestDefaults:
         monkeypatch.delenv("ENABLE_THOUSANDEYES_RCA", raising=False)
         monkeypatch.delenv("TE_USE_FIXTURES", raising=False)
         monkeypatch.delenv("VISUAL_EVIDENCE_ENABLED", raising=False)
+        monkeypatch.delenv("GATEWAY_MODE", raising=False)
         cfg = SentinelConfig.from_env()
         assert cfg.workers.enable_thousandeyes_rca is False
         assert cfg.workers.te_use_fixtures is False
         assert cfg.workers.visual_evidence_enabled is True
+        assert cfg.workers.gateway_mode == ""
 
     def test_environment_default(self, monkeypatch):
         monkeypatch.delenv("ENVIRONMENT", raising=False)
@@ -187,6 +189,11 @@ class TestEnvOverrides:
         monkeypatch.setenv("BEDROCK_MODEL_ID", "anthropic.custom-bedrock")
         cfg = SentinelConfig.from_env()
         assert cfg.supervisor.llm_model == "anthropic.custom-bedrock"
+
+    def test_gateway_mode_override(self, monkeypatch):
+        monkeypatch.setenv("GATEWAY_MODE", "stub")
+        cfg = SentinelConfig.from_env()
+        assert cfg.workers.gateway_mode == "stub"
 
 
 # ---------------------------------------------------------------------------

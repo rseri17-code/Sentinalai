@@ -167,6 +167,11 @@ def _resolved_provider() -> str:
     return raw or "bedrock"
 
 
+def resolved_provider() -> str:
+    """Public alias of the normalized LLM_PROVIDER (null | bedrock | anthropic | …)."""
+    return _resolved_provider()
+
+
 def is_enabled() -> bool:
     """Check whether a live (non-null) inference backend is configured.
 

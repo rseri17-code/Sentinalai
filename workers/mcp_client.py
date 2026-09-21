@@ -10,12 +10,18 @@ or HTTP.  The gateway handles authentication, tool routing, transport,
 response parsing, structured logging, and stub fallback for local dev/tests.
 
 Requires (production):
+    - GATEWAY_MODE=live (or unset with AGENTCORE_GATEWAY_URL set)
     - strands-agents SDK  (strands.tools.mcp.MCPClient)
     - mcp SDK             (mcp.client.streamable_http)
     - AGENTCORE_GATEWAY_URL env var set to the gateway endpoint
     - OAuth2 client credentials (GATEWAY_OAUTH2_CLIENT_ID + token URL), OR
     - GATEWAY_ACCESS_TOKEN env var for static CUSTOM_JWT auth, OR
       AWS credentials for AWS_IAM (SigV4) auth
+
+GATEWAY_MODE:
+    stub | fixtures  — always return in-process stubs (even if a URL is set)
+    live | agentcore — call the gateway / ARNs
+    unset            — auto: live if URL or ARN is set, else stub
 
 Authentication priority:
     1. OAuth2 client_credentials grant (if GATEWAY_OAUTH2_CLIENT_ID is set)
@@ -102,6 +108,14 @@ AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
 # AgentCore Gateway URL — single endpoint for all MCP targets
 AGENTCORE_GATEWAY_URL = os.environ.get("AGENTCORE_GATEWAY_URL", "")
 
+# GATEWAY_MODE is the real stub-vs-live switch (compose sets a URL even in stub).
+#   stub | fixtures  — always in-process stubs, even if AGENTCORE_GATEWAY_URL is set
+#   live | agentcore — use URL / MCP_*_TOOL_ARN as today
+#   unset / other    — auto: live if URL or ARN is set, else stub (backward compatible)
+GATEWAY_MODE = os.environ.get("GATEWAY_MODE", "").strip().lower()
+_STUB_GATEWAY_MODES = frozenset({"stub", "fixtures", "fixture"})
+_LIVE_GATEWAY_MODES = frozenset({"live", "agentcore"})
+
 # Authentication — static Bearer token (fallback if OAuth2 not configured)
 GATEWAY_ACCESS_TOKEN = os.environ.get("GATEWAY_ACCESS_TOKEN", "")
 
@@ -138,6 +152,29 @@ MCP_MAX_RETRIES = int(os.environ.get("MCP_MAX_RETRIES", "2"))
 def _has_any_arn() -> bool:
     """Check if any MCP tool ARN is configured (legacy check)."""
     return any(arn for arn in MCP_TOOL_ARNS.values())
+
+
+def force_stub_gateway() -> bool:
+    """True when GATEWAY_MODE explicitly requests in-process stubs.
+
+    Compose sets AGENTCORE_GATEWAY_URL even in stub; this flag wins.
+    """
+    return GATEWAY_MODE in _STUB_GATEWAY_MODES
+
+
+def resolved_gateway_mode() -> str:
+    """Effective MCP path: ``stub`` or ``live``.
+
+    ``GATEWAY_MODE=stub`` forces stubs. ``live``/``agentcore`` uses URL/ARNs
+    when present. Unset keeps today's auto behavior (URL or ARN → live).
+    """
+    if force_stub_gateway():
+        return "stub"
+    if GATEWAY_MODE in _LIVE_GATEWAY_MODES:
+        return "live" if (AGENTCORE_GATEWAY_URL or _has_any_arn()) else "stub"
+    if AGENTCORE_GATEWAY_URL or _has_any_arn():
+        return "live"
+    return "stub"
 
 
 # Optional HTTP library for OAuth2 token requests
@@ -609,14 +646,14 @@ class McpGateway:
         self._boto3_client = None
         # OAuth2 provider (lazy-init from env if not injected)
         self._oauth2_provider = oauth2_provider
-        # Fast-path: when no gateway is configured, skip rate limiting for stubs
-        # (stubs are instant in-memory responses — no external service to protect)
-        stub_mode = not AGENTCORE_GATEWAY_URL
+        # Fast-path: skip rate limiting for in-process stubs
+        stub_mode = force_stub_gateway() or not AGENTCORE_GATEWAY_URL
         self._rate_limiter = rate_limiter or RateLimiterRegistry(
             unlimited=stub_mode,
         )
         # Duplicate-call suppression (MCP_DEDUP_ENABLED=true to activate)
         self._call_signatures: set[str] = set()
+        self._mode = resolved_gateway_mode()
 
     @classmethod
     def get_instance(cls) -> McpGateway:
@@ -646,8 +683,9 @@ class McpGateway:
         """Invoke an MCP tool via the AgentCore gateway.
 
         Routes through the MCP protocol (streamable HTTP) when the gateway
-        is configured.  Falls back to legacy invoke_inline_agent if only
-        per-server ARNs are set.  Returns stub responses for local dev/tests.
+        is configured and GATEWAY_MODE is not stub.  Falls back to legacy
+        invoke_inline_agent if only per-server ARNs are set.  Returns stub
+        responses for local dev/tests and when GATEWAY_MODE=stub.
 
         Args:
             mcp_tool_name: Internal dotted tool name (e.g. "splunk.search_oneshot")
@@ -700,6 +738,13 @@ class McpGateway:
                 "Rate limited: server=%s tool=%s", server, mcp_tool_name,
             )
             return {"error": "rate_limited", "server": server, "tool": mcp_tool_name}
+
+        # GATEWAY_MODE=stub wins over a configured URL (compose sets both).
+        if force_stub_gateway():
+            logger.debug(
+                "GATEWAY_MODE=%s — returning stub for %s", GATEWAY_MODE, mcp_tool_name,
+            )
+            return _stub_response(mcp_tool_name, tool_action, params)
 
         # Priority 1: AgentCore gateway (MCP protocol — production path)
         if AGENTCORE_GATEWAY_URL and _MCP_SDK_AVAILABLE:
@@ -984,6 +1029,13 @@ class McpGateway:
 
         if explicit_url:
             discovery_url = explicit_url
+        elif force_stub_gateway():
+            # Do not probe AGENTCORE_GATEWAY_URL while the process is in stub mode.
+            if stub_url:
+                discovery_url = stub_url.rstrip("/") + "/tools"
+            else:
+                logger.debug("GATEWAY_MODE=stub — assuming all in-process stub tools")
+                return self._ALL_KNOWN_SERVERS
         elif AGENTCORE_GATEWAY_URL:
             discovery_url = AGENTCORE_GATEWAY_URL.rstrip("/") + "/tools"
         elif stub_url:

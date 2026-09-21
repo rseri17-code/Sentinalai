@@ -203,8 +203,11 @@ pytest -q
 # 3. Configure (secure + explicit defaults)
 export AGUI_AUTH_REQUIRED=true          # auth on by default; set a real secret:
 export AGUI_JWT_SECRET="<your-secret>"   # the BFF refuses to start without one
-export GATEWAY_MODE=stub                 # 'stub' = synthetic fixtures (default);
-# export AGENTCORE_GATEWAY_URL=...       # set this + GATEWAY_MODE=live for real data
+export LLM_ENABLED=false                 # investigation LLM overlay off (CI default)
+export LLM_PROVIDER=null                 # null | bedrock | anthropic (openai not implemented)
+export GATEWAY_MODE=stub                 # honored: in-process fixtures even if a URL is set
+# export GATEWAY_MODE=live
+# export AGENTCORE_GATEWAY_URL=...       # required for live MCP tools
 ```
 
 **Run the BFF (API + serves the built SPA):**
@@ -229,9 +232,12 @@ python -c "from eval.enterprise.validate import validate; print(validate())"
 (`/api/v1/investigations/{id}/replay`) and the deterministic replay engine
 (`supervisor/replay.py`).
 
-> **Important:** with `GATEWAY_MODE=stub` (the default) investigations run against
-> synthetic fixtures. Configure a real `AGENTCORE_GATEWAY_URL` before using
-> SentinelAI on real incidents.
+> **Important:** `GATEWAY_MODE=stub` (compose default) is honored by
+> `McpGateway.invoke()` — investigations use in-process stubs even when
+> `AGENTCORE_GATEWAY_URL` is set. Set `GATEWAY_MODE=live` and a real
+> gateway URL before using SentinelAI on live incidents. The investigation
+> LLM overlay stays off unless `LLM_ENABLED=true` and `LLM_PROVIDER` is
+> `bedrock` or `anthropic`.
 
 ---
 
@@ -310,5 +316,10 @@ Engineering expectations (see [`CLAUDE.md`](CLAUDE.md)):
 
 ## License
 
-No `LICENSE` file is present in the repository at this time; licensing is
-determined by the repository owner. Do not assume an open-source grant.
+`pyproject.toml` declares `license = {text = "Proprietary"}`. There is **no
+`LICENSE` file**. This repository does not grant an open-source license by
+implication.
+
+**Owner decision required** for third-party clone / OSS plug-and-play: choose
+and commit a LICENSE text (or confirm proprietary-only). Do not change
+`license = Proprietary` without an explicit owner instruction.

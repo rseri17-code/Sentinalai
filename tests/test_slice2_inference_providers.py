@@ -127,15 +127,17 @@ class RaisingPort:
 
 def _run_inc12345() -> dict:
     sup = SentinalAISupervisor()
+    # Sequential playbook so worker-call order is stable across two runs.
+    sup._parallel_playbook = False
     _build_mock_workers(sup, "INC12345")
     return sup.investigate("INC12345")
 
 
 def _worker_calls(result: dict) -> list[tuple[str, str]]:
-    return [
+    return sorted(
         (str(r.get("tool", "")), str(r.get("action", "")))
         for r in result.get("receipts", [])
-    ]
+    )
 
 
 def _timeline_events(result: dict) -> list[tuple[Any, Any, Any]]:

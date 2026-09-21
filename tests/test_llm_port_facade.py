@@ -57,3 +57,23 @@ class TestInvestigateViaInferencePort:
         # Empty LLM overlay fail-opens to deterministic RCA.
         _assert_inc12345_keywords(result)
         assert mock_client.converse.called
+
+    @patch.object(llm_module, "LLM_PROVIDER", "openai")
+    @patch.object(llm_module, "LLM_ENABLED", True)
+    @patch.object(llm_module, "_OPENAI_AVAILABLE", True)
+    @patch.object(llm_module, "MODEL_ID", "gpt-4o")
+    def test_investigate_with_openai_port_mocked(self):
+        mock_choice = MagicMock()
+        mock_choice.message.content = ""
+        mock_choice.finish_reason = "stop"
+        mock_resp = MagicMock()
+        mock_resp.choices = [mock_choice]
+        mock_resp.usage = MagicMock(prompt_tokens=1, completion_tokens=0)
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_resp
+        with patch.object(llm_module, "_openai_client", return_value=mock_client):
+            result = _run_inc12345()
+        assert "root_cause" in result
+        assert "confidence" in result
+        _assert_inc12345_keywords(result)
+        assert mock_client.chat.completions.create.called

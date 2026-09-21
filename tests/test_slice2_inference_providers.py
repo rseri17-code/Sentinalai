@@ -1,11 +1,13 @@
-"""Slice 2 acceptance tests (§6.2 A–D).
+"""Slice 2 / Slice 5 acceptance tests (§6.2 A–D).
 
-A. Same investigation, two injected InferencePort classes, identical canned
-   InferenceResponse → equal root_cause / confidence / evidence_timeline /
-   worker call list. Inject via set_inference_port — do not patch boto3.
+A. Same investigation, injected InferencePort classes (Bedrock / Anthropic /
+   OpenAI stand-ins), identical canned InferenceResponse → equal root_cause /
+   confidence / evidence_timeline / worker call list. Inject via
+   set_inference_port — do not patch boto3.
 B. Provider failure → fail-open (pre-LLM hypotheses kept; result returned).
 C. Null / LLM off equals CI path (no network; INC12345 still deterministic).
-D. LLM_PROVIDER selects adapter class without SRE-domain code change.
+D. LLM_PROVIDER selects adapter class without SRE-domain code change
+   (bedrock | anthropic | openai).
 """
 from __future__ import annotations
 
@@ -93,6 +95,20 @@ class CannedAnthropicPort:
         return _canned_dict(system_prompt)
 
 
+class CannedOpenAIPort:
+    """Third class, identical canned InferenceResponse."""
+
+    def __call__(
+        self,
+        system_prompt: str,
+        user_message: str,
+        model_id: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> dict[str, Any]:
+        return _canned_dict(system_prompt)
+
+
 class FailingPort:
     """Provider that returns a taxonomy error (fail-open)."""
 
@@ -155,8 +171,10 @@ class TestASameInvestigationTwoProviders:
 
     def test_identical_canned_response_equal_rca(self):
         assert CannedBedrockPort is not CannedAnthropicPort
+        assert CannedBedrockPort is not CannedOpenAIPort
         assert isinstance(CannedBedrockPort(), InferencePort)
         assert isinstance(CannedAnthropicPort(), InferencePort)
+        assert isinstance(CannedOpenAIPort(), InferencePort)
 
         with patch.object(llm_module, "LLM_ENABLED", True), \
              patch.object(llm_module, "MODEL_ID", "canned-slice2"):
@@ -164,11 +182,17 @@ class TestASameInvestigationTwoProviders:
             bedrock_result = _run_inc12345()
             set_inference_port(CannedAnthropicPort())
             anthropic_result = _run_inc12345()
+            set_inference_port(CannedOpenAIPort())
+            openai_result = _run_inc12345()
 
         assert bedrock_result["root_cause"] == anthropic_result["root_cause"]
         assert bedrock_result["confidence"] == anthropic_result["confidence"]
+        assert bedrock_result["root_cause"] == openai_result["root_cause"]
+        assert bedrock_result["confidence"] == openai_result["confidence"]
         assert _timeline_events(bedrock_result) == _timeline_events(anthropic_result)
+        assert _timeline_events(bedrock_result) == _timeline_events(openai_result)
         assert _worker_calls(bedrock_result) == _worker_calls(anthropic_result)
+        assert _worker_calls(bedrock_result) == _worker_calls(openai_result)
         assert bedrock_result["root_cause"]
         assert _worker_calls(bedrock_result)
 
@@ -211,7 +235,8 @@ class TestCNullEqualsCiPath:
         with patch.object(llm_module, "LLM_ENABLED", False), \
              patch.object(llm_module, "LLM_PROVIDER", "null"):
             with patch.object(llm_module, "_get_client", side_effect=AssertionError("boto3")), \
-                 patch.object(llm_module, "_anthropic_client", side_effect=AssertionError("anthropic")):
+                 patch.object(llm_module, "_anthropic_client", side_effect=AssertionError("anthropic")), \
+                 patch.object(llm_module, "_openai_client", side_effect=AssertionError("openai")):
                 result = _run_inc12345()
         root = result["root_cause"].lower()
         for kw in expected["root_cause_keywords"]:
@@ -232,27 +257,30 @@ class TestCNullEqualsCiPath:
 class TestDConfigSelectsAdapter:
     """§6.2 D — LLM_PROVIDER selects the adapter class; SRE code unchanged."""
 
-    def test_bedrock_vs_anthropic_factory(self):
+    def test_bedrock_vs_anthropic_vs_openai_factory(self):
         with patch.object(llm_module, "LLM_ENABLED", True), \
              patch.object(llm_module, "MODEL_ID", "test-model"), \
              patch.object(llm_module, "_BOTO3_AVAILABLE", True), \
-             patch.object(llm_module, "_ANTHROPIC_AVAILABLE", True):
+             patch.object(llm_module, "_ANTHROPIC_AVAILABLE", True), \
+             patch.object(llm_module, "_OPENAI_AVAILABLE", True):
             with patch.object(llm_module, "LLM_PROVIDER", "bedrock"):
                 assert isinstance(llm_module.get_inference_port(), llm_module.BedrockInference)
             with patch.object(llm_module, "LLM_PROVIDER", "anthropic"):
                 assert isinstance(llm_module.get_inference_port(), llm_module.AnthropicInference)
             with patch.object(llm_module, "LLM_PROVIDER", "openai"):
+                assert isinstance(llm_module.get_inference_port(), llm_module.OpenAIInference)
+            with patch.object(llm_module, "LLM_PROVIDER", "gemini"):
                 from supervisor.inference_helpers import NullInference
                 assert isinstance(llm_module.get_inference_port(), NullInference)
 
     def test_sentinel_config_exposes_provider(self, monkeypatch):
         reset_config()
-        monkeypatch.setenv("LLM_PROVIDER", "anthropic")
-        monkeypatch.setenv("LLM_MODEL", "claude-sonnet-4-6")
+        monkeypatch.setenv("LLM_PROVIDER", "openai")
+        monkeypatch.setenv("LLM_MODEL", "gpt-4o")
         try:
             cfg = SentinelConfig.from_env()
-            assert cfg.supervisor.llm_provider == "anthropic"
-            assert cfg.supervisor.llm_model == "claude-sonnet-4-6"
+            assert cfg.supervisor.llm_provider == "openai"
+            assert cfg.supervisor.llm_model == "gpt-4o"
         finally:
             reset_config()
 

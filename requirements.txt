@@ -14,5 +14,5 @@ scikit-learn>=1.3.0,<2.0.0
 # boto3>=1.34.0,<2.0.0          # AWS / Bedrock
 # psycopg2-binary>=2.9.9,<3.0.0 # PostgreSQL
 # pgvector>=0.2.4,<1.0.0        # Postgres vector extension
-# openai>=1.6.0,<2.0.0          # OpenAI LLM provider
+# openai>=1.6.0,<2.0.0          # OpenAI LLM provider (LLM_PROVIDER=openai)
 # mcp>=1.0.0,<2.0.0             # MCP tool gateway

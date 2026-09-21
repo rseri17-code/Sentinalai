@@ -350,14 +350,38 @@ class TestInferencePortFacade:
         assert isinstance(port, InferencePort)
 
     @patch.object(llm_module, "LLM_PROVIDER", "openai")
+    @patch.object(llm_module, "_OPENAI_AVAILABLE", True)
+    @patch.object(llm_module, "LLM_ENABLED", True)
+    @patch.object(llm_module, "MODEL_ID", "test-model")
+    @patch.object(llm_module, "_BOTO3_AVAILABLE", False)
+    @patch.object(llm_module, "_ANTHROPIC_AVAILABLE", False)
+    def test_openai_port_when_enabled(self):
+        from sentinel_core.models.inference import InferencePort
+        assert is_enabled() is True
+        port = llm_module.get_inference_port()
+        assert isinstance(port, llm_module.OpenAIInference)
+        assert isinstance(port, InferencePort)
+
+    @patch.object(llm_module, "LLM_PROVIDER", "gemini")
     @patch.object(llm_module, "LLM_ENABLED", True)
     @patch.object(llm_module, "MODEL_ID", "test-model")
     @patch.object(llm_module, "_BOTO3_AVAILABLE", True)
     @patch.object(llm_module, "_ANTHROPIC_AVAILABLE", True)
+    @patch.object(llm_module, "_OPENAI_AVAILABLE", True)
     def test_unknown_provider_uses_null(self):
         from supervisor.inference_helpers import NullInference
         assert is_enabled() is False
         assert isinstance(llm_module.get_inference_port(), NullInference)
+
+    def test_unknown_provider_warning_lists_openai(self, caplog):
+        import logging
+        llm_module.dispose()
+        with caplog.at_level(logging.WARNING, logger="sentinalai.llm"), \
+             patch.object(llm_module, "LLM_PROVIDER", "gemini"), \
+             patch.object(llm_module, "LLM_ENABLED", True), \
+             patch.object(llm_module, "MODEL_ID", "test-model"):
+            llm_module.get_inference_port()
+        assert "supported: null, bedrock, anthropic, openai" in caplog.text
 
 
 class TestAnthropicAdapter:
@@ -445,4 +469,132 @@ class TestAnthropicAdapter:
             result = converse("sys", "user")
         assert result["stop_reason"] == "disabled"
         assert result["text"] == ""
+
+
+class TestOpenAIAdapter:
+    """Slice 5: OpenAI Chat Completions mapping stays inside the adapter."""
+
+    def teardown_method(self):
+        dispose()
+
+    def test_maps_tokens_and_stop_reason(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-a-real-key")
+        mock_choice = MagicMock()
+        mock_choice.message.content = "adapter output"
+        mock_choice.finish_reason = "length"
+        mock_resp = MagicMock()
+        mock_resp.choices = [mock_choice]
+        mock_resp.usage = MagicMock(prompt_tokens=21, completion_tokens=7)
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_resp
+
+        with patch.object(llm_module, "LLM_PROVIDER", "openai"), \
+             patch.object(llm_module, "LLM_ENABLED", True), \
+             patch.object(llm_module, "MODEL_ID", "anthropic.claude-sonnet-4-5-20250929-v1:0"), \
+             patch.object(llm_module, "_OPENAI_AVAILABLE", True), \
+             patch.object(llm_module, "_openai_client", return_value=mock_client):
+            result = converse("sys", "user", max_tokens=256, temperature=0.0)
+
+        assert result["text"] == "adapter output"
+        assert result["input_tokens"] == 21
+        assert result["output_tokens"] == 7
+        assert result["stop_reason"] == "max_tokens"
+        assert result["model_id"] == "gpt-4o"
+        kwargs = mock_client.chat.completions.create.call_args.kwargs
+        assert kwargs["max_tokens"] == 256
+        assert kwargs["temperature"] == 0.0
+        assert kwargs["model"] == "gpt-4o"
+        assert kwargs["messages"] == [
+            {"role": "system", "content": "sys"},
+            {"role": "user", "content": "user"},
+        ]
+
+    def test_native_model_id_passthrough(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-a-real-key")
+        mock_choice = MagicMock()
+        mock_choice.message.content = "ok"
+        mock_choice.finish_reason = "stop"
+        mock_resp = MagicMock()
+        mock_resp.choices = [mock_choice]
+        mock_resp.usage = MagicMock(prompt_tokens=1, completion_tokens=1)
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_resp
+
+        with patch.object(llm_module, "LLM_PROVIDER", "openai"), \
+             patch.object(llm_module, "LLM_ENABLED", True), \
+             patch.object(llm_module, "MODEL_ID", "gpt-4o-mini"), \
+             patch.object(llm_module, "_OPENAI_AVAILABLE", True), \
+             patch.object(llm_module, "_openai_client", return_value=mock_client):
+            result = converse("sys", "user")
+
+        assert result["model_id"] == "gpt-4o-mini"
+        assert result["stop_reason"] == "end_turn"
+        assert mock_client.chat.completions.create.call_args.kwargs["model"] == "gpt-4o-mini"
+
+    def test_rate_limit_maps_to_taxonomy_not_bedrock(self):
+        from sentinel_core.models.inference import InferenceError
+        if not llm_module._OPENAI_AVAILABLE:
+            pytest.skip("openai SDK not installed")
+        import httpx
+        request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+        response = httpx.Response(429, request=request)
+        exc = llm_module._openai_sdk.RateLimitError(
+            "rate", response=response, body=None,
+        )
+        assert llm_module._map_openai_error(exc) == InferenceError.RATE_LIMITED.value
+
+    def test_timeout_maps_to_taxonomy(self):
+        from sentinel_core.models.inference import InferenceError
+        if not llm_module._OPENAI_AVAILABLE:
+            pytest.skip("openai SDK not installed")
+        import httpx
+        request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+        exc = llm_module._openai_sdk.APITimeoutError(request=request)
+        assert llm_module._map_openai_error(exc) == InferenceError.TIMEOUT.value
+
+    def test_generic_error_is_unknown_not_bedrock(self):
+        from sentinel_core.models.inference import InferenceError
+        assert llm_module._map_openai_error(RuntimeError("boom")) == InferenceError.UNKNOWN.value
+
+    def test_api_key_read_at_call_time_never_logged(self, monkeypatch, caplog):
+        import logging
+        secret = "sk-SUPERSECRET-SLICE5"
+        monkeypatch.setenv("OPENAI_API_KEY", secret)
+        fake_client = MagicMock()
+        with caplog.at_level(logging.DEBUG, logger="sentinalai.llm"), \
+             patch.object(llm_module, "_OPENAI_AVAILABLE", True), \
+             patch.object(llm_module, "_openai_sdk") as sdk:
+            sdk.OpenAI.return_value = fake_client
+            client = llm_module._openai_client()
+        assert client is fake_client
+        assert sdk.OpenAI.call_args.kwargs["api_key"] == secret
+        assert sdk.OpenAI.call_args.kwargs["max_retries"] == 2
+        assert secret not in caplog.text
+
+    def test_missing_api_key_does_not_network(self, monkeypatch):
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        with patch.object(llm_module, "LLM_PROVIDER", "openai"), \
+             patch.object(llm_module, "LLM_ENABLED", True), \
+             patch.object(llm_module, "MODEL_ID", "gpt-4o"), \
+             patch.object(llm_module, "_OPENAI_AVAILABLE", True), \
+             patch.object(llm_module, "_openai_sdk") as sdk:
+            sdk.OpenAI.side_effect = AssertionError("must not construct client")
+            result = converse("sys", "user")
+        assert result["stop_reason"] == "disabled"
+        assert result["text"] == ""
+
+    def test_converse_generic_error_is_unknown(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-a-real-key")
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.side_effect = RuntimeError("boom")
+        with patch.object(llm_module, "LLM_PROVIDER", "openai"), \
+             patch.object(llm_module, "LLM_ENABLED", True), \
+             patch.object(llm_module, "MODEL_ID", "gpt-4o"), \
+             patch.object(llm_module, "_OPENAI_AVAILABLE", True), \
+             patch.object(llm_module, "_openai_client", return_value=mock_client):
+            result = converse("sys", "user")
+        assert result["error"] == "unknown"
+        assert result["stop_reason"] == "error"
+        assert result["text"] == ""
+        assert "bedrock_error" not in result.get("error", "")
 

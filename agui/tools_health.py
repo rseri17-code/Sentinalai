@@ -84,6 +84,6 @@ def build_tools_health() -> dict:
             "MCP tools follow GATEWAY_MODE + MCP_GATEWAY_URL "
             "(alias: AGENTCORE_GATEWAY_URL; see .env.example). "
             "Investigation LLM follows LLM_ENABLED + "
-            "LLM_PROVIDER (null | bedrock | anthropic)."
+            "LLM_PROVIDER (null | bedrock | anthropic | openai)."
         ),
     }

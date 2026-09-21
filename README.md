@@ -205,7 +205,7 @@ pytest -q
 export AGUI_AUTH_REQUIRED=true          # auth on by default; set a real secret:
 export AGUI_JWT_SECRET="<your-secret>"   # the BFF refuses to start without one
 export LLM_ENABLED=false                 # investigation LLM overlay off (CI default)
-export LLM_PROVIDER=null                 # null | bedrock | anthropic (openai not implemented)
+export LLM_PROVIDER=null                 # null | bedrock | anthropic | openai
 export GATEWAY_MODE=stub                 # honored: in-process fixtures even if a URL is set
 # export GATEWAY_MODE=live
 # export MCP_GATEWAY_URL=...             # clone-facing; AGENTCORE_GATEWAY_URL still works
@@ -241,7 +241,7 @@ python -c "from eval.enterprise.validate import validate; print(validate())"
 > Map MCP targets with `AGENTCORE_TARGET_*` — see
 > [`docs/clone/CONNECT_YOUR_ENVIRONMENT.md`](docs/clone/CONNECT_YOUR_ENVIRONMENT.md).
 > The investigation LLM overlay stays off unless `LLM_ENABLED=true` and
-> `LLM_PROVIDER` is `bedrock` or `anthropic`.
+> `LLM_PROVIDER` is `bedrock`, `anthropic`, or `openai`.
 
 ---
 
@@ -320,10 +320,8 @@ Engineering expectations (see [`CLAUDE.md`](CLAUDE.md)):
 
 ## License
 
-`pyproject.toml` declares `license = {text = "Proprietary"}`. There is **no
-`LICENSE` file**. This repository does not grant an open-source license by
-implication.
+Licensed under the **Apache License, Version 2.0**. See [`LICENSE`](LICENSE).
+Copyright 2026 the SentinalAI authors.
 
-**Owner decision required** for third-party clone / OSS plug-and-play: choose
-and commit a LICENSE text (or confirm proprietary-only). Do not change
-`license = Proprietary` without an explicit owner instruction.
+`pyproject.toml` declares `license = {text = "Apache-2.0"}`. Third-party
+clone / OSS plug-and-play is granted under Apache-2.0.

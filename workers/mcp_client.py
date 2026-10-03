@@ -23,6 +23,15 @@ GATEWAY_MODE:
     live | agentcore — call the gateway / ARNs
     unset            — auto: live if URL or ARN is set, else stub
 
+PLAIN_MCP (default off):
+    When unset/false, tool names are still rewritten to ``Target___operation``.
+    When true, the worker's plain tool name is sent with no rewrite.
+    Plain mode never replaces a failed live call with stub data.
+    Plain mode also refuses to fetch live evidence unless the model layer
+    is NullInference (LLM_ENABLED=false or LLM_PROVIDER=null/none/disabled).
+    That guard stays until identifier masking before model calls exists
+    and has been verified.
+
 Authentication priority:
     1. OAuth2 client_credentials grant (if GATEWAY_OAUTH2_CLIENT_ID is set)
        - Automatic token acquisition from Cognito token endpoint
@@ -68,11 +77,12 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import threading
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Callable
 
 logger = logging.getLogger("sentinalai.mcp_client")
 
@@ -203,6 +213,134 @@ def resolved_gateway_mode() -> str:
     if url or _has_any_arn():
         return "live"
     return "stub"
+
+
+def plain_mcp_enabled() -> bool:
+    """True when plain MCP tool names are opted in. Default off."""
+    return os.environ.get("PLAIN_MCP", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def mcp_call_timeout_seconds() -> float:
+    """Per-call timeout for live MCP and legacy calls.
+
+    ``MCP_CALL_TIMEOUT`` is the import-time default (30s). A later env change
+    is honored so tests can bound a hung call without reimporting.
+    """
+    raw = os.environ.get("MCP_CALL_TIMEOUT_SECONDS", "").strip()
+    if not raw:
+        return float(MCP_CALL_TIMEOUT)
+    try:
+        value = float(raw)
+    except ValueError:
+        return float(MCP_CALL_TIMEOUT)
+    if value <= 0:
+        return float(MCP_CALL_TIMEOUT)
+    return value
+
+
+# Identifier-masking guard. Live plain-MCP evidence must not reach a real model
+# until masking exists and is verified. Fail closed if the model layer cannot
+# be confirmed null.
+_PLAIN_MCP_MODEL_GUARD = (
+    "Refusing to send live MCP evidence to a non-null model; "
+    "identifier masking is not verified. Set LLM_PROVIDER=null or "
+    "LLM_ENABLED=false. This guard stays until identifier masking "
+    "before model calls is implemented and verified."
+)
+
+_SECRET_ASSIGN_RE = re.compile(
+    r"(?i)\b(authorization|bearer|token|secret|password|api[_-]?key)\b\s*[:=]\s*\S+"
+)
+_BEARER_RE = re.compile(r"(?i)\bBearer\s+\S+")
+
+
+def scrub_secrets(text: str, limit: int = 200) -> str:
+    """Drop credential-shaped fragments and bound the length."""
+    cleaned = _BEARER_RE.sub("Bearer [redacted]", text or "")
+    cleaned = _SECRET_ASSIGN_RE.sub(lambda match: f"{match.group(1)}=[redacted]", cleaned)
+    return cleaned[:limit]
+
+
+def plain_mcp_model_block_reason() -> str | None:
+    """Return the guard message when plain MCP would feed a non-null model.
+
+    Returns None when plain mode is off or the resolved port is NullInference.
+    An import or resolution failure fails closed (message returned) so live
+    evidence is not fetched.
+    """
+    if not plain_mcp_enabled():
+        return None
+    try:
+        from supervisor.llm import get_inference_port
+        port = get_inference_port()
+    except Exception:
+        return _PLAIN_MCP_MODEL_GUARD
+    if type(port).__name__ == "NullInference":
+        return None
+    return _PLAIN_MCP_MODEL_GUARD
+
+
+def _is_unauthorized(exc: BaseException) -> bool:
+    """True when *exc* or its cause chain looks like an HTTP 401."""
+    seen: list[BaseException] = []
+    current: BaseException | None = exc
+    while current is not None and current not in seen:
+        seen.append(current)
+        text = str(current)
+        if "401" in text or "Unauthorized" in text:
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
+def _call_with_timeout(fn: Callable[[], Any], timeout_s: float) -> Any:
+    """Run *fn* and raise TimeoutError if it has not finished in *timeout_s*.
+
+    The worker is a daemon so a timed-out call cannot block process exit.
+    The caller turns TimeoutError into an error dict; it is not propagated
+    out of ``McpGateway.invoke``.
+    """
+    box: dict[str, Any] = {}
+
+    def _run() -> None:
+        try:
+            box["value"] = fn()
+        except Exception as exc:
+            box["error"] = exc
+
+    worker = threading.Thread(target=_run, name="mcp-call-timeout", daemon=True)
+    worker.start()
+    worker.join(timeout_s)
+    if worker.is_alive():
+        raise TimeoutError(f"mcp call exceeded {timeout_s:g}s")
+    if "error" in box:
+        raise box["error"]
+    return box.get("value")
+
+
+def _failure_dict(mcp_tool_name: str, exc: BaseException, *, plain: bool) -> dict[str, Any]:
+    """Error dict for a live call that did not succeed.
+
+    Flag off keeps the historical ``gateway_exception`` string so existing
+    callers and tests stay stable. Plain mode never attaches stub payload
+    keys; the connection state is ``failed``.
+    """
+    if not plain:
+        return {"error": f"gateway_exception: {exc}", "tool": mcp_tool_name}
+    safe = scrub_secrets(str(exc))
+    return {
+        "error": f"failed: {type(exc).__name__}: {safe}",
+        "tool": mcp_tool_name,
+        "error_class": type(exc).__name__,
+        "connection_state": "failed",
+    }
+
+
+def _mark_stub_substitution(payload: dict[str, Any]) -> dict[str, Any]:
+    """Label a live-path stub fallback. Fixture mode does not use this."""
+    marked = dict(payload)
+    marked["connection_state"] = "stubbed"
+    return marked
 
 
 # Optional HTTP library for OAuth2 token requests
@@ -505,6 +643,108 @@ def _to_gateway_tool_name(mcp_tool_name: str) -> str:
     return f"{target}___{operation}"
 
 
+def outbound_tool_name(mcp_tool_name: str) -> str:
+    """Name placed on the wire.
+
+    PLAIN_MCP off: AgentCore ``Target___operation`` (unchanged).
+    PLAIN_MCP on: the worker's plain tool name, with no rewrite.
+    The OSS validation shim already accepts both forms; this client does
+    not reimplement that shim.
+    """
+    if plain_mcp_enabled():
+        return mcp_tool_name
+    return _to_gateway_tool_name(mcp_tool_name)
+
+
+def tool_identity(name: str) -> tuple[str, str] | None:
+    """Map a plain or AgentCore tool name to ``(server, operation)``.
+
+    Used to compare a worker's tool with a ``tools/list`` entry. This is
+    not the gateway shim's dispatcher.
+    """
+    raw = (name or "").strip()
+    if not raw:
+        return None
+    if "___" in raw:
+        target, operation = raw.split("___", 1)
+        target, operation = target.strip(), operation.strip()
+        if not target or not operation:
+            return None
+        for server, configured in _SERVER_TO_TARGET.items():
+            if configured == target or configured.lower() == target.lower():
+                return server, operation
+        lowered = target.lower().removesuffix("target")
+        if lowered in _SERVER_TO_TARGET:
+            return lowered, operation
+        return None
+    if "." in raw:
+        server, operation = raw.split(".", 1)
+        server, operation = server.strip().lower(), operation.strip()
+        if server and operation:
+            return server, operation
+    return None
+
+
+def normalize_mcp_result(result: Any, mcp_tool_name: str) -> dict[str, Any]:
+    """Normalize an MCP tool result to a dict.
+
+    A tool ``status == "error"`` becomes an error dict (never a stub).
+    Successful dicts are returned unchanged.
+    """
+    if isinstance(result, dict):
+        return result
+    status = getattr(result, "status", None)
+    content_parts = getattr(result, "content", None)
+    if status == "error":
+        text = _content_text(content_parts) or "tool status error"
+        return _failure_dict(mcp_tool_name, RuntimeError(text), plain=plain_mcp_enabled())
+    if content_parts is not None:
+        combined = _content_text(content_parts)
+        try:
+            parsed = json.loads(combined) if combined else {}
+        except (json.JSONDecodeError, TypeError):
+            return {"raw_response": combined}
+        if isinstance(parsed, dict):
+            return parsed
+        return {"raw_response": combined}
+    return {"raw_response": str(result)}
+
+
+def _content_text(content_parts: Any) -> str:
+    if not isinstance(content_parts, list):
+        return ""
+    text_parts: list[str] = []
+    for part in content_parts:
+        if isinstance(part, dict) and "text" in part:
+            text_parts.append(str(part["text"]))
+        elif hasattr(part, "text"):
+            text_parts.append(str(part.text))
+    return "\n".join(text_parts)
+
+
+def tool_names_from_list(payload: Any) -> list[str]:
+    """Extract tool names from an MCP ``tools/list`` result. Order preserved."""
+    if isinstance(payload, dict) and "tools" in payload:
+        items = payload["tools"]
+    elif hasattr(payload, "tools"):
+        items = payload.tools
+    elif isinstance(payload, list):
+        items = payload
+    else:
+        items = []
+    names: list[str] = []
+    for item in items:
+        if isinstance(item, str):
+            names.append(item)
+        elif isinstance(item, dict) and item.get("name"):
+            names.append(str(item["name"]))
+        elif hasattr(item, "tool_name") and callable(item.tool_name):
+            names.append(str(item.tool_name()))
+        elif hasattr(item, "name"):
+            names.append(str(item.name))
+    return names
+
+
 # =========================================================================
 # Token-bucket rate limiter (per MCP server)
 # =========================================================================
@@ -774,16 +1014,43 @@ class McpGateway:
             )
             return _stub_response(mcp_tool_name, tool_action, params)
 
+        url = resolved_gateway_url()
+        # Live evidence must not reach a non-null model while masking is absent.
+        # Fixture mode returned above, so this only applies to a configured endpoint.
+        if url or self.get_arn_for_tool(mcp_tool_name):
+            blocked = plain_mcp_model_block_reason()
+            if blocked:
+                return {
+                    "error": blocked,
+                    "tool": mcp_tool_name,
+                    "error_class": "PlainMcpModelGuard",
+                    "connection_state": "failed",
+                }
+
         # Priority 1: AgentCore gateway (MCP protocol — production path)
-        if resolved_gateway_url() and _MCP_SDK_AVAILABLE:
+        if url and _MCP_SDK_AVAILABLE:
             return self._invoke_via_gateway(mcp_tool_name, tool_action, params)
+
+        # URL set but the MCP SDK/client cannot be built. Legacy ARN still wins
+        # when one is configured. Otherwise the historical path substitutes a
+        # stub; plain mode fails closed instead.
+        if url and not _MCP_SDK_AVAILABLE:
+            arn = self.get_arn_for_tool(mcp_tool_name)
+            if arn:
+                return self._invoke_via_legacy(mcp_tool_name, tool_action, params, arn)
+            if plain_mcp_enabled():
+                return _failure_dict(
+                    mcp_tool_name, RuntimeError("MCP SDK not installed"), plain=True,
+                )
+            logger.warning("MCP SDK not installed — stub substitution for %s", mcp_tool_name)
+            return _mark_stub_substitution(_stub_response(mcp_tool_name, tool_action, params))
 
         # Priority 2: Legacy per-server ARNs (invoke_inline_agent)
         arn = self.get_arn_for_tool(mcp_tool_name)
         if arn:
             return self._invoke_via_legacy(mcp_tool_name, tool_action, params, arn)
 
-        # Priority 3: Stub responses (local dev / tests)
+        # Priority 3: Stub responses (local dev / tests). Unchanged bytes.
         logger.debug("No gateway or ARN configured for %s — returning stub", mcp_tool_name)
         return _stub_response(mcp_tool_name, tool_action, params)
 
@@ -800,51 +1067,50 @@ class McpGateway:
         On 401 (Unauthorized), invalidates the OAuth2 token and retries once
         to handle token expiry during mid-flight requests.
         """
-        gateway_tool_name = _to_gateway_tool_name(mcp_tool_name)
+        gateway_tool_name = outbound_tool_name(mcp_tool_name)
         tool_use_id = f"sentinalai-{uuid.uuid4().hex[:12]}"
 
         start = time.monotonic()
         try:
             client = self._get_mcp_client()
             if client is None:
+                if plain_mcp_enabled():
+                    return _failure_dict(
+                        mcp_tool_name,
+                        RuntimeError("MCP client could not be built"),
+                        plain=True,
+                    )
                 logger.warning("MCPClient unavailable — returning stub for %s", mcp_tool_name)
-                return _stub_response(mcp_tool_name, tool_action, params)
+                return _mark_stub_substitution(
+                    _stub_response(mcp_tool_name, tool_action, params),
+                )
 
-            result = client.call_tool_sync(
-                tool_use_id=tool_use_id,
-                name=gateway_tool_name,
-                arguments=params,
-            )
+            timeout_s = mcp_call_timeout_seconds()
+            try:
+                result = _call_with_timeout(
+                    lambda: client.call_tool_sync(
+                        tool_use_id=tool_use_id,
+                        name=gateway_tool_name,
+                        arguments=params,
+                        read_timeout_seconds=timedelta(seconds=timeout_s),
+                    ),
+                    timeout_s,
+                )
+            except TimeoutError as exc:
+                return _failure_dict(mcp_tool_name, exc, plain=plain_mcp_enabled())
 
             elapsed_ms = (time.monotonic() - start) * 1000
             logger.info(
                 "MCP gateway call: tool=%s gateway_name=%s elapsed=%.1fms",
                 mcp_tool_name, gateway_tool_name, elapsed_ms,
             )
-
-            # MCPClient returns tool result content — normalize to dict
-            if isinstance(result, dict):
-                return result
-            if hasattr(result, "content"):
-                # MCP ToolResult has a .content field (list of TextContent)
-                content_parts = result.content if hasattr(result, "content") else []
-                text_parts = []
-                for part in content_parts:
-                    if hasattr(part, "text"):
-                        text_parts.append(part.text)
-                combined = "\n".join(text_parts)
-                try:
-                    return json.loads(combined)
-                except (json.JSONDecodeError, TypeError):
-                    return {"raw_response": combined}
-            return {"raw_response": str(result)}
+            return normalize_mcp_result(result, mcp_tool_name)
 
         except Exception as exc:
             elapsed_ms = (time.monotonic() - start) * 1000
 
             # 401 retry: invalidate OAuth2 token and retry once
-            is_401 = "401" in str(exc) or "Unauthorized" in str(exc)
-            if is_401 and not _is_retry and self._oauth2_provider is not None:
+            if _is_unauthorized(exc) and not _is_retry and self._oauth2_provider is not None:
                 logger.warning(
                     "MCP gateway 401 for %s — invalidating token and retrying",
                     mcp_tool_name,
@@ -860,6 +1126,8 @@ class McpGateway:
                 "MCP gateway call failed: tool=%s error=%s elapsed=%.1fms",
                 mcp_tool_name, exc, elapsed_ms,
             )
+            if plain_mcp_enabled():
+                return _failure_dict(mcp_tool_name, exc, plain=True)
             return {"error": f"gateway_exception: {exc}", "tool": mcp_tool_name}
 
     def _get_auth_headers(self) -> dict[str, str]:
@@ -924,6 +1192,14 @@ class McpGateway:
                     headers=gw_self._get_auth_headers(),
                 ),
             )
+            # strands MCPClient refuses call_tool_sync until start() has
+            # opened the session. A start failure is "client could not be built".
+            try:
+                _call_with_timeout(self._mcp_client.start, mcp_call_timeout_seconds())
+            except Exception as exc:
+                logger.warning("Failed to start MCPClient: %s", exc)
+                self._mcp_client = None
+                return None
             logger.info("MCPClient connected to AgentCore gateway: %s", gateway_url)
             return self._mcp_client
         except Exception as exc:

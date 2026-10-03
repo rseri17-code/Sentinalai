@@ -1,0 +1,795 @@
+{
+  "_confidence_provenance": {
+    "base": 55.0,
+    "contributions": [
+      {
+        "delta": -5,
+        "kind": "penalty",
+        "source": "golden_signals"
+      },
+      {
+        "delta": -3,
+        "kind": "penalty",
+        "source": "metrics"
+      }
+    ],
+    "final_confidence": 47
+  },
+  "_corpus_version": "corpus:fc20a6c46b9a211f314caf95d0033ce3",
+  "_critique": {
+    "dimensions": {
+      "calibration": 1.0,
+      "coherence": 0.533,
+      "coverage": 0.4,
+      "specificity": 0.35,
+      "timeline": 0.1
+    },
+    "gaps": [
+      "Missing changes evidence \u2014 querying log_worker.get_change_data",
+      "Missing events evidence \u2014 querying apm_worker.get_k8s_events",
+      "Missing metrics evidence \u2014 querying metrics_worker.query_metrics",
+      "No changes evidence gathered",
+      "No events evidence gathered",
+      "No metrics evidence gathered",
+      "Root cause determination was inconclusive"
+    ],
+    "score": 0.459,
+    "triggered_refinement": true
+  },
+  "_evidence_lifecycle": {
+    "by_source": {
+      "check_changes": "used",
+      "check_events": "used",
+      "check_golden_signals": "used",
+      "check_itsm_changes": "used",
+      "search_error_logs": "used"
+    },
+    "counts": {
+      "error": 0,
+      "filtered": 0,
+      "suppressed": 0,
+      "unavailable": 0,
+      "used": 5
+    }
+  },
+  "_evidence_snapshot": {
+    "check_changes": true,
+    "check_events": true,
+    "check_golden_signals": true,
+    "check_itsm_changes": true,
+    "gap_get_change_data": true,
+    "gap_query_metrics": true,
+    "search_error_logs": true
+  },
+  "_gate_post_analysis": {
+    "blocking_gate": null,
+    "gates": [
+      {
+        "gate": "G3_CitationFloor",
+        "metric_value": 0.0,
+        "reason": "Citation coverage 0.0% < floor 35.0%. RCA claims may lack evidence backing.",
+        "threshold": 0.35,
+        "verdict": "warn"
+      },
+      {
+        "gate": "G2_ConfidenceFloor",
+        "metric_value": 47.0,
+        "reason": "confidence 47% (budget remaining)",
+        "threshold": 25.0,
+        "verdict": "pass"
+      }
+    ],
+    "passed": true,
+    "verdict": "warn"
+  },
+  "_llm_call_graph": {
+    "by_purpose": {},
+    "duplicate_calls": 0,
+    "estimated_cost_usd": 0.0,
+    "investigation_id": "INC12345",
+    "nodes": [],
+    "total_calls": 0,
+    "total_tokens": 0
+  },
+  "_online_eval": {
+    "dimensions": {
+      "calibration": 0.8,
+      "coherence": 1.0,
+      "diversity": 0.85,
+      "overconfidence_penalty": 1.0,
+      "specificity": 0.3,
+      "volume": 0.85
+    },
+    "source_count": 4,
+    "sources_found": [
+      "signals",
+      "logs",
+      "changes",
+      "metrics"
+    ]
+  },
+  "_phase_receipts": [
+    {
+      "completed_at": 4702.753649008,
+      "degraded_reason": "",
+      "elapsed_ms": 17.538920999868424,
+      "error_type": "",
+      "evidence_count_after": 0,
+      "evidence_count_before": 0,
+      "metadata": {},
+      "phase_name": "fetch",
+      "started_at": 4702.736110087,
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "completed_at": 4702.758204188,
+      "degraded_reason": "",
+      "elapsed_ms": 4.539827999906265,
+      "error_type": "",
+      "evidence_count_after": 0,
+      "evidence_count_before": 0,
+      "metadata": {},
+      "phase_name": "classify",
+      "started_at": 4702.75366436,
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "completed_at": 4702.765793999,
+      "degraded_reason": "",
+      "elapsed_ms": 7.5669050002034055,
+      "error_type": "",
+      "evidence_count_after": 9,
+      "evidence_count_before": 0,
+      "metadata": {},
+      "phase_name": "collect",
+      "started_at": 4702.758227094,
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "completed_at": 4702.780154258,
+      "degraded_reason": "",
+      "elapsed_ms": 14.345284999762953,
+      "error_type": "",
+      "evidence_count_after": 11,
+      "evidence_count_before": 9,
+      "metadata": {},
+      "phase_name": "analyze",
+      "started_at": 4702.765808973,
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "completed_at": 4704.162881193,
+      "degraded_reason": "",
+      "elapsed_ms": 1382.7141159999883,
+      "error_type": "",
+      "evidence_count_after": 11,
+      "evidence_count_before": 11,
+      "metadata": {},
+      "phase_name": "persist",
+      "started_at": 4702.780167077,
+      "status": "success",
+      "warnings": []
+    }
+  ],
+  "citation_coverage": 0.0,
+  "citations": [],
+  "cited_root_cause": "LOW CONFIDENCE: deployment v3.1.0 introduced NullPointerException in payment-service [UNVERIFIED]",
+  "confidence": 47,
+  "corpus_stamp": {
+    "build_version": "unknown",
+    "corpus_version": "corpus:fc20a6c46b9a211f314caf95d0033ce3",
+    "schema_version": 1
+  },
+  "evidence_timeline": [],
+  "hallucination_risk": true,
+  "historical_matches": [],
+  "hypothesis_count": 4,
+  "incident_id": "INC12345",
+  "non_validated_claims": [
+    "1"
+  ],
+  "online_quality_score": 0.74,
+  "rca_markdown": "# Root Cause Analysis Report\n\n**Report ID:** rca-INC12345-20261003T081111Z\n**Generated:** 2026-10-03T08:11:11.577979+00:00\n\n---\n\n## Incident Summary\n\n| Field | Value |\n|-------|-------|\n| Incident ID | INC12345 |\n| Type | error_spike |\n| Service | unknown |\n| Severity | medium (level 3) |\n| Summary |  |\n\n---\n\n## Root Cause\n\n**Determination:** LOW CONFIDENCE: deployment v3.1.0 introduced NullPointerException in payment-service [UNVERIFIED]\n\n**Confidence:** 47% (low)\n\n### Reasoning\n\nHistorical pattern: similar error_spike incidents in unknown were previously diagnosed as 'deployment v3.1.0 introduced NullPointerException in payment-service [UNVERIFIED]'. Confidence elevated if current evidence matches.\n\n---\n\n## Evidence Timeline\n\n*No timeline entries collected.*\n\n---\n\n## Investigation Steps\n\n| # | Tool | Action | Status | Duration | Results |\n|---|------|--------|--------|----------|---------|\n| 1 | ops_worker | get_incident_by_id | OK | 2ms | 1 |\n| 2 | itsm_worker | get_ci_details | OK | 0ms | 0 |\n| 3 | itsm_worker | get_known_errors | OK | 0ms | 0 |\n| 4 | itsm_worker | search_incidents | OK | 0ms | 0 |\n| 5 | confluence_worker | search_runbooks | OK | 0ms | 0 |\n| 6 | confluence_worker | search_postmortems | OK | 0ms | 0 |\n| 7 | knowledge_worker | search_similar | OK | 4ms | 0 |\n| 8 | log_worker | search_logs | OK | 1ms | 0 |\n| 9 | apm_worker | get_golden_signals | OK | 1ms | 0 |\n| 10 | itsm_worker | get_change_records | OK | 1ms | 0 |\n| 11 | metrics_worker | get_events | OK | 1ms | 0 |\n| 12 | log_worker | get_change_data | OK | 1ms | 0 |\n| 13 | log_worker | get_change_data | OK | 0ms | 0 |\n| 14 | apm_worker | get_k8s_events | OK | 1ms | 0 |\n| 15 | metrics_worker | query_metrics | OK | 0ms | 0 |\n\n---\n\n## Evidence Completeness\n\n- **logs:** Missing\n- **golden_signals:** Missing\n- **metrics:** Missing\n- **events:** Missing\n- **changes:** Missing\n\n---\n\n## Hypothesis Analysis\n\n- **Hypotheses generated:** 4\n- **Winning hypothesis:** historical_pattern\n- **Knowledge retrieval boost:** +0.0\n\n---\n\n## Remediation Guidance\n\n**Risk Level:** high\n\n> **WARNING: Verify root cause before acting on remediation.**\n\n> Low confidence RCA - verify root cause before acting on remediation\n> VERIFY BEFORE ACTING: risk level is high \u2014 confirm root cause and review rollback plan before executing remediation\n\n### Immediate Actions\n1. Rollback last deployment via CI/CD pipeline\n1. Enable feature flag rollback for affected features\n\n### Permanent Fix\n1. Improve integration test coverage for error paths\n1. Add canary deployment stage to CI/CD pipeline\n\n**Runbook:** runbook/error-spike-response.md\n\n---\n\n## Investigation Metadata\n\n- **Total duration:** 54ms\n- **Tool calls:** 15\n- **Budget remaining:** 10\n- **Evidence sources:** 0\n- **Agent version:** 0.1.0\n- **Quality score (judge):** 0.54\n",
+  "rca_report": {
+    "affected_service": "unknown",
+    "agent_version": "0.1.0",
+    "budget_remaining": 10,
+    "confidence": 47,
+    "confidence_bracket": "low",
+    "elapsed_ms": 53.7,
+    "evidence_completeness": {
+      "changes": false,
+      "events": false,
+      "golden_signals": false,
+      "logs": false,
+      "metrics": false
+    },
+    "evidence_sources": 0,
+    "evidence_timeline": [],
+    "generated_at": "2026-10-03T08:11:11.577979+00:00",
+    "historical_matches": [],
+    "hypothesis_count": 4,
+    "incident_id": "INC12345",
+    "incident_summary": "",
+    "incident_type": "error_spike",
+    "investigation_steps": [
+      {
+        "action": "get_incident_by_id",
+        "elapsed_ms": 1.6,
+        "error": "",
+        "result_count": 1,
+        "status": "success",
+        "tool": "ops_worker"
+      },
+      {
+        "action": "get_ci_details",
+        "elapsed_ms": 0.3,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "itsm_worker"
+      },
+      {
+        "action": "get_known_errors",
+        "elapsed_ms": 0.1,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "itsm_worker"
+      },
+      {
+        "action": "search_incidents",
+        "elapsed_ms": 0.1,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "itsm_worker"
+      },
+      {
+        "action": "search_runbooks",
+        "elapsed_ms": 0.1,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "confluence_worker"
+      },
+      {
+        "action": "search_postmortems",
+        "elapsed_ms": 0.1,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "confluence_worker"
+      },
+      {
+        "action": "search_similar",
+        "elapsed_ms": 3.9,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "knowledge_worker"
+      },
+      {
+        "action": "search_logs",
+        "elapsed_ms": 0.6,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "log_worker"
+      },
+      {
+        "action": "get_golden_signals",
+        "elapsed_ms": 0.6,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "apm_worker"
+      },
+      {
+        "action": "get_change_records",
+        "elapsed_ms": 0.7,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "itsm_worker"
+      },
+      {
+        "action": "get_events",
+        "elapsed_ms": 0.8,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "metrics_worker"
+      },
+      {
+        "action": "get_change_data",
+        "elapsed_ms": 0.6,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "log_worker"
+      },
+      {
+        "action": "get_change_data",
+        "elapsed_ms": 0.3,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "log_worker"
+      },
+      {
+        "action": "get_k8s_events",
+        "elapsed_ms": 1.1,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "apm_worker"
+      },
+      {
+        "action": "query_metrics",
+        "elapsed_ms": 0.4,
+        "error": "",
+        "result_count": 0,
+        "status": "success",
+        "tool": "metrics_worker"
+      }
+    ],
+    "judge_scores": {
+      "actionability": 1.0,
+      "causal_reasoning": 0.0,
+      "evidence_usage": 0.223,
+      "overall": 0.537,
+      "root_cause_accuracy": 1.0,
+      "timeline_quality": 0.0
+    },
+    "llm_usage": {},
+    "reasoning": "Historical pattern: similar error_spike incidents in unknown were previously diagnosed as 'deployment v3.1.0 introduced NullPointerException in payment-service [UNVERIFIED]'. Confidence elevated if current evidence matches.",
+    "remediation": {
+      "confidence": 47,
+      "immediate_actions": [
+        "Rollback last deployment via CI/CD pipeline",
+        "Enable feature flag rollback for affected features"
+      ],
+      "permanent_fix": [
+        "Improve integration test coverage for error paths",
+        "Add canary deployment stage to CI/CD pipeline"
+      ],
+      "risk_level": "high",
+      "runbook_hint": "runbook/error-spike-response.md",
+      "source": "template_only",
+      "verify_before_acting": true,
+      "warnings": [
+        "Low confidence RCA - verify root cause before acting on remediation",
+        "VERIFY BEFORE ACTING: risk level is high \u2014 confirm root cause and review rollback plan before executing remediation"
+      ]
+    },
+    "report_id": "rca-INC12345-20261003T081111Z",
+    "retrieval_confidence_boost": 0.0,
+    "root_cause": "LOW CONFIDENCE: deployment v3.1.0 introduced NullPointerException in payment-service [UNVERIFIED]",
+    "severity_label": "medium",
+    "severity_level": 3,
+    "tool_calls_made": 15,
+    "winner_hypothesis": "historical_pattern"
+  },
+  "reasoning": "Historical pattern: similar error_spike incidents in unknown were previously diagnosed as 'deployment v3.1.0 introduced NullPointerException in payment-service [UNVERIFIED]'. Confidence elevated if current evidence matches.",
+  "receipts": [
+    {
+      "action": "get_incident_by_id",
+      "case_id": "INC12345",
+      "correlation_id": "9198e696e6d5",
+      "elapsed_ms": 1.6,
+      "end_ts": 4702.738386137,
+      "entity": "",
+      "error": "",
+      "missing_reason": null,
+      "params": {
+        "incident_id": "INC12345"
+      },
+      "policy_ref": "budget:remaining=20",
+      "result_count": 1,
+      "sequence_order": 1,
+      "signal_strength": null,
+      "start_ts": 4702.736829423,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "ops_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.521496+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.519938+00:00"
+    },
+    {
+      "action": "get_ci_details",
+      "case_id": "INC12345",
+      "correlation_id": "505ea06030a2",
+      "elapsed_ms": 0.3,
+      "end_ts": 4702.75490446,
+      "entity": "unknown",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "service": "unknown"
+      },
+      "policy_ref": "budget:remaining=19",
+      "result_count": 0,
+      "sequence_order": 2,
+      "signal_strength": null,
+      "start_ts": 4702.754614946,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "itsm_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.538013+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.537723+00:00"
+    },
+    {
+      "action": "get_known_errors",
+      "case_id": "INC12345",
+      "correlation_id": "f37484f4240a",
+      "elapsed_ms": 0.1,
+      "end_ts": 4702.755063932,
+      "entity": "unknown",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "service": "unknown",
+        "summary": ""
+      },
+      "policy_ref": "budget:remaining=18",
+      "result_count": 0,
+      "sequence_order": 3,
+      "signal_strength": null,
+      "start_ts": 4702.754990998,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "itsm_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.538172+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.538099+00:00"
+    },
+    {
+      "action": "search_incidents",
+      "case_id": "INC12345",
+      "correlation_id": "c44f968f8b59",
+      "elapsed_ms": 0.1,
+      "end_ts": 4702.755166493,
+      "entity": "unknown",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "query": "",
+        "service": "unknown"
+      },
+      "policy_ref": "budget:remaining=17",
+      "result_count": 0,
+      "sequence_order": 4,
+      "signal_strength": null,
+      "start_ts": 4702.755110704,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "itsm_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.538275+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.538218+00:00"
+    },
+    {
+      "action": "search_runbooks",
+      "case_id": "INC12345",
+      "correlation_id": "c87a08c09e27",
+      "elapsed_ms": 0.1,
+      "end_ts": 4702.75530937,
+      "entity": "unknown",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "query": "",
+        "service": "unknown"
+      },
+      "policy_ref": "budget:remaining=16",
+      "result_count": 0,
+      "sequence_order": 5,
+      "signal_strength": null,
+      "start_ts": 4702.755209545,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "confluence_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.538418+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.538317+00:00"
+    },
+    {
+      "action": "search_postmortems",
+      "case_id": "INC12345",
+      "correlation_id": "fd6a74bf5a04",
+      "elapsed_ms": 0.1,
+      "end_ts": 4702.755418281,
+      "entity": "unknown",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "incident_type": "error_spike",
+        "service": "unknown"
+      },
+      "policy_ref": "budget:remaining=15",
+      "result_count": 0,
+      "sequence_order": 6,
+      "signal_strength": null,
+      "start_ts": 4702.755354072,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "confluence_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.538526+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.538462+00:00"
+    },
+    {
+      "action": "search_similar",
+      "case_id": "INC12345",
+      "correlation_id": "b331590a43ad",
+      "elapsed_ms": 3.9,
+      "end_ts": 4702.761045038,
+      "entity": "",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "incident_type": "error_spike",
+        "service": "unknown",
+        "summary": ""
+      },
+      "policy_ref": "budget:remaining=19",
+      "result_count": 0,
+      "sequence_order": 7,
+      "signal_strength": null,
+      "start_ts": 4702.757172325,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "knowledge_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.544155+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.540281+00:00"
+    },
+    {
+      "action": "search_logs",
+      "case_id": "INC12345",
+      "correlation_id": "adaea08e7635",
+      "elapsed_ms": 0.6,
+      "end_ts": 4702.763360898,
+      "entity": "unknown",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "query": "error unknown",
+        "service": "unknown"
+      },
+      "policy_ref": "budget:remaining=18",
+      "result_count": 0,
+      "sequence_order": 8,
+      "signal_strength": null,
+      "start_ts": 4702.762788496,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "log_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.546469+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.545897+00:00"
+    },
+    {
+      "action": "get_golden_signals",
+      "case_id": "INC12345",
+      "correlation_id": "060d3c253236",
+      "elapsed_ms": 0.6,
+      "end_ts": 4702.763491266,
+      "entity": "unknown",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "service": "unknown",
+        "target": "unknown"
+      },
+      "policy_ref": "budget:remaining=17",
+      "result_count": 0,
+      "sequence_order": 9,
+      "signal_strength": null,
+      "start_ts": 4702.762894179,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "apm_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.546601+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.546004+00:00"
+    },
+    {
+      "action": "get_change_records",
+      "case_id": "INC12345",
+      "correlation_id": "642153539c57",
+      "elapsed_ms": 0.7,
+      "end_ts": 4702.763757506,
+      "entity": "unknown",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "service": "unknown",
+        "time_window_hours": 24
+      },
+      "policy_ref": "budget:remaining=16",
+      "result_count": 0,
+      "sequence_order": 10,
+      "signal_strength": null,
+      "start_ts": 4702.763013967,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "itsm_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.546866+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.546122+00:00"
+    },
+    {
+      "action": "get_events",
+      "case_id": "INC12345",
+      "correlation_id": "730a96985bf5",
+      "elapsed_ms": 0.8,
+      "end_ts": 4702.763937799,
+      "entity": "unknown",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "service": "unknown",
+        "target": "unknown"
+      },
+      "policy_ref": "budget:remaining=15",
+      "result_count": 0,
+      "sequence_order": 11,
+      "signal_strength": null,
+      "start_ts": 4702.763087803,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "metrics_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.547046+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.546196+00:00"
+    },
+    {
+      "action": "get_change_data",
+      "case_id": "INC12345",
+      "correlation_id": "db0f411218c6",
+      "elapsed_ms": 0.6,
+      "end_ts": 4702.764016427,
+      "entity": "unknown",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "service": "unknown",
+        "time_window_hours": 24
+      },
+      "policy_ref": "budget:remaining=14",
+      "result_count": 0,
+      "sequence_order": 12,
+      "signal_strength": null,
+      "start_ts": 4702.763440861,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "log_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.547125+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.546548+00:00"
+    },
+    {
+      "action": "get_change_data",
+      "case_id": "INC12345",
+      "correlation_id": "09eafcf6a8ef",
+      "elapsed_ms": 0.3,
+      "end_ts": 4702.776145536,
+      "entity": "unknown",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "service": "unknown"
+      },
+      "policy_ref": "budget:remaining=13",
+      "result_count": 0,
+      "sequence_order": 13,
+      "signal_strength": null,
+      "start_ts": 4702.775882969,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "log_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.559256+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.558991+00:00"
+    },
+    {
+      "action": "get_k8s_events",
+      "case_id": "INC12345",
+      "correlation_id": "817e02428950",
+      "elapsed_ms": 1.1,
+      "end_ts": 4702.777304828,
+      "entity": "unknown",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "service": "unknown"
+      },
+      "policy_ref": "budget:remaining=12",
+      "result_count": 0,
+      "sequence_order": 14,
+      "signal_strength": null,
+      "start_ts": 4702.776247839,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "apm_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.560415+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.559356+00:00"
+    },
+    {
+      "action": "query_metrics",
+      "case_id": "INC12345",
+      "correlation_id": "e824b262d8b2",
+      "elapsed_ms": 0.4,
+      "end_ts": 4702.777762299,
+      "entity": "unknown",
+      "error": "",
+      "missing_reason": "no_evidence_returned",
+      "params": {
+        "metric_name": "error_rate",
+        "service": "unknown",
+        "window_minutes": 30
+      },
+      "policy_ref": "budget:remaining=11",
+      "result_count": 0,
+      "sequence_order": 15,
+      "signal_strength": null,
+      "start_ts": 4702.777398913,
+      "status": "success",
+      "time_window_end": "",
+      "time_window_start": "",
+      "tool": "metrics_worker",
+      "trace_id": "",
+      "wall_clock_end": "2026-10-03T08:11:11.560871+00:00",
+      "wall_clock_start": "2026-10-03T08:11:11.560507+00:00"
+    }
+  ],
+  "remediation": {
+    "confidence": 47,
+    "immediate_actions": [
+      "Rollback last deployment via CI/CD pipeline",
+      "Enable feature flag rollback for affected features"
+    ],
+    "permanent_fix": [
+      "Improve integration test coverage for error paths",
+      "Add canary deployment stage to CI/CD pipeline"
+    ],
+    "risk_level": "high",
+    "runbook_hint": "runbook/error-spike-response.md",
+    "source": "template_only",
+    "verify_before_acting": true,
+    "warnings": [
+      "Low confidence RCA - verify root cause before acting on remediation",
+      "VERIFY BEFORE ACTING: risk level is high \u2014 confirm root cause and review rollback plan before executing remediation"
+    ]
+  },
+  "retrieval_confidence_boost": 0.0,
+  "root_cause": "LOW CONFIDENCE: deployment v3.1.0 introduced NullPointerException in payment-service [UNVERIFIED]",
+  "validated_claims": [
+    "LOW CONFIDENCE: deployment v3",
+    "0 introduced NullPointerException in payment-service [UNVERIFIED]"
+  ],
+  "winner_hypothesis": "historical_pattern"
+}

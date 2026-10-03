@@ -57,11 +57,18 @@ _NON_EVIDENCE_FIELDS = frozenset({
 })
 
 # Allow list. "pool" counts when nothing is in front of it, when the
-# word in front is connection, db, database, jdbc, or hikari, or when
-# the token is a DB pool class: HikariPool, JdbcPool, QueuePool,
-# AsyncAdaptedQueuePool. Any other word in front does not.
+# word in front is connection, db, database, jdbc, hikari, pgx, or
+# r2dbc, or when the token is a DB pool class: HikariPool, JdbcPool,
+# QueuePool, AsyncAdaptedQueuePool. max/maximum in front counts only
+# when the word before that is empty, punctuation, a log level, an
+# allowed pool word, or a function word. Any other word does not.
 _ALLOWED_POOL_PREFIX = frozenset({
-    "connection", "db", "database", "jdbc", "hikari",
+    "connection", "db", "database", "jdbc", "hikari", "pgx", "r2dbc",
+})
+# Closed list. A noun in this slot blocks "max pool" / "maximum pool".
+_MAX_POOL_FUNCTION_WORDS = frozenset({
+    "and", "or", "the", "a", "an", "was", "is", "of", "when",
+    "because", "that", "but", "so", "then", "its", "has", "had", "been",
 })
 # A severity token is not a pool-kind word. "ERROR pool.exhausted"
 # is still a bare pool.
@@ -78,7 +85,7 @@ _POOL_MENTION = re.compile(
 )
 _POOL_NAME = (
     r"(?:"
-    r"\b(?:connection|database|jdbc|hikari|db)[\s._-]*pool\b"
+    r"\b(?:connection|database|r2dbc|hikari|jdbc|pgx|db)[\s._-]*pool\b"
     r"|\basyncadaptedqueuepool\b"
     r"|\bqueuepool\b"
     r"|\bpool\b"
@@ -112,7 +119,11 @@ _POOL_PATTERNS = (
     re.compile(r"remaining connection slots", re.I),
     re.compile(r"too many clients already", re.I),
     re.compile(r"cannot get (a )?connection", re.I),
-    re.compile(r"max(?:imum)? pool size (?:reached|exceeded)", re.I),
+    # "was" may sit between size and reached, as in the ADO.NET sentence.
+    re.compile(
+        r"max(?:imum)? pool size(?:\s+\w+){0,3}\s+(?:reached|exceeded)",
+        re.I,
+    ),
     re.compile(r"connection pool.{0,40}(held|waiting)", re.I),
 )
 
@@ -840,7 +851,29 @@ def _raw_text(record: dict) -> str:
     return "\n".join(parts)
 
 
-def _pool_mention_allowed(token: str) -> bool:
+def _max_pool_prefix_allowed(before: str) -> bool:
+    """True when the word before max/maximum may introduce a pool.
+
+    The slot is the single word before "max" or "maximum". Empty, the
+    start of a clause, and punctuation are allowed. A noun is not.
+    """
+    trimmed = before.rstrip(" \t\r\n")
+    if not trimmed:
+        return True
+    if not trimmed[-1].isalnum():
+        return True
+    found = re.search(r"[A-Za-z0-9]+$", trimmed)
+    if not found:
+        return True
+    word = found.group(0).lower()
+    return (
+        word in _LOG_LEVEL
+        or word in _ALLOWED_POOL_PREFIX
+        or word in _MAX_POOL_FUNCTION_WORDS
+    )
+
+
+def _pool_mention_allowed(token: str, before: str = "") -> bool:
     """True when this pool token is on the connection-pool allow list."""
     separated = re.search(r"[\s._-]", token) is not None
     compact = re.sub(r"[\s._-]+", "", token).lower()
@@ -848,6 +881,8 @@ def _pool_mention_allowed(token: str) -> bool:
         return True
     prefix = re.match(r"^(.*?)[\s._-]*pool$", token, re.I)
     word = (prefix.group(1) if prefix else "").lower()
+    if word in {"max", "maximum"}:
+        return _max_pool_prefix_allowed(before)
     if word in _ALLOWED_POOL_PREFIX or word == "":
         return True
     # "ERROR pool.exhausted": the severity is not the pool's kind.
@@ -858,7 +893,7 @@ def _listed_pool_text(text: str) -> str:
     """Blank every pool token that is not on the allow list."""
     def repl(match: re.Match[str]) -> str:
         token = match.group(0)
-        if _pool_mention_allowed(token):
+        if _pool_mention_allowed(token, text[:match.start()]):
             return token
         return " " * len(token)
 

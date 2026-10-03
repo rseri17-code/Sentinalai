@@ -218,6 +218,19 @@ def _failed_tool_search(val: object) -> bool:
     return tool_search_error(val) is not None
 
 
+def playbook_step_label(step: dict) -> str:
+    """Evidence key and owner-order label for one playbook step.
+
+    An empty label is not a key. ``dict.get("label", action)`` keeps
+    that empty string, and the owner walk then looks up the action.
+    """
+    label = step.get("label")
+    if isinstance(label, str) and label.strip():
+        return label.strip()
+    action = step.get("action") or ""
+    return str(action)
+
+
 class SentinalAISupervisor:
     """Autonomous incident RCA supervisor."""
 
@@ -2055,7 +2068,7 @@ class SentinalAISupervisor:
         # Records adaptive threshold feedback for each skipped step.
         filtered_playbook = []
         for step in playbook:
-            step_label = step.get("label", step.get("action", ""))
+            step_label = playbook_step_label(step)
             if _should_skip_step(incident_type, step_label, service):
                 logger.info(
                     "Skipping low-weight step: %s (type=%s service=%s)",
@@ -2070,10 +2083,7 @@ class SentinalAISupervisor:
             else:
                 filtered_playbook.append(step)
         playbook = filtered_playbook
-        step_labels = [
-            str(step.get("label") or step.get("action") or "")
-            for step in playbook
-        ]
+        step_labels = [playbook_step_label(step) for step in playbook]
 
         if not self._parallel_playbook:
             evidence = self._execute_playbook_sequential(
@@ -2120,7 +2130,7 @@ class SentinalAISupervisor:
             results = []
             for step in steps:
                 action = step["action"]
-                label = step.get("label", action)
+                label = playbook_step_label(step)
                 params = self._build_params(step, incident_id, service)
                 worker = self.workers.get(worker_name)
                 if worker is None:
@@ -2214,7 +2224,7 @@ class SentinalAISupervisor:
         for step in playbook:
             worker_name = step["worker"]
             action = step["action"]
-            label = step.get("label", action)
+            label = playbook_step_label(step)
             params = self._build_params(step, incident_id, service)
             worker = self.workers.get(worker_name)
             if worker is None:

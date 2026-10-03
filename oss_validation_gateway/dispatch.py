@@ -9,6 +9,7 @@ from typing import Any
 from oss_validation_gateway.backends import Backends
 from oss_validation_gateway.names import parse_tool_name
 from oss_validation_gateway.queries import (
+    _safe_service,
     golden_signal_promql,
     metric_hint_to_promql,
     splunk_query_to_logql,
@@ -58,6 +59,13 @@ def _loki_window_ns(params: dict[str, Any]) -> tuple[str, str]:
 
 
 def _golden_values(backends: Backends, service: str) -> dict[str, float]:
+    """Query the seven golden signals.
+
+    A missing or invalid service raises ``ValueError`` from
+    ``_safe_service`` before any query. Prometheus failures still become
+    0.0 so one bad series does not drop the rest.
+    """
+    safe = _safe_service(service)
     values: dict[str, float] = {}
     for key in (
         "latency_p95",
@@ -69,7 +77,7 @@ def _golden_values(backends: Backends, service: str) -> dict[str, float]:
         "saturation",
     ):
         try:
-            payload = backends.prometheus_query(golden_signal_promql(key, service or "payment-service"))
+            payload = backends.prometheus_query(golden_signal_promql(key, safe))
             values[key] = shaping.prometheus_scalar(payload, default=0.0)
         except Exception as exc:
             logger.warning("prometheus golden signal %s failed: %s", key, exc)
@@ -189,7 +197,7 @@ def _splunk(operation: str, params: dict[str, Any], service: str, backends: Back
 def _sysdig(operation: str, params: dict[str, Any], service: str, backends: Backends) -> dict[str, Any]:
     if operation in {"query_metrics", "get_host_metrics"}:
         metric = str(params.get("metric") or params.get("metric_hint") or "")
-        promql = metric_hint_to_promql(metric, service or "payment-service")
+        promql = metric_hint_to_promql(metric, service)
         start, end = _range_window(params)
         try:
             payload = backends.prometheus_query_range(promql, start=start, end=end)
@@ -199,7 +207,7 @@ def _sysdig(operation: str, params: dict[str, Any], service: str, backends: Back
         shaped["promql"] = promql
         return shaped
     if operation in {"golden_signals"}:
-        values = _golden_values(backends, service or "payment-service")
+        values = _golden_values(backends, service)
         return shaping.shape_golden_signals(values, service=service)
     if operation in {"get_events", "get_kubernetes_events"}:
         alerts = backends.alertmanager_alerts()
@@ -213,7 +221,7 @@ def _sysdig(operation: str, params: dict[str, Any], service: str, backends: Back
 
 def _dynatrace(operation: str, params: dict[str, Any], service: str, backends: Backends) -> dict[str, Any]:
     if operation in {"get_metrics"}:
-        values = _golden_values(backends, service or "payment-service")
+        values = _golden_values(backends, service)
         return shaping.shape_golden_signals(values, service=service)
     if operation == "get_problems":
         return shaping.shape_problems(backends.alertmanager_alerts())
@@ -227,7 +235,7 @@ def _dynatrace(operation: str, params: dict[str, Any], service: str, backends: B
 
 def _signalfx(operation: str, params: dict[str, Any], service: str, backends: Backends) -> dict[str, Any]:
     if operation == "query_signalfx_metrics":
-        values = _golden_values(backends, service or "payment-service")
+        values = _golden_values(backends, service)
         return shaping.shape_golden_signals(values, service=service)
     if operation == "get_signalfx_active_incidents":
         return shaping.shape_incidents(backends.alertmanager_alerts())

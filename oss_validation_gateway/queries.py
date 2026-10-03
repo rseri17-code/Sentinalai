@@ -6,8 +6,8 @@ metric names and a Loki line filter.
 
 Log and query matching is case-insensitive. Each query keyword is a hint.
 A hint with a synonym set matches any phrase in that set; other hints
-match themselves. Every hint is kept (the translator used to emit only
-the first keyword) and Loki must match all of them.
+match themselves. Space-separated hints are AND'd. An explicit ``OR``
+puts those alternatives in one filter.
 """
 
 from __future__ import annotations
@@ -59,7 +59,8 @@ QUERY_HINT_SYNONYMS: dict[str, tuple[str, ...]] = {
 }
 
 _IDENT = re.compile(r"^[A-Za-z0-9_.:-]+$")
-_BOOLEAN_WORDS = frozenset({"or", "and", "not"})
+_DROPPED_WORDS = frozenset({"and", "not"})
+_OR_SPLIT = re.compile(r"(?i)\s+OR\s+")
 # RE2 (Loki) rejects unknown escapes such as backslash-space. Escape only
 # metacharacters. Leave spaces so phrases stay readable line filters.
 _RE2_META = re.compile(r"([.^$*+?{}\[\]\\|()])")
@@ -117,11 +118,48 @@ def _escape_re2(value: str) -> str:
     return _RE2_META.sub(r"\\\1", value)
 
 
+def _hint_pattern(keyword: str) -> str:
+    """RE2 body for one hint. Synonyms inside the hint are alternatives."""
+    parts = [_escape_re2(term) for term in _terms_for_hint(keyword)]
+    if len(parts) == 1:
+        return parts[0]
+    return "(?:" + "|".join(parts) + ")"
+
+
 def _logql_filter(terms: tuple[str, ...]) -> str:
-    """Case-insensitive RE2 filter. Phrases in one hint are OR'd."""
+    """One case-insensitive line filter."""
     parts = [_escape_re2(term) for term in terms]
     body = parts[0] if len(parts) == 1 else "(?:" + "|".join(parts) + ")"
     return '|~ "(?i)%s"' % _quote_logql(body)
+
+
+def _keywords_from_clause(clause: str, service: str) -> list[str]:
+    tokens = [t for t in re.split(r"\s+", clause.strip()) if t and t.lower() != service.lower()]
+    keywords: list[str] = []
+    seen: set[str] = set()
+    for token in tokens:
+        cleaned = re.sub(r"[^A-Za-z0-9_.:-]+", "", token)
+        if not cleaned or cleaned.lower() in _DROPPED_WORDS:
+            continue
+        marker = cleaned.lower()
+        if marker in seen:
+            continue
+        seen.add(marker)
+        keywords.append(cleaned)
+    return keywords
+
+
+def _clause_pattern(keywords: list[str]) -> str:
+    """AND the hints in one OR-alternative, in order, without lookahead.
+
+    RE2 has no lookahead, so words in one alternative are joined with
+    ``.*``. ``connection refused`` matches that phrase with anything
+    between the words.
+    """
+    patterns = [_hint_pattern(keyword) for keyword in keywords]
+    if len(patterns) == 1:
+        return patterns[0]
+    return ".*".join(patterns)
 
 
 def splunk_query_to_logql(query: str, service: str | None = None) -> str:
@@ -129,45 +167,57 @@ def splunk_query_to_logql(query: str, service: str | None = None) -> str:
 
     The service token is dropped, case-insensitively, when the playbook
     already interpolated it. Punctuation other than ``_.:-`` is stripped.
-    ``or``, ``and``, and ``not`` are not hints.
+    ``and`` and ``not`` are not hints.
 
-    Every remaining keyword is a hint. The previous translator kept only
-    the first one. Each hint becomes its own ``|~ "(?i)..."`` filter, and
-    Loki ANDs those filters: a line must satisfy every hint. Within a
-    hint, the synonym set is OR'd. A token that is itself a listed
-    synonym (for example ``exception`` or ``pool.exhausted``) uses that
-    hint's full set. A token with no set matches itself only. Duplicate
-    hints that share a set are emitted once.
+    Space-separated hints are the default and stay a conjunction. Each
+    hint becomes its own ``|~ "(?i)..."`` filter, and Loki requires every
+    filter to match. ``error cascade`` asks for both an error and a
+    cascade; matching either word alone would return lines the playbook
+    did not ask for. The previous translator kept only the first keyword.
+    Within a hint, the synonym set is OR'd. A token that is itself a
+    listed synonym uses that hint's full set. A token with no set matches
+    itself only. Duplicate hints that share a set are emitted once.
+
+    An explicit ``OR`` (any case) splits the query into alternatives and
+    emits one filter, ``|~ "(?i)(?:a|b)"``. A line matches if any
+    alternative matches. ``latency OR slow`` is one filter, not two
+    filters that both have to match. A mixed query such as ``a b OR c``
+    is still one filter: the left alternative requires ``a`` then ``b``,
+    or the right alternative matches ``c``.
 
     An empty keyword list selects the service stream and adds no filter.
     ``service`` must be a non-empty label token; see ``_safe_service``.
     """
     svc = _safe_service(service)
     raw = (query or "").strip()
-    tokens = [t for t in re.split(r"\s+", raw) if t and t.lower() != svc.lower()]
-    keywords: list[str] = []
-    seen_tokens: set[str] = set()
-    for token in tokens:
-        cleaned = re.sub(r"[^A-Za-z0-9_.:-]+", "", token)
-        if not cleaned or cleaned.lower() in _BOOLEAN_WORDS:
-            continue
-        marker = cleaned.lower()
-        if marker in seen_tokens:
-            continue
-        seen_tokens.add(marker)
-        keywords.append(cleaned)
+    clause_keywords = [
+        keywords
+        for keywords in (_keywords_from_clause(part, svc) for part in _OR_SPLIT.split(raw))
+        if keywords
+    ]
     selector = '{service="%s"}' % _quote_logql(svc)
-    if not keywords:
+    if not clause_keywords:
         return selector
-    filters: list[str] = []
-    seen_sets: set[tuple[str, ...]] = set()
-    for keyword in keywords:
-        terms = _terms_for_hint(keyword)
-        if terms in seen_sets:
+    if len(clause_keywords) == 1:
+        filters: list[str] = []
+        seen_sets: set[tuple[str, ...]] = set()
+        for keyword in clause_keywords[0]:
+            terms = _terms_for_hint(keyword)
+            if terms in seen_sets:
+                continue
+            seen_sets.add(terms)
+            filters.append(_logql_filter(terms))
+        return selector + " " + " ".join(filters)
+    patterns: list[str] = []
+    seen_patterns: set[str] = set()
+    for keywords in clause_keywords:
+        pattern = _clause_pattern(keywords)
+        if pattern in seen_patterns:
             continue
-        seen_sets.add(terms)
-        filters.append(_logql_filter(terms))
-    return selector + " " + " ".join(filters)
+        seen_patterns.add(pattern)
+        patterns.append(pattern)
+    body = patterns[0] if len(patterns) == 1 else "(?:" + "|".join(patterns) + ")"
+    return selector + " " + '|~ "(?i)%s"' % _quote_logql(body)
 
 
 def metric_hint_to_promql(metric: str | None, service: str | None = None) -> str:

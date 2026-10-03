@@ -21,7 +21,11 @@ from oss_validation_gateway.names import (
     tool_catalog,
 )
 from oss_validation_gateway.protocol import handle_rpc
-from oss_validation_gateway.queries import metric_hint_to_promql, splunk_query_to_logql
+from oss_validation_gateway.queries import (
+    golden_signal_promql,
+    metric_hint_to_promql,
+    splunk_query_to_logql,
+)
 from oss_validation_gateway.server import create_app
 from oss_validation_gateway.shaping import (
     incident_id_of,
@@ -242,11 +246,27 @@ class TestQueryTranslation:
         assert "cascade" in logql
         assert "restart" in logql
 
-    def test_boolean_words_are_not_hints(self):
+    def test_or_terms_are_alternatives(self):
         logql = splunk_query_to_logql("latency OR slow", "api")
+        assert logql.count("|~") == 1
+        assert '|~ "(?i)(?:latency|slow)"' in logql
+        assert splunk_query_to_logql("latency or slow", "api") == logql
+
+    def test_space_separated_hints_are_anded(self):
+        logql = splunk_query_to_logql("a b", "api")
         assert logql.count("|~") == 2
-        assert "latency" in logql
-        assert "slow" in logql
+        assert '|~ "(?i)a"' in logql
+        assert '|~ "(?i)b"' in logql
+
+    def test_mixed_or_query(self):
+        logql = splunk_query_to_logql("a b OR c", "api")
+        assert logql.count("|~") == 1
+        assert '|~ "(?i)(?:a.*b|c)"' in logql
+
+    def test_and_and_not_are_not_hints(self):
+        logql = splunk_query_to_logql("a AND b", "api")
+        assert logql.count("|~") == 2
+        assert "AND" not in logql
 
     def test_empty_query_selects_service(self):
         logql = splunk_query_to_logql("", "api-gateway")
@@ -276,6 +296,16 @@ class TestQueryTranslation:
         assert metric_hint_to_promql("Response_Time_MS", "payment-service") == metric_hint_to_promql(
             "response_time_ms", "payment-service"
         )
+
+    def test_metric_and_golden_reject_empty_service(self):
+        with pytest.raises(ValueError, match="empty"):
+            metric_hint_to_promql("request_rate", "")
+        with pytest.raises(ValueError, match="empty"):
+            metric_hint_to_promql("request_rate", None)
+        with pytest.raises(ValueError, match="empty"):
+            golden_signal_promql("latency_p95", "")
+        with pytest.raises(ValueError, match="empty"):
+            golden_signal_promql("latency_p95", "   ")
 
 
 # ---------------------------------------------------------------------------
@@ -439,6 +469,25 @@ class TestDispatch:
         assert gw.transport.calls == []
         assert "invalid" in result["error"]
         assert result["logs"]["results"] == []
+
+    def test_metrics_missing_service_is_not_defaulted(self):
+        gw = _backends({"/api/v1/query_range": _prom_range([1.0]), "/api/v1/query": _prom_vector(1.0)})
+        result = dispatch("SysdigTarget___query_metrics", {"metric": "response_time_ms"}, gw)
+        assert gw.transport.calls == []
+        assert "empty" in result["error"]
+        assert "payment-service" not in result["error"]
+
+    def test_golden_signals_missing_service_is_not_defaulted(self):
+        gw = _backends({"/api/v1/query": _prom_vector(1.0)})
+        result = dispatch("DynatraceTarget___get_metrics", {}, gw)
+        assert gw.transport.calls == []
+        assert "empty" in result["error"]
+        result = dispatch("sysdig.golden_signals", {"service": "   "}, gw)
+        assert gw.transport.calls == []
+        assert "empty" in result["error"]
+        result = dispatch("signalfx.query_signalfx_metrics", {}, gw)
+        assert gw.transport.calls == []
+        assert "empty" in result["error"]
 
     def test_empty_service_is_not_rewritten(self):
         gw = _backends({"/loki/api/v1/query_range": _loki_payload()})

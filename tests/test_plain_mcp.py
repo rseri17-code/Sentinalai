@@ -401,19 +401,14 @@ class TestDiagnosticsStates:
 # Investigation-only replay hashes of INC12345 (flag off, LLM off,
 # GATEWAY_MODE=stub) against the committed frozen corpus. The historical
 # context future races the playbook, so knowledge_worker.search_similar lands
-# at sequence_order 7 through 13. Each position has one hash. 11-13 are the
-# same document as 7-10 with only that slot shifted (shifting a passing
-# order-7 run reproduces 8, 9, and 10). An unknown position or a different
-# hash fails. The v1 narrow hash was
+# at sequence_order 7, 8, 9, or 10. Each position has one hash. An unknown
+# position or a different hash fails. The v1 narrow hash was
 # e528c42a50b4aaf30280c2418e9a8924178c7697bd76de4da928604f109d5f72.
 _SEARCH_SIMILAR_HASHES = {
     7: "5411c9b66e7c69665cff32a828671317ca6192352fbb4188d988f7ef2f5560a1",
     8: "2e5a4bcb86966f093eb7dc6da6e09d05cf017718f26e4b848de93324aace986f",
     9: "101b1bd3ddf17d178982ad220a83035d3a1e5cc578c6e28146fc66be0c72115f",
     10: "5ee2e766f25414701c7b7ed7b32af9e35bf8e60e12d405cab99ce5148b89965d",
-    11: "a0f31c4b890a8a662a79230516164bc436a95d0554024218fdeb43b24f20611c",
-    12: "c0ba93f20387d1a265ce13ed21d437b81456e82ce85328350459f688dec3460b",
-    13: "38e78f285c6547902d1007c56fbce174948c62433388baf789b57f16d007d822",
 }
 _PINNED_RUNS = 3
 

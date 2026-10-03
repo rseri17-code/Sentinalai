@@ -265,6 +265,9 @@ class _CountingStart:
         self._fail()
 
     def _fail(self) -> None:
+        # Stay in start() long enough for the other first calls to wait
+        # on this attempt. An instant raise lets late threads miss the wave.
+        time.sleep(0.2)
         raise ConnectionError("dial tcp refused")
 
     def call_tool_sync(self, **_kwargs: Any) -> dict[str, Any]:

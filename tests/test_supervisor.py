@@ -246,8 +246,8 @@ class TestSupervisorWithMocks:
             assert req.lower() in evidence_text, f"Missing evidence: '{req}'"
 
         reasoning = result["reasoning"].lower()
-        assert any(kw in reasoning for kw in ("gradual", "increasing", "leak")), (
-            "Must identify memory leak pattern"
+        assert any(kw in reasoning for kw in ("memory", "oom", "increased")), (
+            "Must identify the memory growth the records show"
         )
 
         assert elapsed <= expected["investigation_time_max_seconds"]
@@ -261,7 +261,8 @@ class TestSupervisorWithMocks:
         result, _ = self._run("INC12347")
 
         root_cause = result["root_cause"].lower()
-        assert "deployment" in root_cause, "Must correlate with deployment"
+        assert "deploy" in root_cause, "Must name the deployment the records show"
+        assert "introduced" not in root_cause, "No pre-deploy baseline, so the statement does not say the deploy introduced the error"
         assert "nullpointer" in root_cause or "exception" in root_cause, (
             "Must identify specific error type"
         )
@@ -341,9 +342,10 @@ class TestSupervisorWithMocks:
 
         assert expected["confidence_min"] <= result["confidence"] <= expected["confidence_max"]
 
-        # Must show cascade understanding
+        # Both mechanisms are in the window, so the cause stays UNKNOWN.
         reasoning = result["reasoning"].lower()
-        assert any(kw in reasoning for kw in ("cascade", "cascading", "downstream", "propagat"))
+        assert "unknown" in result["root_cause"].lower()
+        assert any(kw in reasoning for kw in ("pool", "index", "unknown", "cause"))
 
         assert elapsed <= expected["investigation_time_max_seconds"]
 

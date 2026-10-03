@@ -7,6 +7,8 @@ the bottom of ``supervisor/agent.py``.
 """
 from __future__ import annotations
 
+from supervisor.helpers.placeholders import is_placeholder
+
 
 # Incident types where absence of signals/metrics is the expected finding,
 # not a gap in investigation quality.
@@ -30,7 +32,9 @@ def compute_confidence(
       +2 per corroborating evidence source (logs, signals, metrics, events, changes)
       +1 per log entry (max +5)
       +2 if golden signals present with anomaly detected
-      +1 if metrics have pattern field
+      +1 if metrics have a pattern that is not a placeholder
+      (the strings none / unknown / "", null, and empty lists or dicts
+      are not data and do not count)
       -5 if signals absent AND the incident type is not one where absence is the symptom
       -3 if metrics absent AND the incident type is not one where absence is the symptom
     Bounded to [0, 100].
@@ -58,36 +62,44 @@ def _score(base, logs, signals, metrics, events, changes, incident_type):
 
     # Per-source corroboration: counted once per present category (+2 each),
     # plus source-specific detail bonuses.
-    if logs:
+    real_logs = [item for item in logs if not is_placeholder(item)] if isinstance(logs, list) else []
+    if real_logs:
         contributions.append({"kind": "corroboration", "source": "logs",
                               "delta": 2})
         contributions.append({"kind": "detail", "source": "logs",
-                              "delta": min(len(logs), 5)})   # +1/log, max +5
-    if signals and signals.get("golden_signals"):
+                              "delta": min(len(real_logs), 5)})   # +1/log, max +5
+    golden = signals.get("golden_signals") if isinstance(signals, dict) else None
+    if not is_placeholder(golden):
         contributions.append({"kind": "corroboration", "source": "golden_signals",
                               "delta": 2})
-        if signals.get("anomaly_detected"):
+        anomaly = signals.get("anomaly_detected") if isinstance(signals, dict) else None
+        if anomaly and not is_placeholder(anomaly):
             contributions.append({"kind": "detail", "source": "golden_signals",
                                   "delta": 2})
-    if metrics and metrics.get("metrics"):
+    series = metrics.get("metrics") if isinstance(metrics, dict) else None
+    if not is_placeholder(series):
         contributions.append({"kind": "corroboration", "source": "metrics",
                               "delta": 2})
-        if metrics.get("pattern"):
+        pattern = metrics.get("pattern") if isinstance(metrics, dict) else None
+        # "none" is a non-empty string. It is still no data.
+        if not is_placeholder(pattern):
             contributions.append({"kind": "detail", "source": "metrics",
                                   "delta": 1})
-    if events:
+    real_events = [item for item in events if not is_placeholder(item)] if isinstance(events, list) else []
+    if real_events:
         contributions.append({"kind": "corroboration", "source": "events",
                               "delta": 2})
-    if changes:
+    real_changes = [item for item in changes if not is_placeholder(item)] if isinstance(changes, list) else []
+    if real_changes:
         contributions.append({"kind": "corroboration", "source": "changes",
                               "delta": 2})
 
     # Missing-source penalties (once each) where presence is expected.
     if incident_type not in _ABSENCE_IS_SYMPTOM:
-        if not signals or not signals.get("golden_signals"):
+        if is_placeholder(golden):
             contributions.append({"kind": "penalty", "source": "golden_signals",
                                   "delta": -5})
-        if not metrics or not metrics.get("metrics"):
+        if is_placeholder(series):
             contributions.append({"kind": "penalty", "source": "metrics",
                                   "delta": -3})
 

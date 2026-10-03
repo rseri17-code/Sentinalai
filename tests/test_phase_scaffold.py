@@ -243,7 +243,11 @@ class TestBehaviorParity:
                 score += 2
         if metrics and metrics.get("metrics"):
             sc += 1
-            if metrics.get("pattern"):
+            pattern = metrics.get("pattern")
+            # v1.2: "none" / "unknown" / "" are placeholders, not a pattern.
+            if isinstance(pattern, str) and pattern.strip().lower() in {"", "none", "unknown"}:
+                pattern = None
+            if pattern:
                 score += 1
         if events:
             sc += 1
@@ -265,6 +269,8 @@ class TestBehaviorParity:
         (80, [{"x": 1}] * 3, {}, {}, [], [], 0, ""),
         (80, [], {"golden_signals": True, "anomaly_detected": True}, {}, [], [], 0, ""),
         (80, [], {}, {"metrics": {"cpu": 1}, "pattern": "spike"}, [], [], 0, ""),
+        (80, [], {}, {"metrics": [{"n": 1}], "pattern": "none"}, [], [], 0, ""),
+        (80, [], {}, {"metrics": [{"n": 1}], "pattern": " unknown "}, [], [], 0, ""),
         (80, [], {}, {}, [], [], 0, "silent_failure"),
         (80, [], {}, {}, [], [], 0, "missing_data"),
         (60, [{"x": 1}], {"golden_signals": True}, {"metrics": {}}, [1], [1], 3, "error_spike"),

@@ -138,6 +138,10 @@ class TestValidateQuery:
         assert not ok
         assert "allowed pattern" in reason
 
+    def test_pool_query_is_allowed(self):
+        ok, reason = validate_query("pool payment-service")
+        assert ok, reason
+
     def test_allowlist_accepts_known_terms(self):
         for term in SPLUNK_QUERY_ALLOWLIST:
             ok, reason = validate_query(f"search {term} in service")

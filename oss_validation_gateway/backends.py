@@ -182,8 +182,8 @@ class Backends:
     ) -> dict[str, Any]:
         """Query Loki. ``limit`` is a newest-first line cap (see ``LOKI_LINE_LIMIT``).
 
-        The returned Loki payload is not annotated by this client. Shaping
-        does not add a truncation flag when more lines existed than ``limit``.
+        Shaping sets ``truncated`` when the returned line count equals
+        ``limit``, or when this body says it truncated.
         """
         url = f"{self.settings.loki_url}/loki/api/v1/query_range"
         params: dict[str, Any] = {"query": logql, "limit": str(limit), "direction": "backward"}

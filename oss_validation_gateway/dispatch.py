@@ -6,7 +6,7 @@ import logging
 import time
 from typing import Any
 
-from oss_validation_gateway.backends import Backends
+from oss_validation_gateway.backends import LOKI_LINE_LIMIT, Backends
 from oss_validation_gateway.names import parse_tool_name
 from oss_validation_gateway.queries import (
     _safe_service,
@@ -44,18 +44,15 @@ def _range_window(params: dict[str, Any]) -> tuple[str, str]:
 
     Clamped to 1–48 hours (default 2). This is not a sample cap. The query
     uses a 30s step in ``prometheus_query_range``. Shaped metric payloads
-    do not report truncation.
+    report ``range``, ``step``, and ``truncated`` (true only when the
+    sample count equals ``limit``, or Prometheus says it truncated).
+    There is no sample ``limit`` on this path, so ``limit`` is null.
     """
     hours = int(params.get("time_window_hours") or params.get("window_hours") or 2)
     hours = max(1, min(hours, 48))
     end = int(time.time())
     start = end - hours * 3600
     return str(start), str(end)
-
-
-def _loki_window_ns(params: dict[str, Any]) -> tuple[str, str]:
-    start_s, end_s = _range_window(params)
-    return str(int(start_s) * 1_000_000_000), str(int(end_s) * 1_000_000_000)
 
 
 def _golden_values(backends: Backends, service: str) -> dict[str, float]:
@@ -178,9 +175,17 @@ def _splunk(operation: str, params: dict[str, Any], service: str, backends: Back
     if operation in {"search_oneshot", "search_export"}:
         query = str(params.get("query") or "")
         logql = splunk_query_to_logql(query, service)
-        start_ns, end_ns = _loki_window_ns(params)
+        start_s, end_s = _range_window(params)
+        start_ns = str(int(start_s) * 1_000_000_000)
+        end_ns = str(int(end_s) * 1_000_000_000)
         payload = backends.loki_query_range(logql, start_ns=start_ns, end_ns=end_ns)
-        shaped = shaping.shape_logs(payload, service=service)
+        shaped = shaping.shape_logs(
+            payload,
+            service=service,
+            limit=LOKI_LINE_LIMIT,
+            window_start=shaping.unix_to_iso(start_s),
+            window_end=shaping.unix_to_iso(end_s),
+        )
         shaped["logql"] = logql
         return shaped
     if operation in {"get_change_data", "app_change_data"}:
@@ -199,11 +204,24 @@ def _sysdig(operation: str, params: dict[str, Any], service: str, backends: Back
         metric = str(params.get("metric") or params.get("metric_hint") or "")
         promql = metric_hint_to_promql(metric, service)
         start, end = _range_window(params)
+        step = "30s"
         try:
-            payload = backends.prometheus_query_range(promql, start=start, end=end)
+            payload = backends.prometheus_query_range(promql, start=start, end=end, step=step)
+            prom_range = f"{int(end) - int(start)}s"
         except Exception:
             payload = backends.prometheus_query(promql)
-        shaped = shaping.shape_metrics(payload, metric_name=metric or "request_rate", service=service)
+            step = None
+            prom_range = None
+        shaped = shaping.shape_metrics(
+            payload,
+            metric_name=metric or "request_rate",
+            service=service,
+            limit=None,
+            window_start=shaping.unix_to_iso(start),
+            window_end=shaping.unix_to_iso(end),
+            prom_range=prom_range,
+            step=step,
+        )
         shaped["promql"] = promql
         return shaped
     if operation in {"golden_signals"}:
@@ -243,11 +261,34 @@ def _signalfx(operation: str, params: dict[str, Any], service: str, backends: Ba
 
 
 # get_pod_logs reads at most this many pods and the last this many lines
-# of each pod. ``pod_count`` in the payload is the number of lines returned,
-# not the number of pods. The payload does not say when either cap cut
-# the result.
+# of each pod. ``pod_count`` is the number of lines returned, not pods.
+# ``pods_total`` is the number of pods in the list when the API returned it.
 _KUBE_POD_CAP = 3
 _KUBE_LOG_TAIL = 50
+
+
+def _pod_log_bounds(
+    logs: list[str],
+    per_pod_lines: list[int],
+    pods_total: int | None,
+) -> dict[str, Any]:
+    line_limit = _KUBE_POD_CAP * _KUBE_LOG_TAIL
+    pod_cut = pods_total is not None and pods_total > _KUBE_POD_CAP
+    pod_line_cut = any(n == _KUBE_LOG_TAIL for n in per_pod_lines)
+    bounds = shaping.result_bounds(
+        count=len(logs),
+        timestamps=[],
+        limit=line_limit,
+        window_start=None,
+        window_end=None,
+        backend_truncated=pod_cut or pod_line_cut,
+    )
+    bounds.update({
+        "pods_limit": _KUBE_POD_CAP,
+        "lines_per_pod_limit": _KUBE_LOG_TAIL,
+        "pods_total": pods_total,
+    })
+    return bounds
 
 
 def _kubernetes(operation: str, params: dict[str, Any], service: str, backends: Backends) -> dict[str, Any]:
@@ -278,7 +319,14 @@ def _kubernetes(operation: str, params: dict[str, Any], service: str, backends: 
                 "source": "oss_validation",
             }
         if operation == "get_pod_logs":
-            return {"logs": [], "pod_count": 0, "error": "kubernetes_not_configured", "source": "oss_validation"}
+            body: dict[str, Any] = {
+                "logs": [],
+                "pod_count": 0,
+                "error": "kubernetes_not_configured",
+                "source": "oss_validation",
+            }
+            body.update(_pod_log_bounds([], [], None))
+            return body
         return {
             "success": False,
             "error": "kubernetes_not_configured",
@@ -305,8 +353,10 @@ def _kubernetes(operation: str, params: dict[str, Any], service: str, backends: 
     if operation == "get_pod_logs":
         path = f"/api/v1/namespaces/{namespace}/pods"
         listing = backends.kubernetes_get(path, params={"labelSelector": f"app={name}"})
-        items = listing.get("items") if isinstance(listing, dict) else []
+        items = listing.get("items") if isinstance(listing, dict) else None
         logs: list[str] = []
+        per_pod_lines: list[int] = []
+        pods_total = len(items) if isinstance(items, list) else None
         if isinstance(items, list):
             for pod in items[:_KUBE_POD_CAP]:
                 pod_name = (pod.get("metadata") or {}).get("name") if isinstance(pod, dict) else None
@@ -317,8 +367,14 @@ def _kubernetes(operation: str, params: dict[str, Any], service: str, backends: 
                     params={"tailLines": str(_KUBE_LOG_TAIL)},
                 )
                 if isinstance(raw, str) and raw.strip():
-                    logs.extend(raw.splitlines()[-_KUBE_LOG_TAIL:])
-        return {"logs": logs, "pod_count": len(logs), "source": "kubernetes"}
+                    kept = raw.splitlines()[-_KUBE_LOG_TAIL:]
+                    per_pod_lines.append(len(kept))
+                    logs.extend(kept)
+                else:
+                    per_pod_lines.append(0)
+        body = {"logs": logs, "pod_count": len(logs), "source": "kubernetes"}
+        body.update(_pod_log_bounds(logs, per_pod_lines, pods_total))
+        return body
 
     if operation == "rollback_deployment":
         return {

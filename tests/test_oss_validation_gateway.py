@@ -336,15 +336,66 @@ class TestShaping:
         assert row["downstream"] == "payment-db"
         assert row["level"] == "ERROR"
 
+    def test_capped_loki_query_reports_truncation(self):
+        values = []
+        start = 1_700_000_000
+        for i in range(LOKI_LINE_LIMIT):
+            values.append([str((start + i) * 1_000_000_000), f"line {i}"])
+        payload = {
+            "data": {
+                "result": [{
+                    "stream": {"service": "api"},
+                    "values": values,
+                }],
+            },
+        }
+        shaped = shape_logs(
+            payload,
+            limit=LOKI_LINE_LIMIT,
+            window_start="2023-11-14T22:13:20Z",
+            window_end="2023-11-15T00:13:20Z",
+        )
+        assert shaped["logs"]["count"] == LOKI_LINE_LIMIT
+        assert shaped["truncated"] is True
+        assert shaped["limit"] == LOKI_LINE_LIMIT
+        assert shaped["oldest_ts"] == "2023-11-14T22:13:20Z"
+        assert shaped["newest_ts"] == "2023-11-14T22:14:09Z"
+        assert shaped["window_start"] == "2023-11-14T22:13:20Z"
+        assert shaped["window_end"] == "2023-11-15T00:13:20Z"
+
+    def test_uncapped_loki_query_is_not_truncated(self):
+        shaped = shape_logs(
+            _loki_payload(),
+            limit=LOKI_LINE_LIMIT,
+            window_start="2024-01-15T10:40:11Z",
+            window_end="2024-01-15T12:40:11Z",
+        )
+        assert shaped["logs"]["count"] == 1
+        assert shaped["truncated"] is False
+        assert shaped["oldest_ts"] == "2024-01-15T12:40:11Z"
+        assert shaped["newest_ts"] == "2024-01-15T12:40:11Z"
+
+    def test_backend_truncated_flag_is_reported(self):
+        payload = _loki_payload()
+        payload["data"]["truncated"] = True
+        shaped = shape_logs(payload, limit=LOKI_LINE_LIMIT)
+        assert shaped["logs"]["count"] == 1
+        assert shaped["truncated"] is True
+
     def test_reported_counts_match_returned_records(self):
         logs = shape_logs(_loki_payload())
         assert logs["logs"]["count"] == len(logs["logs"]["results"])
         assert "result_count" not in logs
-        assert "truncated" not in logs
+        assert logs["truncated"] is False
+        assert logs["limit"] is None
         incidents = shape_incidents([_alert(), _alert("INC-OSS-002")])
         assert incidents["count"] == len(incidents["incidents"])
+        assert incidents["truncated"] is False
+        assert incidents["oldest_ts"]
         alerts = shape_alerts([_alert()])
         assert alerts["count"] == len(alerts["alerts"])
+        assert alerts["truncated"] is False
+        assert alerts["oldest_ts"] == alerts["newest_ts"]
 
     def test_metrics_nested_list(self):
         shaped = shape_metrics(_prom_range([80, 100, 2500]), metric_name="response_time_ms")
@@ -393,7 +444,12 @@ class TestDispatch:
         assert "timeout" in result["logs"]["results"][0]["message"]
         assert "(?i)" in result["logql"]
         assert "timeout" in result["logql"]
-        assert "truncated" not in result
+        assert result["truncated"] is False
+        assert result["limit"] == LOKI_LINE_LIMIT
+        assert result["window_start"]
+        assert result["window_end"]
+        assert result["oldest_ts"] == "2024-01-15T12:40:11Z"
+        assert result["newest_ts"] == result["oldest_ts"]
         params = gw.transport.calls[0][2]
         assert params is not None
         assert params["limit"] == str(LOKI_LINE_LIMIT)
@@ -409,6 +465,14 @@ class TestDispatch:
         points = result["metrics"]["metrics"]
         assert points[-1]["value"] == 2500.0
         assert "demo_latency_p95_ms" in result["promql"]
+        assert result["truncated"] is False
+        assert result["limit"] is None
+        assert result["step"] == "30s"
+        assert result["range"]
+        assert result["oldest_ts"]
+        assert result["newest_ts"]
+        assert result["window_start"]
+        assert result["window_end"]
 
     def test_golden_signals_from_dynatrace_name(self):
         gw = _backends({"/api/v1/query": _prom_vector(2500.0)})
@@ -448,6 +512,18 @@ class TestDispatch:
         )
         assert result["skipped"] is True
         assert result["rollback"]["status"] == "skipped"
+
+    def test_kubernetes_pod_logs_report_caps(self):
+        gw = _backends({})
+        result = dispatch("kubernetes.get_pod_logs", {"service": "payment-service"}, gw)
+        assert result["error"] == "kubernetes_not_configured"
+        assert result["pods_limit"] == 3
+        assert result["lines_per_pod_limit"] == 50
+        assert result["pods_total"] is None
+        assert result["limit"] == 150
+        assert result["truncated"] is False
+        assert result["oldest_ts"] is None
+        assert result["newest_ts"] is None
 
     def test_kubernetes_status_without_cluster(self):
         gw = _backends({})

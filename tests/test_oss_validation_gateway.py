@@ -389,6 +389,33 @@ class TestQueryTranslation:
         with pytest.raises(ValueError, match="empty"):
             golden_signal_promql("latency_p95", "   ")
 
+    def test_unknown_metric_hint_raises(self):
+        with pytest.raises(KeyError):
+            metric_hint_to_promql("not_a_real_metric", "payment-service")
+
+    def test_empty_metric_hint_raises(self):
+        with pytest.raises(KeyError):
+            metric_hint_to_promql("", "payment-service")
+        with pytest.raises(KeyError):
+            metric_hint_to_promql(None, "payment-service")
+        with pytest.raises(KeyError):
+            metric_hint_to_promql("   ", "payment-service")
+
+    def test_db_connection_pool_active_errors_on_this_seed(self):
+        seed = Path("deploy/oss-validation/seed/seed.py").read_text(encoding="utf-8")
+        assert "db_connection_pool_active" not in seed
+        assert "connection_pool" not in seed
+        with pytest.raises(KeyError):
+            metric_hint_to_promql("db_connection_pool_active", "payment-service")
+
+    def test_not_is_rejected(self):
+        with pytest.raises(ValueError, match="not"):
+            splunk_query_to_logql("error not timeout", "api")
+        with pytest.raises(ValueError, match="not"):
+            splunk_query_to_logql("NOT timeout", "api")
+        logql = splunk_query_to_logql("notification", "api")
+        assert "notification" in logql
+
 
 # ---------------------------------------------------------------------------
 # Response shaping
@@ -627,6 +654,51 @@ class TestDispatch:
         assert gw.transport.calls == []
         assert "invalid" in result["error"]
         assert result["logs"]["results"] == []
+
+    def test_unknown_metric_returns_error_payload(self):
+        gw = _backends({"/api/v1/query_range": _prom_range([1.0]), "/api/v1/query": _prom_vector(1.0)})
+        result = dispatch(
+            "SysdigTarget___query_metrics",
+            {"service": "payment-service", "metric": "not_a_real_metric"},
+            gw,
+        )
+        assert gw.transport.calls == []
+        assert result["error"] == "unknown_metric: not_a_real_metric"
+        assert result["metrics"]["metrics"] == []
+        assert "promql" not in result
+        assert "demo_request_rate" not in str(result)
+
+    def test_empty_metric_returns_error_payload(self):
+        gw = _backends({"/api/v1/query_range": _prom_range([1.0])})
+        result = dispatch(
+            "sysdig.query_metrics",
+            {"service": "payment-service", "metric": ""},
+            gw,
+        )
+        assert gw.transport.calls == []
+        assert result["error"] == "unknown_metric: "
+        missing = dispatch("sysdig.query_metrics", {"service": "payment-service"}, gw)
+        assert gw.transport.calls == []
+        assert missing["error"] == "unknown_metric: "
+        blank = dispatch(
+            "sysdig.query_metrics",
+            {"service": "payment-service", "metric_hint": "   "},
+            gw,
+        )
+        assert gw.transport.calls == []
+        assert blank["error"] == "unknown_metric:    "
+
+    def test_db_connection_pool_active_tool_errors(self):
+        gw = _backends({"/api/v1/query_range": _prom_range([1.0]), "/api/v1/query": _prom_vector(1.0)})
+        result = dispatch(
+            "SysdigTarget___query_metrics",
+            {"service": "payment-service", "metric": "db_connection_pool_active"},
+            gw,
+        )
+        assert gw.transport.calls == []
+        assert result["error"] == "unknown_metric: db_connection_pool_active"
+        assert result["metrics"]["metrics"] == []
+        assert "demo_request_rate" not in str(result)
 
     def test_metrics_missing_service_is_not_defaulted(self):
         gw = _backends({"/api/v1/query_range": _prom_range([1.0]), "/api/v1/query": _prom_vector(1.0)})

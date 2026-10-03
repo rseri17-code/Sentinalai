@@ -16,8 +16,8 @@ from typing import Any, Protocol
 
 
 # Newest-first line cap passed to Loki ``query_range``. Shaped log payloads
-# set ``count`` to the number of lines actually returned. They do not set a
-# truncation flag when Loki had more lines than this cap.
+# set ``count`` to the number of lines returned and set ``truncated`` when
+# that count equals this limit, or when Loki says the response was truncated.
 LOKI_LINE_LIMIT = 50
 
 

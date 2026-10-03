@@ -9,6 +9,9 @@ A hint with a synonym set matches any phrase in that set; other hints
 match themselves. A hint of two or three words matches those words in any
 order, in one filter. An explicit ``OR`` gives each alternative that same
 treatment. Regex metacharacters in a hint are escaped and match literally.
+The word ``not`` raises ``ValueError``. It is not dropped and it is not
+rewritten as a ``!~`` exclusion: dropping it made ``error not timeout``
+require timeout. No playbook hint uses ``not``.
 """
 
 from __future__ import annotations
@@ -61,7 +64,7 @@ QUERY_HINT_SYNONYMS: dict[str, tuple[str, ...]] = {
 }
 
 _IDENT = re.compile(r"^[A-Za-z0-9_.:-]+$")
-_DROPPED_WORDS = frozenset({"and", "not"})
+_DROPPED_WORDS = frozenset({"and"})
 _OR_SPLIT = re.compile(r"(?i)\s+OR\s+")
 # RE2 (Loki) rejects unknown escapes such as backslash-space. Escape only
 # metacharacters. Leave spaces so phrases stay readable line filters.
@@ -154,13 +157,27 @@ def _line_filter(body: str) -> str:
     return '|~ "(?i)%s"' % _quote_logql(body)
 
 
+def _reject_not(query: str) -> None:
+    """Raise when the hint contains the word ``not``.
+
+    The word is not removed and it is not turned into a Loki ``!~``
+    filter. No current playbook uses it. A silent drop inverted
+    ``error not timeout`` into a query that required timeout.
+    """
+    for token in re.split(r"\s+", query.strip()):
+        if token.lower() == "not":
+            raise ValueError(
+                f'hint contains "not"; exclusion is not supported: {query.strip()!r}'
+            )
+
+
 def _keywords_from_clause(clause: str, service: str) -> list[str]:
     """Words of one hint, in written order.
 
-    The service token, ``and``, and ``not`` are not words. Hint text is
-    kept as written: regex metacharacters are not stripped. Duplicate
-    words that share a synonym set are kept once, at the first position.
-    More than three words raises. The hint is not shortened to three.
+    The service token and ``and`` are not words. Hint text is kept as
+    written: regex metacharacters are not stripped. Duplicate words that
+    share a synonym set are kept once, at the first position. More than
+    three words raises. The hint is not shortened to three.
     """
     tokens = [t for t in re.split(r"\s+", clause.strip()) if t and t.lower() != service.lower()]
     keywords: list[str] = []
@@ -212,8 +229,9 @@ def splunk_query_to_logql(query: str, service: str | None = None) -> str:
     """Map a playbook ``query_hint`` to a Loki LogQL selector.
 
     The service token is dropped, case-insensitively, when the playbook
-    already interpolated it. ``and`` and ``not`` are not hints. Hint words
-    are regex-escaped and are not stripped down to alphanumerics.
+    already interpolated it. ``and`` is not a hint. The word ``not``
+    raises ``ValueError``; see ``_reject_not``. Hint words are
+    regex-escaped and are not stripped down to alphanumerics.
 
     A space-separated hint of one, two, or three words is one filter.
     Two or three words become every permutation of those words inside one
@@ -239,6 +257,7 @@ def splunk_query_to_logql(query: str, service: str | None = None) -> str:
     """
     svc = _safe_service(service)
     raw = (query or "").strip()
+    _reject_not(raw)
     patterns: list[str] = []
     seen_patterns: set[str] = set()
     for part in _OR_SPLIT.split(raw):
@@ -258,10 +277,17 @@ def splunk_query_to_logql(query: str, service: str | None = None) -> str:
 
 
 def metric_hint_to_promql(metric: str | None, service: str | None = None) -> str:
-    """Map a metric hint to PromQL. The hint lookup is case-insensitive."""
+    """Map a metric hint to PromQL. The hint lookup is case-insensitive.
+
+    Unknown, empty, and whitespace-only hints raise ``KeyError``. There
+    is no fallback to ``request_rate``. A hint is mapped only when it is
+    a key of ``METRIC_PROMQL``, the demo seed's metric set.
+    """
     svc = _safe_service(service)
-    key = (metric or "").strip().lower() or "request_rate"
-    template = METRIC_PROMQL.get(key, METRIC_PROMQL["request_rate"])
+    key = (metric or "").strip().lower()
+    template = METRIC_PROMQL.get(key)
+    if template is None:
+        raise KeyError(metric)
     # Label equality. Quote quotes and backslashes. Do not regex-escape
     # the value: a dot must stay a dot in the label text.
     return template.format(service=_quote_logql(svc))

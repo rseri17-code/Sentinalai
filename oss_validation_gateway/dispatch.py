@@ -202,7 +202,17 @@ def _splunk(operation: str, params: dict[str, Any], service: str, backends: Back
 def _sysdig(operation: str, params: dict[str, Any], service: str, backends: Backends) -> dict[str, Any]:
     if operation in {"query_metrics", "get_host_metrics"}:
         metric = str(params.get("metric") or params.get("metric_hint") or "")
-        promql = metric_hint_to_promql(metric, service)
+        try:
+            promql = metric_hint_to_promql(metric, service)
+        except KeyError:
+            return {
+                "error": f"unknown_metric: {metric}",
+                "metric": metric,
+                "source": "oss_validation",
+                "server": "sysdig",
+                "operation": operation,
+                "metrics": {"metrics": [], "baseline": 0},
+            }
         start, end = _range_window(params)
         step = "30s"
         try:

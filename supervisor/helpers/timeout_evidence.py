@@ -56,11 +56,24 @@ _NON_EVIDENCE_FIELDS = frozenset({
     "description", "root_cause_hint", "hint", "comment", "comments",
 })
 
-# A pool name is the word "pool", a CamelCase identifier ending in Pool
-# (HikariPool), or a lowercase token ending in pool (dbpool, connection_pool).
-# A rate, capacity, slot, or generic resource limit is not a pool name.
+# A connection pool: "connection pool", a db pool (dbpool), a driver
+# library name (HikariPool), or the standalone word "pool".
+# Thread, worker, fork-join, spool, and buffer pools are not this name.
 _POOL_NAME = (
-    r"(?:\bpool\b|(?<![A-Za-z0-9_])[A-Za-z][A-Za-z0-9_]*pool\b)"
+    r"(?:connection[\s._-]*pool|db[\s._-]*pool|hikari[\s._-]*pool|\bpool\b)"
+)
+
+# Removed before the connection-pool patterns run, so the word "pool"
+# inside them cannot bind as connection-pool exhaustion.
+_NON_CONNECTION_POOL = re.compile(
+    r"(?:"
+    r"\bthread[\s._-]*pool\b"
+    r"|\bworker[\s._-]*pool\b"
+    r"|\bfork[\s._-]*join[\s._-]*pool\b"
+    r"|\bbuffer[\s._-]*pool\b"
+    r"|\bspool\b"
+    r")",
+    re.I,
 )
 
 _POOL_PATTERNS = (
@@ -818,9 +831,14 @@ def _raw_text(record: dict) -> str:
     return "\n".join(parts)
 
 
+def _connection_pool_text(text: str) -> str:
+    """Drop thread, worker, fork-join, spool, and buffer pool names."""
+    return _NON_CONNECTION_POOL.sub(" ", text)
+
+
 def _is_pool(record: dict) -> bool:
     text = _raw_text(record)
-    if text and any(p.search(text) for p in _POOL_PATTERNS):
+    if text and any(p.search(_connection_pool_text(text)) for p in _POOL_PATTERNS):
         return True
     # Numeric pool gauges on the record itself (not a summary string).
     active = _num(record, "active", "active_connections", "pool_active", "db_pool_active")

@@ -1518,3 +1518,53 @@ class TestPoolWordingNamesAPool:
         assert {ref["signal"] for ref in cause["evidence_refs"]} == {
             "connection_pool_exhausted",
         }
+
+
+class TestConnectionPoolNotAnyPool:
+    """v1.11. Only a connection pool binds as connection-pool exhaustion.
+
+    Expected before the run, written against 2505022. Each line below
+    produces no connection-pool statement and no pool ref. The v1.10
+    connection-pool lines and the generic limit lines stay as they are.
+    A saturation thread-pool proposal stays a thread pool.
+    """
+
+    def test_non_connection_pools_are_not_connection_pool_exhaustion(self):
+        lines = (
+            "ThreadPool limit of 200 reached",
+            "thread pool limit reached",
+            "worker pool overflow",
+            "ForkJoinPool queue limit reached",
+            "spool limit reached",
+            "bufferpool limit reached",
+        )
+        for message in lines:
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            _assert_not_a_pool(result)
+
+
+class TestConnectionPoolNotAnyPool:
+    """v1.11. Only a connection pool binds as connection-pool exhaustion.
+
+    Expected before the run, written against 2505022. Each line below
+    produces no connection-pool statement and no pool ref. The v1.10
+    connection-pool lines and the generic limit lines stay as they are.
+    A saturation thread-pool proposal stays a thread pool.
+    """
+
+    def test_non_connection_pools_are_not_connection_pool_exhaustion(self):
+        lines = (
+            "ThreadPool limit of 200 reached",
+            "thread pool limit reached",
+            "worker pool overflow",
+            "ForkJoinPool queue limit reached",
+            "spool limit reached",
+            "bufferpool limit reached",
+        )
+        for message in lines:
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            _assert_not_a_pool(result)

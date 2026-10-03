@@ -432,9 +432,7 @@ def _view_matches(view: dict, kind: str, token: str) -> bool:
     if kind_l in {"golden_signals", "signals", "signal"} and view_kind != "signal":
         return False
     if token_l in {"pool_exhaustion", "pool"}:
-        return _is_connection_pool(record) or (
-            "pool" in _blob(record) and "thread pool" not in _blob(record)
-        )
+        return _is_connection_pool(record)
     if token_l in {"slow_query", "slow_queries"}:
         return _is_slow_query(record)
     if token_l in {"gradual_increase", "memory"}:
@@ -536,12 +534,7 @@ def _kept_clauses(proposed: str, views: list[dict], service: str) -> tuple[list[
             category = cat
 
     if re.search(r"pool", low) and not re.search(r"thread pool", low):
-        pool_records = [
-            r for r in records
-            if _is_connection_pool(r) or (
-                "pool" in _blob(r) and "thread pool" not in _blob(r)
-            )
-        ]
+        pool_records = [r for r in records if _is_connection_pool(r)]
         if pool_records:
             if _record_downstream(pool_records[0]):
                 phrase, _owner = _pool_owner_statement(pool_records[0])

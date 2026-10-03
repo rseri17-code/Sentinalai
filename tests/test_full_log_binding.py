@@ -765,3 +765,89 @@ class TestDatabaseSlowStatement:
         assert cause["confidence"] == 62
         assert cause["category"] == "slow_queries"
         assert {ref["service"] for ref in cause["evidence_refs"]} == {"catalog-db"}
+
+
+_OWNER_CAP_REASON = "downstream owner search cap is 3"
+
+
+def _investigate_latency_owners(service, records, downstream):
+    saved = {
+        key: os.environ.get(key)
+        for key in ("LLM_ENABLED", "PARALLEL_PLAYBOOK", "CALIBRATION_ENABLED")
+    }
+    os.environ["LLM_ENABLED"] = "false"
+    os.environ["PARALLEL_PLAYBOOK"] = "false"
+    os.environ["CALIBRATION_ENABLED"] = "false"
+    try:
+        sup = SentinalAISupervisor()
+        sup._parallel_playbook = False
+        gateway = _ServiceScopedLogs(records)
+        for name in list(sup.workers):
+            sup.workers[name] = gateway
+        incident = {
+            "incident_id": "INC-FULL",
+            "affected_service": service,
+            "summary": f"{service} latency",
+            "start_time": _START,
+            "downstream": downstream,
+        }
+        sup._tls.current_incident = dict(incident)
+        sup._tls.run_started = "2024-11-04T12:00:00Z"
+        receipts = ReceiptCollector(case_id="INC-FULL")
+        evidence = sup._execute_playbook(
+            "latency", "INC-FULL", service, receipts,
+            ExecutionBudget(), CircuitBreakerRegistry(),
+        )
+        sup._tls.last_evidence = evidence
+        result = sup._analyze_evidence(
+            "INC-FULL", dict(incident), "latency", evidence,
+        )
+        return result, gateway
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+class TestDownstreamOwnerSearchCap:
+    """At most three downstream owners are searched.
+
+    Expected before the run, written against 2505022. Five distinct
+    owners: db-1 through db-4 on retrieved records, in that order, then
+    db-5 on the incident. The first three records are searched. db-4
+    and db-5 are listed under unchecked coverage with a reason. A second
+    run returns the same searches and the same unchecked list.
+    """
+
+    def test_five_owners_search_three_and_list_the_rest(self):
+        records = [
+            {
+                "_time": "2024-11-04T07:59:10Z",
+                "service": "checkout-api",
+                "downstream": name,
+                "level": "ERROR",
+                "message": f"checkout-api latency waiting on {name}",
+            }
+            for name in ("db-1", "db-2", "db-3", "db-4")
+        ]
+        expected_searched = ["db-1", "db-2", "db-3"]
+        expected_unchecked = [
+            {"owner": "db-4", "reason": _OWNER_CAP_REASON},
+            {"owner": "db-5", "reason": _OWNER_CAP_REASON},
+        ]
+
+        def _once():
+            result, gateway = _investigate_latency_owners(
+                "checkout-api", records, "db-5",
+            )
+            searched = [name for name in gateway.services if name != "checkout-api"]
+            coverage = result["_confidence_provenance"]["unchecked_coverage"]
+            return searched, coverage.get("unsearched_downstream_owners")
+
+        first = _once()
+        second = _once()
+        assert first == second
+        assert first[0] == expected_searched
+        assert first[1] == expected_unchecked

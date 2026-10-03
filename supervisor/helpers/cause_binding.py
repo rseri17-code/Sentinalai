@@ -1337,6 +1337,9 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
                 "reported_count": reported,
                 "records_returned": len(results),
             })
+    unsearched = (evidence or {}).get("_unsearched_downstream_owners")
+    if not isinstance(unsearched, list):
+        unsearched = []
     after = None
     if run_started and requested:
         run_dt = _parse_ts(run_started)
@@ -1358,6 +1361,9 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
         "reported_count_disagrees": count_gaps,
         "after_run_start": after,
         "tool_errors": tool_errors,
+        "unsearched_downstream_owners": [
+            row for row in unsearched if isinstance(row, dict)
+        ],
     }
 
 

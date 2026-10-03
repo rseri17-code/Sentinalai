@@ -1950,11 +1950,12 @@ class SentinalAISupervisor:
         budget: ExecutionBudget | None,
         circuits: CircuitBreakerRegistry | None,
     ) -> dict[str, Any]:
-        """On the latency path, also search each downstream owner's logs.
+        """On the latency path, also search downstream owners' logs.
 
-        The owner is a retrieved record's ``downstream`` field (v1.7), or
-        the incident's own downstream name. The alerted service is already
-        searched by the playbook.
+        Owners are the order first seen on retrieved records, then an
+        owner named only on the incident. At most three are searched.
+        The rest are listed for unchecked coverage. The alerted service
+        is already searched by the playbook.
         """
         if incident_type != "latency" or not isinstance(evidence, dict):
             return evidence
@@ -1972,10 +1973,7 @@ class SentinalAISupervisor:
             seen.add(token)
             owners.append(token)
 
-        incident = getattr(self._tls, "current_incident", None) or {}
-        if isinstance(incident, dict):
-            _add(incident.get("downstream"))
-            _add(incident.get("downstream_service"))
+        # Record order first, then an owner named only on the incident.
         for value in evidence.values():
             if not isinstance(value, dict):
                 continue
@@ -1986,6 +1984,19 @@ class SentinalAISupervisor:
             for row in results:
                 if isinstance(row, dict):
                     _add(row.get("downstream"))
+        incident = getattr(self._tls, "current_incident", None) or {}
+        if isinstance(incident, dict):
+            _add(incident.get("downstream"))
+            _add(incident.get("downstream_service"))
+
+        cap = 3
+        skipped = owners[cap:]
+        owners = owners[:cap]
+        if skipped:
+            evidence["_unsearched_downstream_owners"] = [
+                {"owner": name, "reason": "downstream owner search cap is 3"}
+                for name in skipped
+            ]
 
         worker = self.workers.get("log_worker")
         if worker is None:

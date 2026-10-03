@@ -25,6 +25,27 @@ class TestWorstState:
         assert worst_state(["reachable", "stubbed"]) == "stubbed"
         assert worst_state(["stubbed", "missing"]) == "missing"
         assert worst_state(["missing", "failed", "reachable"]) == "failed"
+        assert worst_state(["reachble"]) == "failed"
+        assert worst_state(["reachable", "reachble"]) == "failed"
+
+    def test_unrecognized_required_state_fails_the_worker(self) -> None:
+        from workers.mcp_diagnostics import _envelope, _rollup, _tool_row
+
+        tool_rows = [
+            _tool_row(
+                "ops_worker",
+                "moogsoft.get_incident_by_id",
+                True,
+                "reachble",
+                "unrecognized",
+            ),
+        ]
+        worker = _rollup("ops_worker", frozenset({"moogsoft"}), tool_rows)
+        report = _envelope([worker], tool_rows, mode="live")
+        assert worker["state"] == "failed"
+        assert report["workers"][0]["state"] == "failed"
+        assert report["tools"][0]["state"] == "reachble"
+        assert report_exit_code(report) == 2
 
     def test_optional_failure_does_not_move_the_worker(self) -> None:
         report = diagnose(

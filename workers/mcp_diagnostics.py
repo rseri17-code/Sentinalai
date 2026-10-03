@@ -174,10 +174,18 @@ STATE_RANK: dict[str, int] = {
 
 
 def worst_state(states: list[str]) -> str:
-    """Worst connection state among required tools. Empty is reachable."""
+    """Worst connection state among required tools. Empty is reachable.
+
+    An unrecognized state ranks as failed. A typo such as ``reachble`` cannot
+    pass as reachable.
+    """
     if not states:
         return "reachable"
-    return max(states, key=lambda state: STATE_RANK.get(state, 0))
+    failed_rank = STATE_RANK["failed"]
+    winner = max(states, key=lambda state: STATE_RANK.get(state, failed_rank))
+    if winner not in STATE_RANK:
+        return "failed"
+    return winner
 
 
 def _row(
@@ -307,7 +315,8 @@ def _worker_reason(tool_rows: list[dict[str, Any]], state: str) -> tuple[str, st
             parts.append("missing: " + ",".join(other))
         return ("; ".join(parts) or "missing"), None
     if state == "failed":
-        row = sorted(matching, key=lambda item: item["tool"])[0]
+        pool = matching or [row for row in required if row["state"] not in STATE_RANK]
+        row = sorted(pool, key=lambda item: item["tool"])[0]
         return row["detail"], row.get("_error_class")
     if state == "stubbed":
         return (matching[0]["detail"] if matching else "stubbed"), None

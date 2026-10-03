@@ -398,11 +398,19 @@ class TestDiagnosticsStates:
         assert "[redacted]" in blob
 
 
-# Widened investigation hash of INC12345 (flag off, LLM off, GATEWAY_MODE=stub)
-# against the committed frozen corpus. Same bytes at e364e32 and this branch
-# when the corpus is pinned between runs. The v1 narrow hash was
+# Investigation-only replay hashes of INC12345 (flag off, LLM off,
+# GATEWAY_MODE=stub) against the committed frozen corpus. The historical
+# context future races the playbook, so knowledge_worker.search_similar lands
+# at sequence_order 7, 8, 9, or 10. Each position has one known hash. An
+# unknown position or a different hash fails the test. Position 7 is the
+# previously pinned hash. The v1 narrow hash was
 # e528c42a50b4aaf30280c2418e9a8924178c7697bd76de4da928604f109d5f72.
-_INC12345_INVESTIGATION_HASH = "5411c9b66e7c69665cff32a828671317ca6192352fbb4188d988f7ef2f5560a1"
+_SEARCH_SIMILAR_HASHES = {
+    7: "5411c9b66e7c69665cff32a828671317ca6192352fbb4188d988f7ef2f5560a1",
+    8: "2e5a4bcb86966f093eb7dc6da6e09d05cf017718f26e4b848de93324aace986f",
+    9: "101b1bd3ddf17d178982ad220a83035d3a1e5cc578c6e28146fc66be0c72115f",
+    10: "5ee2e766f25414701c7b7ed7b32af9e35bf8e60e12d405cab99ce5148b89965d",
+}
 
 
 # Committed paths. tests/conftest.py redirects the import-time env copies to an
@@ -480,53 +488,58 @@ def _pin_committed_corpus(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> di
     return snapshots
 
 
-def _receipt_pair(doc: dict) -> tuple[dict, dict] | None:
-    """The two calls that race: historical search vs the playbook log search."""
-    receipts = doc.get("receipts")
-    if not isinstance(receipts, list):
-        return None
-    knowledge = log = None
-    for row in receipts:
+def _is_search_similar(row: dict) -> bool:
+    return row.get("tool") == "knowledge_worker" and row.get("action") == "search_similar"
+
+
+def _search_similar_order(doc: dict) -> int | None:
+    for row in doc.get("receipts") or []:
+        if isinstance(row, dict) and _is_search_similar(row):
+            order = row.get("sequence_order")
+            return order if isinstance(order, int) else None
+    return None
+
+
+def _sort_receipts(receipts: list) -> list:
+    def _key(row: object) -> tuple:
         if not isinstance(row, dict):
-            continue
-        if row.get("tool") == "knowledge_worker" and row.get("action") == "search_similar":
-            knowledge = row
-        elif row.get("tool") == "log_worker" and row.get("action") == "search_logs":
-            log = row
-    if knowledge is None or log is None:
-        return None
-    return knowledge, log
+            return (10**9, "", "")
+        order = row.get("sequence_order")
+        if not isinstance(order, int):
+            order = 10**9
+        return (order, str(row.get("tool") or ""), str(row.get("action") or ""))
 
-
-def _knowledge_search_is_earlier(doc: dict) -> bool:
-    pair = _receipt_pair(doc)
-    if pair is None:
-        return False
-    knowledge, log = pair
-    return knowledge.get("sequence_order", 10**9) < log.get("sequence_order", 10**9)
+    return sorted(receipts, key=_key)
 
 
 def _only_historical_race(left: dict, right: dict) -> bool:
-    """True when the documents differ only by that one sequence_order swap."""
-    pair_l = _receipt_pair(left)
-    pair_r = _receipt_pair(right)
-    if pair_l is None or pair_r is None:
+    """True when the documents differ only by search_similar's sequence_order.
+
+    The call can land at any position. Receipts between the two slots shift by
+    one. Any other difference fails.
+    """
+    src = _search_similar_order(right)
+    dst = _search_similar_order(left)
+    if src is None or dst is None or not isinstance(right.get("receipts"), list):
         return False
-    swapped = json.loads(json.dumps(right))
-    for row in swapped["receipts"]:
-        if row.get("tool") == "knowledge_worker" and row.get("action") == "search_similar":
-            row["sequence_order"] = pair_l[0]["sequence_order"]
-        elif row.get("tool") == "log_worker" and row.get("action") == "search_logs":
-            row["sequence_order"] = pair_l[1]["sequence_order"]
-    swapped["receipts"].sort(
-        key=lambda row: (
-            row.get("sequence_order", 10**9),
-            str(row.get("tool") or ""),
-            str(row.get("action") or ""),
-        ),
-    )
+    moved = json.loads(json.dumps(right))
+    receipts = moved["receipts"]
+    if src != dst:
+        for row in receipts:
+            if not isinstance(row, dict):
+                continue
+            order = row.get("sequence_order")
+            if not isinstance(order, int):
+                continue
+            if _is_search_similar(row):
+                row["sequence_order"] = dst
+            elif src < dst and src < order <= dst:
+                row["sequence_order"] = order - 1
+            elif dst < src and dst <= order < src:
+                row["sequence_order"] = order + 1
+    moved["receipts"] = _sort_receipts(receipts)
     from workers.mcp_diagnostics import canonical_json
-    return canonical_json(left) == canonical_json(swapped)
+    return canonical_json(left) == canonical_json(moved)
 
 
 def _reset_learning_snapshots(snapshots: dict[str, bytes | None]) -> None:
@@ -606,12 +619,11 @@ class TestInc12345Unchanged:
         d2, _miss2 = replay_canonical(second, None)
         d3, miss3 = replay_canonical(replayed, None)
         # historical_future (knowledge_worker.search_similar) is submitted
-        # beside the playbook, so it can swap sequence_order with
-        # log_worker.search_logs even when PARALLEL_PLAYBOOK is false.
-        # That race is pre-existing in supervisor/. Do not "fix" it here.
+        # beside the playbook, so its sequence_order can land at any position
+        # even when PARALLEL_PLAYBOOK is false. Neighbors between those slots
+        # shift by one. That race is pre-existing in supervisor/. Do not
+        # "fix" it here.
         assert canonical_json(d1) == canonical_json(d2) or _only_historical_race(d1, d2)
-        stable = d1 if _knowledge_search_is_earlier(d1) else d2
-        assert _knowledge_search_is_earlier(stable)
         # replay=True returns the analysis dict. These envelope fields are
         # attached later on the full investigate() result and are absent here.
         # Do not invent them (that would be a supervisor/ change).
@@ -625,9 +637,12 @@ class TestInc12345Unchanged:
             assert d3[key] == d1[key] == d2[key]
         assert miss1 == []
 
-        stable_result = first if stable is d1 else second
         if canonical_json(d1) == canonical_json(d2):
             assert replay_hash(first, report) == replay_hash(second, report)
 
-        investigation_only = replay_hash(stable_result, None)
-        assert investigation_only == _INC12345_INVESTIGATION_HASH
+        for result, doc in ((first, d1), (second, d2)):
+            order = _search_similar_order(doc)
+            assert order in _SEARCH_SIMILAR_HASHES, (
+                f"search_similar sequence_order {order} is not a pinned variant"
+            )
+            assert replay_hash(result, None) == _SEARCH_SIMILAR_HASHES[order]

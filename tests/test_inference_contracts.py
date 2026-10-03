@@ -407,18 +407,20 @@ class TestConverseTyped:
         mock_client = self._mock_client(text="hello", input_t=20, output_t=10)
         # _do_converse samples time.monotonic twice and rounds to 0.1 ms.
         # A fixed step makes both calls record the same latency_ms.
-        # Drop the process-wide limiter so earlier real timestamps cannot
-        # stall acquire() under this clock.
-        llm_module._rate_limiter = None
+        # Patch the process-wide limiter so earlier real timestamps cannot
+        # stall acquire() under this clock; exit restores the previous one.
         ticks = itertools.count()
 
         def clock() -> float:
             return next(ticks) * 0.0001
 
-        with patch.object(llm_module, "_get_client", return_value=mock_client):
-            with patch.object(llm_module.time, "monotonic", side_effect=clock):
-                typed_result = converse_typed("sys", "user")
-                raw_result = converse("sys", "user")
+        with (
+            patch.object(llm_module, "_get_client", return_value=mock_client),
+            patch.object(llm_module, "_rate_limiter", None),
+            patch.object(llm_module.time, "monotonic", side_effect=clock),
+        ):
+            typed_result = converse_typed("sys", "user")
+            raw_result = converse("sys", "user")
         assert typed_result.to_dict() == raw_result
         assert raw_result["latency_ms"] == 0.1
 

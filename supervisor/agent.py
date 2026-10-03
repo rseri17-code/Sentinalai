@@ -1940,6 +1940,71 @@ class SentinalAISupervisor:
             evidence, _ = planner.run(incident_id, incident, incident_type)
         return evidence
 
+    def _search_downstream_owners(
+        self,
+        evidence: dict[str, Any],
+        incident_type: str,
+        incident_id: str,
+        service: str,
+        receipts: ReceiptCollector | None,
+        budget: ExecutionBudget | None,
+        circuits: CircuitBreakerRegistry | None,
+    ) -> dict[str, Any]:
+        """On the latency path, also search each downstream owner's logs.
+
+        The owner is a retrieved record's ``downstream`` field (v1.7), or
+        the incident's own downstream name. The alerted service is already
+        searched by the playbook.
+        """
+        if incident_type != "latency" or not isinstance(evidence, dict):
+            return evidence
+        from supervisor.helpers.placeholders import is_placeholder
+
+        owners: list[str] = []
+        seen: set[str] = set()
+
+        def _add(name: Any) -> None:
+            if not isinstance(name, str) or not name.strip() or is_placeholder(name):
+                return
+            token = name.strip()
+            if token == service or token in seen:
+                return
+            seen.add(token)
+            owners.append(token)
+
+        incident = getattr(self._tls, "current_incident", None) or {}
+        if isinstance(incident, dict):
+            _add(incident.get("downstream"))
+            _add(incident.get("downstream_service"))
+        for value in evidence.values():
+            if not isinstance(value, dict):
+                continue
+            logs = value.get("logs")
+            results = logs.get("results") if isinstance(logs, dict) else None
+            if not isinstance(results, list):
+                continue
+            for row in results:
+                if isinstance(row, dict):
+                    _add(row.get("downstream"))
+
+        worker = self.workers.get("log_worker")
+        if worker is None:
+            return evidence
+        for name in owners:
+            label = f"search_downstream_{name}_logs"
+            if label in evidence:
+                continue
+            params = self._build_params(
+                {"action": "search_logs", "query_hint": "{service}"},
+                incident_id,
+                name,
+            )
+            evidence[label] = self._call_worker(
+                worker, "search_logs", params, receipts, budget, "log_worker",
+                circuits=circuits,
+            )
+        return evidence
+
     # ------------------------------------------------------------------ #
     # Internal: execute playbook (W1 isolated circuits, W4 timeout, W5 retry)
     # ------------------------------------------------------------------ #
@@ -1985,9 +2050,13 @@ class SentinalAISupervisor:
         playbook = filtered_playbook
 
         if not self._parallel_playbook:
-            return self._execute_playbook_sequential(
+            evidence = self._execute_playbook_sequential(
                 playbook, incident_id, service, receipts, budget, cb_registry,
                 loop_checkpoint=loop_checkpoint,
+            )
+            return self._search_downstream_owners(
+                evidence, incident_type, incident_id, service,
+                receipts, budget, cb_registry,
             )
 
         # Group steps by worker for parallel dispatch
@@ -2095,7 +2164,10 @@ class SentinalAISupervisor:
 
         if _shadow is not None:
             _shadow.parity_log(evidence, context="_execute_playbook")
-        return evidence
+        return self._search_downstream_owners(
+            evidence, incident_type, incident_id, service,
+            receipts, budget, cb_registry,
+        )
 
     def _execute_playbook_sequential(
         self, playbook: list[dict], incident_id: str, service: str,

@@ -630,3 +630,138 @@ class TestResourceOwnerAndSymptom:
                 returned.extend(row.get("message", "") for row in val["logs"]["results"])
         assert timed in returned
         _assert_full_return(result, gateway, evidence)
+
+
+# v1.10 slow-statement coverage. Expected before the run:
+# a database's own duration-in-ms line binds as slow queries on that
+# database, and the latency path searches the downstream owner's logs.
+_PG_STATEMENT = (
+    "duration: 3645.077 ms  statement: SELECT id FROM payments WHERE id = $1"
+)
+_PG_EXECUTE = (
+    "duration: 1820.441 ms  execute <unnamed>: "
+    "UPDATE payment_transactions SET status = $1"
+)
+
+
+class _ServiceScopedLogs:
+    """Returns a log only when the search names that record's service."""
+
+    def __init__(self, records):
+        self.records = [dict(row) for row in records]
+        self.services: list[str] = []
+
+    def execute(self, action, params):
+        params = params or {}
+        if action == "search_logs" or str(action).startswith("search_"):
+            service = str(params.get("service") or "")
+            self.services.append(service)
+            rows = [
+                dict(row) for row in self.records
+                if str(row.get("service") or "") == service
+            ]
+            return {"logs": {"results": rows, "count": len(rows)}}
+        if action in ("get_change_data", "get_change_records"):
+            return {"changes": []}
+        if action in ("get_golden_signals", "check_latency"):
+            return {"signals": {"golden_signals": {}}}
+        if action == "get_events":
+            return {"events": []}
+        if action in ("query_metrics", "get_resource_metrics"):
+            return {"metrics": {"metrics": []}}
+        return {}
+
+
+def _investigate_scoped(incident_type, service, records):
+    saved = {
+        key: os.environ.get(key)
+        for key in ("LLM_ENABLED", "PARALLEL_PLAYBOOK", "CALIBRATION_ENABLED")
+    }
+    os.environ["LLM_ENABLED"] = "false"
+    os.environ["PARALLEL_PLAYBOOK"] = "false"
+    os.environ["CALIBRATION_ENABLED"] = "false"
+    try:
+        sup = SentinalAISupervisor()
+        sup._parallel_playbook = False
+        gateway = _ServiceScopedLogs(records)
+        for name in list(sup.workers):
+            sup.workers[name] = gateway
+        incident = {
+            "incident_id": "INC-FULL",
+            "affected_service": service,
+            "summary": f"{service} {incident_type}",
+            "start_time": _START,
+        }
+        sup._tls.current_incident = dict(incident)
+        sup._tls.run_started = "2024-11-04T12:00:00Z"
+        receipts = ReceiptCollector(case_id="INC-FULL")
+        evidence = sup._execute_playbook(
+            incident_type, "INC-FULL", service, receipts,
+            ExecutionBudget(), CircuitBreakerRegistry(),
+        )
+        sup._tls.last_evidence = evidence
+        result = sup._analyze_evidence(
+            "INC-FULL", dict(incident), incident_type, evidence,
+        )
+        return result, gateway
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+class TestDatabaseSlowStatement:
+    """Database slow-statement logs and downstream retrieval.
+
+    Expected before the run. A PostgreSQL ``duration: <ms> ms`` line
+    followed by ``statement:`` or ``execute`` binds as slow queries on
+    the database service, with no application wording. On the latency
+    path the playbook searches the alerted service and the downstream
+    owner named by the v1.7 ``downstream`` field, and the cause names
+    that owner.
+    """
+
+    def test_database_duration_statement_binds(self):
+        for message in (_PG_STATEMENT, _PG_EXECUTE):
+            records = [{
+                "_time": "2024-11-04T07:59:40Z",
+                "service": "payment-db",
+                "level": "LOG",
+                "message": message,
+            }]
+            result, _gateway, _evidence = _investigate(
+                "latency", "payment-db", records,
+            )
+            cause = result["cause"]
+            assert cause["statement"] == "slow queries on payment-db"
+            assert cause["confidence"] == 62
+            assert cause["category"] == "slow_queries"
+            assert {ref["service"] for ref in cause["evidence_refs"]} == {"payment-db"}
+            assert {ref["signal"] for ref in cause["evidence_refs"]} == {"slow_query"}
+
+    def test_latency_searches_the_downstream_owner(self):
+        records = [
+            {
+                "_time": "2024-11-04T07:59:10Z",
+                "service": "checkout-api",
+                "downstream": "catalog-db",
+                "level": "ERROR",
+                "message": "checkout-api latency waiting on catalog-db",
+            },
+            {
+                "_time": "2024-11-04T07:59:40Z",
+                "service": "catalog-db",
+                "level": "LOG",
+                "message": _PG_STATEMENT,
+            },
+        ]
+        result, gateway = _investigate_scoped("latency", "checkout-api", records)
+        assert "checkout-api" in gateway.services
+        assert "catalog-db" in gateway.services
+        cause = result["cause"]
+        assert cause["statement"] == "slow queries on catalog-db"
+        assert cause["confidence"] == 62
+        assert cause["category"] == "slow_queries"
+        assert {ref["service"] for ref in cause["evidence_refs"]} == {"catalog-db"}

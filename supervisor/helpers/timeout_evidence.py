@@ -106,6 +106,16 @@ _SLOW_QUERY_PATTERNS = (
     re.compile(r"query[_\s-]*duration", re.I),
 )
 
+# PostgreSQL logs a slow statement as milliseconds, then the SQL.
+# log_min_duration_statement: "duration: <ms> ms  statement: <sql>"
+# extended-query execute: "duration: <ms> ms  execute <name>: <sql>"
+# The same millisecond-then-statement shape is what that server emits.
+# A duration under the raw query_duration_ms bar is not a slow statement.
+_DB_DURATION_STATEMENT = re.compile(
+    r"\bduration:\s*(\d+(?:\.\d+)?)\s*ms\b.{0,80}?\b(?:statement|execute)\b",
+    re.I,
+)
+
 _DOWNSTREAM_PATTERNS = (
     re.compile(r"timeout.*?:\s*(\S+?)(?::\d+)?(?:\s|$)", re.I),
     re.compile(r"waiting for connection:\s*(\S+)", re.I),
@@ -825,6 +835,10 @@ def _is_slow_query(record: dict) -> bool:
     text = _raw_text(record)
     if text and any(p.search(text) for p in _SLOW_QUERY_PATTERNS):
         return True
+    if text:
+        match = _DB_DURATION_STATEMENT.search(text)
+        if match and float(match.group(1)) >= 1000:
+            return True
     for key in _QUERY_DURATION_FIELDS:
         val = record.get(key)
         if isinstance(val, (int, float)) and not isinstance(val, bool) and val >= 1000:

@@ -965,11 +965,13 @@ def _pool_cause(view: dict, views: list[dict], service: str, incident_type: str 
 
 def _slow_cause(view: dict, service: str, views: list[dict] | None = None) -> dict:
     record = view["record"]
-    target = ""
-    backend = record.get("backend")
-    if isinstance(backend, str) and backend.strip() and not is_placeholder(backend):
-        target = backend.strip()
-    else:
+    # v1.7: the owner is the record's downstream field when that field is set.
+    target = _record_downstream(record)
+    if not target:
+        backend = record.get("backend")
+        if isinstance(backend, str) and backend.strip() and not is_placeholder(backend):
+            target = backend.strip()
+    if not target:
         match = re.search(
             r"slow quer(?:y|ies)(?::| on)\s+([A-Za-z0-9_.-]+)",
             _raw_text(record),

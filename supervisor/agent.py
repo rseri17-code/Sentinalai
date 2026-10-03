@@ -2044,8 +2044,9 @@ class SentinalAISupervisor:
                     circuits=cb_registry,
                 )
                 results.append((label, result))
-                # Stop this worker group if _call_worker reported budget exhaustion
-                if result and result.get("error") == "budget_exhausted":
+                # Stop this worker group if _call_worker reported budget exhaustion.
+                # A worker can return a non-dict; only a dict carries that signal.
+                if isinstance(result, dict) and result.get("error") == "budget_exhausted":
                     logger.warning("Budget exhausted at step %s for %s", label, incident_id)
                     break
             return results
@@ -2123,8 +2124,9 @@ class SentinalAISupervisor:
             evidence[label] = result
             if _shadow is not None:
                 _shadow.set(label, result)
-            # _call_worker returns a budget-exhausted signal when try_record() fails
-            if result and result.get("error") in ("budget_exhausted",):
+            # _call_worker returns a budget-exhausted signal when try_record() fails.
+            # A worker can return a non-dict; only a dict carries that signal.
+            if isinstance(result, dict) and result.get("error") in ("budget_exhausted",):
                 logger.warning("Budget exhausted at step %s for %s", label, incident_id)
                 break
 

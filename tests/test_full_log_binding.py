@@ -119,9 +119,24 @@ class _AllLogs:
 
 
 def _investigate(incident_type, service, records, changes=None, summary=""):
+    saved = {
+        key: os.environ.get(key)
+        for key in ("LLM_ENABLED", "PARALLEL_PLAYBOOK", "CALIBRATION_ENABLED")
+    }
     os.environ["LLM_ENABLED"] = "false"
     os.environ["PARALLEL_PLAYBOOK"] = "false"
     os.environ["CALIBRATION_ENABLED"] = "false"
+    try:
+        return _investigate_with_flags(incident_type, service, records, changes, summary)
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+def _investigate_with_flags(incident_type, service, records, changes=None, summary=""):
     sup = SentinalAISupervisor()
     sup._parallel_playbook = False
     gateway = _AllLogs(records, changes, summary=summary)

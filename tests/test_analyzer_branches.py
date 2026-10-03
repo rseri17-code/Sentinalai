@@ -168,7 +168,8 @@ class TestErrorSpikeBranches:
             },
         )
         result = supervisor.investigate("INC_E2")
-        assert 40 <= result["confidence"] <= 60
+        assert result["confidence"] < 60
+        assert "UNKNOWN" in result["root_cause"]
 
 
 # =========================================================================
@@ -197,7 +198,8 @@ class TestLatencyFallback:
         )
         result = supervisor.investigate("INC_L1")
         assert "latency" in result["root_cause"].lower()
-        assert 45 <= result["confidence"] <= 65
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] < 60
 
 
 # =========================================================================
@@ -238,8 +240,8 @@ class TestSaturationBranches:
             changes_data={"changes": []},
         )
         result = supervisor.investigate("INC_S2")
-        assert "saturation" in result["root_cause"].lower()
-        assert 35 <= result["confidence"] <= 60
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] < 60
 
 
 # =========================================================================
@@ -282,8 +284,8 @@ class TestNetworkBranches:
             changes_data={"changes": []},
         )
         result = supervisor.investigate("INC_N2")
-        assert "network" in result["root_cause"].lower()
-        assert 30 <= result["confidence"] <= 60
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] < 60
 
 
 # =========================================================================
@@ -307,8 +309,8 @@ class TestCascadingFallback:
             changes_data={"changes": []},
         )
         result = supervisor.investigate("INC_C1")
-        assert "cascading" in result["root_cause"].lower()
-        assert 35 <= result["confidence"] <= 65
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] < 60
 
 
 # =========================================================================
@@ -360,8 +362,8 @@ class TestFlappingFallback:
             metrics_data={"metrics": [], "pattern": "flat"},
         )
         result = supervisor.investigate("INC_F1")
-        assert "intermittent" in result["root_cause"].lower()
-        assert 25 <= result["confidence"] <= 55
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] < 60
 
 
 # =========================================================================
@@ -414,8 +416,8 @@ class TestSilentFailureBranches:
             },
         )
         result = supervisor.investigate("INC_SF2")
-        assert "throughput" in result["root_cause"].lower()
-        assert 25 <= result["confidence"] <= 55
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] < 60
 
 
 # =========================================================================
@@ -696,7 +698,7 @@ class TestHelperMethods:
             },
         )
         result = supervisor.investigate("INC_H9")
-        assert result["confidence"] >= 70
+        assert result["confidence"] >= 60
 
     def test_missing_worker_in_playbook(self):
         """If a worker is missing from the dict, playbook continues."""

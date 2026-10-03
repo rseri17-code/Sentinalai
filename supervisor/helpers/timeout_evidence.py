@@ -280,8 +280,8 @@ def decide_timeout(
 def citations_for_bound_result(result: dict) -> list[dict] | None:
     """Citations drawn from the refs that chose the winner.
 
-    Returns None when this result was not produced by the evidence-bound
-    timeout path, so the legacy keyword citer stays in place.
+    Returns None when this result was not re-scored from cited refs, so the
+    legacy keyword citer stays in place.
     """
     if not result.get("_evidence_bound_cause"):
         return None

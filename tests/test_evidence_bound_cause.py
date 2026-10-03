@@ -9,7 +9,9 @@ Cases:
 """
 from __future__ import annotations
 
-from supervisor.agent import SentinalAISupervisor
+from supervisor.agent import Hypothesis, SentinalAISupervisor
+from supervisor.helpers.cause_binding import bind_hypothesis
+from supervisor.replay import REPLAY_HASH_FIELDS, replay_result_hash
 from supervisor.evidence_citation import annotate_citations
 from supervisor.helpers.confidence import compute_confidence
 from supervisor.helpers.placeholders import is_placeholder
@@ -510,3 +512,219 @@ class TestRefResolution:
             key = ref["locator"]["evidence_key"]
             assert key in evidence
             assert evidence[key]
+
+
+class TestEveryWinnerIsRebound:
+    """AC2/AC3 apply to every incident type. Historical matches are not evidence."""
+
+    def test_historical_npe_is_not_this_incident(self):
+        hyp = Hypothesis(
+            name="historical_pattern",
+            root_cause="deployment v3.1.0 introduced NullPointerException in payment-service",
+            base_score=55,
+            evidence_refs=["_past_experiences"],
+            reasoning="a previous incident said so",
+        )
+        # A log from this incident that does NOT contain the exception.
+        evidence = {
+            "search_error_logs": {
+                "_receipt_sequence_order": 3,
+                "_receipt_tool": "log_worker",
+                "logs": {"results": [{
+                    "_time": "2024-06-21T03:44:18Z",
+                    "message": "ERROR upstream reset",
+                    "service": "payment-service",
+                }]},
+            }
+        }
+        assessment = bind_hypothesis(
+            hyp,
+            incident_type="error_spike",
+            service="payment-service",
+            incident={"start_time": "2024-06-21T03:44:21Z", "affected_service": "payment-service"},
+            evidence=evidence,
+        )
+        assert assessment["category"] == "unknown"
+        assert assessment["cause_confidence"] < 60
+        assert "NullPointerException" not in assessment["statement"]
+        assert "UNKNOWN" in assessment["statement"]
+
+    def test_npe_in_this_incidents_logs_is_kept(self):
+        evidence = {
+            "search_error_logs": {
+                "_receipt_sequence_order": 3,
+                "_receipt_tool": "log_worker",
+                "logs": {"results": [{
+                    "_time": "2024-06-21T03:44:18Z",
+                    "message": "NullPointerException in handler",
+                    "service": "payment-service",
+                }]},
+            }
+        }
+        sup = SentinalAISupervisor()
+        incident = {
+            "incident_id": "INC-NPE",
+            "affected_service": "payment-service",
+            "summary": "Payment service error spike",
+            "start_time": "2024-06-21T03:44:21Z",
+        }
+        result = sup._analyze_evidence("INC-NPE", incident, "error_spike", evidence)
+        assert "NullPointerException" in result["root_cause"]
+        assert result["confidence"] >= 60
+        assert result["cause"]["confidence"] >= 60
+        assert result["cause"]["evidence_refs"]
+
+    def test_pool_clause_kept_cascade_clause_dropped(self):
+        hyp = Hypothesis(
+            name="pool_exhaustion_cascade",
+            root_cause=(
+                "database connection pool exhaustion in payment-service "
+                "caused by slow queries after index drop, cascading to checkout"
+            ),
+            base_score=73,
+            evidence_refs=["logs:pool_exhaustion", "logs:cascade_chain"],
+            reasoning="template",
+        )
+        evidence = {
+            "search_error_logs": {
+                "_receipt_sequence_order": 2,
+                "_receipt_tool": "log_worker",
+                "logs": {"results": [{
+                    "_time": "2024-06-21T03:44:19Z",
+                    "service": "payment-service",
+                    "message": "Connection pool exhausted: 50/50 connections in use",
+                }]},
+            }
+        }
+        assessment = bind_hypothesis(
+            hyp,
+            incident_type="cascading",
+            service="payment-service",
+            incident={"start_time": "2024-06-21T03:44:21Z"},
+            evidence=evidence,
+        )
+        assert "connection pool exhausted" in assessment["statement"]
+        assert "cascad" not in assessment["statement"].lower()
+        assert "slow quer" not in assessment["statement"].lower()
+        assert assessment["cause_confidence"] >= 60
+        assert any("cascade" in u or "slow" in u or "index" in u or "change" in u
+                   for u in assessment["unknowns"])
+
+    def test_replay_fieldset_includes_symptom_and_cause(self):
+        assert "symptom" in REPLAY_HASH_FIELDS
+        assert "cause" in REPLAY_HASH_FIELDS
+        base = {
+            "incident_id": "INC1",
+            "incident_type": "error_spike",
+            "root_cause": "error_spike observed; cause UNKNOWN",
+            "confidence": 12,
+            "winner_hypothesis": "historical_pattern",
+            "symptom": {"statement": "error_spike observed", "confidence": 12, "evidence_refs": []},
+            "cause": {"statement": "error_spike observed; cause UNKNOWN", "category": "unknown", "confidence": 12},
+        }
+        changed = dict(base)
+        changed["cause"] = dict(base["cause"])
+        changed["cause"]["statement"] = "NullPointerException in payment-service"
+        changed["root_cause"] = changed["cause"]["statement"]
+        assert replay_result_hash(base) != replay_result_hash(changed)
+
+
+class TestLlmRefineGate:
+    """AC10: an LLM-replaced hypothesis is re-scored from its cited refs."""
+
+    def test_unref_cited_rewrite_cannot_exceed_59(self, monkeypatch):
+        monkeypatch.setenv("LLM_ENABLED", "true")
+        monkeypatch.setattr("supervisor.llm.LLM_ENABLED", True)
+        monkeypatch.setattr("supervisor.agent._llm_enabled", lambda: True)
+
+        def _fake_refine(incident_type, service, summary, evidence_summary, hypotheses, pil_context=""):
+            rewritten = []
+            for h in hypotheses:
+                rewritten.append({
+                    "name": h["name"],
+                    "root_cause": "disk full because of a leak on an uncited host",
+                    "score": 97,
+                    "reasoning": "the model is sure",
+                })
+            return {
+                "refined_hypotheses": rewritten,
+                "input_tokens": 1,
+                "output_tokens": 1,
+                "latency_ms": 1,
+                "model_id": "stub",
+            }
+
+        monkeypatch.setattr("supervisor.agent._llm_refine", _fake_refine)
+        sup = SentinalAISupervisor()
+        incident = {
+            "incident_id": "INC-LLM",
+            "affected_service": "payment-service",
+            "summary": "Payment service error spike",
+            "start_time": "2024-06-21T03:44:21Z",
+        }
+        evidence = {
+            "search_error_logs": {
+                "_receipt_sequence_order": 2,
+                "_receipt_tool": "log_worker",
+                "logs": {"results": [{
+                    "_time": "2024-06-21T03:44:18Z",
+                    "message": "NullPointerException in handler",
+                    "service": "payment-service",
+                }]},
+            }
+        }
+        result = sup._analyze_evidence("INC-LLM", incident, "error_spike", evidence)
+        assert result["confidence"] <= 59
+        assert result["cause"]["confidence"] <= 59
+        assert "disk full" not in result["root_cause"].lower()
+        assert "UNKNOWN" in result["cause"]["statement"]
+
+    def test_score_bump_keeps_cited_cause(self, monkeypatch):
+        monkeypatch.setenv("LLM_ENABLED", "true")
+        monkeypatch.setattr("supervisor.llm.LLM_ENABLED", True)
+        monkeypatch.setattr("supervisor.agent._llm_enabled", lambda: True)
+        called = {}
+
+        def _fake_refine(incident_type, service, summary, evidence_summary, hypotheses, pil_context=""):
+            called["yes"] = True
+            rewritten = []
+            for h in hypotheses:
+                rewritten.append({
+                    "name": h["name"],
+                    "root_cause": h["root_cause"],
+                    "score": 97,
+                    "reasoning": h.get("reasoning", ""),
+                })
+            return {
+                "refined_hypotheses": rewritten,
+                "input_tokens": 1,
+                "output_tokens": 1,
+                "latency_ms": 1,
+                "model_id": "stub",
+            }
+
+        monkeypatch.setattr("supervisor.agent._llm_refine", _fake_refine)
+        sup = SentinalAISupervisor()
+        incident = {
+            "incident_id": "INC-LLM2",
+            "affected_service": "payment-service",
+            "summary": "Payment service error spike",
+            "start_time": "2024-06-21T03:44:21Z",
+        }
+        evidence = {
+            "search_error_logs": {
+                "_receipt_sequence_order": 2,
+                "_receipt_tool": "log_worker",
+                "logs": {"results": [{
+                    "_time": "2024-06-21T03:44:18Z",
+                    "message": "NullPointerException in handler",
+                    "service": "payment-service",
+                }]},
+            }
+        }
+        result = sup._analyze_evidence("INC-LLM2", incident, "error_spike", evidence)
+        assert called.get("yes") is True
+        assert "NullPointerException" in result["root_cause"]
+        assert result["confidence"] >= 60
+        assert result["confidence"] != 97
+        assert result["cause"]["confidence"] <= 100

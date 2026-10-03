@@ -178,6 +178,7 @@ SPLUNK_QUERY_ALLOWLIST = [
     "thread",
     "dns",
     "connection",
+    "pool",
     "network",
     "cascade",
     "pipeline",

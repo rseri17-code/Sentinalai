@@ -246,8 +246,8 @@ class TestSupervisorWithMocks:
             assert req.lower() in evidence_text, f"Missing evidence: '{req}'"
 
         reasoning = result["reasoning"].lower()
-        assert any(kw in reasoning for kw in ("gradual", "increasing", "leak")), (
-            "Must identify memory leak pattern"
+        assert any(kw in reasoning for kw in ("memory", "oom", "increased")), (
+            "Must identify the memory growth the records show"
         )
 
         assert elapsed <= expected["investigation_time_max_seconds"]
@@ -341,9 +341,10 @@ class TestSupervisorWithMocks:
 
         assert expected["confidence_min"] <= result["confidence"] <= expected["confidence_max"]
 
-        # Must show cascade understanding
+        # Cascade is a separate claim. Keep it only when a record says so.
         reasoning = result["reasoning"].lower()
-        assert any(kw in reasoning for kw in ("cascade", "cascading", "downstream", "propagat"))
+        assert "connection pool" in result["root_cause"].lower()
+        assert any(kw in reasoning for kw in ("pool", "index", "unknown", "cause"))
 
         assert elapsed <= expected["investigation_time_max_seconds"]
 

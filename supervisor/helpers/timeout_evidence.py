@@ -7,10 +7,14 @@ annotation fields are never evidence and are never cited.
 Cause statements (AC2):
   * ``<caller>'s connection pool to <downstream> exhausted`` when the
     cited pool record has a ``downstream`` field
-  * ``connection pool for <ds> exhausted`` when no such field is set
+  * ``connection pool for <ds> exhausted`` when a cited record names one
+  * ``connection pool exhausted on <service>`` when none does
   * ``slow queries on <ds>`` when a raw query-level record says so
-  * ``<ds> latency elevated; cause UNKNOWN``
+  * ``<ds> latency elevated; cause UNKNOWN`` from a raw metric point
   * ``timeout observed; cause UNKNOWN`` when evidence is missing or conflicts
+
+A derived record (anomaly flag, pattern, summary, note, verdict) adds 0
+to cause confidence. Only raw metric points, log lines, and events score.
 """
 from __future__ import annotations
 
@@ -28,9 +32,17 @@ ALIGNMENT_WINDOW_MINUTES = 15
 LATENCY_ELEVATION_FACTOR = 10
 
 # Cause-confidence weights. UNKNOWN and contradicted causes never reach 60.
-# A single direct aligned ref is 62. Extra direct refs do not add a
-# per-line bonus (that would recreate source-count scoring).
+# One direct in-window raw record is three parts (20 + 22 + 20 = 62).
+# Each further agreeing raw record adds EXTRA_RAW. A derived record and
+# a record outside the alignment window add 0 and are not scored.
 DIRECT_SUPPORT_DELTA = 62
+RAW_IN_WINDOW = 20
+RAW_OBSERVATION = 22
+RAW_MECHANISM = 20
+EXTRA_RAW = 8
+RAW_CAP = 90
+
+DOWNSTREAM_UNKNOWN = "which downstream this resource connects to"
 LATENCY_UNKNOWN_DELTA = 34
 CONFLICT_BASE = 40
 CONFLICT_EACH = -8
@@ -51,6 +63,16 @@ _POOL_PATTERNS = (
         re.I,
     ),
     re.compile(r"\bresource\s+limit\b", re.I),
+    # "limit … reached" for a pool, overflow, or other resource. The words
+    # may sit in either order. A library's exact sentence is not required.
+    re.compile(
+        r"\b(?:pool|overflow|resource|connection|slot|capacity)\b.{0,60}\blimit\b.{0,40}\breached\b",
+        re.I,
+    ),
+    re.compile(
+        r"\blimit\b.{0,40}\breached\b.{0,60}\b(?:pool|overflow|resource|slot|capacity)\b",
+        re.I,
+    ),
     re.compile(r"unable to acquire connection", re.I),
     re.compile(r"connection is not available", re.I),
     re.compile(r"hikari\s*pool.{0,60}(not available|exhaust|timed?\s*out|timeout)", re.I),
@@ -97,8 +119,8 @@ def decide_timeout(
     """Return the single evidence-bound timeout decision.
 
     ``cause_confidence`` is an int in 0..100. UNKNOWN causes are below 60.
-    A score of 60 or more has exactly one direct aligned supporting ref and
-    no contradiction.
+    A bound cause cites at least one in-window raw record. Each further
+    agreeing raw record adds to that score. A derived record adds 0.
     """
     incident = incident or {}
     evidence = evidence or {}
@@ -130,6 +152,13 @@ def decide_timeout(
         v for v in latency_views
         if _in_window(v["timestamp"], start, end) and _latency_elevated(v)
     ]
+    # A golden-signals summary is the detector's conclusion. Cause support
+    # uses the raw metric points behind it, and only those.
+    raw_latency = dedupe_views([
+        v for v in latency_views if not _is_derived_record(v["record"])
+    ])
+    pool_views = dedupe_views(pool_views)
+    slow_views = dedupe_views(slow_views)
     timeout_views = [
         v for v in timeout_views if _in_window(v["timestamp"], start, end)
     ]
@@ -188,40 +217,48 @@ def decide_timeout(
         name = "timeout_conflict"
         cause_refs = []
     elif pool_views and (ds or _record_downstream(pool_views[0]["record"])):
-        pool_record = pool_views[0]["record"]
-        pool_ref = _ref(pool_views[0], "connection_pool_exhausted", ds)
-        cause_refs = [pool_ref]
-        contributions = [_contrib(
-            "support", pool_ref, DIRECT_SUPPORT_DELTA, "direct", "direct",
-        )]
-        # The owner is the cited pool record's downstream field when it
-        # has one. A thin return that never names a downstream in text
-        # must not fall back to the caller alone.
-        field = _record_downstream(pool_record)
-        if field:
-            statement, named = _pool_owner_statement(pool_record)
-        else:
+        raw_pools = [
+            v for v in pool_views if not _is_derived_record(v["record"])
+        ]
+        pool_record = raw_pools[0]["record"]
+        cause_refs = [
+            _ref(v, "connection_pool_exhausted", ds) for v in raw_pools
+        ]
+        _score, contributions = score_raw_support(cause_refs)
+        # The owner is a cited record's downstream field when one is set.
+        # A timeout line that names a downstream still counts. When no
+        # cited record names one, the cause names the service.
+        field_record = next(
+            (v["record"] for v in raw_pools if _record_downstream(v["record"])),
+            None,
+        )
+        if field_record is not None:
+            statement, named = _pool_owner_statement(field_record)
+        elif named_downstream and ds:
             statement = f"connection pool for {ds} exhausted"
             named = ds
+        else:
+            statement, named = _pool_owner_statement(pool_record)
+            unknowns.append(DOWNSTREAM_UNKNOWN)
         category = "connection_pool_exhaustion"
         name = "connection_pool_exhaustion"
-        unknowns.append(f"why {named} refuses connections")
+        if named:
+            unknowns.append(f"why {named} refuses connections")
     elif slow_views and ds:
-        slow_ref = _ref(slow_views[0], "slow_query", ds)
-        cause_refs = [slow_ref]
-        contributions = [_contrib(
-            "support", slow_ref, DIRECT_SUPPORT_DELTA, "direct", "direct",
-        )]
+        raw_slow = [
+            v for v in slow_views if not _is_derived_record(v["record"])
+        ]
+        cause_refs = [_ref(v, "slow_query", ds) for v in raw_slow]
+        _score, contributions = score_raw_support(cause_refs)
         statement = f"slow queries on {ds}"
         category = "slow_queries"
         name = "slow_queries"
         unknowns.append(f"why queries on {ds} are slow")
-    elif latency_views and ds:
-        lat_ref = _ref(latency_views[0], "latency_elevated", ds)
-        cause_refs = [lat_ref]
-        contributions = [_contrib(
-            "support", lat_ref, LATENCY_UNKNOWN_DELTA, "indirect", "indirect",
-        )]
+    elif raw_latency and ds:
+        cause_refs = [
+            _ref(v, "latency_elevated", ds) for v in raw_latency
+        ]
+        _score, contributions = score_latency_unknown(cause_refs)
         statement = f"{ds} latency elevated; cause UNKNOWN"
         category = "unknown"
         name = "latency_elevated_unknown"
@@ -435,16 +472,171 @@ def ref_in_window(ref: dict, incident: dict) -> bool:
 # Internals
 # ---------------------------------------------------------------------------
 
-def _contrib(kind: str, ref: dict, delta: int, relevance: str, strength: str) -> dict:
+def _contrib(
+    kind: str,
+    ref: dict,
+    delta: int,
+    relevance: str,
+    strength: str,
+    *,
+    part: str = "",
+) -> dict:
+    source = f"seq={ref.get('sequence_order')}:{ref.get('signal')}"
+    if part:
+        source = f"{source}:{part}"
     return {
         "kind": kind,
-        "source": f"seq={ref.get('sequence_order')}:{ref.get('signal')}",
+        "source": source,
+        "part": part,
         "delta": delta,
         "relevance": relevance,
         "strength": strength,
         "signal": ref.get("signal") or "",
         "sequence_order": ref.get("sequence_order"),
+        "evidence_class": ref.get("evidence_class") or "",
     }
+
+
+def _is_derived_record(record: dict) -> bool:
+    """A tool's conclusion, not an observation.
+
+    Anomaly flags, ``anomaly_type``, ``pattern``, vendor problem records,
+    summaries, notes, and verdicts are derived. A log line, a metric point
+    with a value, or a change event is raw even when a sibling field on
+    the payload is a label.
+    """
+    if not isinstance(record, dict):
+        return True
+    if _raw_text(record).strip():
+        return False
+    value = record.get("value")
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return False
+    if record.get("change_type") or record.get("scheduled_start"):
+        return False
+    conclusion = (
+        "anomaly_type", "anomaly_detected", "pattern", "alert_pattern",
+        "summary", "note", "notes", "annotation", "annotations",
+        "verdict", "problem", "problem_id", "root_cause_hint", "hint",
+        "comment", "comments",
+    )
+    for key in conclusion:
+        val = record.get(key)
+        if isinstance(val, str) and val.strip() and not is_placeholder(val):
+            return True
+        if key == "anomaly_detected" and val is True:
+            return True
+    # A golden-signals latency summary is the detector's conclusion.
+    if "p95" in record and "value" not in record:
+        return True
+    return False
+
+
+def _evidence_class(record: dict) -> str:
+    return "derived" if _is_derived_record(record) else "raw"
+
+
+def score_raw_support(refs: list[dict]) -> tuple[int, list[dict]]:
+    """Confidence from in-window raw refs only.
+
+    The first raw ref contributes ``RAW_IN_WINDOW + RAW_OBSERVATION +
+    RAW_MECHANISM``. Each further agreeing raw ref contributes
+    ``EXTRA_RAW``. Derived refs add 0. The sum is capped at ``RAW_CAP``.
+    """
+    raw_refs = [ref for ref in refs if ref.get("evidence_class") != "derived"]
+    contributions: list[dict] = []
+    if not raw_refs:
+        return 0, contributions
+    first = raw_refs[0]
+    for part, delta in (
+        ("in_window", RAW_IN_WINDOW),
+        ("raw_observation", RAW_OBSERVATION),
+        ("direct_mechanism", RAW_MECHANISM),
+    ):
+        contributions.append(_contrib("support", first, delta, "direct", "direct", part=part))
+    for ref in raw_refs[1:]:
+        contributions.append(_contrib(
+            "support", ref, EXTRA_RAW, "direct", "direct", part="additional_raw",
+        ))
+    total = sum(item["delta"] for item in contributions)
+    if total > RAW_CAP:
+        contributions.append({
+            "kind": "cap",
+            "source": "raw_cap",
+            "part": "cap",
+            "delta": RAW_CAP - total,
+            "relevance": "cap",
+            "strength": "none",
+            "signal": "",
+            "sequence_order": None,
+            "evidence_class": "",
+        })
+        total = RAW_CAP
+    return total, contributions
+
+
+def score_latency_unknown(refs: list[dict]) -> tuple[int, list[dict]]:
+    """Elevated latency is not a mechanism.
+
+    The first raw point contributes ``LATENCY_UNKNOWN_DELTA``. Each further
+    raw point contributes ``EXTRA_RAW``. Derived points add 0. The sum stays
+    below 60, so the cause does not bind.
+    """
+    raw_refs = [ref for ref in refs if ref.get("evidence_class") != "derived"]
+    if not raw_refs:
+        return 0, []
+    contributions = [_contrib(
+        "support", raw_refs[0], LATENCY_UNKNOWN_DELTA, "indirect", "indirect",
+        part="latency_elevated",
+    )]
+    for ref in raw_refs[1:]:
+        contributions.append(_contrib(
+            "support", ref, EXTRA_RAW, "indirect", "indirect", part="additional_raw",
+        ))
+    total = sum(item["delta"] for item in contributions)
+    ceiling = 59
+    if total > ceiling:
+        contributions.append({
+            "kind": "cap",
+            "source": "unknown_cap",
+            "part": "cap",
+            "delta": ceiling - total,
+            "relevance": "cap",
+            "strength": "none",
+            "signal": "",
+            "sequence_order": None,
+            "evidence_class": "",
+        })
+        total = ceiling
+    return total, contributions
+
+
+def dedupe_views(views: list[dict]) -> list[dict]:
+    """One copy of each observation.
+
+    Two searches that return the same line are one record. A later line,
+    or another metric point, is a different record.
+    """
+    seen: set[tuple] = set()
+    chosen: list[dict] = []
+    for view in views:
+        record = view.get("record") if isinstance(view.get("record"), dict) else {}
+        value = record.get("value")
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            value = ""
+        key = (
+            str(view.get("timestamp") or ""),
+            _raw_text(record),
+            str(record.get("service") or ""),
+            str(record.get("name") or record.get("metric") or ""),
+            value,
+            str(record.get("change_type") or record.get("type") or ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        chosen.append(view)
+    return chosen
 
 
 def _direct_support(contributions: list[dict]) -> bool:
@@ -475,6 +667,7 @@ def _ref(view: dict, signal: str, service: str) -> dict:
         "service": own,
         "timestamp": view.get("timestamp") or "",
         "signal": signal,
+        "evidence_class": _evidence_class(record),
     }
 
 
@@ -826,9 +1019,9 @@ def _iter_latency(evidence: dict, signals: dict, metrics: dict) -> list[dict]:
                     "baseline": baseline,
                 })
     if saw_signal or saw_metric:
-        # One latency series is enough. Prefer the golden-signal reading.
-        golden = [v for v in views if v["locator"]["path"][:1] == ["signals"]]
-        return golden[:1] or views[:1]
+        # Keep the raw points. A golden-signals summary may sit beside them;
+        # callers that score a cause skip that summary.
+        return views
     # Fallback when the caller passed already-extracted structures.
     gs = (signals or {}).get("golden_signals") or {}
     latency = gs.get("latency") if isinstance(gs, dict) else None

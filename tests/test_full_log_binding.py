@@ -45,7 +45,9 @@ EXPECTED = {
             "IllegalStateException in billing-api 4.8.2, "
             "deployed at 2024-11-04T07:50:00Z"
         ),
-        "confidence": 62,
+        # The exception line and the deploy record are two agreeing raw refs.
+        # 20 + 22 + 20 + 8.
+        "confidence": 70,
         "cause_service": "billing-api",
         "symptom_service": "billing-api",
         "symptom_signal": "error_observed",

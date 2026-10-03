@@ -342,9 +342,9 @@ class TestSupervisorWithMocks:
 
         assert expected["confidence_min"] <= result["confidence"] <= expected["confidence_max"]
 
-        # Cascade is a separate claim. Keep it only when a record says so.
+        # Both mechanisms are in the window, so the cause stays UNKNOWN.
         reasoning = result["reasoning"].lower()
-        assert "connection pool" in result["root_cause"].lower()
+        assert "unknown" in result["root_cause"].lower()
         assert any(kw in reasoning for kw in ("pool", "index", "unknown", "cause"))
 
         assert elapsed <= expected["investigation_time_max_seconds"]

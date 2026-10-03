@@ -9,6 +9,8 @@ Cases:
 """
 from __future__ import annotations
 
+import re
+
 from supervisor.agent import Hypothesis, SentinalAISupervisor
 from supervisor.helpers.cause_binding import bind_hypothesis
 from supervisor.replay import REPLAY_HASH_FIELDS, replay_result_hash
@@ -237,16 +239,14 @@ class TestEvidenceBoundCause:
         }
         result = _run(evidence)
         cause = result["cause"]
-        assert cause["statement"] == "payment-db latency elevated; cause UNKNOWN"
+        # The p95 summary is a derived conclusion. It does not support a cause.
+        # No raw metric point was retrieved, so nothing binds.
+        assert cause["statement"] == "timeout observed; cause UNKNOWN"
         assert cause["category"] == "unknown"
-        assert cause["confidence"] == 34
+        assert cause["confidence"] == 12
         assert cause["confidence"] < 60
+        assert cause["evidence_refs"] == []
         assert result["symptom"]["confidence"] == 85
-        assert {r["signal"] for r in cause["evidence_refs"]} == {"latency_elevated"}
-        for ref in cause["evidence_refs"]:
-            record = resolve_evidence_ref(ref, evidence)
-            assert "p95" in record
-            assert "pool" not in str(record).lower()
         _assert_refs_resolve(result, evidence)
         _no_confidence_without_citations(result)
         _provenance_balances(result)
@@ -328,8 +328,11 @@ class TestEvidenceBoundCause:
                  "message": "INFO healthcheck ok"},
             ]),
         })
-        assert pool["confidence"] == slow["confidence"]
-        assert pool["confidence"] > elevated["confidence"] > conflict["confidence"] > missing["confidence"]
+        # A derived latency summary adds nothing, so it ties the empty case.
+        # A contradicted pair stays under 60 and above that empty case.
+        assert pool["confidence"] == slow["confidence"] == 62
+        assert pool["confidence"] > conflict["confidence"] > elevated["confidence"]
+        assert elevated["confidence"] == missing["confidence"]
         assert pool["confidence"] >= 60
         assert elevated["confidence"] < 60
         assert conflict["confidence"] < 60
@@ -808,3 +811,282 @@ class TestGatewayTruncation:
         row = coverage["truncations"][0]
         assert row == {"evidence_key": "search_logs", "truncation_unknown": True}
         assert coverage["truncation_unknown"] is True
+
+
+# Directions fixed before the v1.8 run. One in-window raw record is
+# 20 + 22 + 20. Each further agreeing raw record adds 8. A derived record
+# adds 0. An out-of-window record adds 0. A contradicted pair stays at 24.
+_ONE_RAW = 20 + 22 + 20
+_TWO_RAW = _ONE_RAW + 8
+_DOWNSTREAM_UNKNOWN = "which downstream this resource connects to"
+
+
+def _v18_incident(service, start="2024-08-01T12:00:00Z"):
+    return {
+        "incident_id": "INC-V18",
+        "affected_service": service,
+        "summary": f"{service} timeout",
+        "start_time": start,
+    }
+
+
+def _v18_timeout(service, records, signals=None):
+    incident = _v18_incident(service)
+    evidence = {
+        "search_timeout_logs": {
+            "_receipt_sequence_order": 2,
+            "_receipt_tool": "log_worker",
+            "logs": {"results": records, "count": len(records)},
+        }
+    }
+    if signals is not None:
+        evidence["check_signals"] = signals
+    sup = SentinalAISupervisor()
+    sup._tls.current_incident = dict(incident)
+    sup._tls.last_evidence = evidence
+    return sup._analyze_evidence("INC-V18", dict(incident), "timeout", evidence), evidence
+
+
+def _pool_line_at(service, when, message="connection pool exhausted"):
+    return {
+        "_time": when,
+        "service": service,
+        "level": "ERROR",
+        "message": message,
+    }
+
+
+def _classes(refs):
+    return {ref.get("evidence_class") for ref in refs}
+
+
+class TestDerivedAndComputedConfidence:
+    """v1.8. Expected directions were written before this class ran."""
+
+    def test_second_raw_record_raises_confidence(self):
+        # (a) A second direct, aligned, raw record that agrees scores higher.
+        one, _ = _v18_timeout("edge-api", [
+            _pool_line_at("edge-api", "2024-08-01T12:00:10Z"),
+        ])
+        two, _ = _v18_timeout("edge-api", [
+            _pool_line_at("edge-api", "2024-08-01T12:00:10Z"),
+            _pool_line_at("edge-api", "2024-08-01T12:00:40Z"),
+        ])
+        assert one["cause"]["confidence"] == _ONE_RAW
+        assert two["cause"]["confidence"] == _TWO_RAW
+        assert two["cause"]["confidence"] > one["cause"]["confidence"]
+        assert len(two["cause"]["evidence_refs"]) == 2
+        assert _classes(two["cause"]["evidence_refs"]) == {"raw"}
+
+    def test_contradicting_raw_record_stays_below_60(self):
+        # (b) An unresolved contradicting raw record lowers the score below 60.
+        result, _ = _v18_timeout("edge-api", [
+            _pool_line_at("edge-api", "2024-08-01T12:00:10Z"),
+            {
+                "_time": "2024-08-01T12:00:20Z",
+                "service": "edge-api",
+                "level": "ERROR",
+                "message": "slow query on edge-api took 9000ms",
+            },
+        ])
+        assert result["cause"]["confidence"] < 60
+        assert result["cause"]["confidence"] < _ONE_RAW
+        assert result["cause"]["confidence"] == 24
+        assert "UNKNOWN" in result["cause"]["statement"]
+
+    def test_derived_label_alone_binds_nothing(self):
+        # (c) A derived label alone gives 0 cause support and no bound cause.
+        evidence = {
+            "check_signals": {
+                "_receipt_sequence_order": 1,
+                "_receipt_tool": "apm_worker",
+                "signals": {
+                    "anomaly_start": "2024-08-01T12:00:00Z",
+                    "anomaly_detected": True,
+                    "anomaly_type": "intermittent_errors",
+                    "summary": "connection pool exhausted",
+                    "golden_signals": {"errors": {"rate": 0.4}},
+                },
+            }
+        }
+        assessment = bind_hypothesis(
+            Hypothesis(
+                name="connection_pool_leak",
+                root_cause="connection pool exhaustion in edge-api; intermittent",
+                base_score=70,
+                evidence_refs=["golden_signals:intermittent"],
+                reasoning="the detector said so",
+            ),
+            incident_type="flapping",
+            service="edge-api",
+            incident=_v18_incident("edge-api"),
+            evidence=evidence,
+        )
+        assert assessment["cause_confidence"] == 0
+        assert assessment["cause_refs"] == []
+        assert "UNKNOWN" in assessment["statement"]
+
+    def test_raw_series_scores_and_the_label_does_not(self):
+        # (d) The same label plus its raw record scores only the raw record.
+        raw = _pool_line_at("edge-api", "2024-08-01T12:00:10Z")
+        signals = {
+            "_receipt_sequence_order": 1,
+            "_receipt_tool": "apm_worker",
+            "signals": {
+                "anomaly_start": "2024-08-01T12:00:00Z",
+                "anomaly_detected": True,
+                "anomaly_type": "pool_exhausted",
+                "summary": "connection pool exhausted",
+                "golden_signals": {"errors": {"rate": 0.4}},
+            },
+        }
+        logs = {
+            "_receipt_sequence_order": 2,
+            "_receipt_tool": "log_worker",
+            "logs": {"results": [raw], "count": 1},
+        }
+        incident = _v18_incident("edge-api")
+        hyp = Hypothesis(
+            name="connection_pool_leak",
+            root_cause="connection pool exhaustion in edge-api",
+            base_score=70,
+            evidence_refs=["logs:pool_exhaustion", "golden_signals:pool_exhausted"],
+            reasoning="template",
+        )
+        raw_only = bind_hypothesis(
+            hyp, incident_type="flapping", service="edge-api",
+            incident=incident, evidence={"search_logs": logs},
+        )
+        both = bind_hypothesis(
+            hyp, incident_type="flapping", service="edge-api",
+            incident=incident,
+            evidence={"check_signals": signals, "search_logs": logs},
+        )
+        assert raw_only["cause_confidence"] == _ONE_RAW
+        assert both["cause_confidence"] == raw_only["cause_confidence"]
+        assert both["cause_refs"]
+        assert _classes(both["cause_refs"]) <= {"raw", "derived"}
+        assert "raw" in _classes(both["cause_refs"])
+        for ref in both["cause_refs"]:
+            assert ref.get("evidence_class") != "derived"
+
+    def test_out_of_window_record_adds_nothing(self):
+        # (e) A record outside the alignment window adds 0 and is not cited.
+        inside = _pool_line_at("edge-api", "2024-08-01T12:00:10Z")
+        outside = _pool_line_at("edge-api", "2024-01-01T00:00:00Z")
+        one, _ = _v18_timeout("edge-api", [inside])
+        both, _ = _v18_timeout("edge-api", [inside, outside])
+        assert one["cause"]["confidence"] == both["cause"]["confidence"] == _ONE_RAW
+        cited = [ref.get("timestamp") for ref in both["cause"]["evidence_refs"]]
+        assert "2024-01-01T00:00:00Z" not in cited
+        assert cited == ["2024-08-01T12:00:10Z"]
+
+    def test_pattern_word_without_a_series_is_an_unknown(self):
+        # (f) No cited raw series: the pattern word leaves the cause.
+        evidence = {
+            "search_logs": {
+                "_receipt_sequence_order": 2,
+                "_receipt_tool": "log_worker",
+                "logs": {"results": [
+                    _pool_line_at("edge-api", "2024-08-01T12:00:10Z"),
+                ], "count": 1},
+            },
+            "check_signals": {
+                "_receipt_sequence_order": 1,
+                "_receipt_tool": "apm_worker",
+                "signals": {
+                    "anomaly_start": "2024-08-01T12:00:00Z",
+                    "anomaly_detected": True,
+                    "anomaly_type": "intermittent_errors",
+                    "pattern": "sawtooth",
+                    "golden_signals": {"errors": {"rate": 0.2}},
+                },
+            },
+        }
+        assessment = bind_hypothesis(
+            Hypothesis(
+                name="connection_pool_leak",
+                root_cause="connection pool exhaustion in edge-api; intermittent",
+                base_score=70,
+                evidence_refs=["logs:pool_exhaustion", "golden_signals:intermittent"],
+                reasoning="template",
+            ),
+            incident_type="flapping",
+            service="edge-api",
+            incident=_v18_incident("edge-api"),
+            evidence=evidence,
+        )
+        assert "intermittent" not in assessment["statement"].lower()
+        assert any("intermittent" in item for item in assessment["unknowns"])
+        assert assessment["cause_confidence"] == _ONE_RAW
+
+    def test_limit_reached_binds_pool_exhaustion(self):
+        # (g) "limit … reached" is pool exhaustion, including a timeout on the same line.
+        result, _ = _v18_timeout("edge-api", [
+            _pool_line_at(
+                "edge-api",
+                "2024-08-01T12:00:10Z",
+                "pool size limit reached and the connection timed out",
+            ),
+        ])
+        statement = result["cause"]["statement"]
+        assert statement == "connection pool exhausted on edge-api"
+        assert result["cause"]["confidence"] == _ONE_RAW
+        assert result["cause"]["category"] == "connection_pool_exhaustion"
+        assert _DOWNSTREAM_UNKNOWN in result["cause"]["unknowns"]
+        assert not re.search(r"\d", statement)
+        rate, _ = _v18_timeout("edge-api", [
+            _pool_line_at(
+                "edge-api",
+                "2024-08-01T12:00:10Z",
+                "rate limit reached and the connection timed out",
+            ),
+        ])
+        assert rate["cause"]["category"] != "connection_pool_exhaustion"
+
+    def test_latency_slow_query_binds(self):
+        # (h) A latency incident binds a supported slow query, not the derived label.
+        evidence = {
+            "search_logs": {
+                "_receipt_sequence_order": 2,
+                "_receipt_tool": "log_worker",
+                "logs": {"results": [
+                    {
+                        "_time": "2024-08-01T12:00:05Z",
+                        "service": "catalog-store",
+                        "level": "WARN",
+                        "message": "catalog-store rebalancing started",
+                    },
+                    {
+                        "_time": "2024-08-01T12:00:20Z",
+                        "service": "catalog-store",
+                        "level": "ERROR",
+                        "message": "slow query on catalog-store took 8000ms",
+                    },
+                ], "count": 2},
+            },
+            "check_signals": {
+                "_receipt_sequence_order": 1,
+                "_receipt_tool": "apm_worker",
+                "signals": {
+                    "anomaly_start": "2024-08-01T12:00:00Z",
+                    "anomaly_detected": True,
+                    "anomaly_type": "latency_spike",
+                    "summary": "latency elevated",
+                    "golden_signals": {
+                        "latency": {"p95": 9000, "baseline_p95": 100},
+                    },
+                },
+            },
+        }
+        incident = _v18_incident("query-api")
+        sup = SentinalAISupervisor()
+        sup._tls.current_incident = dict(incident)
+        sup._tls.last_evidence = evidence
+        result = sup._analyze_evidence("INC-V18", dict(incident), "latency", evidence)
+        statement = result["cause"]["statement"].lower()
+        assert "slow quer" in statement
+        assert result["cause"]["confidence"] == _ONE_RAW
+        assert result["cause"]["category"] == "slow_queries"
+        assert _classes(result["cause"]["evidence_refs"]) == {"raw"}
+        assert "latency_spike" not in statement

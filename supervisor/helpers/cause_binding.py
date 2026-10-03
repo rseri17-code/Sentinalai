@@ -14,9 +14,11 @@ from typing import Any
 from supervisor.helpers.placeholders import is_placeholder
 from supervisor.helpers.timeout_evidence import (
     ALIGNMENT_WINDOW_MINUTES,
+    DOWNSTREAM_UNKNOWN,
     _extract_downstream,
     _in_window,
     _incident_bounds,
+    _is_derived_record,
     _is_pool,
     _is_slow_query,
     _is_timeout_text,
@@ -25,11 +27,11 @@ from supervisor.helpers.timeout_evidence import (
     _raw_text,
     _record_downstream,
     _ref,
+    dedupe_views,
+    score_raw_support,
 )
 
-# One direct aligned ref. Extra refs do not add a per-line bonus.
-DIRECT_SUPPORT = 62
-# A symptom record exists, but it does not support the proposed cause.
+# A raw symptom record exists, but it does not support the proposed cause.
 SYMPTOM_ONLY = 34
 # The cited refs resolve to nothing in this incident.
 MISSING_CAUSE = 12
@@ -118,69 +120,56 @@ def bind_hypothesis(
     )
     symptom = _symptom_for(windowed, incident_type)
 
-    kept, unknowns, category = _kept_clauses(proposed, cited, service)
+    # A derived label may suggest the hypothesis. It does not support it.
+    raw_cited = [
+        v for v in cited if not _is_derived_record(v.get("record") or {})
+    ]
+    # A derived label does not support a clause. The raw series it was built
+    # from does, when that series was retrieved.
+    clause_views = list(raw_cited) + _raw_behind_derived(cited, windowed)
+    series = _cycle_series(windowed)
+    kept, unknowns, category = _kept_clauses(proposed, clause_views, service)
+    kept, unknowns = _apply_pattern(proposed, kept, unknowns, series)
+    support = _support_views(windowed, kept, series, service)
     cause_refs = []
-    if kept and cited:
-        # One direct ref is enough. Cite the first record that supports a
-        # kept clause, then any other cited record of a different signal.
-        seen: set[str] = set()
-        for view in cited:
-            signal = _signal_for(view, kept)
-            if not signal or signal in seen:
-                continue
-            seen.add(signal)
-            cause_refs.append(_ref(view, signal, service or ""))
-            if len(cause_refs) == 3:
-                break
+    for view in support:
+        signal = _signal_for(view, kept) or (view.get("kind") or "record")
+        ref = _ref(view, signal, service or "")
+        if ref.get("evidence_class") == "derived":
+            continue
+        cause_refs.append(ref)
 
+    derived_only = bool(cited) and not raw_cited and not cause_refs
+    contributions: list[dict] = []
     if kept and cause_refs:
         statement = _render(service, kept)
-        confidence = DIRECT_SUPPORT
+        if (
+            category == "connection_pool_exhaustion"
+            and not _views_name_downstream(support)
+            and DOWNSTREAM_UNKNOWN not in unknowns
+        ):
+            unknowns.append(DOWNSTREAM_UNKNOWN)
+        confidence, contributions = score_raw_support(cause_refs)
     else:
         if kept and not cause_refs:
             unknowns = list(unknowns) + [f"cited refs do not locate: {', '.join(kept)}"]
         statement = f"{incident_type} observed; cause UNKNOWN"
         category = "unknown"
-        confidence = SYMPTOM_ONLY if cited else MISSING_CAUSE
+        if derived_only:
+            confidence = 0
+        else:
+            confidence = SYMPTOM_ONLY if raw_cited else MISSING_CAUSE
         cause_refs = []
 
     if category == "unknown":
         confidence = min(confidence, 59)
 
-    if not symptom["evidence_refs"] and cited:
+    if not symptom["evidence_refs"] and raw_cited:
         symptom = {
             "statement": f"{incident_type} observed",
             "confidence": 70,
-            "evidence_refs": [_ref(cited[0], "symptom_observed", service or "")],
+            "evidence_refs": [_ref(raw_cited[0], "symptom_observed", service or "")],
         }
-    reasoning = (
-        f"Re-scored {name or 'hypothesis'} from cited in-window records "
-        f"for {service or 'the alerted service'}. "
-        f"The cause statement is: {statement}."
-    )
-    if unknowns:
-        reasoning += " Not established: " + "; ".join(unknowns) + "."
-    provenance = {
-        "model": "cited_evidence_v1",
-        "alignment_window_minutes": ALIGNMENT_WINDOW_MINUTES,
-        "base": 0.0,
-        "contributions": [
-            {
-                "kind": "support" if cause_refs else "missing",
-                "source": (f"seq={cause_refs[0].get('sequence_order')}:{cause_refs[0].get('signal')}"
-                           if cause_refs else "no_direct_ref"),
-                "delta": confidence,
-                "relevance": "direct" if cause_refs else "none",
-                "strength": "direct" if cause_refs else "none",
-                "signal": cause_refs[0].get("signal") if cause_refs else "",
-                "sequence_order": cause_refs[0].get("sequence_order") if cause_refs else None,
-            }
-        ],
-        "final_confidence": confidence,
-        "symptom_base": 0.0,
-        "symptom_contributions": [],
-        "symptom_confidence": symptom["confidence"],
-    }
     proposal: dict[str, Any] = {
         "hypothesis_name": name or category,
         "statement": statement,
@@ -190,30 +179,42 @@ def bind_hypothesis(
         "contradictions": [],
         "unknowns": unknowns,
         "symptom": symptom,
-        "reasoning": reasoning,
-        "provenance": provenance,
+        "contributions": contributions,
     }
-    # A template that already has a direct ref keeps its statement, except
-    # an exception, which is restated from the log and the deploy record.
-    # A template with no direct ref yields to whatever the records support.
+    proposal = _with_provenance(proposal, name)
+    _mention_service(proposal, service)
+    # A supported slow query, pool record, or exception is the cause even
+    # when the proposal already scored at or above 60 from another clause.
+    # A derived label must not be what keeps that proposal in place.
     logs = [v for v in windowed if v.get("kind") == "log"]
-    use_records = proposal["cause_confidence"] < 60 or _exception_hit(logs) is not None
-    if not use_records:
-        return proposal
     scanned = _decide_from_views(windowed, service=service, incident_type=incident_type)
     if scanned is None:
         return proposal
-    if proposal["cause_confidence"] >= 60 and scanned.get("category") != "exception":
+    scanned_raw = [
+        r for r in (scanned.get("cause_refs") or [])
+        if r.get("evidence_class") != "derived"
+    ]
+    prefer = bool(scanned.get("contradictions")) or (
+        scanned.get("category") in {
+            "exception", "slow_queries", "connection_pool_exhaustion",
+        }
+        and bool(scanned_raw)
+    )
+    if not prefer and proposal["cause_confidence"] >= 60:
         return proposal
+    if scanned.get("category") == "connection_pool_exhaustion":
+        scanned = _merge_pattern(scanned, proposed, windowed)
     if symptom["evidence_refs"]:
         scanned["symptom"] = symptom
     _kept, proposal_unknowns, _category = _kept_clauses(proposed, windowed, service)
+    _kept, proposal_unknowns = _apply_pattern(proposed, _kept, proposal_unknowns, series)
     merged = list(scanned.get("unknowns") or [])
     for item in proposal_unknowns:
         if item not in merged:
             merged.append(item)
     scanned["unknowns"] = merged
-    return _with_provenance(scanned, name)
+    scanned = _with_provenance(scanned, name)
+    return _mention_service(scanned, service)
 
 
 def narrow_statement(
@@ -648,11 +649,8 @@ def _kept_clauses(proposed: str, views: list[dict], service: str) -> tuple[list[
         else:
             unknowns.append("whether a cache is stale")
 
-    if re.search(r"intermittent|sawtooth|flapping", low):
-        if any_blob(r"intermittent|sawtooth|flapping"):
-            add("intermittent", "intermittent")
-        else:
-            unknowns.append("whether the pattern is intermittent")
+    # The pattern word is applied later, from the raw series only.
+    # A label such as anomaly_type or a payload pattern field does not keep it.
 
     # A proposed exception or error token that the logs actually contain.
     # A class that only restates the timeout or error symptom is not a cause.
@@ -831,7 +829,7 @@ def _decide_from_views(
     if pool:
         return _pool_cause(pool[0], views, service)
     if slow:
-        return _slow_cause(slow[0], service)
+        return _slow_cause(slow[0], service, views)
     exc = _exception_hit(logs)
     if exc is not None:
         return _exception_cause(exc, views, service)
@@ -889,15 +887,25 @@ def _conflict(pool: dict, slow: dict, incident_type: str) -> dict:
 def _pool_cause(view: dict, views: list[dict], service: str) -> dict:
     record = view["record"]
     own = _citation_service(record)
-    # A downstream field on the cited pool record is the owner. Naming
+    pool_views = [
+        v for v in views
+        if v.get("kind") == "log" and _is_connection_pool(v["record"])
+        and not _is_derived_record(v["record"])
+    ] or [view]
+    # A downstream field on a cited pool record is the owner. Naming
     # only the caller is an overclaim. Text from another line is used
     # only when this record has no downstream field.
-    if _record_downstream(record):
-        statement, named = _pool_owner_statement(record)
+    field_record = next(
+        (v["record"] for v in pool_views if _record_downstream(v["record"])),
+        None,
+    )
+    named_by_text = ""
+    if field_record is not None:
+        statement, named = _pool_owner_statement(field_record)
     else:
         downstream = ""
         for other in views:
-            if other is view or other.get("kind") != "log":
+            if other.get("kind") != "log":
                 continue
             if _is_timeout_text(_raw_text(other["record"])):
                 downstream = _extract_downstream(_raw_text(other["record"]))
@@ -905,6 +913,7 @@ def _pool_cause(view: dict, views: list[dict], service: str) -> dict:
                     break
         if downstream and (not own or downstream == own or downstream in _raw_text(record)):
             statement, named = _pool_owner_statement(record, downstream)
+            named_by_text = downstream
         elif own:
             statement, named = f"connection pool exhausted on {own}", own
         else:
@@ -912,10 +921,22 @@ def _pool_cause(view: dict, views: list[dict], service: str) -> dict:
     unknowns = []
     if named:
         unknowns.append(f"why {named} refuses connections")
-    return _direct(view, statement, "connection_pool_exhaustion", "connection_pool_exhausted", service, unknowns=unknowns)
+    if field_record is None and not named_by_text and not _views_name_downstream(pool_views):
+        unknowns.append(DOWNSTREAM_UNKNOWN)
+    pool_views = dedupe_views(pool_views)
+    refs = [_ref(v, "connection_pool_exhausted", "") for v in pool_views]
+    for metric in dedupe_views([
+        item for item in views
+        if item.get("kind") == "metric" and _pool_metric(item["record"])
+    ]):
+        refs.append(_ref(metric, "connection_pool_exhausted", ""))
+    return _direct(
+        view, statement, "connection_pool_exhaustion", "connection_pool_exhausted",
+        service, unknowns=unknowns, refs=refs,
+    )
 
 
-def _slow_cause(view: dict, service: str) -> dict:
+def _slow_cause(view: dict, service: str, views: list[dict] | None = None) -> dict:
     record = view["record"]
     target = ""
     backend = record.get("backend")
@@ -939,7 +960,12 @@ def _slow_cause(view: dict, service: str) -> dict:
     statement = f"slow queries on {target}" if target else "slow queries"
     if own and own not in statement:
         statement = f"{statement} in {own}"
-    return _direct(view, statement, "slow_queries", "slow_query", service)
+    slow_views = dedupe_views([
+        v for v in (views or [view])
+        if _is_slow_query(v["record"]) and not _is_derived_record(v["record"])
+    ]) or [view]
+    refs = [_ref(v, "slow_query", "") for v in slow_views]
+    return _direct(view, statement, "slow_queries", "slow_query", service, refs=refs)
 
 
 def _is_symptom_exception(name: str) -> bool:
@@ -988,11 +1014,14 @@ def _exception_cause(hit: dict, views: list[dict], service: str) -> dict:
         statement = f"{exc} in {own} {version}"
     refs = [_ref(view, exc, "")]
     unknowns: list[str] = []
+    deploys = _deploy_views(views)
+    deploy = deploys[0] if deploys else None
     if deploy is not None:
         when = _record_ts(deploy["record"])
         if when:
             statement = f"{statement}, deployed at {when}"
-        refs.append(_ref(deploy, "deployment", ""))
+        for item in dedupe_views(deploys):
+            refs.append(_ref(item, "deployment", ""))
         deploy_ts = _parse_ts(when)
         if not _error_absent_before_deploy(views, deploy_ts):
             unknowns.append("whether the deploy introduced the error")
@@ -1002,17 +1031,25 @@ def _exception_cause(hit: dict, views: list[dict], service: str) -> dict:
     )
 
 
+def _is_deploy_view(view: dict) -> bool:
+    raw_record = view.get("record")
+    record: dict = raw_record if isinstance(raw_record, dict) else {}
+    if view.get("kind") not in {"change", "event", "log"} and not _looks_like_change(record):
+        return False
+    if _is_derived_record(record):
+        return False
+    blob = (_change_blob(record) + " " + _raw_text(record)).lower()
+    change_type = str(record.get("change_type") or record.get("type") or "").lower()
+    return change_type == "deployment" or "deploy" in blob
+
+
+def _deploy_views(views: list[dict]) -> list[dict]:
+    return [view for view in views if _is_deploy_view(view)]
+
+
 def _deploy_view(views: list[dict]) -> dict | None:
-    for view in views:
-        raw_record = view.get("record")
-        record: dict = raw_record if isinstance(raw_record, dict) else {}
-        if view.get("kind") not in {"change", "event", "log"} and not _looks_like_change(record):
-            continue
-        blob = (_change_blob(record) + " " + _raw_text(record)).lower()
-        change_type = str(record.get("change_type") or record.get("type") or "").lower()
-        if change_type == "deployment" or "deploy" in blob:
-            return view
-    return None
+    found = _deploy_views(views)
+    return found[0] if found else None
 
 
 def _version_in_text(text: str) -> str:
@@ -1082,15 +1119,40 @@ def _direct(
         statement = f"{statement} in {own}"
     elif service and service not in statement and not own and category not in {"exception", "slow_queries", "connection_pool_exhaustion"}:
         statement = f"{statement} in {service}"
+    used = refs if refs is not None else [_ref(view, signal, "")]
+    raw = [ref for ref in used if ref.get("evidence_class") != "derived"]
+    if not raw:
+        return {
+            "hypothesis_name": category,
+            "statement": f"{service or 'incident'} observed; cause UNKNOWN",
+            "category": "unknown",
+            "cause_confidence": 0,
+            "cause_refs": [],
+            "contradictions": [],
+            "unknowns": list(unknowns or []),
+            "contributions": [],
+        }
+    score, contribs = score_raw_support(raw)
     return {
         "hypothesis_name": category,
         "statement": statement,
         "category": category,
-        "cause_confidence": DIRECT_SUPPORT,
-        "cause_refs": refs if refs is not None else [_ref(view, signal, "")],
+        "cause_confidence": score,
+        "cause_refs": raw,
         "contradictions": [],
         "unknowns": list(unknowns or []),
+        "contributions": contribs,
     }
+
+
+def _mention_service(decision: dict, service: str) -> dict:
+    """The affected service stays in the reasoning when the cause cannot name it."""
+    if not service:
+        return decision
+    reasoning = str(decision.get("reasoning") or "")
+    if service.lower() not in reasoning.lower():
+        decision["reasoning"] = f"For {service}. {reasoning}".strip()
+    return decision
 
 
 def _with_provenance(decision: dict, hypothesis_name: str) -> dict:
@@ -1114,6 +1176,7 @@ def _with_provenance(decision: dict, hypothesis_name: str) -> dict:
                     "strength": "contradiction",
                     "signal": ref.get("signal") or "",
                     "sequence_order": ref.get("sequence_order"),
+                    "evidence_class": ref.get("evidence_class") or "",
                 })
         # 40 + (-8) * n, then the published score is already capped.
         raw = base + sum(c["delta"] for c in contributions)
@@ -1126,6 +1189,9 @@ def _with_provenance(decision: dict, hypothesis_name: str) -> dict:
                 "strength": "none",
                 "signal": "",
             })
+    elif decision.get("contributions"):
+        base = 0
+        contributions = list(decision["contributions"])
     else:
         base = 0
         ref = refs[0] if refs else {}
@@ -1140,6 +1206,7 @@ def _with_provenance(decision: dict, hypothesis_name: str) -> dict:
             "strength": "direct" if refs else "none",
             "signal": ref.get("signal") if refs else "",
             "sequence_order": ref.get("sequence_order") if refs else None,
+            "evidence_class": ref.get("evidence_class") or "",
         }]
     unknowns = list(decision.get("unknowns") or [])
     reasoning = (
@@ -1313,6 +1380,251 @@ def build_evidence_snapshot(evidence: dict | None) -> dict:
         # skip them. A filled key carries the record hashes.
         snap[key] = {"present": True, "records": records} if val else False
     return snap
+
+
+_PATTERN_WORDS = ("intermittent", "recurring", "sawtooth", "flapping")
+
+
+def _pattern_words(text: str) -> list[str]:
+    found = []
+    for word in _PATTERN_WORDS:
+        if re.search(rf"\b{word}\b", text or "", re.I) and word not in found:
+            found.append(word)
+    return found
+
+
+def _apply_pattern(proposed, kept, unknowns, series):
+    """Keep a pattern word only when the raw series shows repeated cycles."""
+    words = _pattern_words(proposed)
+    if not words:
+        return kept, unknowns
+    kept = [phrase for phrase in kept if phrase.lower() not in _PATTERN_WORDS]
+    unknowns = list(unknowns)
+    if series:
+        if "intermittent" not in [phrase.lower() for phrase in kept]:
+            kept.append("intermittent")
+    else:
+        for word in words:
+            if not any(word in item for item in unknowns):
+                unknowns.append(word)
+    return kept, unknowns
+
+
+def _cycle_series(views: list[dict]) -> list[dict]:
+    """In-window metric points that change direction at least twice.
+
+    The payload ``pattern`` field is not consulted. Fewer than four points,
+    or a series that does not reverse, is not a cycle.
+    """
+    groups: dict[str, list[dict]] = {}
+    for view in dedupe_views(views):
+        if view.get("kind") != "metric":
+            continue
+        record = view.get("record") or {}
+        if _is_derived_record(record):
+            continue
+        value = record.get("value")
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            continue
+        name = str(record.get("name") or record.get("metric") or "value")
+        groups.setdefault(name, []).append(view)
+    for group in groups.values():
+        ordered = sorted(group, key=lambda item: item.get("timestamp") or "")
+        if len(ordered) < 4:
+            continue
+        values = [float(item["record"]["value"]) for item in ordered]
+        changes = 0
+        for index in range(2, len(values)):
+            delta = (values[index] - values[index - 1]) * (values[index - 1] - values[index - 2])
+            if delta < 0:
+                changes += 1
+        if changes >= 2:
+            return ordered
+    return []
+
+
+def _pool_metric(record: dict) -> bool:
+    if not isinstance(record, dict) or _is_derived_record(record):
+        return False
+    value = record.get("value")
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    name = str(record.get("name") or record.get("metric") or "")
+    return bool(re.search(r"pool|connection", name, re.I))
+
+
+def _views_name_downstream(views: list[dict]) -> bool:
+    for view in views:
+        record = view.get("record") or {}
+        if _record_downstream(record):
+            return True
+        if _extract_downstream(_raw_text(record)):
+            return True
+    return False
+
+
+def _raw_behind_derived(cited: list[dict], windowed: list[dict]) -> list[dict]:
+    """Raw points retrieved behind a derived label the hypothesis cited."""
+    blobs = []
+    for view in cited:
+        record = view.get("record") or {}
+        if _is_derived_record(record):
+            blobs.append(_blob(record))
+    if not blobs:
+        return []
+    blob = "\n".join(blobs)
+    wanted: list[dict] = []
+    for view in windowed:
+        if _is_derived_record(view.get("record") or {}):
+            continue
+        record = view.get("record") or {}
+        name = str(record.get("name") or record.get("metric") or "").lower()
+        if view.get("kind") != "metric":
+            continue
+        if re.search(r"cpu|saturation", blob) and "cpu" in name:
+            wanted.append(view)
+        elif re.search(r"mem|oom", blob) and "mem" in name:
+            wanted.append(view)
+        elif re.search(r"pool|sawtooth|intermittent", blob) and re.search(r"pool|connection", name):
+            wanted.append(view)
+    return wanted
+
+
+def _support_views(windowed, kept, series, service: str = "") -> list[dict]:
+    """Raw in-window views that show a kept clause. Derived labels are skipped."""
+    chosen: list[dict] = []
+    seen: set[int] = set()
+
+    def add(view: dict) -> None:
+        if id(view) in seen:
+            return
+        record = view.get("record") or {}
+        if _is_derived_record(record):
+            return
+        seen.add(id(view))
+        chosen.append(view)
+
+    service_name = (service or "").lower()
+    for phrase in kept:
+        low = phrase.lower().strip()
+        if not low or low == service_name:
+            continue
+        if "connection pool" in low:
+            for view in windowed:
+                record = view.get("record") or {}
+                if view.get("kind") == "log" and _is_connection_pool(record):
+                    add(view)
+                elif view.get("kind") == "metric" and _pool_metric(record):
+                    add(view)
+        elif low == "intermittent":
+            for view in series:
+                add(view)
+        elif "slow quer" in low:
+            for view in windowed:
+                if _is_slow_query((view.get("record") or {})):
+                    add(view)
+        elif "oom" in low:
+            for view in windowed:
+                if view.get("kind") in {"log", "event"} and re.search(
+                    r"oom", _raw_text(view.get("record") or {}), re.I,
+                ):
+                    add(view)
+        elif "memory" in low:
+            for view in windowed:
+                record = view.get("record") or {}
+                name = str(record.get("name") or "")
+                if view.get("kind") == "metric" and "mem" in name.lower() and not _is_derived_record(record):
+                    add(view)
+        elif "thread pool" in low:
+            for view in windowed:
+                if re.search(r"thread pool", _raw_text(view.get("record") or {}), re.I):
+                    add(view)
+        elif "cpu" in low:
+            for view in windowed:
+                record = view.get("record") or {}
+                name = str(record.get("name") or "")
+                text = _raw_text(record)
+                if view.get("kind") == "metric" and "cpu" in name.lower():
+                    add(view)
+                elif re.search(r"\bcpu\b", text, re.I):
+                    add(view)
+        elif "dns" in low:
+            for view in windowed:
+                if re.search(r"\bdns\b|resolve hostname|name resolution", _raw_text(view.get("record") or {}), re.I):
+                    add(view)
+        elif "pipeline" in low:
+            for view in windowed:
+                if re.search(r"pipeline", _raw_text(view.get("record") or {}), re.I):
+                    add(view)
+        elif "stale" in low:
+            for view in windowed:
+                if re.search(r"\bstale\b", _raw_text(view.get("record") or {}), re.I):
+                    add(view)
+        elif "connection" in low:
+            for view in windowed:
+                text = _raw_text(view.get("record") or {})
+                if re.search(r"connection (failure|refused|error)|connection refused", text, re.I):
+                    add(view)
+                elif re.search(r"\bredis\b|\bpostgres\b|\bdatabase\b|\belasticsearch\b", text, re.I) and re.search(
+                    r"refused|unavailable|unreachable|failure", text, re.I,
+                ):
+                    add(view)
+        elif any(token in low for token in ("deploy", "config", "maintenance", "index", "change")):
+            for view in windowed:
+                record = view.get("record") or {}
+                if view.get("kind") == "change" or _looks_like_change(record):
+                    add(view)
+        elif "rebalanc" in low:
+            for view in windowed:
+                if re.search(r"rebalanc", _raw_text(view.get("record") or {}), re.I):
+                    add(view)
+        else:
+            token = low.split()[0]
+            if len(token) < 4:
+                continue
+            for view in windowed:
+                if token in _raw_text(view.get("record") or {}).lower():
+                    add(view)
+    return dedupe_views(chosen)
+
+
+def _merge_pattern(decision: dict, proposed: str, windowed: list[dict]) -> dict:
+    """Attach a pattern word only together with the raw series that shows it."""
+    series = _cycle_series(windowed)
+    words = _pattern_words(proposed)
+    if not words:
+        return decision
+    statement = str(decision.get("statement") or "")
+    unknowns = list(decision.get("unknowns") or [])
+    if series:
+        if "intermittent" not in statement.lower():
+            statement = f"{statement}; intermittent"
+        refs = list(decision.get("cause_refs") or [])
+        existing = [ref.get("locator") for ref in refs]
+        for view in series:
+            ref = _ref(view, "pool_series", "")
+            if ref.get("evidence_class") == "derived":
+                continue
+            if ref.get("locator") in existing:
+                continue
+            refs.append(ref)
+            existing.append(ref.get("locator"))
+        score, contribs = score_raw_support(refs)
+        decision["statement"] = statement
+        decision["cause_refs"] = refs
+        decision["cause_confidence"] = score
+        decision["contributions"] = contribs
+    else:
+        for word in _PATTERN_WORDS:
+            statement = re.sub(rf";\s*{word}\b", "", statement, flags=re.I)
+            statement = re.sub(rf"\b{word}\b", "", statement, flags=re.I)
+        statement = re.sub(r"\s{2,}", " ", statement).strip(" ;")
+        decision["statement"] = statement
+        for word in words:
+            if not any(word in item for item in unknowns):
+                unknowns.append(word)
+        decision["unknowns"] = unknowns
+    return decision
 
 
 def _error_tokens(proposed: str) -> list[str]:

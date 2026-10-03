@@ -232,15 +232,13 @@ class TestConflictingSignalsScenario:
         report = _instrumented_investigate("INC12351", tmp_path)
         result = report["result"]
 
-        # Must identify the origin service (payment-db / payment-service)
+        # Pool and slow-query records disagree, so the cause does not name an origin.
         root_cause = result["root_cause"].lower()
-        assert "payment" in root_cause, (
-            f"Should identify payment-* as origin, got: {result['root_cause']}"
+        assert "unknown" in root_cause, (
+            f"Conflicting mechanisms must stay UNKNOWN, got: {result['root_cause']}"
         )
-        # Must mention cascading nature
-        assert "cascad" in root_cause or "connection pool" in root_cause, (
-            f"Should mention cascading or pool exhaustion: {result['root_cause']}"
-        )
+        assert result["confidence"] < 60
+        assert "cascad" in root_cause
 
 
 # =========================================================================

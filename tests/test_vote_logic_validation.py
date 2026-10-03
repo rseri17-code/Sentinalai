@@ -102,7 +102,7 @@ class TestClearSignalScenario:
         ("INC12345", "timeout", ["payment-service", "latency", "unknown"]),
         # Logs show rising memory and OOMKill. They do not say "leak".
         ("INC12346", "oomkill", ["memory", "oom", "user-service"]),
-        ("INC12347", "error_spike", ["deployment", "NullPointerException"]),
+        ("INC12347", "error_spike", ["deployed", "NullPointerException"]),
         ("INC12349", "saturation", ["order-service", "cpu"]),
         ("INC12350", "network", ["dns", "resolution"]),
     ]

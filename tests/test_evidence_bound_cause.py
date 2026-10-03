@@ -106,7 +106,13 @@ def _assert_refs_resolve(result, evidence):
         record = resolve_evidence_ref(ref, evidence, result.get("receipts"))
         assert record is not None, ref
         assert ref_in_window(ref, incident), ref
-        assert ref["service"] == "payment-db" or result["cause"]["category"] == "unknown"
+        # The ref keeps the record's own service. payment-db is named by the
+        # timeout line; it is not copied onto the pool or latency record.
+        own = record.get("service") if isinstance(record, dict) else ""
+        if isinstance(own, str) and own:
+            assert ref["service"] == own, ref
+        else:
+            assert ref["service"] in ("", None) or result["cause"]["category"] == "unknown"
         # The locator must not be a summary/note/annotation field.
         assert "summary" not in ref["locator"]["path"]
         assert "note" not in ref["locator"]["path"]
@@ -674,10 +680,13 @@ class TestLlmRefineGate:
             }
         }
         result = sup._analyze_evidence("INC-LLM", incident, "error_spike", evidence)
-        assert result["confidence"] <= 59
-        assert result["cause"]["confidence"] <= 59
         assert "disk full" not in result["root_cause"].lower()
-        assert "UNKNOWN" in result["cause"]["statement"]
+        # The rewrite is unsupported. The log's NullPointerException is a
+        # direct cause, so the published statement names that and not UNKNOWN.
+        assert "NullPointerException" in result["cause"]["statement"]
+        assert result["confidence"] >= 60
+        assert result["confidence"] != 97
+        assert result["cause"]["confidence"] != 97
 
     def test_score_bump_keeps_cited_cause(self, monkeypatch):
         monkeypatch.setenv("LLM_ENABLED", "true")

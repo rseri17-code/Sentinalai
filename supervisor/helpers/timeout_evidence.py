@@ -440,11 +440,24 @@ def _direct_support(contributions: list[dict]) -> bool:
 
 
 def _ref(view: dict, signal: str, service: str) -> dict:
+    """Cite the record's own service, or a downstream that same record names.
+
+    ``service`` is not copied onto the ref. A different record's downstream
+    (the timeout line naming payment-db) must not relabel this one.
+    """
+    raw_record = view.get("record")
+    record: dict = raw_record if isinstance(raw_record, dict) else {}
+    own = ""
+    raw = record.get("service")
+    if isinstance(raw, str) and raw.strip() and not is_placeholder(raw):
+        own = raw.strip()
+    else:
+        own = _extract_downstream(_raw_text(record))
     return {
         "sequence_order": view.get("sequence_order"),
         "tool": view.get("tool") or "",
         "locator": view.get("locator"),
-        "service": service,
+        "service": own,
         "timestamp": view.get("timestamp") or "",
         "signal": signal,
     }

@@ -261,7 +261,8 @@ class TestSupervisorWithMocks:
         result, _ = self._run("INC12347")
 
         root_cause = result["root_cause"].lower()
-        assert "deployment" in root_cause, "Must correlate with deployment"
+        assert "deploy" in root_cause, "Must name the deployment the records show"
+        assert "introduced" not in root_cause, "No pre-deploy baseline, so the statement does not say the deploy introduced the error"
         assert "nullpointer" in root_cause or "exception" in root_cause, (
             "Must identify specific error type"
         )

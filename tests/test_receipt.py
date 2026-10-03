@@ -95,6 +95,10 @@ class TestCountResults:
     def test_nested_results(self):
         assert _count_results({"metrics": {"results": [1, 2]}}) == 2
 
+    def test_log_results_ignore_inflated_count(self):
+        payload = {"logs": {"results": [{"message": "a"}, {"message": "b"}], "count": 524}}
+        assert _count_results(payload) == 2
+
 
 class TestRedactParams:
     def test_redacts_sensitive_keys(self):

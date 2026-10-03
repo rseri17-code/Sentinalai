@@ -18,7 +18,7 @@ import re
 import threading
 import time
 import concurrent.futures
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from supervisor.tool_selector import get_evolved_playbook
@@ -433,6 +433,7 @@ class SentinalAISupervisor:
             if _im_results:
                 _r_local.metadata["intelligence"] = [r.to_dict() for r in _im_results]
 
+        self._tls.run_started = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         with trace_span("investigate", case_id=incident_id) as span:
             # GenAI semantic conventions for agent observability
             span.set_attribute(GENAI_SYSTEM, "sentinalai")
@@ -1341,6 +1342,11 @@ class SentinalAISupervisor:
                     result["_receipt_sequence_order"] = receipt.sequence_order
                     result["_receipt_tool"] = worker_name or receipt.tool
                     result["_receipt_action"] = action
+                    result["_receipt_time_window_start"] = receipt.time_window_start or ""
+                    result["_receipt_time_window_end"] = receipt.time_window_end or ""
+                    _cap = params.get("limit", params.get("max_results"))
+                    if isinstance(_cap, int):
+                        result["_receipt_cap"] = _cap
                 record_worker_call(worker_name, action, "success", call_elapsed)
                 if circuits:
                     circuits.get(worker_name).record_success(worker_name)
@@ -2443,8 +2449,35 @@ class SentinalAISupervisor:
             h.base_score = int(assessment["cause_confidence"])
 
         # W2: Select winner — highest score, deterministic tiebreak by name
-        hypotheses.sort(key=lambda h: (-h.base_score, h.name))
+        # Same score: a record-backed analyzer hypothesis outranks a
+        # historical proposal so the published reasoning does not flip
+        # when experience replay sometimes injects historical_pattern.
+        hypotheses.sort(key=lambda h: (
+            -h.base_score,
+            1 if h.name == "historical_pattern" else 0,
+            h.name,
+        ))
         winner = hypotheses[0] if hypotheses else None
+        if winner is not None and isinstance(winner.bound_assessment, dict):
+            from supervisor.helpers.cause_binding import unchecked_coverage
+            _cov = unchecked_coverage(
+                incident, evidence,
+                run_started=str(getattr(self._tls, "run_started", "") or ""),
+            )
+            _prov = dict(winner.bound_assessment.get("provenance") or {})
+            _prov["unchecked_coverage"] = _cov
+            winner.bound_assessment["provenance"] = _prov
+            if not _cov.get("searched_window_reported"):
+                _unknowns = list(winner.bound_assessment.get("unknowns") or [])
+                _note = "search did not report the window it covered"
+                if _note not in _unknowns:
+                    _unknowns.append(_note)
+                winner.bound_assessment["unknowns"] = _unknowns
+                _reason = str(winner.bound_assessment.get("reasoning") or "")
+                if _note not in _reason:
+                    winner.bound_assessment["reasoning"] = (
+                        _reason + " Not established: " + _note + "."
+                    ).strip()
 
         _bound_winner = bool(winner and winner.evidence_bound and winner.bound_assessment)
         if winner:
@@ -4027,8 +4060,7 @@ class SentinalAISupervisor:
         except Exception:
             pass
 
-        result["_evidence_snapshot"] = {
-            k: bool(v) for k, v in evidence.items() if not k.startswith("_")
-        }
+        from supervisor.helpers.cause_binding import build_evidence_snapshot
+        result["_evidence_snapshot"] = build_evidence_snapshot(evidence)
         result["_reanalyzed"] = True
         return result

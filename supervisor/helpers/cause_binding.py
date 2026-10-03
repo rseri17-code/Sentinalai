@@ -14,10 +14,12 @@ from typing import Any
 from supervisor.helpers.placeholders import is_placeholder
 from supervisor.helpers.timeout_evidence import (
     ALIGNMENT_WINDOW_MINUTES,
+    _extract_downstream,
     _in_window,
     _incident_bounds,
     _is_pool,
     _is_slow_query,
+    _is_timeout_text,
     _parse_ts,
     _raw_text,
     _ref,
@@ -101,6 +103,19 @@ def bind_hypothesis(
             changes=changes or [],
         )
 
+    # The proposal is only a menu. Windowed records are what a symptom
+    # cites, and what fills a cause when the proposal itself has no support.
+    windowed = _windowed_views(
+        incident=incident,
+        evidence=evidence,
+        logs=logs or [],
+        signals=signals or {},
+        metrics=metrics or {},
+        events=events or [],
+        changes=changes or [],
+    )
+    symptom = _symptom_for(windowed, incident_type)
+
     kept, unknowns, category = _kept_clauses(proposed, cited, service)
     cause_refs = []
     if kept and cited:
@@ -130,16 +145,12 @@ def bind_hypothesis(
     if category == "unknown":
         confidence = min(confidence, 59)
 
-    symptom_refs = []
-    symptom_score = MISSING_CAUSE
-    if cited:
-        symptom_refs = [_ref(cited[0], "symptom_observed", service or "")]
-        symptom_score = 70
-    symptom = {
-        "statement": f"{incident_type} observed",
-        "confidence": symptom_score,
-        "evidence_refs": symptom_refs,
-    }
+    if not symptom["evidence_refs"] and cited:
+        symptom = {
+            "statement": f"{incident_type} observed",
+            "confidence": 70,
+            "evidence_refs": [_ref(cited[0], "symptom_observed", service or "")],
+        }
     reasoning = (
         f"Re-scored {name or 'hypothesis'} from cited in-window records "
         f"for {service or 'the alerted service'}. "
@@ -166,9 +177,9 @@ def bind_hypothesis(
         "final_confidence": confidence,
         "symptom_base": 0.0,
         "symptom_contributions": [],
-        "symptom_confidence": symptom_score,
+        "symptom_confidence": symptom["confidence"],
     }
-    return {
+    proposal: dict[str, Any] = {
         "hypothesis_name": name or category,
         "statement": statement,
         "category": category,
@@ -180,6 +191,27 @@ def bind_hypothesis(
         "reasoning": reasoning,
         "provenance": provenance,
     }
+    # A template that already has a direct ref keeps its statement, except
+    # an exception, which is restated from the log and the deploy record.
+    # A template with no direct ref yields to whatever the records support.
+    logs = [v for v in windowed if v.get("kind") == "log"]
+    use_records = proposal["cause_confidence"] < 60 or _exception_hit(logs) is not None
+    if not use_records:
+        return proposal
+    scanned = _decide_from_views(windowed, service=service, incident_type=incident_type)
+    if scanned is None:
+        return proposal
+    if proposal["cause_confidence"] >= 60 and scanned.get("category") != "exception":
+        return proposal
+    if symptom["evidence_refs"]:
+        scanned["symptom"] = symptom
+    _kept, proposal_unknowns, _category = _kept_clauses(proposed, windowed, service)
+    merged = list(scanned.get("unknowns") or [])
+    for item in proposal_unknowns:
+        if item not in merged:
+            merged.append(item)
+    scanned["unknowns"] = merged
+    return _with_provenance(scanned, name)
 
 
 def narrow_statement(
@@ -580,8 +612,12 @@ def _kept_clauses(proposed: str, views: list[dict], service: str) -> tuple[list[
                 phrase = "index change"
             else:
                 phrase = "change recorded"
-            if re.search(r"\bintroduced\b", low):
+            # "introduced" is a claim about why. It stays only when a record
+            # from before the deploy shows the error was absent.
+            if re.search(r"\bintroduced\b", low) and _error_absent_before_deploy(views):
                 add("introduced", "change")
+            elif re.search(r"\bintroduced\b|caused", low):
+                unknowns.append("whether the deploy introduced the error")
             add(phrase, "change")
         elif re.search(r"deploy|introduced|after ", low):
             unknowns.append("whether a change in this incident preceded the symptom")
@@ -704,6 +740,505 @@ def _connection_target(records: list[dict]) -> str:
         if match:
             return match.group(1)
     return ""
+
+
+def _windowed_views(
+    *,
+    incident: dict,
+    evidence: dict,
+    logs: list,
+    signals: dict,
+    metrics: dict,
+    events: list,
+    changes: list,
+) -> list[dict]:
+    views = _collect_views(evidence, logs, signals, metrics, events, changes)
+    start, end = _alignment_bounds(incident)
+    if start is not None:
+        views = [v for v in views if _in_window(v["timestamp"], start, end)]
+    return views
+
+
+def _symptom_for(views: list[dict], incident_type: str) -> dict:
+    """Cite a returned timeout or error record, whichever the logs contain."""
+    refs = []
+    saw_timeout = False
+    saw_error = False
+    for view in views:
+        if view.get("kind") != "log":
+            continue
+        text = _raw_text(view["record"])
+        if not saw_timeout and _is_timeout_text(text):
+            refs.append(_ref(view, "timeout_observed", ""))
+            saw_timeout = True
+        elif not saw_error and _is_error_record(view):
+            refs.append(_ref(view, "error_observed", ""))
+            saw_error = True
+        if saw_timeout and saw_error:
+            break
+    if saw_timeout:
+        statement = "timeout observed"
+    elif saw_error:
+        statement = "error observed"
+    else:
+        statement = f"{incident_type} observed"
+    return {
+        "statement": statement,
+        "confidence": 70 if refs else MISSING_CAUSE,
+        "evidence_refs": refs,
+    }
+
+
+def _is_error_record(view: dict) -> bool:
+    raw_record = view.get("record")
+    record: dict = raw_record if isinstance(raw_record, dict) else {}
+    level = str(record.get("level") or record.get("severity") or "")
+    if level.upper() in {"ERROR", "FATAL", "CRITICAL"}:
+        return True
+    text = _raw_text(record)
+    if text.upper().startswith("ERROR"):
+        return True
+    exc = record.get("exception")
+    return isinstance(exc, str) and bool(exc.strip()) and not is_placeholder(exc)
+
+
+def _decide_from_views(
+    views: list[dict],
+    *,
+    service: str,
+    incident_type: str,
+) -> dict | None:
+    """A specific cause the records support, or a conflict. None when they don't.
+
+    Latency elevation by itself is not a cause. 'The deploy introduced it'
+    is not a cause unless a pre-deploy record shows the error was absent.
+    """
+    logs = [v for v in views if v.get("kind") == "log"]
+    pool = [v for v in logs if _is_connection_pool(v["record"])]
+    slow = [v for v in logs if _is_slow_query(v["record"])]
+    if pool and slow:
+        return _conflict(pool[0], slow[0], incident_type)
+    if pool:
+        return _pool_cause(pool[0], views, service)
+    if slow:
+        return _slow_cause(slow[0], service)
+    exc = _exception_hit(logs)
+    if exc is not None:
+        return _exception_cause(exc, views, service)
+    conn = _first_text(logs, r"connection (failure|refused|error)|connection refused")
+    if conn is not None:
+        target = _connection_target([conn["record"]])
+        phrase = f"{target} connection failure".strip() if target else "connection failure"
+        return _direct(conn, phrase, "connection_failure", "connection_failure", service)
+    dns = _first_text(logs, r"\bdns\b|resolve hostname|name resolution")
+    if dns is not None:
+        return _direct(dns, "dns resolution failure", "dns", "dns", service)
+    oom = _first_text(logs, r"\boom\b|oomkill")
+    if oom is not None:
+        return _direct(oom, "OOMKill", "oomkill", "oomkill", service, extra="memory usage increased" if _memory_increased([v["record"] for v in views]) or _blob(oom["record"]).find("memory") >= 0 else "")
+    pipe = _first_text(logs, r"pipeline")
+    if pipe is not None:
+        return _direct(pipe, "data pipeline failure", "pipeline", "pipeline", service)
+    stale = _first_text(logs, r"\bstale\b")
+    if stale is not None and "cache" in _blob(stale["record"]):
+        return _direct(stale, "stale cache", "stale_cache", "stale_cache", service)
+    threads = _first_text(logs, r"thread pool")
+    if threads is not None:
+        return _direct(threads, "thread pool saturation", "thread_pool", "thread_pool", service)
+    return None
+
+
+def _conflict(pool: dict, slow: dict, incident_type: str) -> dict:
+    pool_ref = _ref(pool, "connection_pool_exhausted", "")
+    slow_ref = _ref(slow, "slow_query", "")
+    return {
+        "hypothesis_name": "cause_conflict",
+        "statement": f"{incident_type} observed; cause UNKNOWN",
+        "category": "unknown",
+        "cause_confidence": 24,
+        "cause_refs": [],
+        "contradictions": [
+            {"statement": "connection pool exhaustion", "evidence_refs": [pool_ref]},
+            {"statement": "slow queries", "evidence_refs": [slow_ref]},
+        ],
+        "unknowns": [
+            "which mechanism is immediate: connection pool exhaustion or slow queries"
+        ],
+    }
+
+
+def _pool_cause(view: dict, views: list[dict], service: str) -> dict:
+    own = _citation_service(view["record"])
+    downstream = ""
+    for other in views:
+        if other is view or other.get("kind") != "log":
+            continue
+        if _is_timeout_text(_raw_text(other["record"])):
+            downstream = _extract_downstream(_raw_text(other["record"]))
+            if downstream:
+                break
+    # The pool statement may name a downstream the timeout record names.
+    # The pool citation still carries the pool record's own service.
+    if downstream and (not own or downstream == own or downstream in _raw_text(view["record"])):
+        statement = f"connection pool for {downstream} exhausted"
+    elif own:
+        statement = f"connection pool exhausted on {own}"
+    else:
+        statement = "connection pool exhausted"
+    unknowns = []
+    if downstream:
+        unknowns.append(f"why {downstream} refuses connections")
+    elif own:
+        unknowns.append(f"why {own} refuses connections")
+    return _direct(view, statement, "connection_pool_exhaustion", "connection_pool_exhausted", service, unknowns=unknowns)
+
+
+def _slow_cause(view: dict, service: str) -> dict:
+    record = view["record"]
+    target = ""
+    backend = record.get("backend")
+    if isinstance(backend, str) and backend.strip() and not is_placeholder(backend):
+        target = backend.strip()
+    else:
+        match = re.search(
+            r"slow quer(?:y|ies)(?::| on)\s+([A-Za-z0-9_.-]+)",
+            _raw_text(record),
+            re.I,
+        )
+        if match and match.group(1).lower() not in {"response", "took", "the"}:
+            target = match.group(1)
+        else:
+            named = re.search(r"\b([A-Za-z][A-Za-z0-9_.-]*)\s+quer(?:y|ies)\b", _raw_text(record))
+            if named and named.group(1).lower() not in {"slow", "the", "a"}:
+                target = named.group(1)
+    own = _citation_service(record)
+    if not target:
+        target = own or service
+    statement = f"slow queries on {target}" if target else "slow queries"
+    if own and own not in statement:
+        statement = f"{statement} in {own}"
+    return _direct(view, statement, "slow_queries", "slow_query", service)
+
+
+def _exception_hit(logs: list[dict]) -> dict | None:
+    pattern = re.compile(r"\b([A-Z][A-Za-z0-9]*(?:Exception|Error))\b")
+    for view in logs:
+        text = _raw_text(view["record"])
+        match = pattern.search(text)
+        if match:
+            return {"view": view, "name": match.group(1), "text": text}
+    return None
+
+
+def _exception_cause(hit: dict, views: list[dict], service: str) -> dict:
+    view = hit["view"]
+    exc = hit["name"]
+    own = _citation_service(view["record"]) or service
+    version = _version_in_text(hit["text"])
+    deploy = _deploy_view(views)
+    if not version and deploy is not None:
+        version = _version([_change_blob(deploy["record"]) + " " + _raw_text(deploy["record"])])
+    statement = f"{exc} in {own}"
+    if version:
+        statement = f"{exc} in {own} {version}"
+    refs = [_ref(view, exc, "")]
+    unknowns: list[str] = []
+    if deploy is not None:
+        when = _record_ts(deploy["record"])
+        if when:
+            statement = f"{statement}, deployed at {when}"
+        refs.append(_ref(deploy, "deployment", ""))
+        deploy_ts = _parse_ts(when)
+        if not _error_absent_before_deploy(views, deploy_ts):
+            unknowns.append("whether the deploy introduced the error")
+    return _direct(
+        view, statement, "exception", exc, service,
+        unknowns=unknowns, refs=refs,
+    )
+
+
+def _deploy_view(views: list[dict]) -> dict | None:
+    for view in views:
+        raw_record = view.get("record")
+        record: dict = raw_record if isinstance(raw_record, dict) else {}
+        if view.get("kind") not in {"change", "event", "log"} and not _looks_like_change(record):
+            continue
+        blob = (_change_blob(record) + " " + _raw_text(record)).lower()
+        change_type = str(record.get("change_type") or record.get("type") or "").lower()
+        if change_type == "deployment" or "deploy" in blob:
+            return view
+    return None
+
+
+def _version_in_text(text: str) -> str:
+    match = re.search(r"\bv?\d+\.\d+(?:\.\d+)?\b", text or "", re.I)
+    if not match:
+        return ""
+    token = match.group(0)
+    return token if token.lower().startswith("v") else token
+
+
+def _error_absent_before_deploy(views: list[dict], deploy_ts=None) -> bool:
+    """True when a record before the deploy says the error was absent."""
+    if deploy_ts is None:
+        # Called from the proposal path without a parsed time: look for any
+        # pre-change absence line. Without a deploy clock this stays false.
+        times = []
+        for view in views:
+            if _looks_like_change(view.get("record") or {}):
+                parsed = _parse_ts(view.get("timestamp") or "")
+                if parsed is not None:
+                    times.append(parsed)
+        deploy_ts = min(times) if times else None
+    if deploy_ts is None:
+        return False
+    for view in views:
+        parsed = _parse_ts(view.get("timestamp") or "")
+        if parsed is None or parsed >= deploy_ts:
+            continue
+        text = _raw_text(view.get("record") or {}).lower()
+        if re.search(
+            r"no errors|errors absent|error rate\s*[:=]?\s*0(?:\.0+)?\b|0 errors",
+            text,
+        ):
+            return True
+    return False
+
+
+def _first_text(logs: list[dict], pattern: str) -> dict | None:
+    for view in logs:
+        if re.search(pattern, _blob(view["record"]), re.I):
+            return view
+    return None
+
+
+def _citation_service(record: dict) -> str:
+    raw = record.get("service") if isinstance(record, dict) else ""
+    if isinstance(raw, str) and raw.strip() and not is_placeholder(raw):
+        return raw.strip()
+    return ""
+
+
+def _direct(
+    view: dict,
+    statement: str,
+    category: str,
+    signal: str,
+    service: str,
+    *,
+    extra: str = "",
+    unknowns: list[str] | None = None,
+    refs: list[dict] | None = None,
+) -> dict:
+    if extra and extra not in statement:
+        statement = f"{statement}; {extra}"
+    own = _citation_service(view["record"])
+    if own and own not in statement and category not in {"exception", "slow_queries", "connection_pool_exhaustion"}:
+        statement = f"{statement} in {own}"
+    elif service and service not in statement and not own and category not in {"exception", "slow_queries", "connection_pool_exhaustion"}:
+        statement = f"{statement} in {service}"
+    return {
+        "hypothesis_name": category,
+        "statement": statement,
+        "category": category,
+        "cause_confidence": DIRECT_SUPPORT,
+        "cause_refs": refs if refs is not None else [_ref(view, signal, "")],
+        "contradictions": [],
+        "unknowns": list(unknowns or []),
+    }
+
+
+def _with_provenance(decision: dict, hypothesis_name: str) -> dict:
+    confidence = int(decision["cause_confidence"])
+    symptom = decision.get("symptom") or {
+        "statement": "observed",
+        "confidence": MISSING_CAUSE,
+        "evidence_refs": [],
+    }
+    refs = decision.get("cause_refs") or []
+    if decision.get("contradictions"):
+        base = 40
+        contributions = []
+        for group in decision["contradictions"]:
+            for ref in group.get("evidence_refs") or []:
+                contributions.append({
+                    "kind": "contradiction",
+                    "source": f"seq={ref.get('sequence_order')}:{ref.get('signal')}",
+                    "delta": -8,
+                    "relevance": "direct",
+                    "strength": "contradiction",
+                    "signal": ref.get("signal") or "",
+                    "sequence_order": ref.get("sequence_order"),
+                })
+        # 40 + (-8) * n, then the published score is already capped.
+        raw = base + sum(c["delta"] for c in contributions)
+        if confidence != raw:
+            contributions.append({
+                "kind": "cap",
+                "source": "unknown_or_contradiction",
+                "delta": confidence - raw,
+                "relevance": "cap",
+                "strength": "none",
+                "signal": "",
+            })
+    else:
+        base = 0
+        ref = refs[0] if refs else {}
+        contributions = [{
+            "kind": "support" if refs else "missing",
+            "source": (
+                f"seq={ref.get('sequence_order')}:{ref.get('signal')}"
+                if refs else "no_direct_ref"
+            ),
+            "delta": confidence,
+            "relevance": "direct" if refs else "none",
+            "strength": "direct" if refs else "none",
+            "signal": ref.get("signal") if refs else "",
+            "sequence_order": ref.get("sequence_order") if refs else None,
+        }]
+    unknowns = list(decision.get("unknowns") or [])
+    reasoning = (
+        f"Re-scored {hypothesis_name or decision.get('hypothesis_name') or 'hypothesis'} "
+        f"from in-window records. The cause statement is: {decision['statement']}."
+    )
+    if unknowns:
+        reasoning += " Not established: " + "; ".join(unknowns) + "."
+    decision["reasoning"] = reasoning
+    decision["provenance"] = {
+        "model": "cited_evidence_v1",
+        "alignment_window_minutes": ALIGNMENT_WINDOW_MINUTES,
+        "base": float(base),
+        "contributions": contributions,
+        "final_confidence": confidence,
+        "symptom_base": 0.0,
+        "symptom_contributions": [],
+        "symptom_confidence": int(symptom.get("confidence") or 0),
+    }
+    decision["symptom"] = symptom
+    return decision
+
+
+def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started: str = "") -> dict:
+    """What this run did not see.
+
+    Requested window versus the windows the receipts say were searched,
+    a result cap that filled up, and any requested span after the run
+    started. These are notes on the cause. They are not replay fields.
+    """
+    start, end = _alignment_bounds(incident or {})
+    requested = None
+    if start is not None and end is not None:
+        from datetime import timedelta
+        width = timedelta(minutes=ALIGNMENT_WINDOW_MINUTES)
+        requested = {
+            "start": (start - width).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "end": (end + width).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+    searched = []
+    truncations = []
+    count_gaps = []
+    for key, val in (evidence or {}).items():
+        if not isinstance(val, dict) or str(key).startswith("_"):
+            continue
+        tws = str(val.get("_receipt_time_window_start") or "")
+        twe = str(val.get("_receipt_time_window_end") or "")
+        if tws or twe:
+            searched.append({"evidence_key": key, "start": tws, "end": twe})
+        results = _log_results(val) or []
+        logs_obj = val.get("logs") if isinstance(val.get("logs"), dict) else {}
+        cap = val.get("_receipt_cap")
+        if not isinstance(cap, int):
+            for src in (logs_obj, val):
+                if isinstance(src, dict) and isinstance(src.get("limit"), int):
+                    cap = src["limit"]
+                    break
+        if isinstance(cap, int) and results and len(results) == cap:
+            times = sorted(
+                _record_ts(rec) for rec in results
+                if isinstance(rec, dict) and _record_ts(rec)
+            )
+            truncations.append({
+                "evidence_key": key,
+                "cap": cap,
+                "returned": len(results),
+                "covered_start": times[0] if times else "",
+                "covered_end": times[-1] if times else "",
+            })
+        reported = logs_obj.get("count") if isinstance(logs_obj, dict) else None
+        if isinstance(reported, int) and reported != len(results):
+            count_gaps.append({
+                "evidence_key": key,
+                "reported_count": reported,
+                "records_returned": len(results),
+            })
+    after = None
+    if run_started and requested:
+        run_dt = _parse_ts(run_started)
+        req_end = _parse_ts(requested["end"])
+        req_start = _parse_ts(requested["start"])
+        if run_dt and req_end and req_start and run_dt < req_end:
+            span_start = run_dt if run_dt > req_start else req_start
+            after = {
+                "run_started": run_started,
+                "unchecked_start": span_start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "unchecked_end": requested["end"],
+            }
+    return {
+        "requested_window": requested,
+        "searched_windows": searched,
+        "searched_window_reported": bool(searched),
+        "truncations": truncations,
+        "reported_count_disagrees": count_gaps,
+        "after_run_start": after,
+    }
+
+
+def build_evidence_snapshot(evidence: dict | None) -> dict:
+    """Bool presence plus a content hash of every record consulted.
+
+    ``present`` stays truthy for callers that only ask whether a key was
+    filled. ``records`` is what an outside reviewer hashes.
+    """
+    import hashlib
+    import json
+
+    snap: dict[str, Any] = {}
+    for key, val in (evidence or {}).items():
+        if str(key).startswith("_"):
+            continue
+        records = []
+        if isinstance(val, dict):
+            results = _log_results(val) or []
+            blobs = [("logs", results)]
+            for label in ("events", "changes", "change_records"):
+                entries = val.get(label)
+                if isinstance(entries, list):
+                    blobs.append((label, entries))
+            metrics = val.get("metrics")
+            if isinstance(metrics, dict) and isinstance(metrics.get("metrics"), list):
+                blobs.append(("metrics", metrics["metrics"]))
+            elif isinstance(metrics, list):
+                blobs.append(("metrics", metrics))
+            index = 0
+            for label, entries in blobs:
+                for rec in entries:
+                    if not isinstance(rec, dict):
+                        continue
+                    raw = json.dumps(
+                        rec, sort_keys=True, default=str, separators=(",", ":"),
+                    ).encode()
+                    records.append({
+                        "index": index,
+                        "path": label,
+                        "content_hash": hashlib.sha256(raw).hexdigest(),
+                        "service": str(rec.get("service") or ""),
+                        "timestamp": _record_ts(rec),
+                    })
+                    index += 1
+        # Absent keys stay false so callers that test truthiness still
+        # skip them. A filled key carries the record hashes.
+        snap[key] = {"present": True, "records": records} if val else False
+    return snap
 
 
 def _error_tokens(proposed: str) -> list[str]:

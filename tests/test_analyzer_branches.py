@@ -284,8 +284,12 @@ class TestNetworkBranches:
             changes_data={"changes": []},
         )
         result = supervisor.investigate("INC_N2")
-        assert "UNKNOWN" in result["root_cause"]
-        assert result["confidence"] < 60
+        # "connection refused" is a direct cause. It is not a dns claim
+        # and it is not a deployment claim.
+        assert "connection" in result["root_cause"].lower()
+        assert "dns" not in result["root_cause"].lower()
+        assert "deploy" not in result["root_cause"].lower()
+        assert result["confidence"] >= 60
 
 
 # =========================================================================

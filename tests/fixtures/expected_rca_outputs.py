@@ -89,8 +89,8 @@ EXPECTED_RCA = {
     # =========================================================================
     "INC12347": {
         "incident_id": "INC12347",
-        "root_cause": "NullPointerException; introduced; deployment v3.1.0 in payment-service",
-        "root_cause_keywords": ["deployment", "v3.1.0", "NullPointerException"],
+        "root_cause": "NullPointerException in payment-service v3.1.0, deployed at 2024-02-12T09:00:00Z",
+        "root_cause_keywords": ["deployed", "v3.1.0", "NullPointerException"],
         "confidence_min": 62,
         "confidence_max": 62,
         "required_evidence": [

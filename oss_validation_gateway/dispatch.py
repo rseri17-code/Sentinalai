@@ -39,6 +39,12 @@ def _find_alert(alerts: list[dict[str, Any]], incident_id: str) -> dict[str, Any
 
 
 def _range_window(params: dict[str, Any]) -> tuple[str, str]:
+    """Unix-second window for Prometheus ``query_range``.
+
+    Clamped to 1–48 hours (default 2). This is not a sample cap. The query
+    uses a 30s step in ``prometheus_query_range``. Shaped metric payloads
+    do not report truncation.
+    """
     hours = int(params.get("time_window_hours") or params.get("window_hours") or 2)
     hours = max(1, min(hours, 48))
     end = int(time.time())
@@ -228,6 +234,14 @@ def _signalfx(operation: str, params: dict[str, Any], service: str, backends: Ba
     return shaping.shape_skip("signalfx", operation)
 
 
+# get_pod_logs reads at most this many pods and the last this many lines
+# of each pod. ``pod_count`` in the payload is the number of lines returned,
+# not the number of pods. The payload does not say when either cap cut
+# the result.
+_KUBE_POD_CAP = 3
+_KUBE_LOG_TAIL = 50
+
+
 def _kubernetes(operation: str, params: dict[str, Any], service: str, backends: Backends) -> dict[str, Any]:
     namespace = str(params.get("namespace") or backends.settings.kubernetes_namespace or "default")
     name = service or str(params.get("deployment") or "unknown-service")
@@ -286,16 +300,16 @@ def _kubernetes(operation: str, params: dict[str, Any], service: str, backends: 
         items = listing.get("items") if isinstance(listing, dict) else []
         logs: list[str] = []
         if isinstance(items, list):
-            for pod in items[:3]:
+            for pod in items[:_KUBE_POD_CAP]:
                 pod_name = (pod.get("metadata") or {}).get("name") if isinstance(pod, dict) else None
                 if not pod_name:
                     continue
                 raw = backends.kubernetes_get(
                     f"/api/v1/namespaces/{namespace}/pods/{pod_name}/log",
-                    params={"tailLines": "50"},
+                    params={"tailLines": str(_KUBE_LOG_TAIL)},
                 )
                 if isinstance(raw, str) and raw.strip():
-                    logs.extend(raw.splitlines()[-50:])
+                    logs.extend(raw.splitlines()[-_KUBE_LOG_TAIL:])
         return {"logs": logs, "pod_count": len(logs), "source": "kubernetes"}
 
     if operation == "rollback_deployment":

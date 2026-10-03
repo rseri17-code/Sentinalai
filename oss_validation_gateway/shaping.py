@@ -171,6 +171,13 @@ def shape_problems(alerts: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def shape_logs(loki_payload: dict[str, Any], service: str = "") -> dict[str, Any]:
+    """Turn a Loki payload into the log shape workers already read.
+
+    ``logs.count`` is the number of records in ``logs.results``. This
+    payload has no ``result_count`` field. Loki was queried with
+    ``LOKI_LINE_LIMIT`` newest lines. Lines beyond that cap are absent,
+    and this function does not report that they were dropped.
+    """
     results: list[dict[str, Any]] = []
     data = loki_payload.get("data") if isinstance(loki_payload, dict) else None
     streams = []

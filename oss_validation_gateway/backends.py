@@ -15,6 +15,12 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 
+# Newest-first line cap passed to Loki ``query_range``. Shaped log payloads
+# set ``count`` to the number of lines actually returned. They do not set a
+# truncation flag when Loki had more lines than this cap.
+LOKI_LINE_LIMIT = 50
+
+
 class Transport(Protocol):
     def request(
         self,
@@ -167,7 +173,18 @@ class Backends:
 
     # -- Loki ----------------------------------------------------------- #
 
-    def loki_query_range(self, logql: str, start_ns: str | None = None, end_ns: str | None = None, limit: int = 50) -> dict[str, Any]:
+    def loki_query_range(
+        self,
+        logql: str,
+        start_ns: str | None = None,
+        end_ns: str | None = None,
+        limit: int = LOKI_LINE_LIMIT,
+    ) -> dict[str, Any]:
+        """Query Loki. ``limit`` is a newest-first line cap (see ``LOKI_LINE_LIMIT``).
+
+        The returned Loki payload is not annotated by this client. Shaping
+        does not add a truncation flag when more lines existed than ``limit``.
+        """
         url = f"{self.settings.loki_url}/loki/api/v1/query_range"
         params: dict[str, Any] = {"query": logql, "limit": str(limit), "direction": "backward"}
         if start_ns:

@@ -8,9 +8,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
-from oss_validation_gateway.backends import Backends, Settings
+from oss_validation_gateway.backends import LOKI_LINE_LIMIT, Backends, Settings
 from oss_validation_gateway.dispatch import dispatch
 from oss_validation_gateway.names import (
     DEFAULT_TARGETS,
@@ -24,8 +25,10 @@ from oss_validation_gateway.queries import metric_hint_to_promql, splunk_query_t
 from oss_validation_gateway.server import create_app
 from oss_validation_gateway.shaping import (
     incident_id_of,
+    shape_alerts,
     shape_golden_signals,
     shape_incident,
+    shape_incidents,
     shape_logs,
     shape_metrics,
 )
@@ -193,20 +196,85 @@ class TestQueryTranslation:
     def test_timeout_hint_to_logql(self):
         logql = splunk_query_to_logql("timeout payment-service", "payment-service")
         assert 'service="payment-service"' in logql
-        assert '|= "timeout"' in logql
+        assert "|~" in logql
+        assert "(?i)" in logql
+        assert "timeout" in logql
+        assert "timed out" in logql
+        assert "deadline exceeded" in logql
+        assert "|=" not in logql
+
+    def test_timeout_hint_is_case_insensitive(self):
+        assert splunk_query_to_logql("TIMEOUT", "payment-service") == splunk_query_to_logql(
+            "timeout", "payment-service"
+        )
+
+    def test_service_token_dropped_case_insensitively(self):
+        logql = splunk_query_to_logql("TIMEOUT Payment-Service", "payment-service")
+        assert "Payment-Service" not in logql
+        assert logql.count("|~") == 1
+
+    def test_pool_synonyms(self):
+        logql = splunk_query_to_logql("pool", "checkout")
+        assert "connection pool" in logql
+        assert "pool exhausted" in logql
+        assert "pool\\\\.exhausted" in logql
+
+    def test_error_covers_exception(self):
+        logql = splunk_query_to_logql("ERROR", "api")
+        assert "exception" in logql
+        assert "(?i)" in logql
+
+    def test_synonym_token_uses_the_whole_set(self):
+        logql = splunk_query_to_logql("exception", "api")
+        assert "error" in logql
+        assert "exception" in logql
+        assert logql.count("|~") == 1
+
+    def test_multi_keyword_hints_are_all_kept(self):
+        logql = splunk_query_to_logql("timeout error", "api")
+        assert logql.count("|~") == 2
+        assert "deadline exceeded" in logql
+        assert "exception" in logql
+
+    def test_unknown_keywords_are_all_kept(self):
+        logql = splunk_query_to_logql("cascade restart", "api")
+        assert logql.count("|~") == 2
+        assert "cascade" in logql
+        assert "restart" in logql
+
+    def test_boolean_words_are_not_hints(self):
+        logql = splunk_query_to_logql("latency OR slow", "api")
+        assert logql.count("|~") == 2
+        assert "latency" in logql
+        assert "slow" in logql
 
     def test_empty_query_selects_service(self):
         logql = splunk_query_to_logql("", "api-gateway")
         assert logql == '{service="api-gateway"}'
 
-    def test_unsafe_service_falls_back(self):
-        logql = splunk_query_to_logql("timeout", 'pay"ment')
-        assert "payment-service" in logql
+    def test_empty_service_raises(self):
+        with pytest.raises(ValueError, match="empty"):
+            splunk_query_to_logql("timeout", "")
+        with pytest.raises(ValueError, match="empty"):
+            splunk_query_to_logql("timeout", None)
+        with pytest.raises(ValueError, match="empty"):
+            splunk_query_to_logql("timeout", "   ")
+
+    def test_invalid_service_raises(self):
+        with pytest.raises(ValueError, match="invalid"):
+            splunk_query_to_logql("timeout", 'pay"ment')
+        with pytest.raises(ValueError, match="invalid"):
+            splunk_query_to_logql("timeout", "pay ment")
 
     def test_metric_hint_promql(self):
         assert "demo_latency_p95_ms" in metric_hint_to_promql("response_time_ms", "payment-service")
         assert "process_resident_memory_bytes" in metric_hint_to_promql(
             "memory_usage_bytes", "payment-service"
+        )
+
+    def test_metric_hint_is_case_insensitive(self):
+        assert metric_hint_to_promql("Response_Time_MS", "payment-service") == metric_hint_to_promql(
+            "response_time_ms", "payment-service"
         )
 
 
@@ -237,6 +305,16 @@ class TestShaping:
         assert row["_time"]
         assert row["downstream"] == "payment-db"
         assert row["level"] == "ERROR"
+
+    def test_reported_counts_match_returned_records(self):
+        logs = shape_logs(_loki_payload())
+        assert logs["logs"]["count"] == len(logs["logs"]["results"])
+        assert "result_count" not in logs
+        assert "truncated" not in logs
+        incidents = shape_incidents([_alert(), _alert("INC-OSS-002")])
+        assert incidents["count"] == len(incidents["incidents"])
+        alerts = shape_alerts([_alert()])
+        assert alerts["count"] == len(alerts["alerts"])
 
     def test_metrics_nested_list(self):
         shaped = shape_metrics(_prom_range([80, 100, 2500]), metric_name="response_time_ms")
@@ -281,8 +359,15 @@ class TestDispatch:
             gw,
         )
         assert result["logs"]["count"] == 1
+        assert result["logs"]["count"] == len(result["logs"]["results"])
         assert "timeout" in result["logs"]["results"][0]["message"]
-        assert '|= "timeout"' in result["logql"]
+        assert "(?i)" in result["logql"]
+        assert "timeout" in result["logql"]
+        assert "truncated" not in result
+        params = gw.transport.calls[0][2]
+        assert params is not None
+        assert params["limit"] == str(LOKI_LINE_LIMIT)
+        assert params["direction"] == "backward"
 
     def test_query_metrics_prometheus(self):
         gw = _backends({"/api/v1/query_range": _prom_range([80.0, 2500.0])})
@@ -343,6 +428,24 @@ class TestDispatch:
         )
         assert result["error"] == "kubernetes_not_configured"
         assert result["available"] is False
+
+    def test_invalid_service_is_not_rewritten(self):
+        gw = _backends({"/loki/api/v1/query_range": _loki_payload()})
+        result = dispatch(
+            "splunk.search_oneshot",
+            {"query": "timeout", "service": 'pay"ment'},
+            gw,
+        )
+        assert gw.transport.calls == []
+        assert "invalid" in result["error"]
+        assert result["logs"]["results"] == []
+
+    def test_empty_service_is_not_rewritten(self):
+        gw = _backends({"/loki/api/v1/query_range": _loki_payload()})
+        result = dispatch("splunk.search_oneshot", {"query": "timeout", "service": ""}, gw)
+        assert gw.transport.calls == []
+        assert "empty" in result["error"]
+        assert result["logs"]["count"] == 0
 
     def test_backend_down_fail_open_logs(self):
         gw = _backends({})  # no loki route → ConnectionError

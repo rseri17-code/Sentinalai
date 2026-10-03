@@ -420,3 +420,43 @@ class TestSingleFlightStart:
             assert stopped.wait(2)
         finally:
             release.set()
+
+    def test_claimed_client_is_kept_if_dropped_before_use(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A timeout may clear _mcp_client after claim releases the lock.
+
+        The caller must use the client claim observed, not a second read.
+        """
+        monkeypatch.setenv("PLAIN_MCP", "true")
+        payload = {"logs": {"results": [{"message": "kept"}], "count": 1}}
+
+        class _Ready:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def call_tool_sync(self, **_kwargs: Any) -> dict[str, Any]:
+                self.calls += 1
+                return payload
+
+        seen = _Ready()
+        gateway = _gateway()
+        real = gateway._claim_start_flight
+
+        def claim_then_drop() -> Any:
+            # Fast path already saw no client. Publish one for claim, then
+            # drop it before the caller can re-read the attribute.
+            gateway._mcp_client = seen
+            found = real()
+            gateway._drop_mcp_client()
+            return found
+
+        gateway._claim_start_flight = claim_then_drop  # type: ignore[method-assign]
+
+        def factory(_transport: Any) -> Any:
+            raise AssertionError("must not build a new client")
+
+        result = _invoke(gateway, factory)
+        assert result == payload
+        assert seen.calls == 1
+        assert "could not be built" not in json.dumps(result)

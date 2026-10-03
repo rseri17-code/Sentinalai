@@ -1316,20 +1316,24 @@ class McpGateway:
         with self._mcp_client_lock:
             self._mcp_client = None
 
-    def _claim_start_flight(self) -> tuple[_McpStartFlight | None, bool]:
+    def _claim_start_flight(self) -> tuple[Any, _McpStartFlight | None, bool]:
         """Join the in-flight start, or become its leader.
 
-        ``(None, False)`` means a client was published before this claim.
+        Returns ``(client, flight, is_leader)``. ``client`` is the instance
+        observed while holding the lock when one is already published.
+        Callers must use that object: a later read of ``_mcp_client`` can
+        be ``None`` if a timeout drops it after this lock is released.
         """
         with self._mcp_client_lock:
-            if self._mcp_client is not None:
-                return None, False
+            client = self._mcp_client
+            if client is not None:
+                return client, None, False
             flight = self._mcp_start_flight
             if flight is not None:
-                return flight, False
+                return None, flight, False
             flight = _McpStartFlight()
             self._mcp_start_flight = flight
-            return flight, True
+            return None, flight, True
 
     def _join_start_flight(self, flight: _McpStartFlight) -> Any:
         """Return the leader's client, or None and the same failure."""
@@ -1416,9 +1420,9 @@ class McpGateway:
         gateway_url = resolved_gateway_url()
         if not gateway_url:
             return None
-        flight, leader = self._claim_start_flight()
+        held, flight, leader = self._claim_start_flight()
         if flight is None:
-            return self._mcp_client
+            return held
         if not leader:
             return self._join_start_flight(flight)
         try:

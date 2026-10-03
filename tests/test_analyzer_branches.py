@@ -633,6 +633,8 @@ class TestHelperMethods:
                 "incident_id": "INC_H7",
                 "summary": "API Gateway timeout spike",
                 "affected_service": "api-gateway",
+                # Alignment uses the incident clock. The log is at 10:00Z.
+                "start_time": "2024-01-01T10:00:00Z",
             },
             log_data={
                 "results": [

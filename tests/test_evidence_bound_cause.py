@@ -1,0 +1,395 @@
+"""Evidence-bound timeout causes. Answers are fixed before the run.
+
+Cases:
+  (a) pool exhaustion
+  (b) supported slow queries
+  (c) elevated latency, cause unknown
+  (d) missing evidence (a summary that names the pool is not evidence)
+  (e) conflicting pool and slow-query records
+"""
+from __future__ import annotations
+
+from supervisor.agent import SentinalAISupervisor
+from supervisor.evidence_citation import annotate_citations
+from supervisor.helpers.timeout_evidence import (
+    ALIGNMENT_WINDOW_MINUTES,
+    attach_cited_outputs,
+    resolve_evidence_ref,
+    ref_in_window,
+)
+
+INCIDENT = {
+    "incident_id": "INC-T",
+    "affected_service": "payment-service",
+    "summary": "payment-service request timeout — upstream payment-db not responding",
+    "start_time": "2024-06-21T03:44:21Z",
+}
+
+# A source summary that states a cause. It must never be cited.
+_DECOY_SUMMARY = (
+    "connection pool exhausted because of slow queries, query plan, "
+    "index, lock contention, and replication lag on payment-db"
+)
+
+
+def _logs_blob(records, sequence_order=2):
+    return {
+        "_receipt_sequence_order": sequence_order,
+        "_receipt_tool": "log_worker",
+        "summary": _DECOY_SUMMARY,
+        "note": "annotation: slow queries caused the pool to exhaust",
+        "logs": {"results": records, "count": len(records)},
+    }
+
+
+def _signals_blob(p95=2500, baseline=80, sequence_order=3):
+    return {
+        "_receipt_sequence_order": sequence_order,
+        "_receipt_tool": "apm_worker",
+        "summary": _DECOY_SUMMARY,
+        "signals": {
+            "anomaly_start": "2024-06-21T03:44:10Z",
+            "anomaly_detected": True,
+            "golden_signals": {
+                "latency": {"p95": p95, "baseline_p95": baseline},
+            },
+        },
+    }
+
+
+def _timeout_line():
+    return {
+        "_time": "2024-06-21T03:44:18Z",
+        "service": "payment-service",
+        "message": "ERROR timeout waiting for connection: payment-db",
+    }
+
+
+def _pool_line():
+    return {
+        "_time": "2024-06-21T03:44:19Z",
+        "service": "payment-service",
+        "message": "ERROR pool.exhausted service=payment-service waiting=47",
+    }
+
+
+def _slow_line():
+    return {
+        "_time": "2024-06-21T03:44:20Z",
+        "service": "payment-service",
+        "message": "ERROR slow query on payment-db: SELECT id FROM payments took 28450ms",
+    }
+
+
+def _run(evidence):
+    sup = SentinalAISupervisor()
+    sup._tls.current_incident = dict(INCIDENT)
+    sup._tls.last_evidence = evidence
+    result = sup._analyze_evidence("INC-T", dict(INCIDENT), "timeout", evidence)
+    annotate_citations(result, evidence)
+    return result
+
+
+def _assert_refs_resolve(result, evidence):
+    incident = dict(INCIDENT)
+    groups = []
+    cause = result["cause"]
+    groups.extend(cause["evidence_refs"])
+    for group in cause["contradictions"]:
+        groups.extend(group["evidence_refs"])
+    groups.extend(result["symptom"]["evidence_refs"])
+    for ref in groups:
+        record = resolve_evidence_ref(ref, evidence, result.get("receipts"))
+        assert record is not None, ref
+        assert ref_in_window(ref, incident), ref
+        assert ref["service"] == "payment-db" or result["cause"]["category"] == "unknown"
+        # The locator must not be a summary/note/annotation field.
+        assert "summary" not in ref["locator"]["path"]
+        assert "note" not in ref["locator"]["path"]
+        assert "annotation" not in ref["locator"]["path"]
+        blob = evidence[ref["locator"]["evidence_key"]]
+        assert blob.get("_receipt_sequence_order") == ref["sequence_order"]
+
+
+def _no_confidence_without_citations(result):
+    if result["cause"]["confidence"] / 100 >= 0.60:
+        assert result["citations"], result["cause"]
+
+
+def _provenance_balances(result):
+    prov = result["_confidence_provenance"]
+    assert prov["alignment_window_minutes"] == ALIGNMENT_WINDOW_MINUTES
+    total = prov["base"] + sum(c["delta"] for c in prov["contributions"])
+    assert int(round(total)) == prov["final_confidence"]
+    assert prov["final_confidence"] == result["confidence"]
+    assert prov["final_confidence"] == result["cause"]["confidence"]
+    symptom_total = prov["symptom_base"] + sum(
+        c["delta"] for c in prov["symptom_contributions"]
+    )
+    assert int(round(symptom_total)) == prov["symptom_confidence"]
+    assert prov["symptom_confidence"] == result["symptom"]["confidence"]
+
+
+class TestEvidenceBoundCause:
+    def test_pool_exhaustion(self):
+        evidence = {
+            "search_timeout_logs": _logs_blob([_timeout_line(), _pool_line()]),
+            "check_golden_signals": _signals_blob(),
+        }
+        result = _run(evidence)
+        cause = result["cause"]
+        assert cause["statement"] == "connection pool for payment-db exhausted"
+        assert result["root_cause"] == cause["statement"]
+        assert cause["category"] == "connection_pool_exhaustion"
+        assert cause["confidence"] == 62
+        assert result["confidence"] == 62
+        assert result["symptom"]["statement"] == "timeout observed"
+        assert result["symptom"]["confidence"] == 85
+        assert cause["confidence"] < result["symptom"]["confidence"]
+        assert any("why payment-db refuses connections" == u for u in cause["unknowns"])
+        assert cause["contradictions"] == []
+        assert {r["signal"] for r in cause["evidence_refs"]} == {"connection_pool_exhausted"}
+        for ref in cause["evidence_refs"]:
+            record = resolve_evidence_ref(ref, evidence)
+            assert "pool.exhausted" in record["message"]
+            assert "p95" not in record
+        text = result["root_cause"].lower()
+        for forbidden in ("slow quer", "query plan", "index", "lock contention", "replication lag"):
+            assert forbidden not in text
+        _assert_refs_resolve(result, evidence)
+        _no_confidence_without_citations(result)
+        _provenance_balances(result)
+        # The decoy summary is not a cited record.
+        cited_messages = []
+        for ref in cause["evidence_refs"] + result["symptom"]["evidence_refs"]:
+            rec = resolve_evidence_ref(ref, evidence)
+            cited_messages.append(rec.get("message", ""))
+        assert all("query plan" not in m for m in cited_messages)
+
+    def test_driver_wording_is_not_one_literal(self):
+        """Pool and slow-query matches follow the record's meaning.
+
+        Hikari says "connection is not available"; another driver says
+        "query exceeded". Neither line is the literal "pool.exhausted"
+        or "slow query".
+        """
+        evidence = {
+            "search_timeout_logs": _logs_blob([
+                _timeout_line(),
+                {
+                    "_time": "2024-06-21T03:44:19Z",
+                    "service": "payment-service",
+                    "message": "HikariPool-1 - Connection is not available, request timed out after 30000ms",
+                },
+            ]),
+        }
+        pool = _run(evidence)
+        assert pool["cause"]["statement"] == "connection pool for payment-db exhausted"
+        assert pool["cause"]["confidence"] == 62
+
+        slow = _run({
+            "search_timeout_logs": _logs_blob([
+                _timeout_line(),
+                {
+                    "_time": "2024-06-21T03:44:20Z",
+                    "service": "payment-db",
+                    "message": "postgres query exceeded 25s: UPDATE payment_transactions",
+                },
+            ]),
+        })
+        assert slow["cause"]["statement"] == "slow queries on payment-db"
+        assert slow["cause"]["confidence"] == 62
+
+    def test_supported_slow_queries(self):
+        evidence = {
+            "search_timeout_logs": _logs_blob([_timeout_line(), _slow_line()]),
+            "check_golden_signals": _signals_blob(),
+        }
+        result = _run(evidence)
+        cause = result["cause"]
+        assert cause["statement"] == "slow queries on payment-db"
+        assert cause["category"] == "slow_queries"
+        assert cause["confidence"] == 62
+        assert result["symptom"]["confidence"] == 85
+        assert {r["signal"] for r in cause["evidence_refs"]} == {"slow_query"}
+        for ref in cause["evidence_refs"]:
+            record = resolve_evidence_ref(ref, evidence)
+            assert "slow query" in record["message"].lower()
+            assert "p95" not in record
+        _assert_refs_resolve(result, evidence)
+        _no_confidence_without_citations(result)
+        _provenance_balances(result)
+
+    def test_elevated_latency_cause_unknown(self):
+        evidence = {
+            "search_timeout_logs": _logs_blob([_timeout_line()]),
+            "check_golden_signals": _signals_blob(),
+        }
+        result = _run(evidence)
+        cause = result["cause"]
+        assert cause["statement"] == "payment-db latency elevated; cause UNKNOWN"
+        assert cause["category"] == "unknown"
+        assert cause["confidence"] == 34
+        assert cause["confidence"] < 60
+        assert result["symptom"]["confidence"] == 85
+        assert {r["signal"] for r in cause["evidence_refs"]} == {"latency_elevated"}
+        for ref in cause["evidence_refs"]:
+            record = resolve_evidence_ref(ref, evidence)
+            assert "p95" in record
+            assert "pool" not in str(record).lower()
+        _assert_refs_resolve(result, evidence)
+        _no_confidence_without_citations(result)
+        _provenance_balances(result)
+
+    def test_missing_evidence(self):
+        # Pool wording lives only in summary/note, plus one raw line outside
+        # the window and one in-window line that is not a timeout.
+        evidence = {
+            "search_timeout_logs": _logs_blob([
+                {
+                    "_time": "2024-01-01T00:00:00Z",
+                    "service": "payment-service",
+                    "message": "ERROR pool.exhausted service=payment-service waiting=47 payment-db",
+                },
+                {
+                    "_time": "2024-06-21T03:44:18Z",
+                    "service": "payment-service",
+                    "message": "INFO healthcheck ok",
+                },
+            ]),
+            "_sources_unavailable": ["metrics"],
+        }
+        result = _run(evidence)
+        cause = result["cause"]
+        assert cause["statement"] == "timeout observed; cause UNKNOWN"
+        assert result["root_cause"] == cause["statement"]
+        assert cause["category"] == "unknown"
+        assert cause["confidence"] == 12
+        assert cause["confidence"] < 60
+        assert cause["evidence_refs"] == []
+        assert result["symptom"]["confidence"] < 60
+        assert any(u.startswith("unavailable:") for u in cause["unknowns"])
+        assert "pool" not in cause["statement"]
+        _no_confidence_without_citations(result)
+        _provenance_balances(result)
+
+    def test_conflicting_evidence(self):
+        evidence = {
+            "search_timeout_logs": _logs_blob([_timeout_line(), _pool_line(), _slow_line()]),
+            "check_golden_signals": _signals_blob(),
+        }
+        result = _run(evidence)
+        cause = result["cause"]
+        assert cause["statement"] == "timeout observed; cause UNKNOWN"
+        assert cause["category"] == "unknown"
+        assert cause["confidence"] < 60
+        assert cause["confidence"] == 24
+        assert len(cause["contradictions"]) == 2
+        signals = {
+            ref["signal"]
+            for group in cause["contradictions"]
+            for ref in group["evidence_refs"]
+        }
+        assert signals == {"connection_pool_exhausted", "slow_query"}
+        assert result["symptom"]["confidence"] >= 60
+        _assert_refs_resolve(result, evidence)
+        _no_confidence_without_citations(result)
+        _provenance_balances(result)
+
+    def test_confidence_ordering(self):
+        pool = _run({
+            "search_timeout_logs": _logs_blob([_timeout_line(), _pool_line()]),
+            "check_golden_signals": _signals_blob(),
+        })
+        slow = _run({
+            "search_timeout_logs": _logs_blob([_timeout_line(), _slow_line()]),
+            "check_golden_signals": _signals_blob(),
+        })
+        elevated = _run({
+            "search_timeout_logs": _logs_blob([_timeout_line()]),
+            "check_golden_signals": _signals_blob(),
+        })
+        conflict = _run({
+            "search_timeout_logs": _logs_blob([_timeout_line(), _pool_line(), _slow_line()]),
+        })
+        missing = _run({
+            "search_timeout_logs": _logs_blob([
+                {"_time": "2024-06-21T03:44:18Z", "service": "payment-service",
+                 "message": "INFO healthcheck ok"},
+            ]),
+        })
+        assert pool["confidence"] == slow["confidence"]
+        assert pool["confidence"] > elevated["confidence"] > conflict["confidence"] > missing["confidence"]
+        assert pool["confidence"] >= 60
+        assert elevated["confidence"] < 60
+        assert conflict["confidence"] < 60
+        assert missing["confidence"] < 60
+
+    def test_no_confidence_without_citations_helper(self):
+        """Fail if cause confidence/100 >= 0.60 and citations are empty."""
+        evidence = {
+            "search_timeout_logs": _logs_blob([_timeout_line(), _pool_line()]),
+        }
+        result = _run(evidence)
+        assert result["cause"]["confidence"] / 100 >= 0.60
+        assert result["citations"]
+        # Every citation's signal supports the claim it is attached to.
+        for citation in result["citations"]:
+            if citation["claim"] == result["cause"]["statement"]:
+                assert citation["signal"] == "connection_pool_exhausted"
+
+
+class TestRefResolution:
+    def test_locator_resolves_inside_receipt_result(self):
+        evidence = {
+            "search_timeout_logs": _logs_blob([_timeout_line(), _pool_line()], sequence_order=4),
+        }
+        result = _run(evidence)
+        ref = result["cause"]["evidence_refs"][0]
+        assert ref["sequence_order"] == 4
+        assert ref["tool"] == "log_worker"
+        record = resolve_evidence_ref(ref, evidence)
+        assert record["message"].startswith("ERROR pool.exhausted")
+        # A wrong sequence does not resolve.
+        bad = dict(ref)
+        bad["sequence_order"] = 99
+        assert resolve_evidence_ref(bad, evidence) is None
+
+    def test_cited_ref_resolves_from_receipt_output(self):
+        evidence = {
+            "search_timeout_logs": _logs_blob([_timeout_line(), _pool_line()], sequence_order=4),
+        }
+        result = _run(evidence)
+
+        class _Receipt:
+            def __init__(self):
+                self.sequence_order = 4
+                self.output = None
+
+        class _Collector:
+            def __init__(self):
+                self.receipts = [_Receipt()]
+
+        collector = _Collector()
+        attach_cited_outputs(result, evidence, collector)
+        receipt = collector.receipts[0]
+        assert receipt.output is not None
+        ref = result["cause"]["evidence_refs"][0]
+        # Snapshot is not the record store. The receipt output is.
+        record = resolve_evidence_ref(
+            ref, {}, receipts=[{"sequence_order": 4, "output": receipt.output}],
+        )
+        assert record is not None
+        assert record["message"].startswith("ERROR pool.exhausted")
+
+    def test_snapshot_key_matches_locator(self):
+        evidence = {
+            "search_timeout_logs": _logs_blob([_timeout_line(), _pool_line()]),
+        }
+        result = _run(evidence)
+        # _analyze_evidence does not build the bool snapshot; the analyze
+        # phase does. The locator's evidence key is present in the corpus.
+        for ref in result["cause"]["evidence_refs"]:
+            key = ref["locator"]["evidence_key"]
+            assert key in evidence
+            assert evidence[key]

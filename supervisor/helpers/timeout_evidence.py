@@ -1,0 +1,800 @@
+"""Evidence-bound timeout cause selection.
+
+A timeout cause is chosen only from raw records that name the alerted
+downstream and sit inside the alignment window. Source summary, note, and
+annotation fields are never evidence and are never cited.
+
+Cause statements (AC2):
+  * ``connection pool for <ds> exhausted``
+  * ``slow queries on <ds>`` when a raw query-level record says so
+  * ``<ds> latency elevated; cause UNKNOWN``
+  * ``timeout observed; cause UNKNOWN`` when evidence is missing or conflicts
+"""
+from __future__ import annotations
+
+import re
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+# Records must fall in [incident_start - W, incident_end + W].
+ALIGNMENT_WINDOW_MINUTES = 15
+
+# Service latency at or above this multiple of baseline is elevated.
+# It never proves slow queries.
+LATENCY_ELEVATION_FACTOR = 10
+
+# Cause-confidence weights. UNKNOWN and contradicted causes never reach 60.
+# A single direct aligned ref is 62. Extra direct refs do not add a
+# per-line bonus (that would recreate source-count scoring).
+DIRECT_SUPPORT_DELTA = 62
+LATENCY_UNKNOWN_DELTA = 34
+CONFLICT_BASE = 40
+CONFLICT_EACH = -8
+MISSING_CAUSE = 12
+
+SYMPTOM_TIMEOUT_DELTA = 70
+SYMPTOM_LATENCY_DELTA = 15
+
+_NON_EVIDENCE_FIELDS = frozenset({
+    "summary", "note", "notes", "annotation", "annotations",
+    "description", "root_cause_hint", "hint", "comment", "comments",
+})
+
+_POOL_PATTERNS = (
+    re.compile(r"pool[\s._-]*exhaust", re.I),
+    re.compile(r"connection\s+pool.{0,80}(exhaust|not available|unavailable|timed?\s*out|timeout|full|overflow|at capacity|waiting)", re.I),
+    re.compile(r"unable to acquire connection", re.I),
+    re.compile(r"connection is not available", re.I),
+    re.compile(r"hikari\s*pool.{0,60}(not available|exhaust|timed?\s*out|timeout)", re.I),
+    re.compile(r"(pool|hikari).{0,40}wait queue", re.I),
+    re.compile(r"wait queue.{0,40}(pool|connection)", re.I),
+    re.compile(r"remaining connection slots", re.I),
+    re.compile(r"too many clients already", re.I),
+    re.compile(r"cannot get (a )?connection", re.I),
+    re.compile(r"max(?:imum)? pool size (?:reached|exceeded)", re.I),
+    re.compile(r"connection pool.{0,40}(held|waiting)", re.I),
+)
+
+_SLOW_QUERY_PATTERNS = (
+    re.compile(r"slow[\s_-]*quer", re.I),
+    re.compile(r"quer(?:y|ies)\s+slow", re.I),
+    re.compile(r"long[\s-]*running[\s-]*quer", re.I),
+    re.compile(
+        r"quer(?:y|ies).{0,40}(?:took|duration|lasted|exceeded)\s*[:=]?\s*\d+",
+        re.I,
+    ),
+    re.compile(r"\b(?:select|insert|update|delete)\b.{0,120}\btook\s+\d+", re.I),
+    re.compile(r"query[_\s-]*duration", re.I),
+)
+
+_DOWNSTREAM_PATTERNS = (
+    re.compile(r"timeout.*?:\s*(\S+?)(?::\d+)?(?:\s|$)", re.I),
+    re.compile(r"waiting for connection:\s*(\S+)", re.I),
+    re.compile(r"upstream\s+(\S+?)\s+not responding", re.I),
+)
+
+_QUERY_DURATION_FIELDS = ("query_duration_ms", "query_time_ms", "query_duration")
+_QUERY_COUNT_FIELDS = ("slow_query_count", "slow_queries")
+
+
+def decide_timeout(
+    *,
+    service: str,
+    logs: list[dict],
+    signals: dict,
+    metrics: dict,
+    incident: dict | None,
+    evidence: dict | None,
+) -> dict[str, Any]:
+    """Return the single evidence-bound timeout decision.
+
+    ``cause_confidence`` is an int in 0..100. UNKNOWN causes are below 60.
+    A score of 60 or more has exactly one direct aligned supporting ref and
+    no contradiction.
+    """
+    incident = incident or {}
+    evidence = evidence or {}
+    start, end = _incident_bounds(incident)
+    alerted = service or str(incident.get("affected_service") or "")
+
+    log_views = list(_iter_logs(evidence, logs))
+    latency_views = list(_iter_latency(evidence, signals, metrics))
+
+    ds, timeout_views = _downstream(log_views, start, end)
+    named_downstream = bool(ds)
+    # A pool or query record on the alerted service still counts when no
+    # timeout line names a separate downstream token.
+    if not ds:
+        ds = alerted
+    pool_views = [
+        v for v in log_views
+        if _in_window(v["timestamp"], start, end)
+        and _is_pool(v["record"])
+        and _concerns(v, ds, alerted, timeout_names_ds=named_downstream)
+    ]
+    slow_views = [
+        v for v in log_views
+        if _in_window(v["timestamp"], start, end)
+        and _is_slow_query(v["record"])
+        and _concerns(v, ds, alerted, timeout_names_ds=named_downstream)
+    ]
+    latency_views = [
+        v for v in latency_views
+        if _in_window(v["timestamp"], start, end) and _latency_elevated(v)
+    ]
+    timeout_views = [
+        v for v in timeout_views if _in_window(v["timestamp"], start, end)
+    ]
+    if not timeout_views and ds:
+        timeout_views = [
+            v for v in log_views
+            if _in_window(v["timestamp"], start, end)
+            and _is_timeout_text(_raw_text(v["record"]))
+            and _concerns(v, ds, alerted, timeout_names_ds=False)
+        ]
+
+    symptom_refs = [_ref(v, "timeout_observed", ds or alerted) for v in timeout_views[:1]]
+    symptom_contribs: list[dict] = []
+    symptom_score = 0
+    if timeout_views:
+        symptom_contribs.append(_contrib(
+            "support", symptom_refs[0], SYMPTOM_TIMEOUT_DELTA, "direct", "direct",
+        ))
+        symptom_score += SYMPTOM_TIMEOUT_DELTA
+    if latency_views:
+        lat_ref = _ref(latency_views[0], "latency_elevated", ds or alerted)
+        if not symptom_refs:
+            symptom_refs.append(lat_ref)
+        symptom_contribs.append(_contrib(
+            "support", lat_ref, SYMPTOM_LATENCY_DELTA, "indirect", "indirect",
+        ))
+        symptom_score += SYMPTOM_LATENCY_DELTA
+    symptom_score = _clamp(symptom_score)
+
+    unavailable = _unavailable(evidence)
+    contradictions: list[dict] = []
+    unknowns: list[str] = []
+    cause_refs: list[dict] = []
+    contributions: list[dict] = []
+    base = 0
+
+    if pool_views and slow_views:
+        # Both mechanisms are directly evidenced. Neither is the unique
+        # immediate cause, so the narrowest claim is UNKNOWN.
+        pool_ref = _ref(pool_views[0], "connection_pool_exhausted", ds)
+        slow_ref = _ref(slow_views[0], "slow_query", ds)
+        contradictions = [
+            {"statement": "connection pool exhaustion", "evidence_refs": [pool_ref]},
+            {"statement": "slow queries", "evidence_refs": [slow_ref]},
+        ]
+        unknowns.append(
+            "which mechanism is immediate: connection pool exhaustion or slow queries"
+        )
+        base = CONFLICT_BASE
+        contributions = [
+            _contrib("contradiction", pool_ref, CONFLICT_EACH, "direct", "contradiction"),
+            _contrib("contradiction", slow_ref, CONFLICT_EACH, "direct", "contradiction"),
+        ]
+        statement = "timeout observed; cause UNKNOWN"
+        category = "unknown"
+        name = "timeout_conflict"
+        cause_refs = []
+    elif pool_views and ds:
+        pool_ref = _ref(pool_views[0], "connection_pool_exhausted", ds)
+        cause_refs = [pool_ref]
+        contributions = [_contrib(
+            "support", pool_ref, DIRECT_SUPPORT_DELTA, "direct", "direct",
+        )]
+        statement = f"connection pool for {ds} exhausted"
+        category = "connection_pool_exhaustion"
+        name = "connection_pool_exhaustion"
+        unknowns.append(f"why {ds} refuses connections")
+    elif slow_views and ds:
+        slow_ref = _ref(slow_views[0], "slow_query", ds)
+        cause_refs = [slow_ref]
+        contributions = [_contrib(
+            "support", slow_ref, DIRECT_SUPPORT_DELTA, "direct", "direct",
+        )]
+        statement = f"slow queries on {ds}"
+        category = "slow_queries"
+        name = "slow_queries"
+        unknowns.append(f"why queries on {ds} are slow")
+    elif latency_views and ds:
+        lat_ref = _ref(latency_views[0], "latency_elevated", ds)
+        cause_refs = [lat_ref]
+        contributions = [_contrib(
+            "support", lat_ref, LATENCY_UNKNOWN_DELTA, "indirect", "indirect",
+        )]
+        statement = f"{ds} latency elevated; cause UNKNOWN"
+        category = "unknown"
+        name = "latency_elevated_unknown"
+        unknowns.append(f"why {ds} latency is elevated")
+    else:
+        base = MISSING_CAUSE
+        statement = "timeout observed; cause UNKNOWN"
+        category = "unknown"
+        name = "timeout_unknown"
+        if not ds:
+            unknowns.append("downstream not named by an in-window raw record")
+        else:
+            unknowns.append(f"no in-window mechanism record for {ds}")
+        for src in unavailable:
+            unknowns.append(f"unavailable: {src}")
+
+    cause_score = _clamp(base + sum(c["delta"] for c in contributions))
+    if category == "unknown" or contradictions:
+        cause_score = min(cause_score, 59)
+    if cause_score >= 60 and not _direct_support(contributions):
+        cause_score = 59
+    if contradictions and cause_score >= 60:
+        cause_score = 59
+
+    # Reconcile a cap so base + contributions still equals the final score.
+    raw = base + sum(c["delta"] for c in contributions)
+    if cause_score != _clamp(raw):
+        contributions = list(contributions) + [{
+            "kind": "cap",
+            "source": "unknown_or_contradiction",
+            "delta": cause_score - raw,
+            "relevance": "cap",
+            "strength": "none",
+            "signal": "",
+        }]
+
+    symptom = {
+        "statement": "timeout observed",
+        "confidence": symptom_score,
+        "evidence_refs": symptom_refs,
+    }
+    reasoning = _reasoning(
+        statement, ds, alerted, category,
+        bool(pool_views), bool(slow_views), bool(latency_views),
+    )
+    provenance = {
+        "model": "cited_evidence_v1",
+        "alignment_window_minutes": ALIGNMENT_WINDOW_MINUTES,
+        "base": float(base),
+        "contributions": contributions,
+        "final_confidence": cause_score,
+        "symptom_base": 0.0,
+        "symptom_contributions": symptom_contribs,
+        "symptom_confidence": symptom_score,
+    }
+    return {
+        "hypothesis_name": name,
+        "statement": statement,
+        "category": category,
+        "cause_confidence": cause_score,
+        "cause_refs": cause_refs,
+        "contradictions": contradictions,
+        "unknowns": unknowns,
+        "symptom": symptom,
+        "reasoning": reasoning,
+        "provenance": provenance,
+        "downstream": ds,
+    }
+
+
+def citations_for_bound_result(result: dict) -> list[dict] | None:
+    """Citations drawn from the refs that chose the winner.
+
+    Returns None when this result was not produced by the evidence-bound
+    timeout path, so the legacy keyword citer stays in place.
+    """
+    if not result.get("_evidence_bound_cause"):
+        return None
+    cause_raw = result.get("cause")
+    symptom_raw = result.get("symptom")
+    cause: dict = cause_raw if isinstance(cause_raw, dict) else {}
+    symptom: dict = symptom_raw if isinstance(symptom_raw, dict) else {}
+    items: list[tuple[str, dict]] = []
+    for ref in cause.get("evidence_refs") or []:
+        if isinstance(ref, dict):
+            items.append((str(cause.get("statement") or ""), ref))
+    for group in cause.get("contradictions") or []:
+        if not isinstance(group, dict):
+            continue
+        claim = f"conflicting evidence: {group.get('statement', '')}"
+        for ref in group.get("evidence_refs") or []:
+            if isinstance(ref, dict):
+                items.append((claim, ref))
+    for ref in symptom.get("evidence_refs") or []:
+        if isinstance(ref, dict):
+            items.append((str(symptom.get("statement") or ""), ref))
+    citations = []
+    for i, (claim, ref) in enumerate(items, 1):
+        tool = str(ref.get("tool") or "evidence")
+        citations.append({
+            "claim": claim,
+            "source": tool,
+            "evidence": str(ref.get("signal") or ""),
+            "timestamp": str(ref.get("timestamp") or ""),
+            "confidence": 1.0,
+            "citation_id": f"{tool}:{i}",
+            "sequence_order": ref.get("sequence_order"),
+            "locator": ref.get("locator"),
+            "service": ref.get("service"),
+            "signal": ref.get("signal"),
+        })
+    return citations
+
+
+def attach_cited_outputs(result: dict, evidence: dict, receipts: Any) -> None:
+    """Copy cited worker results onto those receipts' output.
+
+    ``_evidence_snapshot`` stays a bool-per-key map. ``RECEIPT_CAPTURE_OUTPUT``
+    stays off for uncited calls. A cited ref still resolves: its locator path
+    walks the receipt output, which is the worker result.
+    """
+    if not result.get("_evidence_bound_cause") or not isinstance(evidence, dict):
+        return
+    wanted: set[int] = set()
+    cause_raw = result.get("cause")
+    symptom_raw = result.get("symptom")
+    cause: dict = cause_raw if isinstance(cause_raw, dict) else {}
+    symptom: dict = symptom_raw if isinstance(symptom_raw, dict) else {}
+    blobs = [cause.get("evidence_refs") or [], symptom.get("evidence_refs") or []]
+    for group in cause.get("contradictions") or []:
+        if isinstance(group, dict):
+            blobs.append(group.get("evidence_refs") or [])
+    for refs in blobs:
+        for ref in refs:
+            if isinstance(ref, dict) and isinstance(ref.get("sequence_order"), int):
+                wanted.add(ref["sequence_order"])
+    if not wanted:
+        return
+    by_seq: dict[int, dict] = {}
+    for val in evidence.values():
+        if isinstance(val, dict) and isinstance(val.get("_receipt_sequence_order"), int):
+            by_seq[val["_receipt_sequence_order"]] = val
+    items = getattr(receipts, "receipts", None)
+    if items is None:
+        return
+    for rec in items:
+        seq = getattr(rec, "sequence_order", None)
+        if not isinstance(seq, int):
+            continue
+        blob = by_seq.get(seq)
+        if blob is None or seq not in wanted:
+            continue
+        if getattr(rec, "output", None) is None:
+            rec.output = blob
+
+
+def resolve_evidence_ref(
+    ref: dict,
+    evidence: dict,
+    receipts: list[dict] | None = None,
+) -> dict | None:
+    """Return the raw record named by ``ref``, or None if it does not resolve.
+
+    The record is taken from the evidence blob stamped with the receipt
+    ``sequence_order`` (the worker result). When that blob was also stored
+    on the receipt output, either source matches.
+    """
+    if not isinstance(ref, dict):
+        return None
+    locator = ref.get("locator")
+    if not isinstance(locator, dict):
+        return None
+    path = locator.get("path")
+    if not isinstance(path, list) or not path:
+        return None
+    seq = ref.get("sequence_order")
+    key = locator.get("evidence_key")
+    blob = None
+    if isinstance(evidence, dict) and key in evidence and isinstance(evidence[key], dict):
+        candidate = evidence[key]
+        if candidate.get("_receipt_sequence_order") == seq:
+            blob = candidate
+    if blob is None and receipts:
+        for rec in receipts:
+            if not isinstance(rec, dict):
+                continue
+            if rec.get("sequence_order") == seq and isinstance(rec.get("output"), dict):
+                blob = rec["output"]
+                break
+    if blob is None:
+        return None
+    node: Any = blob
+    for part in path:
+        if isinstance(node, list) and isinstance(part, int) and 0 <= part < len(node):
+            node = node[part]
+        elif isinstance(node, dict) and part in node:
+            node = node[part]
+        else:
+            return None
+    if not isinstance(node, dict):
+        return None
+    return node
+
+
+def ref_in_window(ref: dict, incident: dict) -> bool:
+    start, end = _incident_bounds(incident or {})
+    return _in_window(str(ref.get("timestamp") or ""), start, end)
+
+
+# ---------------------------------------------------------------------------
+# Internals
+# ---------------------------------------------------------------------------
+
+def _contrib(kind: str, ref: dict, delta: int, relevance: str, strength: str) -> dict:
+    return {
+        "kind": kind,
+        "source": f"seq={ref.get('sequence_order')}:{ref.get('signal')}",
+        "delta": delta,
+        "relevance": relevance,
+        "strength": strength,
+        "signal": ref.get("signal") or "",
+        "sequence_order": ref.get("sequence_order"),
+    }
+
+
+def _direct_support(contributions: list[dict]) -> bool:
+    return any(
+        c.get("kind") == "support" and c.get("strength") == "direct" and c.get("delta", 0) > 0
+        for c in contributions
+    )
+
+
+def _ref(view: dict, signal: str, service: str) -> dict:
+    return {
+        "sequence_order": view.get("sequence_order"),
+        "tool": view.get("tool") or "",
+        "locator": view.get("locator"),
+        "service": service,
+        "timestamp": view.get("timestamp") or "",
+        "signal": signal,
+    }
+
+
+def _reasoning(
+    statement: str,
+    ds: str,
+    alerted: str,
+    category: str,
+    pool: bool,
+    slow: bool,
+    latency: bool,
+) -> str:
+    bits = [
+        (
+            f"Timeline review of in-window raw records for "
+            f"{alerted or 'the alerted service'} waiting on {ds or 'the downstream'}."
+        ),
+        f"The cause statement is: {statement}.",
+    ]
+    if category == "connection_pool_exhaustion":
+        bits.append(
+            "A raw connection-pool exhaustion record precedes the timeout. "
+            "Why the pool exhausted is not established by that record."
+        )
+    elif category == "slow_queries":
+        bits.append(
+            "A raw query-level record names slow queries. "
+            "Database latency alone was not used."
+        )
+    elif pool and slow:
+        bits.append(
+            "Raw records support both connection pool exhaustion and slow queries, "
+            "so the immediate cause cannot be distinguished and stays UNKNOWN."
+        )
+    elif latency and category == "unknown":
+        bits.append(
+            "Latency is elevated against its baseline before the timeout, "
+            "but no connection-pool or slow-query record identifies the cause."
+        )
+    else:
+        bits.append(
+            "No aligned raw record identifies a mechanism, so the cause stays UNKNOWN."
+        )
+    return " ".join(bits)
+
+
+def _incident_bounds(incident: dict) -> tuple[datetime | None, datetime | None]:
+    start = _parse_ts(
+        incident.get("start_time")
+        or incident.get("created_at")
+        or incident.get("timestamp")
+        or incident.get("startsAt")
+        or ""
+    )
+    end = _parse_ts(
+        incident.get("end_time")
+        or incident.get("resolved_at")
+        or incident.get("endsAt")
+        or ""
+    )
+    if start and not end:
+        end = start
+    return start, end
+
+
+def _parse_ts(value: Any) -> datetime | None:
+    if not value or not isinstance(value, str):
+        return None
+    text = value.strip().replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _in_window(ts: str, start: datetime | None, end: datetime | None) -> bool:
+    if start is None or end is None:
+        return False
+    parsed = _parse_ts(ts)
+    if parsed is None:
+        return False
+    w = timedelta(minutes=ALIGNMENT_WINDOW_MINUTES)
+    return (start - w) <= parsed <= (end + w)
+
+
+def _raw_text(record: dict) -> str:
+    """Raw line text only. Summary, note, and annotation fields are not evidence."""
+    parts = []
+    for key in ("message", "_raw", "exception"):
+        if key in _NON_EVIDENCE_FIELDS:
+            continue
+        val = record.get(key)
+        if isinstance(val, str) and val.strip():
+            parts.append(val)
+    return "\n".join(parts)
+
+
+def _is_pool(record: dict) -> bool:
+    text = _raw_text(record)
+    if text and any(p.search(text) for p in _POOL_PATTERNS):
+        return True
+    # Numeric pool gauges on the record itself (not a summary string).
+    active = _num(record, "active", "active_connections", "pool_active", "db_pool_active")
+    limit = _num(record, "max", "pool_max", "pool_size", "max_connections", "db_pool_max")
+    waiting = _num(record, "pending", "waiting", "waiters", "pending_requests", "db_pool_pending")
+    if active is not None and limit is not None and limit > 0 and active >= limit and (waiting or 0) > 0:
+        return True
+    return False
+
+
+def _is_slow_query(record: dict) -> bool:
+    text = _raw_text(record)
+    if text and any(p.search(text) for p in _SLOW_QUERY_PATTERNS):
+        return True
+    for key in _QUERY_DURATION_FIELDS:
+        val = record.get(key)
+        if isinstance(val, (int, float)) and not isinstance(val, bool) and val >= 1000:
+            return True
+    for key in _QUERY_COUNT_FIELDS:
+        val = record.get(key)
+        if isinstance(val, (int, float)) and not isinstance(val, bool) and val > 0:
+            return True
+    return False
+
+
+def _num(record: dict, *keys: str) -> float | None:
+    for key in keys:
+        val = record.get(key)
+        if isinstance(val, (int, float)) and not isinstance(val, bool):
+            return float(val)
+    return None
+
+
+def _is_timeout_text(text: str) -> bool:
+    lowered = (text or "").lower()
+    return "timeout" in lowered or "timed out" in lowered
+
+
+def _extract_downstream(text: str) -> str:
+    if not text:
+        return ""
+    for pattern in _DOWNSTREAM_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            token = match.group(1).strip().rstrip(".,;\"'")
+            if token and token.lower() not in {"timeout", "connection", "upstream"}:
+                return token
+    return ""
+
+
+def _token_in(token: str, text: str) -> bool:
+    if not token or not text:
+        return False
+    return re.search(rf"(?<![\w-]){re.escape(token)}(?![\w-])", text, re.I) is not None
+
+
+def _downstream(log_views: list[dict], start, end) -> tuple[str, list[dict]]:
+    named: list[tuple[str, dict]] = []
+    for view in log_views:
+        if not _in_window(view["timestamp"], start, end):
+            continue
+        text = _raw_text(view["record"])
+        if not _is_timeout_text(text):
+            continue
+        ds = _extract_downstream(text)
+        # A downstream field on the log record is raw data, not a summary.
+        field = view["record"].get("downstream")
+        if isinstance(field, str) and field.strip():
+            ds = ds or field.strip()
+        if ds:
+            named.append((ds, view))
+    if not named:
+        return "", []
+    # Stable: first in-window timeout that names a downstream.
+    ds = named[0][0]
+    views = [v for name, v in named if name == ds]
+    return ds, views
+
+
+def _concerns(view: dict, ds: str, alerted: str, timeout_names_ds: bool) -> bool:
+    if not ds:
+        return False
+    record = view["record"]
+    text = _raw_text(record)
+    if _token_in(ds, text):
+        return True
+    if str(record.get("service") or "") == ds:
+        return True
+    field = record.get("downstream")
+    if isinstance(field, str) and field == ds and (not text or _token_in(field, text) or not text):
+        return True
+    svc = str(record.get("service") or "")
+    if timeout_names_ds and svc in {alerted, ds, ""}:
+        other = _extract_downstream(text)
+        if other and other != ds:
+            return False
+        # Pool/query line on the alerted service, tied to ds by the timeout line.
+        if _is_pool(record) or _is_slow_query(record):
+            return True
+    return False
+
+
+def _latency_elevated(view: dict) -> bool:
+    record = view["record"]
+    p95 = record.get("p95")
+    baseline = record.get("baseline_p95")
+    if isinstance(p95, (int, float)) and isinstance(baseline, (int, float)) and baseline > 0:
+        return float(p95) > float(baseline) * LATENCY_ELEVATION_FACTOR
+    value = record.get("value")
+    base = view.get("baseline")
+    if isinstance(value, (int, float)) and isinstance(base, (int, float)) and base > 0:
+        return float(value) > float(base) * LATENCY_ELEVATION_FACTOR
+    return False
+
+
+def _iter_logs(evidence: dict, fallback: list[dict]) -> list[dict]:
+    found = False
+    views: list[dict] = []
+    for key, val in evidence.items():
+        if str(key).startswith("_") or not isinstance(val, dict):
+            continue
+        results, prefix = _log_list(val)
+        if results is None:
+            continue
+        found = True
+        seq = val.get("_receipt_sequence_order")
+        tool = str(val.get("_receipt_tool") or "")
+        for i, entry in enumerate(results):
+            if not isinstance(entry, dict):
+                continue
+            ts = entry.get("_time") or entry.get("timestamp") or entry.get("ts") or ""
+            views.append({
+                "record": entry,
+                "timestamp": str(ts),
+                "sequence_order": seq if isinstance(seq, int) else entry.get("_receipt_sequence_order"),
+                "tool": tool or str(entry.get("_receipt_tool") or ""),
+                "locator": {"evidence_key": key, "path": prefix + [i]},
+            })
+    if found:
+        return views
+    for i, entry in enumerate(fallback or []):
+        if not isinstance(entry, dict):
+            continue
+        ts = entry.get("_time") or entry.get("timestamp") or entry.get("ts") or ""
+        views.append({
+            "record": entry,
+            "timestamp": str(ts),
+            "sequence_order": entry.get("_receipt_sequence_order"),
+            "tool": str(entry.get("_receipt_tool") or ""),
+            "locator": entry.get("_locator") or {"evidence_key": "logs", "path": ["results", i]},
+        })
+    return views
+
+
+def _log_list(val: dict) -> tuple[list | None, list]:
+    logs = val.get("logs")
+    if isinstance(logs, dict) and isinstance(logs.get("results"), list):
+        return logs["results"], ["logs", "results"]
+    if isinstance(logs, list):
+        return logs, ["logs"]
+    results = val.get("results")
+    if isinstance(results, list) and results and isinstance(results[0], dict):
+        if "message" in results[0] or "_raw" in results[0]:
+            return results, ["results"]
+    return None, []
+
+
+def _iter_latency(evidence: dict, signals: dict, metrics: dict) -> list[dict]:
+    views: list[dict] = []
+    saw_signal = False
+    saw_metric = False
+    for key, val in evidence.items():
+        if str(key).startswith("_") or not isinstance(val, dict):
+            continue
+        seq = val.get("_receipt_sequence_order")
+        tool = str(val.get("_receipt_tool") or "")
+        sig = val.get("signals")
+        if isinstance(sig, dict) and isinstance(sig.get("golden_signals"), dict):
+            latency = sig["golden_signals"].get("latency")
+            if isinstance(latency, dict):
+                saw_signal = True
+                ts = str(sig.get("anomaly_start") or sig.get("timestamp") or "")
+                record = dict(latency)
+                views.append({
+                    "record": record,
+                    "timestamp": ts,
+                    "sequence_order": seq if isinstance(seq, int) else None,
+                    "tool": tool,
+                    "locator": {"evidence_key": key, "path": ["signals", "golden_signals", "latency"]},
+                    "baseline": latency.get("baseline_p95"),
+                })
+        met = val.get("metrics")
+        if isinstance(met, dict) and isinstance(met.get("metrics"), list):
+            baseline = met.get("baseline")
+            for i, point in enumerate(met["metrics"]):
+                if not isinstance(point, dict):
+                    continue
+                name = str(point.get("name") or point.get("metric") or "")
+                if name and not re.search(r"latency|response_time|duration", name, re.I):
+                    continue
+                saw_metric = True
+                views.append({
+                    "record": point,
+                    "timestamp": str(point.get("timestamp") or point.get("_time") or ""),
+                    "sequence_order": seq if isinstance(seq, int) else None,
+                    "tool": tool,
+                    "locator": {"evidence_key": key, "path": ["metrics", "metrics", i]},
+                    "baseline": baseline,
+                })
+    if saw_signal or saw_metric:
+        # One latency series is enough. Prefer the golden-signal reading.
+        golden = [v for v in views if v["locator"]["path"][:1] == ["signals"]]
+        return golden[:1] or views[:1]
+    # Fallback when the caller passed already-extracted structures.
+    gs = (signals or {}).get("golden_signals") or {}
+    latency = gs.get("latency") if isinstance(gs, dict) else None
+    if isinstance(latency, dict):
+        views.append({
+            "record": dict(latency),
+            "timestamp": str((signals or {}).get("anomaly_start") or ""),
+            "sequence_order": (signals or {}).get("_receipt_sequence_order"),
+            "tool": str((signals or {}).get("_receipt_tool") or ""),
+            "locator": {"evidence_key": "signals", "path": ["golden_signals", "latency"]},
+            "baseline": latency.get("baseline_p95"),
+        })
+    return views[:1]
+
+
+def _unavailable(evidence: dict) -> list[str]:
+    names: list[str] = []
+    for item in evidence.get("_sources_unavailable") or []:
+        if isinstance(item, dict):
+            names.append(str(item.get("source") or item.get("name") or "unknown"))
+        else:
+            names.append(str(item))
+    for key, val in evidence.items():
+        if str(key).startswith("_") or not isinstance(val, dict):
+            continue
+        if val.get("error"):
+            names.append(str(key))
+    # Stable, de-duplicated.
+    seen = []
+    for name in names:
+        if name not in seen:
+            seen.append(name)
+    return seen
+
+
+def _clamp(value: float) -> int:
+    return max(0, min(100, int(round(value))))

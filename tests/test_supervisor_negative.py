@@ -225,7 +225,11 @@ class TestSupervisorReentrancy:
         _build_mock_workers(self.supervisor, "INC12346")
         r2 = self.supervisor.investigate("INC12346")
 
-        assert "timeout" in r1["root_cause"].lower() or "slow" in r1["root_cause"].lower()
+        # INC12345 is elevated latency with no query or pool record (AC2).
+        # It must not pick up INC12346's memory/OOM cause.
+        assert "latency" in r1["root_cause"].lower()
+        assert "unknown" in r1["root_cause"].lower()
+        assert "memory" not in r1["root_cause"].lower()
         assert "memory" in r2["root_cause"].lower() or "oom" in r2["root_cause"].lower()
 
 

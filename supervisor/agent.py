@@ -169,7 +169,10 @@ def _parse_incident_ts(value: Any) -> datetime | None:
 class Hypothesis:
     """A scored root-cause hypothesis with evidence references."""
 
-    __slots__ = ("name", "root_cause", "base_score", "evidence_refs", "reasoning")
+    __slots__ = (
+        "name", "root_cause", "base_score", "evidence_refs", "reasoning",
+        "evidence_bound", "bound_assessment",
+    )
 
     def __init__(
         self,
@@ -178,12 +181,16 @@ class Hypothesis:
         base_score: float,
         evidence_refs: list[str],
         reasoning: str,
+        evidence_bound: bool = False,
+        bound_assessment: dict | None = None,
     ):
         self.name = name
         self.root_cause = root_cause
         self.base_score = base_score
         self.evidence_refs = evidence_refs
         self.reasoning = reasoning
+        self.evidence_bound = evidence_bound
+        self.bound_assessment = bound_assessment
 
 
 # =========================================================================
@@ -791,6 +798,12 @@ class SentinalAISupervisor:
         result.setdefault("hypothesis_count", hypothesis_count)
         result.setdefault("winner_hypothesis", winner_hypothesis)
 
+        # Cited timeout refs resolve inside the receipt output. The bool
+        # evidence snapshot is left unchanged.
+        if result.get("_evidence_bound_cause"):
+            from supervisor.helpers.timeout_evidence import attach_cited_outputs
+            attach_cited_outputs(result, evidence, receipts)
+
         # G-1: Surface receipts in the result so callers get a full audit trail
         if "receipts" not in result:
             result["receipts"] = receipts.to_list()
@@ -1319,6 +1332,14 @@ class SentinalAISupervisor:
 
                 if receipt and receipts:
                     receipts.finish(receipt, result)
+                if isinstance(result, dict) and receipt is not None:
+                    # Shallow copy so fixture dicts are not mutated. The
+                    # sequence_order lets a later evidence_ref point at this
+                    # receipt's result.
+                    result = dict(result)
+                    result["_receipt_sequence_order"] = receipt.sequence_order
+                    result["_receipt_tool"] = worker_name or receipt.tool
+                    result["_receipt_action"] = action
                 record_worker_call(worker_name, action, "success", call_elapsed)
                 if circuits:
                     circuits.get(worker_name).record_success(worker_name)
@@ -1400,10 +1421,22 @@ class SentinalAISupervisor:
             # Normalize through canonical Incident model
             try:
                 incident_obj = Incident.from_dict(raw)
-                return incident_obj.to_legacy_dict()
+                legacy = incident_obj.to_legacy_dict()
             except (ValueError, TypeError) as exc:
                 logger.warning("Incident normalization failed, using raw data: %s", exc)
                 return raw
+            # The canonical model fills an empty created_at with wall-clock
+            # now. Alignment must use the incident's own clock (start_time)
+            # or the window slides on every run.
+            if isinstance(raw, dict):
+                own = raw.get("start_time") or raw.get("created_at") or raw.get("createdAt")
+                if own and not raw.get("created_at") and not raw.get("createdAt"):
+                    legacy["created_at"] = own
+                if raw.get("start_time"):
+                    legacy["start_time"] = raw["start_time"]
+                if raw.get("end_time"):
+                    legacy["end_time"] = raw["end_time"]
+            return legacy
 
     def _fetch_historical_context(
         self, service: str, summary: str, incident_type: str = "",
@@ -2205,6 +2238,12 @@ class SentinalAISupervisor:
         summary = incident.get("summary", "")
         service = incident.get("affected_service", "unknown")
 
+        # Timeout alignment reads the incident clock and the receipt-stamped
+        # evidence. Do not clobber a richer incident already on the thread.
+        if not getattr(self._tls, "current_incident", None) and incident:
+            self._tls.current_incident = incident
+        self._tls.last_evidence = evidence
+
         # Gather raw data blobs
         logs = self._extract_logs(evidence)
         signals = self._extract_signals(evidence)
@@ -2307,11 +2346,24 @@ class SentinalAISupervisor:
         _evidence_priors: dict[str, float] = {}
         for h in hypotheses:
             _evidence_priors[h.name] = float(h.base_score)
-            h.base_score = compute_confidence(
-                h.base_score, logs, signals, metrics, events, changes,
-                corroborating_sources=len(h.evidence_refs),
-                incident_type=incident_type,
-            )
+            if h.evidence_bound and h.bound_assessment:
+                # Cause confidence is already the cited-evidence score.
+                # Do not add source-count bonuses on top.
+                h.base_score = int(h.bound_assessment["cause_confidence"])
+            else:
+                h.base_score = compute_confidence(
+                    h.base_score, logs, signals, metrics, events, changes,
+                    corroborating_sources=len(h.evidence_refs),
+                    incident_type=incident_type,
+                )
+        _bound = [h for h in hypotheses if h.evidence_bound]
+        if _bound:
+            # Uncited templates (including historical priming) cannot outrank
+            # a cause that was accepted or rejected from raw records.
+            _floor = min(int(h.base_score) for h in _bound)
+            for h in hypotheses:
+                if not h.evidence_bound:
+                    h.base_score = min(int(h.base_score), _floor - 1)
 
         # Fetch PIL predictions for this service — inject as priors into LLM calls
         pil_context = ""
@@ -2363,6 +2415,7 @@ class SentinalAISupervisor:
         hypotheses.sort(key=lambda h: (-h.base_score, h.name))
         winner = hypotheses[0] if hypotheses else None
 
+        _bound_winner = bool(winner and winner.evidence_bound and winner.bound_assessment)
         if winner:
             root_cause = winner.root_cause
             confidence = winner.base_score
@@ -2371,6 +2424,10 @@ class SentinalAISupervisor:
             root_cause = f"{service} incident - investigation inconclusive"
             confidence = compute_confidence(30, logs, signals, metrics, events, changes, incident_type=incident_type)
             reasoning = f"Generic analysis of {service} incident. Insufficient pattern match."
+        if _bound_winner:
+            _assessment = winner.bound_assessment
+            root_cause = _assessment["statement"]
+            confidence = int(_assessment["cause_confidence"])
 
         # LLM reasoning generation (optional, enhances winner reasoning)
         if _llm_enabled() and winner:
@@ -2395,8 +2452,9 @@ class SentinalAISupervisor:
                     incident_type=incident_type,
                     summary=summary,
                 )
-                if historical_matches and winner:
-                    # Proof-gated: only boost if we already have a winning hypothesis
+                if historical_matches and winner and not _bound_winner:
+                    # Proof-gated: only boost if we already have a winning hypothesis.
+                    # Evidence-bound timeout causes keep the cited-evidence score.
                     retrieval_boost = _retrieval_boost(historical_matches)
                     confidence = min(100, int(confidence + retrieval_boost))
                     # Without proof artifact, confidence must stay < 80
@@ -2407,7 +2465,7 @@ class SentinalAISupervisor:
 
         # Network evidence contribution (ThousandEyes — additive only)
         network_ctx = self._extract_network_evidence(evidence)
-        if network_ctx["total_confidence_delta"] > 0:
+        if network_ctx["total_confidence_delta"] > 0 and not _bound_winner:
             confidence = min(95, int(confidence + network_ctx["total_confidence_delta"] * 100))
         if network_ctx["top_owner"] not in ("unknown", ""):
             reasoning = reasoning + f" Network analysis suggests responsible party: {network_ctx['top_owner']}."
@@ -2417,13 +2475,15 @@ class SentinalAISupervisor:
         # G-5: Fail-closed — qualify root_cause string when confidence is insufficient
         # so callers never act on an unqualified guess
         _MINIMUM_ACTIONABLE_CONFIDENCE = 30
-        if confidence < _MINIMUM_ACTIONABLE_CONFIDENCE:
-            root_cause = (
-                f"INSUFFICIENT EVIDENCE: {service} — confidence {confidence}/100. "
-                "Manual investigation required."
-            )
-        elif confidence < 50 and not root_cause.startswith("LOW CONFIDENCE"):
-            root_cause = f"LOW CONFIDENCE: {root_cause}"
+        # Evidence-bound statements are exact (AC2). Do not prefix them.
+        if not _bound_winner:
+            if confidence < _MINIMUM_ACTIONABLE_CONFIDENCE:
+                root_cause = (
+                    f"INSUFFICIENT EVIDENCE: {service} — confidence {confidence}/100. "
+                    "Manual investigation required."
+                )
+            elif confidence < 50 and not root_cause.startswith("LOW CONFIDENCE"):
+                root_cause = f"LOW CONFIDENCE: {root_cause}"
 
         # LLM reasoning failure: surface status in result so callers can see stale confidence
         llm_reasoning_failed = (
@@ -2455,14 +2515,48 @@ class SentinalAISupervisor:
             "_dna_fingerprint": _fingerprint,
             # R2: evidence-derived confidence provenance for the winner — every
             # contribution attributed exactly once (additive metadata only).
+            # Timeout winners replace this with the cited-evidence model below.
             "_confidence_provenance": (
                 confidence_provenance(
                     _evidence_priors.get(winner.name, 0.0),
                     logs, signals, metrics, events, changes,
                     incident_type=incident_type)
-                if winner else {"base": 0.0, "contributions": [],
+                if winner and not _bound_winner else {"base": 0.0, "contributions": [],
                                 "final_confidence": confidence}),
         }
+
+        if _bound_winner:
+            _assessment = winner.bound_assessment
+            result["root_cause"] = _assessment["statement"]
+            result["confidence"] = int(_assessment["cause_confidence"])
+            result["symptom"] = _assessment["symptom"]
+            result["cause"] = {
+                "statement": _assessment["statement"],
+                "category": _assessment["category"],
+                "confidence": int(_assessment["cause_confidence"]),
+                "evidence_refs": list(_assessment["cause_refs"]),
+                "contradictions": list(_assessment["contradictions"]),
+                "unknowns": list(_assessment["unknowns"]),
+            }
+            result["_evidence_bound_cause"] = True
+            result["_confidence_provenance"] = _assessment["provenance"]
+            result["reasoning"] = _assessment["reasoning"]
+        else:
+            # Non-timeout investigations keep the legacy score. The new
+            # fields mirror it so callers can read symptom and cause.
+            result["symptom"] = {
+                "statement": f"{incident_type} observed",
+                "confidence": int(confidence) if isinstance(confidence, (int, float)) else 0,
+                "evidence_refs": [],
+            }
+            result["cause"] = {
+                "statement": root_cause,
+                "category": winner.name if winner else "none",
+                "confidence": int(confidence) if isinstance(confidence, (int, float)) else 0,
+                "evidence_refs": [],
+                "contradictions": [],
+                "unknowns": [],
+            }
 
         if llm_refine_failed or llm_reasoning_failed:
             result["confidence_degraded"] = True
@@ -2726,57 +2820,34 @@ class SentinalAISupervisor:
     # -- Timeout -------------------------------------------------------- #
 
     def _analyze_timeout(self, service, summary, logs, signals, metrics, events, changes, timeline):
-        hypotheses = []
-        downstream = self._find_downstream_service(logs)
-        gs = signals.get("golden_signals", {})
-        latency = gs.get("latency", {})
-        p95 = latency.get("p95", 0)
-        baseline = latency.get("baseline_p95", 0)
+        # Cause is chosen from raw in-window records. The old
+        # downstream_slow_queries template (fixed text whenever p95 > 10x)
+        # is gone: latency alone is not slow queries.
+        from supervisor.helpers.timeout_evidence import decide_timeout
 
-        if downstream and p95 > baseline * 10:
-            evidence_refs = ["golden_signals:latency_spike", "logs:timeout"]
-            if changes:
-                evidence_refs.append("changes:deployment")
-            # G-7: check ITSM topology to confirm downstream is a known dependency
-            topology_detail = ""
-            ci = (getattr(self._tls, "itsm_evidence", None) or {}).get("ci", {})
-            deps = ci.get("dependencies", [])
-            if deps:
-                evidence_refs.append("itsm:topology")
-                dep_names = [str(d) for d in deps]
-                if downstream in dep_names:
-                    topology_detail = (
-                        f" CMDB confirms {downstream} is a registered dependency of {service}."
-                    )
-                else:
-                    topology_detail = f" CMDB-registered dependencies: {', '.join(dep_names[:3])}."
-            hypotheses.append(Hypothesis(
-                name="downstream_slow_queries",
-                root_cause=f"{downstream} database slow queries causing upstream timeouts",
-                base_score=80,
-                evidence_refs=evidence_refs,
-                reasoning=(
-                    f"Timeline analysis shows {downstream} latency spike preceded "
-                    f"api-gateway timeout errors. {downstream} p95 latency was {p95}ms "
-                    f"compared to baseline of {baseline}ms (a {p95 // max(baseline, 1)}x increase). "
-                    f"This latency caused downstream timeout failures at the api-gateway level. "
-                    f"The first event in the timeline was {downstream} latency at the anomaly start, "
-                    f"which then caused cascading timeouts. The causal chain is clear: "
-                    f"database slow queries in {downstream} led to request timeouts before "
-                    f"the api-gateway timeout threshold was reached.{topology_detail}"
-                ),
-            ))
-
-        # Fallback hypothesis
-        hypotheses.append(Hypothesis(
-            name="timeout_undetermined",
-            root_cause=f"{service} timeout - cause undetermined",
-            base_score=35,
-            evidence_refs=[],
-            reasoning=f"Timeout detected on {service} but insufficient data to determine root cause.",
-        ))
-
-        return hypotheses
+        incident = getattr(self._tls, "current_incident", None) or {}
+        evidence = getattr(self._tls, "last_evidence", None) or {}
+        decision = decide_timeout(
+            service=service,
+            logs=logs,
+            signals=signals,
+            metrics=metrics,
+            incident=incident,
+            evidence=evidence,
+        )
+        refs = [
+            f"seq={r.get('sequence_order')}:{r.get('signal')}"
+            for r in decision["cause_refs"]
+        ]
+        return [Hypothesis(
+            name=decision["hypothesis_name"],
+            root_cause=decision["statement"],
+            base_score=decision["cause_confidence"],
+            evidence_refs=refs,
+            reasoning=decision["reasoning"],
+            evidence_bound=True,
+            bound_assessment=decision,
+        )]
 
     # -- OOMKill -------------------------------------------------------- #
 

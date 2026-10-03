@@ -9,10 +9,13 @@ EXPECTED_RCA = {
     # =========================================================================
     "INC12345": {
         "incident_id": "INC12345",
-        "root_cause": "payment-service database slow queries",
-        "root_cause_keywords": ["payment-service", "database", "slow", "queries"],
-        "confidence_min": 90,
-        "confidence_max": 100,
+        # Evidence-bound: latency is elevated and no pool or slow-query
+        # record exists, so the cause stays UNKNOWN. Top-level confidence
+        # is cause confidence and stays under 60.
+        "root_cause": "payment-service latency elevated; cause UNKNOWN",
+        "root_cause_keywords": ["payment-service", "latency", "elevated", "unknown"],
+        "confidence_min": 34,
+        "confidence_max": 34,
         "required_evidence": [
             "payment-service latency spike",
             "api-gateway timeout errors",

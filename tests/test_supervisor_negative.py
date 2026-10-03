@@ -287,16 +287,28 @@ class TestRegressions:
         assert "pipeline" in result["root_cause"].lower()
         assert "stale" in result["root_cause"].lower()
 
-    def test_inc12351_cascading_mentions_payment_service(self):
-        """
-        Regression: Cascading failure had hardcoded 'payment-service' in the
-        root cause. Verify it's still present (since the mock data IS about
-        payment-service).
+    def test_inc12351_conflict_keeps_the_records_off_the_cause(self):
+        """Pool and slow-query records both sit in the window, so neither binds.
+
+        The pool record still names payment-service. That name stays on the
+        contradiction. It is not a bound cause.
         """
         _build_mock_workers(self.supervisor, "INC12351")
         result = self.supervisor.investigate("INC12351")
-        assert "payment-service" in result["root_cause"].lower()
-        assert "connection pool" in result["root_cause"].lower()
+        assert "unknown" in result["root_cause"].lower()
+        assert result["confidence"] == 24
+        services = [
+            ref.get("service")
+            for group in result["cause"]["contradictions"]
+            for ref in group["evidence_refs"]
+        ]
+        assert "payment-service" in services
+        signals = [
+            ref.get("signal")
+            for group in result["cause"]["contradictions"]
+            for ref in group["evidence_refs"]
+        ]
+        assert "connection_pool_exhausted" in signals
 
 
 # =========================================================================

@@ -222,8 +222,10 @@ class TestSaturationBranches:
             changes_data={"changes": []},
         )
         result = supervisor.investigate("INC_S1")
-        assert "cpu" in result["root_cause"].lower()
-        assert 55 <= result["confidence"] <= 75
+        # A golden-signal CPU summary is the detector's conclusion. With no
+        # raw series behind it, the cause does not bind.
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] == 12
 
     def test_low_cpu_saturation(self):
         supervisor = _make_supervisor_with_data(
@@ -630,7 +632,12 @@ class TestHelperMethods:
             },
         )
         result = supervisor.investigate("INC_H6")
-        assert result["confidence"] >= 50
+        # "connection timeout" names the symptom. It is not a mechanism,
+        # so the cause stays unbound and below 60.
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] == 34
+        assert result["symptom"]["statement"] == "timeout observed"
+        assert result["symptom"]["evidence_refs"][0]["evidence_class"] == "raw"
 
     def test_downstream_from_downstream_field(self):
         """Downstream service identified from log's 'downstream' field."""
@@ -657,7 +664,15 @@ class TestHelperMethods:
             },
         )
         result = supervisor.investigate("INC_H7")
-        assert "payment-service" in result["root_cause"].lower()
+        # The downstream field is read. The timeout line and the derived
+        # latency summary do not name a mechanism, so the cause stays unbound.
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] < 60
+        assert "payment-service" in result["reasoning"].lower()
+        assert any(
+            "payment-service" in item
+            for item in result["cause"]["unknowns"]
+        )
 
     def test_resolve_hostname_dns_detection(self):
         """'resolve hostname' keyword triggers DNS detection."""

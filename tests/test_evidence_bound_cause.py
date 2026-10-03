@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from supervisor.agent import SentinalAISupervisor
 from supervisor.evidence_citation import annotate_citations
+from supervisor.helpers.confidence import compute_confidence
+from supervisor.helpers.placeholders import is_placeholder
 from supervisor.helpers.timeout_evidence import (
     ALIGNMENT_WINDOW_MINUTES,
     attach_cited_outputs,
@@ -337,6 +339,121 @@ class TestEvidenceBoundCause:
         for citation in result["citations"]:
             if citation["claim"] == result["cause"]["statement"]:
                 assert citation["signal"] == "connection_pool_exhausted"
+
+
+class TestPlaceholderValues:
+    """v1.2: none / unknown / "" / null / empty containers are no data."""
+
+    def _metrics_blob(self, metrics_body, sequence_order=6):
+        return {
+            "_receipt_sequence_order": sequence_order,
+            "_receipt_tool": "metrics_worker",
+            "metrics": metrics_body,
+        }
+
+    def test_pattern_none_adds_nothing_to_symptom_or_cause(self):
+        base = {
+            "search_timeout_logs": _logs_blob([_timeout_line()]),
+            "check_golden_signals": _signals_blob(),
+        }
+        with_placeholder = {
+            **base,
+            "check_latency_metrics": self._metrics_blob({
+                "metrics": [],
+                "pattern": "none",
+                "baseline": None,
+            }),
+        }
+        plain = _run(base)
+        marked = _run(with_placeholder)
+        assert marked["cause"]["confidence"] == plain["cause"]["confidence"]
+        assert marked["symptom"]["confidence"] == plain["symptom"]["confidence"]
+        cited = [
+            ref["locator"]["evidence_key"]
+            for ref in marked["cause"]["evidence_refs"] + marked["symptom"]["evidence_refs"]
+        ]
+        assert "check_latency_metrics" not in cited
+
+    def test_real_metric_counts_and_placeholder_does_not(self):
+        placeholder_only = {
+            "search_timeout_logs": _logs_blob([_timeout_line()]),
+            "check_latency_metrics": self._metrics_blob({
+                "metrics": [{
+                    "name": "response_time_ms",
+                    "timestamp": "2024-06-21T03:44:10Z",
+                    "value": "none",
+                }],
+                "baseline": "unknown",
+                "pattern": " NONE ",
+            }),
+        }
+        mixed_body = {
+            "metrics": [
+                {
+                    "name": "response_time_ms",
+                    "timestamp": "2024-06-21T03:44:09Z",
+                    "value": "none",
+                },
+                {
+                    "name": "response_time_ms",
+                    "timestamp": "2024-06-21T03:44:10Z",
+                    "value": 2500,
+                },
+            ],
+            "baseline": 80,
+            "pattern": "none",
+        }
+        mixed = {
+            "search_timeout_logs": _logs_blob([_timeout_line()]),
+            "check_latency_metrics": self._metrics_blob(mixed_body),
+        }
+        real_only = {
+            "search_timeout_logs": _logs_blob([_timeout_line()]),
+            "check_latency_metrics": self._metrics_blob({
+                "metrics": [{
+                    "name": "response_time_ms",
+                    "timestamp": "2024-06-21T03:44:10Z",
+                    "value": 2500,
+                }],
+                "baseline": 80,
+            }),
+        }
+        absent = _run(placeholder_only)
+        both = _run(mixed)
+        real = _run(real_only)
+        assert absent["cause"]["confidence"] == 12
+        assert absent["symptom"]["confidence"] == 70
+        assert both["cause"]["statement"] == "payment-db latency elevated; cause UNKNOWN"
+        assert both["cause"]["confidence"] == real["cause"]["confidence"] == 34
+        assert both["symptom"]["confidence"] == real["symptom"]["confidence"] == 85
+        record = resolve_evidence_ref(both["cause"]["evidence_refs"][0], mixed)
+        assert record["value"] == 2500
+        assert not is_placeholder(record["value"])
+        assert "pattern" not in both["cause"]["evidence_refs"][0]["locator"]["path"]
+
+    def test_inc12345_pattern_none_bonus_removed(self):
+        """The legacy +1 for pattern 'none' is gone on INC12345's metric points."""
+        logs = [
+            {"message": "upstream request timeout: payment-service:8080"},
+            {"message": "upstream request timeout: payment-service:8080"},
+        ]
+        signals = {
+            "golden_signals": {"latency": {"p95": 31000, "baseline_p95": 200}},
+            "anomaly_detected": True,
+        }
+        points = {
+            "metrics": [
+                {"name": "response_time_ms", "timestamp": "2024-02-12T10:30:10Z", "value": 31000},
+                {"name": "response_time_ms", "timestamp": "2024-02-12T10:30:11Z", "value": 30500},
+                {"name": "response_time_ms", "timestamp": "2024-02-12T10:30:12Z", "value": 31200},
+            ],
+            "baseline": 200,
+        }
+        changes = [{"number": "CHG0045678"}]
+        without = compute_confidence(80, logs, signals, points, [], changes)
+        with_none = compute_confidence(80, logs, signals, {**points, "pattern": "none"}, [], changes)
+        assert with_none == without == 92
+        # Pre-v1.2, pattern "none" was a non-empty string and scored 93.
 
 
 class TestRefResolution:

@@ -3532,12 +3532,24 @@ class SentinalAISupervisor:
         if not isinstance(metric_list, list) or not metric_list:
             return entries
 
-        first = metric_list[0]
+        real_points = [
+            m for m in metric_list
+            if isinstance(m, dict) and isinstance(m.get("value"), (int, float))
+            and not isinstance(m.get("value"), bool)
+        ]
+        if not real_points:
+            return entries
+        first = real_points[0]
         name = first.get("name", "metric")
         value = first.get("value", 0)
         ts = first.get("timestamp", "")
 
-        if baseline and value and value > baseline * 2:
+        if (
+            isinstance(baseline, (int, float))
+            and not isinstance(baseline, bool)
+            and baseline
+            and value > baseline * 2
+        ):
             entries.append({"timestamp": ts, "source": "metrics", "service": service,
                             "event": f"{name} spike to {value} (baseline: {baseline}) on {service}"})
 
@@ -3549,8 +3561,8 @@ class SentinalAISupervisor:
                                      f"(limit: {mem_limit / 1e9:.0f}GB) - memory saturation"})
 
         pool_max = metrics.get("pool_max", 0)
-        if pool_max:
-            for m in metric_list:
+        if isinstance(pool_max, (int, float)) and not isinstance(pool_max, bool) and pool_max:
+            for m in real_points:
                 if m.get("value", 0) >= pool_max:
                     entries.append({"timestamp": m.get("timestamp", ""), "source": "metrics",
                                     "service": service,

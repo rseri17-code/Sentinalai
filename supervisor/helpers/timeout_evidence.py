@@ -16,6 +16,8 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from supervisor.helpers.placeholders import is_placeholder
+
 # Records must fall in [incident_start - W, incident_end + W].
 ALIGNMENT_WINDOW_MINUTES = 15
 
@@ -540,7 +542,7 @@ def _raw_text(record: dict) -> str:
         if key in _NON_EVIDENCE_FIELDS:
             continue
         val = record.get(key)
-        if isinstance(val, str) and val.strip():
+        if isinstance(val, str) and not is_placeholder(val):
             parts.append(val)
     return "\n".join(parts)
 
@@ -727,7 +729,7 @@ def _iter_latency(evidence: dict, signals: dict, metrics: dict) -> list[dict]:
         sig = val.get("signals")
         if isinstance(sig, dict) and isinstance(sig.get("golden_signals"), dict):
             latency = sig["golden_signals"].get("latency")
-            if isinstance(latency, dict):
+            if isinstance(latency, dict) and not is_placeholder(latency):
                 saw_signal = True
                 ts = str(sig.get("anomaly_start") or sig.get("timestamp") or "")
                 record = dict(latency)
@@ -742,10 +744,14 @@ def _iter_latency(evidence: dict, signals: dict, metrics: dict) -> list[dict]:
         met = val.get("metrics")
         if isinstance(met, dict) and isinstance(met.get("metrics"), list):
             baseline = met.get("baseline")
+            if is_placeholder(baseline):
+                baseline = None
             for i, point in enumerate(met["metrics"]):
-                if not isinstance(point, dict):
+                if not isinstance(point, dict) or is_placeholder(point.get("value")):
                     continue
                 name = str(point.get("name") or point.get("metric") or "")
+                if is_placeholder(name):
+                    name = ""
                 if name and not re.search(r"latency|response_time|duration", name, re.I):
                     continue
                 saw_metric = True

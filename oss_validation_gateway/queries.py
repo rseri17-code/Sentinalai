@@ -6,12 +6,14 @@ metric names and a Loki line filter.
 
 Log and query matching is case-insensitive. Each query keyword is a hint.
 A hint with a synonym set matches any phrase in that set; other hints
-match themselves. Space-separated hints are AND'd. An explicit ``OR``
-puts those alternatives in one filter.
+match themselves. A hint of two or three words matches those words in any
+order, in one filter. An explicit ``OR`` gives each alternative that same
+treatment. Regex metacharacters in a hint are escaped and match literally.
 """
 
 from __future__ import annotations
 
+import itertools
 import re
 
 # Seed exporter metric names (see deploy/oss-validation/seed/seed.py).
@@ -91,7 +93,9 @@ def _safe_service(service: str | None) -> str:
 
     Empty, missing, and whitespace-only names are rejected. A value that
     is not a single label token (quotes, spaces, or other punctuation) is
-    rejected. There is no fallback service.
+    rejected. A dot is allowed: ``svc.v2`` is one identifier. There is no
+    fallback service. The caller interpolates the name into a label
+    equality matcher, or escapes it if the name is used as a line filter.
     """
     if service is None:
         raise ValueError("service is empty")
@@ -115,109 +119,142 @@ def _terms_for_hint(keyword: str) -> tuple[str, ...]:
 
 
 def _escape_re2(value: str) -> str:
+    """Escape RE2 metacharacters so the text matches literally.
+
+    ``+ | ( ) [ ] { } ? * ^ $ \\ .`` are escaped. They are not dropped
+    and they are not left as operators. Spaces stay spaces so a synonym
+    phrase such as ``timed out`` stays that phrase.
+    """
     return _RE2_META.sub(r"\\\1", value)
 
 
 def _hint_pattern(keyword: str) -> str:
-    """RE2 body for one hint. Synonyms inside the hint are alternatives."""
-    parts = [_escape_re2(term) for term in _terms_for_hint(keyword)]
+    """RE2 body for one hint word. Synonyms inside the word are alternatives.
+
+    Each synonym is escaped before it is interpolated. A multi-word
+    synonym stays in the written order; it is one alternative, not a
+    further permutation. The permutations below apply to the hint's own
+    words.
+    """
+    parts: list[str] = []
+    seen: set[str] = set()
+    for term in _terms_for_hint(keyword):
+        escaped = _escape_re2(term)
+        if escaped in seen:
+            continue
+        seen.add(escaped)
+        parts.append(escaped)
     if len(parts) == 1:
         return parts[0]
     return "(?:" + "|".join(parts) + ")"
 
 
-def _logql_filter(terms: tuple[str, ...]) -> str:
-    """One case-insensitive line filter."""
-    parts = [_escape_re2(term) for term in terms]
-    body = parts[0] if len(parts) == 1 else "(?:" + "|".join(parts) + ")"
+def _line_filter(body: str) -> str:
+    """One case-insensitive line filter. ``body`` is already escaped."""
     return '|~ "(?i)%s"' % _quote_logql(body)
 
 
 def _keywords_from_clause(clause: str, service: str) -> list[str]:
+    """Words of one hint, in written order.
+
+    The service token, ``and``, and ``not`` are not words. Hint text is
+    kept as written: regex metacharacters are not stripped. Duplicate
+    words that share a synonym set are kept once, at the first position.
+    More than three words raises. The hint is not shortened to three.
+    """
     tokens = [t for t in re.split(r"\s+", clause.strip()) if t and t.lower() != service.lower()]
     keywords: list[str] = []
-    seen: set[str] = set()
+    seen: set[tuple[str, ...]] = set()
     for token in tokens:
-        cleaned = re.sub(r"[^A-Za-z0-9_.:-]+", "", token)
-        if not cleaned or cleaned.lower() in _DROPPED_WORDS:
+        if token.lower() in _DROPPED_WORDS:
             continue
-        marker = cleaned.lower()
-        if marker in seen:
+        terms = _terms_for_hint(token)
+        if terms in seen:
             continue
-        seen.add(marker)
-        keywords.append(cleaned)
+        seen.add(terms)
+        keywords.append(token)
+    if len(keywords) > 3:
+        raise ValueError(
+            f"hint has {len(keywords)} words; at most 3 are supported: {clause.strip()!r}"
+        )
     return keywords
 
 
-def _clause_pattern(keywords: list[str]) -> str:
-    """AND the hints in one OR-alternative, in order, without lookahead.
+def _permute_pattern(keywords: list[str]) -> str:
+    """Every word order of one hint, as alternatives in one group.
 
-    RE2 has no lookahead, so words in one alternative are joined with
-    ``.*``. ``connection refused`` matches that phrase with anything
-    between the words.
+    RE2 has no lookahead. Each order joins the words with ``.*``.
+    ``connection refused`` is ``(?:connection.*refused|refused.*connection)``.
+    Three words produce at most six alternatives. One word is that word's
+    pattern, with no extra group. Permutations follow
+    ``itertools.permutations`` on the written word order, so the same hint
+    always yields the same string.
     """
-    patterns = [_hint_pattern(keyword) for keyword in keywords]
-    if len(patterns) == 1:
-        return patterns[0]
-    return ".*".join(patterns)
+    if len(keywords) > 3:
+        raise ValueError(
+            f"hint has {len(keywords)} words; at most 3 are supported"
+        )
+    word_patterns = [_hint_pattern(keyword) for keyword in keywords]
+    if len(word_patterns) == 1:
+        return word_patterns[0]
+    alternatives: list[str] = []
+    seen: set[str] = set()
+    for perm in itertools.permutations(word_patterns):
+        alternative = ".*".join(perm)
+        if alternative in seen:
+            continue
+        seen.add(alternative)
+        alternatives.append(alternative)
+    return "(?:" + "|".join(alternatives) + ")"
 
 
 def splunk_query_to_logql(query: str, service: str | None = None) -> str:
     """Map a playbook ``query_hint`` to a Loki LogQL selector.
 
     The service token is dropped, case-insensitively, when the playbook
-    already interpolated it. Punctuation other than ``_.:-`` is stripped.
-    ``and`` and ``not`` are not hints.
+    already interpolated it. ``and`` and ``not`` are not hints. Hint words
+    are regex-escaped and are not stripped down to alphanumerics.
 
-    Space-separated hints are the default and stay a conjunction. Each
-    hint becomes its own ``|~ "(?i)..."`` filter, and Loki requires every
-    filter to match. ``error cascade`` asks for both an error and a
-    cascade; matching either word alone would return lines the playbook
-    did not ask for. The previous translator kept only the first keyword.
-    Within a hint, the synonym set is OR'd. A token that is itself a
-    listed synonym uses that hint's full set. A token with no set matches
-    itself only. Duplicate hints that share a set are emitted once.
+    A space-separated hint of one, two, or three words is one filter.
+    Two or three words become every permutation of those words inside one
+    non-capturing group. Every permutation still contains every word, so
+    the hint stays a conjunction; only the order is free. Matching either
+    word alone would return lines the playbook did not ask for. A hint
+    with more than three words raises ``ValueError``. Within a word, the
+    synonym set is OR'd. A token that is itself a listed synonym uses that
+    hint's full set. A token with no set matches itself only.
 
-    An explicit ``OR`` (any case) splits the query into alternatives and
-    emits one filter, ``|~ "(?i)(?:a|b)"``. A line matches if any
-    alternative matches. ``latency OR slow`` is one filter, not two
-    filters that both have to match. A mixed query such as ``a b OR c``
-    is still one filter: the left alternative requires ``a`` then ``b``,
-    or the right alternative matches ``c``.
+    An explicit ``OR`` (any case) splits the query into alternatives. Each
+    alternative gets the same permutation treatment, and the alternatives
+    are OR'd in one filter. ``latency OR slow`` is
+    ``|~ "(?i)(?:latency|slow)"``. ``connection refused OR dns`` permutes
+    the two-word side, then ORs ``dns``.
 
     An empty keyword list selects the service stream and adds no filter.
     ``service`` must be a non-empty label token; see ``_safe_service``.
+    The selector is a label equality match, ``{service="..."}``, not a
+    regex matcher. A dot in a service name such as ``svc.v2`` is literal.
+    A service name that instead arrives as a hint word is escaped with
+    the other hint text, so the dot cannot match an arbitrary character.
     """
     svc = _safe_service(service)
     raw = (query or "").strip()
-    clause_keywords = [
-        keywords
-        for keywords in (_keywords_from_clause(part, svc) for part in _OR_SPLIT.split(raw))
-        if keywords
-    ]
-    selector = '{service="%s"}' % _quote_logql(svc)
-    if not clause_keywords:
-        return selector
-    if len(clause_keywords) == 1:
-        filters: list[str] = []
-        seen_sets: set[tuple[str, ...]] = set()
-        for keyword in clause_keywords[0]:
-            terms = _terms_for_hint(keyword)
-            if terms in seen_sets:
-                continue
-            seen_sets.add(terms)
-            filters.append(_logql_filter(terms))
-        return selector + " " + " ".join(filters)
     patterns: list[str] = []
     seen_patterns: set[str] = set()
-    for keywords in clause_keywords:
-        pattern = _clause_pattern(keywords)
+    for part in _OR_SPLIT.split(raw):
+        keywords = _keywords_from_clause(part, svc)
+        if not keywords:
+            continue
+        pattern = _permute_pattern(keywords)
         if pattern in seen_patterns:
             continue
         seen_patterns.add(pattern)
         patterns.append(pattern)
+    selector = '{service="%s"}' % _quote_logql(svc)
+    if not patterns:
+        return selector
     body = patterns[0] if len(patterns) == 1 else "(?:" + "|".join(patterns) + ")"
-    return selector + " " + '|~ "(?i)%s"' % _quote_logql(body)
+    return selector + " " + _line_filter(body)
 
 
 def metric_hint_to_promql(metric: str | None, service: str | None = None) -> str:
@@ -225,7 +262,9 @@ def metric_hint_to_promql(metric: str | None, service: str | None = None) -> str
     svc = _safe_service(service)
     key = (metric or "").strip().lower() or "request_rate"
     template = METRIC_PROMQL.get(key, METRIC_PROMQL["request_rate"])
-    return template.format(service=svc)
+    # Label equality. Quote quotes and backslashes. Do not regex-escape
+    # the value: a dot must stay a dot in the label text.
+    return template.format(service=_quote_logql(svc))
 
 
 def golden_signal_promql(signal: str, service: str | None = None) -> str:
@@ -234,4 +273,4 @@ def golden_signal_promql(signal: str, service: str | None = None) -> str:
     template = GOLDEN_SIGNAL_PROMQL.get((signal or "").strip().lower())
     if template is None:
         raise KeyError(signal)
-    return template.format(service=svc)
+    return template.format(service=_quote_logql(svc))

@@ -4,7 +4,9 @@ No live network. HTTP backends are faked via an in-memory transport.
 """
 from __future__ import annotations
 
+import itertools
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -196,6 +198,32 @@ class TestNameMapping:
 # Query translation
 # ---------------------------------------------------------------------------
 
+def _unquote_logql(body: str) -> str:
+    return body.replace('\\"', '"').replace("\\\\", "\\")
+
+
+def _line_matches(logql: str, line: str) -> bool:
+    """True when every Loki ``|~`` filter in ``logql`` matches ``line``."""
+    bodies = re.findall(r'\|~ "(.*?)"', logql)
+    if not bodies:
+        return False
+    return all(re.search(_unquote_logql(body), line) is not None for body in bodies)
+
+
+def _selected_services(query: str, candidates: list[str]) -> list[str]:
+    """Services a label matcher would select.
+
+    ``service="..."`` is equality. ``service=~"..."`` is a regex. A dot in
+    an equality value must not select ``svcXv2``.
+    """
+    match = re.search(r'service=(~)?"((?:\\.|[^"])*)"', query)
+    assert match is not None, query
+    value = _unquote_logql(match.group(2))
+    if match.group(1):
+        return [candidate for candidate in candidates if re.fullmatch(value, candidate)]
+    return [candidate for candidate in candidates if candidate == value]
+
+
 class TestQueryTranslation:
     def test_timeout_hint_to_logql(self):
         logql = splunk_query_to_logql("timeout payment-service", "payment-service")
@@ -236,15 +264,14 @@ class TestQueryTranslation:
 
     def test_multi_keyword_hints_are_all_kept(self):
         logql = splunk_query_to_logql("timeout error", "api")
-        assert logql.count("|~") == 2
-        assert "deadline exceeded" in logql
-        assert "exception" in logql
+        assert logql.count("|~") == 1
+        assert "(?:timeout|timed out|deadline exceeded).*(?:error|exception)" in logql
+        assert "(?:error|exception).*(?:timeout|timed out|deadline exceeded)" in logql
 
     def test_unknown_keywords_are_all_kept(self):
         logql = splunk_query_to_logql("cascade restart", "api")
-        assert logql.count("|~") == 2
-        assert "cascade" in logql
-        assert "restart" in logql
+        assert logql.count("|~") == 1
+        assert '|~ "(?i)(?:cascade.*restart|restart.*cascade)"' in logql
 
     def test_or_terms_are_alternatives(self):
         logql = splunk_query_to_logql("latency OR slow", "api")
@@ -252,21 +279,76 @@ class TestQueryTranslation:
         assert '|~ "(?i)(?:latency|slow)"' in logql
         assert splunk_query_to_logql("latency or slow", "api") == logql
 
-    def test_space_separated_hints_are_anded(self):
-        logql = splunk_query_to_logql("a b", "api")
-        assert logql.count("|~") == 2
-        assert '|~ "(?i)a"' in logql
-        assert '|~ "(?i)b"' in logql
+    def test_two_word_hint_is_order_free(self):
+        logql = splunk_query_to_logql("connection refused", "api")
+        assert logql.count("|~") == 1
+        assert '|~ "(?i)(?:connection.*refused|refused.*connection)"' in logql
+        assert _line_matches(logql, "connection refused by upstream")
+        assert _line_matches(logql, "refused connection from client")
+        assert not _line_matches(logql, "connection accepted")
+
+    def test_three_word_hint_matches_every_order(self):
+        logql = splunk_query_to_logql("alpha beta gamma", "api")
+        assert (
+            '|~ "(?i)(?:alpha.*beta.*gamma|alpha.*gamma.*beta|'
+            "beta.*alpha.*gamma|beta.*gamma.*alpha|"
+            'gamma.*alpha.*beta|gamma.*beta.*alpha)"'
+        ) in logql
+        for order in itertools.permutations(("alpha", "beta", "gamma")):
+            assert _line_matches(logql, " ".join(order))
+        assert not _line_matches(logql, "alpha beta")
+
+    def test_four_word_hint_raises(self):
+        with pytest.raises(ValueError, match="4 words"):
+            splunk_query_to_logql("alpha beta gamma delta", "api")
+        with pytest.raises(ValueError, match="at most 3"):
+            splunk_query_to_logql("alpha beta gamma delta OR dns", "api")
+
+    def test_hint_filter_is_deterministic(self):
+        hint = "connection refused OR dns"
+        first = splunk_query_to_logql(hint, "api")
+        assert first == splunk_query_to_logql(hint, "api")
+        three = [splunk_query_to_logql("gamma beta alpha", "api") for _ in range(20)]
+        assert len(set(three)) == 1
 
     def test_mixed_or_query(self):
         logql = splunk_query_to_logql("a b OR c", "api")
         assert logql.count("|~") == 1
-        assert '|~ "(?i)(?:a.*b|c)"' in logql
+        assert '|~ "(?i)(?:(?:a.*b|b.*a)|c)"' in logql
 
     def test_and_and_not_are_not_hints(self):
         logql = splunk_query_to_logql("a AND b", "api")
-        assert logql.count("|~") == 2
         assert "AND" not in logql
+        assert '|~ "(?i)(?:a.*b|b.*a)"' in logql
+
+    @pytest.mark.parametrize(
+        ("hint", "literal", "negatives"),
+        [
+            ("a+b", "a+b", ["ab", "aaab", "aXb"]),
+            ("x|y", "x|y", ["xy", "x", "y"]),
+            ("a(b", "a(b", ["ab", "aXb"]),
+        ],
+    )
+    def test_metacharacters_match_literally(self, hint, literal, negatives):
+        logql = splunk_query_to_logql(hint, "api")
+        assert _line_matches(logql, literal)
+        assert _line_matches(logql, literal.upper())
+        for line in negatives:
+            assert not _line_matches(logql, line), line
+
+    def test_dotted_service_matches_only_itself(self):
+        logql = splunk_query_to_logql("timeout", "svc.v2")
+        promql = metric_hint_to_promql("request_rate", "svc.v2")
+        golden = golden_signal_promql("latency_p95", "svc.v2")
+        candidates = ["svc.v2", "svcXv2", "svc.v2.extra"]
+        assert _selected_services(logql, candidates) == ["svc.v2"]
+        assert _selected_services(promql, candidates) == ["svc.v2"]
+        assert _selected_services(golden, candidates) == ["svc.v2"]
+        # The same name, used as a line filter, is escaped. An unescaped
+        # dot would match svcXv2.
+        filtered = splunk_query_to_logql("svc.v2", "api")
+        assert _line_matches(filtered, "down svc.v2 now")
+        assert not _line_matches(filtered, "down svcXv2 now")
 
     def test_empty_query_selects_service(self):
         logql = splunk_query_to_logql("", "api-gateway")

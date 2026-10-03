@@ -101,7 +101,7 @@ class _SlowStartClient:
 
 
 class TestConcurrentFirstCalls:
-    """v1.9 item 1."""
+    """v1.9 item 1: concurrent first calls share one started session."""
 
     def test_eight_concurrent_first_calls_one_session(self, plain: bool) -> None:
         payload = {"logs": {"results": [{"message": "ok"}], "count": 1}}
@@ -156,7 +156,7 @@ class _StartFails:
 
 
 class TestFailedStart:
-    """v1.9 items 3 and 5."""
+    """v1.9 item 2 (loud plain-mode failed start) and item 5 (flag off unchanged)."""
 
     def test_plain_failed_start_is_loud_on_caller(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("PLAIN_MCP", "true")
@@ -200,7 +200,7 @@ class _FatalCall:
 
 
 class TestTimeoutThreadBaseException:
-    """v1.9 items 2 and 4 (main error fields stay visible)."""
+    """v1.9 item 3: a timeout-thread error is never raw_response None."""
 
     def test_base_exception_is_not_raw_none(self, plain: bool) -> None:
         gateway = _gateway()
@@ -217,7 +217,7 @@ class TestTimeoutThreadBaseException:
 
 
 class TestUnwrapOnce:
-    """v1.9 item 4. A tool payload that is itself an envelope is not opened again."""
+    """v1.9 item 4: unwrap the envelope once and keep main's error fields."""
 
     def test_envelope_shaped_payload_unwrapped_once(self, plain: bool) -> None:
         inner = {
@@ -248,3 +248,171 @@ class TestUnwrapOnce:
         assert result["error"] == "gateway_exception: kept"
         assert result["connection_state"] == "failed"
         assert "logs" not in result
+
+
+class _CountingStart:
+    """Each constructed client shares one start counter."""
+
+    def __init__(self, transport: Any, attempts: list[int], lock: threading.Lock) -> None:
+        self.transport = transport
+        self._attempts = attempts
+        self._lock = lock
+        self.calls = 0
+
+    def start(self) -> None:
+        with self._lock:
+            self._attempts.append(1)
+        self._fail()
+
+    def _fail(self) -> None:
+        raise ConnectionError("dial tcp refused")
+
+    def call_tool_sync(self, **_kwargs: Any) -> dict[str, Any]:
+        self.calls += 1
+        raise AssertionError("call_tool_sync must not run after a failed start")
+
+
+class _HungStart(_CountingStart):
+    def __init__(
+        self,
+        transport: Any,
+        attempts: list[int],
+        lock: threading.Lock,
+        release: threading.Event,
+    ) -> None:
+        super().__init__(transport, attempts, lock)
+        self._release = release
+
+    def _fail(self) -> None:
+        self._release.wait()
+
+
+def _eight(
+    gateway: McpGateway,
+    factory: Any,
+) -> tuple[list[dict[str, Any]], list[BaseException], float]:
+    results: list[dict[str, Any]] = []
+    errors: list[BaseException] = []
+    guard = threading.Lock()
+
+    def one(i: int) -> None:
+        try:
+            result = gateway.invoke(
+                "splunk.search_oneshot", "search_logs", {"query": f"q{i}"},
+            )
+        except BaseException as exc:
+            with guard:
+                errors.append(exc)
+            return
+        with guard:
+            results.append(result)
+
+    started = time.monotonic()
+    with _live(factory):
+        threads = [threading.Thread(target=one, args=(i,)) for i in range(8)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+    return results, errors, time.monotonic() - started
+
+
+def _assert_plain_failures(results: list[dict[str, Any]], error_class: str, message: str) -> None:
+    assert len(results) == 8
+    for result in results:
+        assert result.get("connection_state") == "failed"
+        assert result.get("error_class") == error_class
+        assert message in str(result.get("error"))
+        assert "logs" not in result
+        blob = json.dumps(result)
+        assert "stubbed" not in blob
+        assert result.get("raw_response") != "None"
+
+
+class TestSingleFlightStart:
+    """One start attempt per wave. Waiters share that attempt's outcome.
+
+    A later call, after the wave has finished, may retry.
+    """
+
+    def test_eight_concurrent_failed_starts_one_attempt(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("PLAIN_MCP", "true")
+        attempts: list[int] = []
+        lock = threading.Lock()
+        gateway = _gateway()
+
+        def factory(transport: Any) -> _CountingStart:
+            return _CountingStart(transport, attempts, lock)
+
+        results, errors, _elapsed = _eight(gateway, factory)
+        assert errors == []
+        assert len(attempts) == 1
+        _assert_plain_failures(results, "ConnectionError", "dial tcp refused")
+
+        # The wave is over, so a later call is allowed to try again.
+        with _live(factory):
+            again = gateway.invoke("splunk.search_oneshot", "search_logs", {"query": "later"})
+        assert len(attempts) == 2
+        assert again.get("connection_state") == "failed"
+        assert again.get("error_class") == "ConnectionError"
+        assert "dial tcp refused" in str(again.get("error"))
+        assert "stubbed" not in json.dumps(again)
+
+    def test_eight_concurrent_hung_starts_one_timeout(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        timeout_s = 0.4
+        monkeypatch.setenv("PLAIN_MCP", "true")
+        monkeypatch.setenv("MCP_CALL_TIMEOUT_SECONDS", str(timeout_s))
+        attempts: list[int] = []
+        lock = threading.Lock()
+        release = threading.Event()
+        gateway = _gateway()
+
+        def factory(transport: Any) -> _HungStart:
+            return _HungStart(transport, attempts, lock, release)
+
+        try:
+            results, errors, elapsed = _eight(gateway, factory)
+        finally:
+            release.set()
+
+        assert errors == []
+        assert len(attempts) == 1
+        _assert_plain_failures(results, "TimeoutError", "mcp call exceeded")
+        # One timeout, not one timeout per waiter.
+        assert timeout_s * 0.5 <= elapsed < timeout_s * 2.5
+
+    def test_timed_out_start_is_closed_when_it_finishes(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("PLAIN_MCP", "true")
+        monkeypatch.setenv("MCP_CALL_TIMEOUT_SECONDS", "0.2")
+        release = threading.Event()
+        stopped = threading.Event()
+        attempts: list[int] = []
+        lock = threading.Lock()
+
+        class _Late(_HungStart):
+            def stop(self, *_args: Any) -> None:
+                stopped.set()
+
+        gateway = _gateway()
+
+        def factory(transport: Any) -> _Late:
+            return _Late(transport, attempts, lock, release)
+
+        try:
+            result = _invoke(gateway, factory)
+            assert result.get("connection_state") == "failed"
+            assert result.get("error_class") == "TimeoutError"
+            assert "mcp call exceeded" in str(result.get("error"))
+            assert "stubbed" not in json.dumps(result)
+            assert gateway._mcp_client is None
+            assert len(attempts) == 1
+            release.set()
+            assert stopped.wait(2)
+        finally:
+            release.set()

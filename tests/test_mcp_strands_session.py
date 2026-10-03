@@ -385,8 +385,9 @@ class TestSingleFlightStart:
         assert errors == []
         assert len(attempts) == 1
         _assert_plain_failures(results, "TimeoutError", "mcp call exceeded")
-        # One timeout, not one timeout per waiter.
-        assert timeout_s * 0.5 <= elapsed < timeout_s * 2.5
+        # One timeout, not one timeout per waiter. The slack covers thread
+        # startup; eight serial timeouts are about 3.6s at this bound.
+        assert timeout_s * 0.5 <= elapsed < timeout_s * 3.5
 
     def test_timed_out_start_is_closed_when_it_finishes(
         self, monkeypatch: pytest.MonkeyPatch,

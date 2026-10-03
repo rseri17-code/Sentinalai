@@ -210,6 +210,14 @@ from supervisor.helpers.cause_binding import bind_hypothesis  # noqa: E402
 # Supervisor
 # =========================================================================
 
+def _failed_tool_search(val: object) -> bool:
+    """True when a tool result is a search that did not happen."""
+    if not isinstance(val, dict):
+        return False
+    from supervisor.helpers.timeout_evidence import tool_search_error
+    return tool_search_error(val) is not None
+
+
 class SentinalAISupervisor:
     """Autonomous incident RCA supervisor."""
 
@@ -3445,7 +3453,7 @@ class SentinalAISupervisor:
         """Extract log entries from evidence."""
         all_logs = []
         for key, val in evidence.items():
-            if not isinstance(val, dict):
+            if not isinstance(val, dict) or _failed_tool_search(val):
                 continue
             logs_data = val.get("logs", val)
             if isinstance(logs_data, dict):
@@ -3457,7 +3465,7 @@ class SentinalAISupervisor:
     def _extract_signals(self, evidence: dict) -> dict:
         """Extract golden signals from evidence."""
         for key, val in evidence.items():
-            if not isinstance(val, dict):
+            if not isinstance(val, dict) or _failed_tool_search(val):
                 continue
             signals = val.get("signals", {})
             if isinstance(signals, dict) and "golden_signals" in signals:
@@ -3467,7 +3475,7 @@ class SentinalAISupervisor:
     def _extract_metrics(self, evidence: dict) -> dict:
         """Extract metrics from evidence."""
         for key, val in evidence.items():
-            if not isinstance(val, dict):
+            if not isinstance(val, dict) or _failed_tool_search(val):
                 continue
             metrics = val.get("metrics", {})
             if isinstance(metrics, dict) and "metrics" in metrics:
@@ -3478,7 +3486,7 @@ class SentinalAISupervisor:
         """Extract events from evidence."""
         all_events = []
         for key, val in evidence.items():
-            if not isinstance(val, dict):
+            if not isinstance(val, dict) or _failed_tool_search(val):
                 continue
             events = val.get("events", [])
             if isinstance(events, list):
@@ -3546,7 +3554,7 @@ class SentinalAISupervisor:
         """Extract change/deployment data from evidence (Splunk + ServiceNow)."""
         all_changes = []
         for key, val in evidence.items():
-            if not isinstance(val, dict):
+            if not isinstance(val, dict) or _failed_tool_search(val):
                 continue
             # Splunk change data
             changes = val.get("changes", [])

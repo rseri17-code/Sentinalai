@@ -268,12 +268,28 @@ def decide_timeout(
         statement = "timeout observed; cause UNKNOWN"
         category = "unknown"
         name = "timeout_unknown"
-        if not ds:
-            unknowns.append("downstream not named by an in-window raw record")
+        failed = tool_search_errors(evidence)
+        if failed and not successful_observation(evidence):
+            # Every search that could have bound a cause errored. Absence
+            # of records is not a finding.
+            for row in failed:
+                unknowns.append(
+                    f"search did not happen: {row['tool']}: {row['error']}"
+                )
         else:
-            unknowns.append(f"no in-window mechanism record for {ds}")
-        for src in unavailable:
-            unknowns.append(f"unavailable: {src}")
+            if not ds:
+                unknowns.append("downstream not named by an in-window raw record")
+            else:
+                unknowns.append(f"no in-window mechanism record for {ds}")
+            failed_keys = {row["evidence_key"] for row in failed}
+            for src in unavailable:
+                if src in failed_keys:
+                    continue
+                unknowns.append(f"unavailable: {src}")
+            for row in failed:
+                unknowns.append(
+                    f"search did not happen: {row['tool']}: {row['error']}"
+                )
 
     cause_score = _clamp(base + sum(c["delta"] for c in contributions))
     if category == "unknown" or contradictions:
@@ -927,6 +943,8 @@ def _iter_logs(evidence: dict, fallback: list[dict]) -> list[dict]:
     for key, val in evidence.items():
         if str(key).startswith("_") or not isinstance(val, dict):
             continue
+        if tool_search_error(val) is not None:
+            continue
         results, prefix = _log_list(val)
         if results is None:
             continue
@@ -979,6 +997,8 @@ def _iter_latency(evidence: dict, signals: dict, metrics: dict) -> list[dict]:
     saw_metric = False
     for key, val in evidence.items():
         if str(key).startswith("_") or not isinstance(val, dict):
+            continue
+        if tool_search_error(val) is not None:
             continue
         seq = val.get("_receipt_sequence_order")
         tool = str(val.get("_receipt_tool") or "")
@@ -1036,6 +1056,59 @@ def _iter_latency(evidence: dict, signals: dict, metrics: dict) -> list[dict]:
             "baseline": latency.get("baseline_p95"),
         })
     return views[:1]
+
+
+def tool_search_error(payload: dict) -> str | None:
+    """Error text when this tool result is a search that did not happen.
+
+    ``{"error": ...}``, ``tool_status: "error"``, and a gateway or mcp
+    exception are failed searches. They are not empty results.
+    """
+    if not isinstance(payload, dict):
+        return None
+    status = payload.get("tool_status")
+    status_error = isinstance(status, str) and status.strip().lower() == "error"
+    err_text = ""
+    err = payload.get("error")
+    if isinstance(err, str) and err.strip() and not is_placeholder(err):
+        err_text = err.strip()
+    for key in ("gateway_exception", "mcp_exception"):
+        val = payload.get(key)
+        if err_text:
+            break
+        if isinstance(val, str) and val.strip() and not is_placeholder(val):
+            err_text = val.strip()
+    if not status_error and not err_text:
+        return None
+    return err_text or "tool_status: error"
+
+
+def tool_search_errors(evidence: dict | None) -> list[dict]:
+    """Failed searches, with the tool name and the error text."""
+    rows: list[dict] = []
+    for key, val in (evidence or {}).items():
+        if str(key).startswith("_") or not isinstance(val, dict):
+            continue
+        text = tool_search_error(val)
+        if text is None:
+            continue
+        tool = val.get("tool") or val.get("_receipt_tool") or key
+        rows.append({
+            "evidence_key": str(key),
+            "tool": str(tool),
+            "error": text,
+        })
+    return rows
+
+
+def successful_observation(evidence: dict | None) -> bool:
+    """True when some tool result is not a failed search."""
+    for key, val in (evidence or {}).items():
+        if str(key).startswith("_") or not isinstance(val, dict):
+            continue
+        if tool_search_error(val) is None:
+            return True
+    return False
 
 
 def _unavailable(evidence: dict) -> list[str]:

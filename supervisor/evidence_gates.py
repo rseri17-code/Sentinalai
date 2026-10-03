@@ -277,6 +277,11 @@ def _count_empty_evidence(evidence: dict) -> int:
             empty += 1
             continue
         if isinstance(val, dict):
+            # A tool error is a search that did not happen. It is not an
+            # empty result, and it must not be counted as one.
+            from supervisor.helpers.timeout_evidence import tool_search_error
+            if tool_search_error(val) is not None:
+                continue
             if val.get("error") or (not any(
                 v for k, v in val.items() if k not in ("error", "status") and v
             )):

@@ -29,6 +29,9 @@ from supervisor.helpers.timeout_evidence import (
     _ref,
     dedupe_views,
     score_raw_support,
+    successful_observation,
+    tool_search_error,
+    tool_search_errors,
 )
 
 # A raw symptom record exists, but it does not support the proposed cause.
@@ -141,6 +144,8 @@ def bind_hypothesis(
 
     derived_only = bool(cited) and not raw_cited and not cause_refs
     contributions: list[dict] = []
+    failed_searches = tool_search_errors(evidence)
+    searches_all_failed = bool(failed_searches) and not successful_observation(evidence)
     if kept and cause_refs:
         statement = _render(service, kept)
         if (
@@ -151,8 +156,13 @@ def bind_hypothesis(
             unknowns.append(DOWNSTREAM_UNKNOWN)
         confidence, contributions = score_raw_support(cause_refs)
     else:
-        if kept and not cause_refs:
+        if kept and not cause_refs and not searches_all_failed:
             unknowns = list(unknowns) + [f"cited refs do not locate: {', '.join(kept)}"]
+        if searches_all_failed:
+            for row in failed_searches:
+                line = f"search did not happen: {row['tool']}: {row['error']}"
+                if line not in unknowns:
+                    unknowns.append(line)
         statement = f"{incident_type} observed; cause UNKNOWN"
         category = "unknown"
         if derived_only:
@@ -300,6 +310,8 @@ def _collect_views(evidence, logs, signals, metrics, events, changes) -> list[di
         if key in _HISTORICAL_KEYS or str(key).startswith("_"):
             continue
         if not isinstance(val, dict):
+            continue
+        if tool_search_error(val) is not None:
             continue
         seq = val.get("_receipt_sequence_order")
         tool = str(val.get("_receipt_tool") or "")
@@ -1294,8 +1306,12 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
     searched = []
     truncations = []
     count_gaps = []
+    tool_errors = tool_search_errors(evidence)
+    failed_keys = {row["evidence_key"] for row in tool_errors}
     for key, val in (evidence or {}).items():
         if not isinstance(val, dict) or str(key).startswith("_"):
+            continue
+        if str(key) in failed_keys:
             continue
         tws = str(val.get("_receipt_time_window_start") or "")
         twe = str(val.get("_receipt_time_window_end") or "")
@@ -1331,6 +1347,7 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
         "truncation_unknown": any(row.get("truncation_unknown") for row in truncations),
         "reported_count_disagrees": count_gaps,
         "after_run_start": after,
+        "tool_errors": tool_errors,
     }
 
 
@@ -1346,6 +1363,8 @@ def build_evidence_snapshot(evidence: dict | None) -> dict:
     snap: dict[str, Any] = {}
     for key, val in (evidence or {}).items():
         if str(key).startswith("_"):
+            continue
+        if isinstance(val, dict) and tool_search_error(val) is not None:
             continue
         records = []
         if isinstance(val, dict):

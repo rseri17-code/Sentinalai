@@ -1090,3 +1090,104 @@ class TestDerivedAndComputedConfidence:
         assert result["cause"]["category"] == "slow_queries"
         assert _classes(result["cause"]["evidence_refs"]) == {"raw"}
         assert "latency_spike" not in statement
+
+
+def _v18_with_evidence(service, evidence, incident_type="timeout"):
+    incident = _v18_incident(service)
+    sup = SentinalAISupervisor()
+    sup._tls.current_incident = dict(incident)
+    sup._tls.last_evidence = evidence
+    return sup._analyze_evidence("INC-V18", dict(incident), incident_type, evidence)
+
+
+class TestToolErrorIsUnchecked:
+    """A tool error is a search that did not happen.
+
+    Expected directions were written before this class ran.
+    (a) The logs search errors alone. Coverage records the tool and the
+        error. The cause is UNKNOWN. The statement does not say the search
+        found nothing.
+    (b) Metrics error, and a raw pool line from the log tool. The cause
+        binds from that line at the one-record score. The metrics tool is
+        unchecked and is not a contradiction.
+    """
+
+    def test_log_search_error_stays_unknown(self):
+        evidence = {
+            "search_timeout_logs": {
+                "_receipt_sequence_order": 2,
+                "_receipt_tool": "log_worker",
+                "tool": "splunk.search_oneshot",
+                "tool_status": "error",
+                "error": "gateway_exception: connection reset",
+            }
+        }
+        result = _v18_with_evidence("edge-api", evidence)
+        cause = result["cause"]
+        assert "UNKNOWN" in cause["statement"]
+        assert cause["confidence"] < 60
+        assert cause["evidence_refs"] == []
+        assert cause["contradictions"] == []
+        statement = cause["statement"].lower()
+        assert "nothing" not in statement
+        assert "empty" not in statement
+        assert "found" not in statement
+        assert any(
+            "splunk.search_oneshot" in item and "gateway_exception" in item
+            for item in cause["unknowns"]
+        )
+        assert not any("no in-window mechanism" in item for item in cause["unknowns"])
+        from supervisor.helpers.cause_binding import (
+            build_evidence_snapshot,
+            unchecked_coverage,
+        )
+        coverage = unchecked_coverage(_v18_incident("edge-api"), evidence)
+        assert coverage["tool_errors"] == [{
+            "evidence_key": "search_timeout_logs",
+            "tool": "splunk.search_oneshot",
+            "error": "gateway_exception: connection reset",
+        }]
+        assert "search_timeout_logs" not in build_evidence_snapshot(evidence)
+
+    def test_raw_evidence_binds_when_another_tool_errors(self):
+        evidence = {
+            "query_metrics": {
+                "_receipt_sequence_order": 4,
+                "_receipt_tool": "metrics_worker",
+                "tool": "sysdig.query_metrics",
+                "tool_status": "error",
+                "error": "mcp_exception: timeout",
+            },
+            "search_timeout_logs": {
+                "_receipt_sequence_order": 3,
+                "_receipt_tool": "log_worker",
+                "logs": {
+                    "results": [_pool_line_at("edge-api", "2024-08-01T12:00:10Z")],
+                    "count": 1,
+                },
+            },
+        }
+        result = _v18_with_evidence("edge-api", evidence)
+        cause = result["cause"]
+        assert cause["statement"] == "connection pool exhausted on edge-api"
+        assert cause["confidence"] == _ONE_RAW
+        assert cause["contradictions"] == []
+        assert cause["evidence_refs"]
+        assert _classes(cause["evidence_refs"]) == {"raw"}
+        assert all(
+            (ref.get("locator") or {}).get("evidence_key") != "query_metrics"
+            for ref in cause["evidence_refs"]
+        )
+        from supervisor.helpers.cause_binding import (
+            build_evidence_snapshot,
+            unchecked_coverage,
+        )
+        coverage = unchecked_coverage(_v18_incident("edge-api"), evidence)
+        assert coverage["tool_errors"] == [{
+            "evidence_key": "query_metrics",
+            "tool": "sysdig.query_metrics",
+            "error": "mcp_exception: timeout",
+        }]
+        snapshot = build_evidence_snapshot(evidence)
+        assert "query_metrics" not in snapshot
+        assert "search_timeout_logs" in snapshot

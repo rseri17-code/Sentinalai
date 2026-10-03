@@ -6,12 +6,15 @@ The strings are not taken from the OSS seed.
 from __future__ import annotations
 
 import os
+import re
 
 from supervisor.agent import SentinalAISupervisor
 from supervisor.evidence_citation import annotate_citations
 from supervisor.guardrails import CircuitBreakerRegistry, ExecutionBudget
 from supervisor.helpers.cause_binding import build_evidence_snapshot
+from supervisor.helpers.timeout_evidence import resolve_evidence_ref
 from supervisor.receipt import ReceiptCollector
+from supervisor.tool_selector import INCIDENT_PLAYBOOKS
 
 # Answers written before the runs.
 EXPECTED = {
@@ -82,7 +85,60 @@ EXPECTED = {
         "confidence_below": 60,
         "forbidden": ("pool", "exhausted"),
     },
+    # Written before the runs. Not taken from the OSS seed.
+    "owner_latency": {
+        "incident_type": "latency",
+        "service": "fulfillment-api",
+        "statement": "fulfillment-api's connection pool to ledger-db exhausted",
+        "confidence": 62,
+        "caller": "fulfillment-api",
+        "downstream": "ledger-db",
+        "unknown_fragment": "why ledger-db refuses connections",
+    },
+    "owner_timeout_thin": {
+        "incident_type": "timeout",
+        "service": "fulfillment-api",
+        "statement": "fulfillment-api's connection pool to ledger-db exhausted",
+        "confidence": 62,
+        "caller": "fulfillment-api",
+        "downstream": "ledger-db",
+        "unknown_fragment": "why ledger-db refuses connections",
+    },
+    "pool_over_exception": {
+        "incident_type": "error_spike",
+        "service": "invoicing-api",
+        "statement": "invoicing-api's connection pool to invoice-store exhausted",
+        "confidence": 62,
+        "caller": "invoicing-api",
+        "downstream": "invoice-store",
+        "absent": ("SocketTimeoutException", "20", "slots"),
+    },
+    "bare_timeout_exception": {
+        "incident_type": "latency",
+        "service": "catalog-api",
+        "statement": "latency observed; cause UNKNOWN",
+        "confidence": 12,
+        "symptom_statement": "timeout observed",
+        "symptom_service": "catalog-api",
+        "symptom_signal": "timeout_observed",
+        "absent": ("TimeoutException",),
+    },
+    "latency_timed_out": {
+        "incident_type": "latency",
+        "service": "dispatch-api",
+        "statement": "latency observed; cause UNKNOWN",
+        "confidence": 12,
+        "symptom_statement": "timeout observed",
+        "symptom_service": "dispatch-api",
+        "symptom_signal": "timeout_observed",
+        "timed_message": "the call timed out",
+        "other_message": "health check passed",
+    },
 }
+
+# The latency hint before this change. It does not match a line that
+# only says "timed out".
+_LATENCY_HINT_BEFORE = "latency OR slow {service}"
 
 _START = "2024-11-04T08:00:00Z"
 
@@ -375,3 +431,200 @@ class TestOverclaimFullLogs:
         assert result["confidence"] < expected["confidence_below"]
         for word in expected["forbidden"]:
             assert word not in result["root_cause"].lower()
+
+
+def _caller_pool_record():
+    """One caller log. The database is the record's downstream field."""
+    return {
+        "_time": "2024-11-04T07:59:20Z",
+        "service": "fulfillment-api",
+        "downstream": "ledger-db",
+        "level": "ERROR",
+        "message": "connection pool exhausted",
+    }
+
+
+def _hint_words(text: str) -> list[str]:
+    return re.findall(r"[A-Za-z0-9_-]+", text)
+
+
+def _hint_matches(hint: str, message: str) -> bool:
+    """Gateway rule: each OR alternative is at most 3 words, any order, case-insensitive."""
+    message_words = {word.lower() for word in _hint_words(message)}
+    matched = False
+    for part in re.split(r"\s+OR\s+", hint.strip(), flags=re.I):
+        words = [word.lower() for word in _hint_words(part)]
+        assert 0 < len(words) <= 3, hint
+        if all(word in message_words for word in words):
+            matched = True
+    return matched
+
+
+def _assert_no_unlabeled_numbers(statement: str) -> None:
+    scrubbed = re.sub(r"\bv?\d+\.\d+(?:\.\d+)?\b", "", statement)
+    scrubbed = re.sub(r"\d{4}-\d{2}-\d{2}T[\d:]+Z", "", scrubbed)
+    assert not re.search(r"\d", scrubbed), statement
+
+
+def _assert_owner(result, evidence, expected) -> None:
+    cause = result["cause"]
+    statement = cause["statement"]
+    caller = expected["caller"]
+    downstream = expected["downstream"]
+    assert statement == expected["statement"], statement
+    assert result["root_cause"] == expected["statement"]
+    assert cause["confidence"] == expected["confidence"]
+    assert result["confidence"] == expected["confidence"]
+    assert statement != f"connection pool exhausted on {caller}"
+    assert statement != f"connection pool for {caller} exhausted"
+    _assert_no_unlabeled_numbers(statement)
+    if expected.get("unknown_fragment"):
+        assert any(expected["unknown_fragment"] in item for item in cause["unknowns"])
+    refs = cause["evidence_refs"]
+    assert refs, cause
+    for ref in refs:
+        record = resolve_evidence_ref(ref, evidence, result.get("receipts"))
+        assert record is not None, ref
+        fields = {record.get("service") or "", record.get("downstream") or ""}
+        assert caller in fields, (fields, statement)
+        assert downstream in fields, (fields, statement)
+        for token in re.findall(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+", statement):
+            assert token in fields, (token, fields, statement)
+    for word in expected.get("absent") or ():
+        assert word not in statement
+        assert word not in result["root_cause"]
+
+
+class TestResourceOwnerAndSymptom:
+    """Owner, symptom-as-cause, and latency timeout retrieval.
+
+    Expected statements are the EXPECTED entries above. They were written
+    before these investigations ran.
+    """
+
+    def test_latency_names_the_downstream_owner(self):
+        expected = EXPECTED["owner_latency"]
+        records = [
+            _caller_pool_record(),
+            {
+                "_time": "2024-11-04T07:59:40Z",
+                "service": "fulfillment-api",
+                "level": "INFO",
+                "message": "fulfillment checkpoint ok",
+            },
+        ]
+        result, gateway, evidence = _investigate(
+            expected["incident_type"], expected["service"], records,
+        )
+        _assert_owner(result, evidence, expected)
+        _assert_full_return(result, gateway, evidence)
+
+    def test_timeout_thin_evidence_names_the_downstream_owner(self):
+        expected = EXPECTED["owner_timeout_thin"]
+        records = [_caller_pool_record()]
+        result, gateway, evidence = _investigate(
+            expected["incident_type"], expected["service"], records,
+        )
+        _assert_owner(result, evidence, expected)
+        _assert_full_return(result, gateway, evidence)
+
+    def test_pool_limit_outranks_timeout_exception(self):
+        expected = EXPECTED["pool_over_exception"]
+        records = [{
+            "_time": "2024-11-04T07:59:20Z",
+            "service": "invoicing-api",
+            "downstream": "invoice-store",
+            "level": "ERROR",
+            "message": "SocketTimeoutException: connection pool limit reached (slots=20)",
+        }]
+        result, gateway, evidence = _investigate(
+            expected["incident_type"], expected["service"], records,
+        )
+        _assert_owner(result, evidence, expected)
+        _assert_full_return(result, gateway, evidence)
+
+    def test_bare_timeout_exception_stays_unknown(self):
+        expected = EXPECTED["bare_timeout_exception"]
+        records = [{
+            "_time": "2024-11-04T07:59:20Z",
+            "service": "catalog-api",
+            "level": "ERROR",
+            "message": "TimeoutException",
+        }]
+        result, gateway, evidence = _investigate(
+            expected["incident_type"], expected["service"], records,
+        )
+        cause = result["cause"]
+        assert cause["statement"] == expected["statement"], cause["statement"]
+        assert result["root_cause"] == expected["statement"]
+        assert cause["confidence"] == expected["confidence"]
+        assert result["confidence"] == expected["confidence"]
+        assert result["symptom"]["statement"] == expected["symptom_statement"]
+        refs = result["symptom"]["evidence_refs"]
+        assert any(
+            ref.get("signal") == expected["symptom_signal"]
+            and ref.get("service") == expected["symptom_service"]
+            for ref in refs
+        )
+        for word in expected["absent"]:
+            assert word not in cause["statement"]
+            assert word not in result["root_cause"]
+        _assert_no_unlabeled_numbers(cause["statement"])
+        _assert_full_return(result, gateway, evidence)
+
+    def test_latency_retrieves_timed_out_records(self):
+        expected = EXPECTED["latency_timed_out"]
+        timed = expected["timed_message"]
+        other = expected["other_message"]
+        records = [
+            {
+                "_time": "2024-11-04T07:59:20Z",
+                "service": "dispatch-api",
+                "level": "ERROR",
+                "message": timed,
+            },
+            {
+                "_time": "2024-11-04T07:59:30Z",
+                "service": "dispatch-api",
+                "level": "INFO",
+                "message": other,
+            },
+        ]
+        result, gateway, evidence = _investigate(
+            expected["incident_type"], expected["service"], records,
+        )
+        assert result["cause"]["statement"] == expected["statement"], result["cause"]
+        assert result["confidence"] == expected["confidence"]
+        assert result["symptom"]["statement"] == expected["symptom_statement"]
+        assert any(
+            ref.get("signal") == expected["symptom_signal"]
+            and ref.get("service") == expected["symptom_service"]
+            for ref in result["symptom"]["evidence_refs"]
+        )
+        cited = [
+            resolve_evidence_ref(ref, evidence, result.get("receipts"))
+            for ref in result["symptom"]["evidence_refs"]
+        ]
+        assert any(record and record.get("message") == timed for record in cited)
+        assert all(not record or record.get("message") != other for record in cited)
+
+        before = _LATENCY_HINT_BEFORE.format(service=expected["service"])
+        assert not _hint_matches(before, timed)
+        assert any(_hint_matches(query, timed) for query in gateway.queries), gateway.queries
+        assert not any(_hint_matches(query, other) for query in gateway.queries), gateway.queries
+        hints = [
+            step["query_hint"]
+            for step in INCIDENT_PLAYBOOKS["latency"]
+            if step.get("action") == "search_logs"
+        ]
+        assert _LATENCY_HINT_BEFORE in hints
+        assert "timed out" in hints
+        for hint in hints:
+            for part in re.split(r"\s+OR\s+", hint, flags=re.I):
+                assert 0 < len(_hint_words(part)) <= 3, hint
+        returned = []
+        for val in evidence.values():
+            if isinstance(val, dict) and isinstance(val.get("logs"), dict):
+                returned.extend(row.get("message", "") for row in val["logs"]["results"])
+        assert timed in returned
+        _assert_full_return(result, gateway, evidence)

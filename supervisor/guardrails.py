@@ -167,6 +167,7 @@ circuit_registry = CircuitBreakerRegistry()
 # Allowed Splunk query patterns (prefix allowlist)
 SPLUNK_QUERY_ALLOWLIST = [
     "timeout",
+    "timed",
     "oomkill",
     "oom",
     "error",

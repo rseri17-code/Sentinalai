@@ -56,6 +56,9 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
     ],
     "latency": [
         {"worker": "log_worker", "action": "search_logs", "query_hint": "latency OR slow {service}", "label": "search_latency_logs"},
+        # "timed out" is not retrieved by latency/slow. Two words, under the
+        # gateway cap of 3 per hint. OR alternatives stay in their own hint.
+        {"worker": "log_worker", "action": "search_logs", "query_hint": "timed out", "label": "search_timed_out_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "network_worker", "action": "get_network_evidence", "label": "get_network_evidence"},
         {"worker": "metrics_worker", "action": "query_metrics", "metric_hint": "response_time_ms", "label": "check_latency_metrics"},

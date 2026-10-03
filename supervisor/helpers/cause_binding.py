@@ -21,7 +21,9 @@ from supervisor.helpers.timeout_evidence import (
     _is_slow_query,
     _is_timeout_text,
     _parse_ts,
+    _pool_owner_statement,
     _raw_text,
+    _record_downstream,
     _ref,
 )
 
@@ -521,10 +523,13 @@ def _kept_clauses(proposed: str, views: list[dict], service: str) -> tuple[list[
             )
         ]
         if pool_records:
-            pool_svc = str(pool_records[0].get("service") or "")
-            phrase = "connection pool exhausted"
-            if pool_svc:
-                phrase = f"connection pool exhausted on {pool_svc}"
+            if _record_downstream(pool_records[0]):
+                phrase, _owner = _pool_owner_statement(pool_records[0])
+            else:
+                pool_svc = str(pool_records[0].get("service") or "")
+                phrase = "connection pool exhausted"
+                if pool_svc:
+                    phrase = f"connection pool exhausted on {pool_svc}"
             add(phrase, "connection_pool_exhaustion")
         else:
             unknowns.append("whether a connection pool is exhausted")
@@ -650,8 +655,11 @@ def _kept_clauses(proposed: str, views: list[dict], service: str) -> tuple[list[
             unknowns.append("whether the pattern is intermittent")
 
     # A proposed exception or error token that the logs actually contain.
+    # A class that only restates the timeout or error symptom is not a cause.
     if not kept:
         for token in _error_tokens(text):
+            if _is_symptom_exception(token):
+                continue
             if any(token.lower() in b for b in blobs):
                 add(token, "exception")
                 break
@@ -663,6 +671,8 @@ def _kept_clauses(proposed: str, views: list[dict], service: str) -> tuple[list[
         for token in re.findall(r"[A-Za-z][A-Za-z0-9_-]{2,}", text):
             low_tok = token.lower()
             if low_tok in _GLUE or low_tok in _TOKEN_SKIP:
+                continue
+            if _is_symptom_exception(token) or _unlabeled_number(token):
                 continue
             if any(low_tok in b for b in blobs) or any(low_tok in b for b in change_blobs):
                 add(token, category if category != "unknown" else "observed")
@@ -844,7 +854,16 @@ def _decide_from_views(
         return _direct(stale, "stale cache", "stale_cache", "stale_cache", service)
     threads = _first_text(logs, r"thread pool")
     if threads is not None:
-        return _direct(threads, "thread pool saturation", "thread_pool", "thread_pool", service)
+        record = threads["record"]
+        field = _record_downstream(record)
+        caller = _citation_service(record)
+        if field and caller and caller != field:
+            phrase = f"{caller}'s thread pool to {field} saturated"
+        elif field:
+            phrase = f"thread pool for {field} saturated"
+        else:
+            phrase = "thread pool saturation"
+        return _direct(threads, phrase, "thread_pool", "thread_pool", service)
     return None
 
 
@@ -868,28 +887,31 @@ def _conflict(pool: dict, slow: dict, incident_type: str) -> dict:
 
 
 def _pool_cause(view: dict, views: list[dict], service: str) -> dict:
-    own = _citation_service(view["record"])
-    downstream = ""
-    for other in views:
-        if other is view or other.get("kind") != "log":
-            continue
-        if _is_timeout_text(_raw_text(other["record"])):
-            downstream = _extract_downstream(_raw_text(other["record"]))
-            if downstream:
-                break
-    # The pool statement may name a downstream the timeout record names.
-    # The pool citation still carries the pool record's own service.
-    if downstream and (not own or downstream == own or downstream in _raw_text(view["record"])):
-        statement = f"connection pool for {downstream} exhausted"
-    elif own:
-        statement = f"connection pool exhausted on {own}"
+    record = view["record"]
+    own = _citation_service(record)
+    # A downstream field on the cited pool record is the owner. Naming
+    # only the caller is an overclaim. Text from another line is used
+    # only when this record has no downstream field.
+    if _record_downstream(record):
+        statement, named = _pool_owner_statement(record)
     else:
-        statement = "connection pool exhausted"
+        downstream = ""
+        for other in views:
+            if other is view or other.get("kind") != "log":
+                continue
+            if _is_timeout_text(_raw_text(other["record"])):
+                downstream = _extract_downstream(_raw_text(other["record"]))
+                if downstream:
+                    break
+        if downstream and (not own or downstream == own or downstream in _raw_text(record)):
+            statement, named = _pool_owner_statement(record, downstream)
+        elif own:
+            statement, named = f"connection pool exhausted on {own}", own
+        else:
+            statement, named = "connection pool exhausted", ""
     unknowns = []
-    if downstream:
-        unknowns.append(f"why {downstream} refuses connections")
-    elif own:
-        unknowns.append(f"why {own} refuses connections")
+    if named:
+        unknowns.append(f"why {named} refuses connections")
     return _direct(view, statement, "connection_pool_exhaustion", "connection_pool_exhausted", service, unknowns=unknowns)
 
 
@@ -920,13 +942,36 @@ def _slow_cause(view: dict, service: str) -> dict:
     return _direct(view, statement, "slow_queries", "slow_query", service)
 
 
+def _is_symptom_exception(name: str) -> bool:
+    """True when the class only restates a timeout or error symptom.
+
+    TimeoutException and SocketTimeoutException name the symptom. A bare
+    Error or Exception does too. IllegalStateException does not.
+    """
+    if not name:
+        return False
+    if re.search(r"timeout", name, re.I):
+        return True
+    stem = re.sub(r"(?:Exception|Error)$", "", name)
+    return stem.lower() in {"", "runtime", "remote", "generic", "unchecked", "wrapped"}
+
+
+def _unlabeled_number(token: str) -> bool:
+    """A numeric fragment that is not a version token such as 4.8.2 or v3.1.0."""
+    if not token or not re.search(r"\d", token):
+        return False
+    return re.fullmatch(r"v?\d+\.\d+(?:\.\d+)?", token, re.I) is None
+
+
 def _exception_hit(logs: list[dict]) -> dict | None:
     pattern = re.compile(r"\b([A-Z][A-Za-z0-9]*(?:Exception|Error))\b")
     for view in logs:
         text = _raw_text(view["record"])
-        match = pattern.search(text)
-        if match:
-            return {"view": view, "name": match.group(1), "text": text}
+        for match in pattern.finditer(text):
+            name = match.group(1)
+            if _is_symptom_exception(name):
+                continue
+            return {"view": view, "name": name, "text": text}
     return None
 
 

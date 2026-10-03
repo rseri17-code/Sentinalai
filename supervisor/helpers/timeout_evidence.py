@@ -5,7 +5,9 @@ downstream and sit inside the alignment window. Source summary, note, and
 annotation fields are never evidence and are never cited.
 
 Cause statements (AC2):
-  * ``connection pool for <ds> exhausted``
+  * ``<caller>'s connection pool to <downstream> exhausted`` when the
+    cited pool record has a ``downstream`` field
+  * ``connection pool for <ds> exhausted`` when no such field is set
   * ``slow queries on <ds>`` when a raw query-level record says so
   * ``<ds> latency elevated; cause UNKNOWN``
   * ``timeout observed; cause UNKNOWN`` when evidence is missing or conflicts
@@ -44,7 +46,11 @@ _NON_EVIDENCE_FIELDS = frozenset({
 
 _POOL_PATTERNS = (
     re.compile(r"pool[\s._-]*exhaust", re.I),
-    re.compile(r"connection\s+pool.{0,80}(exhaust|not available|unavailable|timed?\s*out|timeout|full|overflow|at capacity|waiting)", re.I),
+    re.compile(
+        r"connection\s+pool.{0,80}(exhaust|not available|unavailable|timed?\s*out|timeout|full|overflow|at capacity|waiting|limit)",
+        re.I,
+    ),
+    re.compile(r"\bresource\s+limit\b", re.I),
     re.compile(r"unable to acquire connection", re.I),
     re.compile(r"connection is not available", re.I),
     re.compile(r"hikari\s*pool.{0,60}(not available|exhaust|timed?\s*out|timeout)", re.I),
@@ -181,16 +187,25 @@ def decide_timeout(
         category = "unknown"
         name = "timeout_conflict"
         cause_refs = []
-    elif pool_views and ds:
+    elif pool_views and (ds or _record_downstream(pool_views[0]["record"])):
+        pool_record = pool_views[0]["record"]
         pool_ref = _ref(pool_views[0], "connection_pool_exhausted", ds)
         cause_refs = [pool_ref]
         contributions = [_contrib(
             "support", pool_ref, DIRECT_SUPPORT_DELTA, "direct", "direct",
         )]
-        statement = f"connection pool for {ds} exhausted"
+        # The owner is the cited pool record's downstream field when it
+        # has one. A thin return that never names a downstream in text
+        # must not fall back to the caller alone.
+        field = _record_downstream(pool_record)
+        if field:
+            statement, named = _pool_owner_statement(pool_record)
+        else:
+            statement = f"connection pool for {ds} exhausted"
+            named = ds
         category = "connection_pool_exhaustion"
         name = "connection_pool_exhaustion"
-        unknowns.append(f"why {ds} refuses connections")
+        unknowns.append(f"why {named} refuses connections")
     elif slow_views and ds:
         slow_ref = _ref(slow_views[0], "slow_query", ds)
         cause_refs = [slow_ref]
@@ -594,6 +609,40 @@ def _num(record: dict, *keys: str) -> float | None:
         if isinstance(val, (int, float)) and not isinstance(val, bool):
             return float(val)
     return None
+
+
+def _record_field(record: dict, key: str) -> str:
+    if not isinstance(record, dict):
+        return ""
+    raw = record.get(key)
+    if isinstance(raw, str) and raw.strip() and not is_placeholder(raw):
+        return raw.strip()
+    return ""
+
+
+def _record_downstream(record: dict) -> str:
+    return _record_field(record, "downstream")
+
+
+def _pool_owner_statement(record: dict, fallback_downstream: str = "") -> tuple[str, str]:
+    """Statement for a pool record, and the component that owns the pool.
+
+    The owner is the record's ``downstream`` field when that field is set,
+    otherwise ``fallback_downstream``, otherwise the record's ``service``.
+    A set ``downstream`` is named even when the caller is named too. The
+    caller is never the only component in that case.
+    """
+    caller = _record_field(record, "service")
+    field = _record_downstream(record)
+    if field:
+        if caller and caller != field:
+            return f"{caller}'s connection pool to {field} exhausted", field
+        return f"connection pool for {field} exhausted", field
+    if fallback_downstream:
+        return f"connection pool for {fallback_downstream} exhausted", fallback_downstream
+    if caller:
+        return f"connection pool exhausted on {caller}", caller
+    return "connection pool exhausted", ""
 
 
 def _is_timeout_text(text: str) -> bool:

@@ -56,24 +56,33 @@ _NON_EVIDENCE_FIELDS = frozenset({
     "description", "root_cause_hint", "hint", "comment", "comments",
 })
 
-# A connection pool: "connection pool", a db pool (dbpool), a driver
-# library name (HikariPool), or the standalone word "pool".
-# Thread, worker, fork-join, spool, and buffer pools are not this name.
-_POOL_NAME = (
-    r"(?:connection[\s._-]*pool|db[\s._-]*pool|hikari[\s._-]*pool|\bpool\b)"
-)
-
-# Removed before the connection-pool patterns run, so the word "pool"
-# inside them cannot bind as connection-pool exhaustion.
-_NON_CONNECTION_POOL = re.compile(
-    r"(?:"
-    r"\bthread[\s._-]*pool\b"
-    r"|\bworker[\s._-]*pool\b"
-    r"|\bfork[\s._-]*join[\s._-]*pool\b"
-    r"|\bbuffer[\s._-]*pool\b"
-    r"|\bspool\b"
-    r")",
+# Allow list. "pool" counts when nothing is in front of it, when the
+# word in front is connection, db, database, jdbc, or hikari, or when
+# the token is a DB pool class: HikariPool, JdbcPool, QueuePool,
+# AsyncAdaptedQueuePool. Any other word in front does not.
+_ALLOWED_POOL_PREFIX = frozenset({
+    "connection", "db", "database", "jdbc", "hikari",
+})
+# A severity token is not a pool-kind word. "ERROR pool.exhausted"
+# is still a bare pool.
+_LOG_LEVEL = frozenset({
+    "error", "err", "warn", "warning", "info", "debug",
+    "fatal", "critical", "trace",
+})
+_POOL_CLASS = frozenset({
+    "hikaripool", "jdbcpool", "queuepool", "asyncadaptedqueuepool",
+})
+_POOL_MENTION = re.compile(
+    r"[A-Za-z0-9]+[\s._-]*pool\b|\bpool\b",
     re.I,
+)
+_POOL_NAME = (
+    r"(?:"
+    r"\b(?:connection|database|jdbc|hikari|db)[\s._-]*pool\b"
+    r"|\basyncadaptedqueuepool\b"
+    r"|\bqueuepool\b"
+    r"|\bpool\b"
+    r")"
 )
 
 _POOL_PATTERNS = (
@@ -831,14 +840,34 @@ def _raw_text(record: dict) -> str:
     return "\n".join(parts)
 
 
-def _connection_pool_text(text: str) -> str:
-    """Drop thread, worker, fork-join, spool, and buffer pool names."""
-    return _NON_CONNECTION_POOL.sub(" ", text)
+def _pool_mention_allowed(token: str) -> bool:
+    """True when this pool token is on the connection-pool allow list."""
+    separated = re.search(r"[\s._-]", token) is not None
+    compact = re.sub(r"[\s._-]+", "", token).lower()
+    if not separated and compact in _POOL_CLASS:
+        return True
+    prefix = re.match(r"^(.*?)[\s._-]*pool$", token, re.I)
+    word = (prefix.group(1) if prefix else "").lower()
+    if word in _ALLOWED_POOL_PREFIX or word == "":
+        return True
+    # "ERROR pool.exhausted": the severity is not the pool's kind.
+    return separated and word in _LOG_LEVEL
+
+
+def _listed_pool_text(text: str) -> str:
+    """Blank every pool token that is not on the allow list."""
+    def repl(match: re.Match[str]) -> str:
+        token = match.group(0)
+        if _pool_mention_allowed(token):
+            return token
+        return " " * len(token)
+
+    return _POOL_MENTION.sub(repl, text)
 
 
 def _is_pool(record: dict) -> bool:
     text = _raw_text(record)
-    if text and any(p.search(_connection_pool_text(text)) for p in _POOL_PATTERNS):
+    if text and any(p.search(_listed_pool_text(text)) for p in _POOL_PATTERNS):
         return True
     # Numeric pool gauges on the record itself (not a summary string).
     active = _num(record, "active", "active_connections", "pool_active", "db_pool_active")

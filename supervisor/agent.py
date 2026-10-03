@@ -1949,13 +1949,14 @@ class SentinalAISupervisor:
         receipts: ReceiptCollector | None,
         budget: ExecutionBudget | None,
         circuits: CircuitBreakerRegistry | None,
+        step_labels: list[str] | None = None,
     ) -> dict[str, Any]:
         """On the latency path, also search downstream owners' logs.
 
-        Owners are the order first seen on retrieved records, then an
-        owner named only on the incident. At most three are searched.
-        The rest are listed for unchecked coverage. The alerted service
-        is already searched by the playbook.
+        Owners follow playbook step order, then record order within a
+        step, then an owner named only on the incident. At most three
+        are searched. The rest are listed for unchecked coverage. The
+        alerted service is already searched by the playbook.
         """
         if incident_type != "latency" or not isinstance(evidence, dict):
             return evidence
@@ -1973,17 +1974,27 @@ class SentinalAISupervisor:
             seen.add(token)
             owners.append(token)
 
-        # Record order first, then an owner named only on the incident.
-        for value in evidence.values():
+        # Playbook step order, then record order within the step, then
+        # an owner named only on the incident. Dict insertion follows
+        # whichever worker finished first, so it is not this order.
+        def _take(value: Any) -> None:
             if not isinstance(value, dict):
-                continue
+                return
             logs = value.get("logs")
             results = logs.get("results") if isinstance(logs, dict) else None
             if not isinstance(results, list):
-                continue
+                return
             for row in results:
                 if isinstance(row, dict):
                     _add(row.get("downstream"))
+
+        labels = [label for label in (step_labels or []) if label]
+        if labels:
+            for label in labels:
+                _take(evidence.get(label))
+        else:
+            for value in evidence.values():
+                _take(value)
         incident = getattr(self._tls, "current_incident", None) or {}
         if isinstance(incident, dict):
             _add(incident.get("downstream"))
@@ -2059,6 +2070,10 @@ class SentinalAISupervisor:
             else:
                 filtered_playbook.append(step)
         playbook = filtered_playbook
+        step_labels = [
+            str(step.get("label") or step.get("action") or "")
+            for step in playbook
+        ]
 
         if not self._parallel_playbook:
             evidence = self._execute_playbook_sequential(
@@ -2067,7 +2082,7 @@ class SentinalAISupervisor:
             )
             return self._search_downstream_owners(
                 evidence, incident_type, incident_id, service,
-                receipts, budget, cb_registry,
+                receipts, budget, cb_registry, step_labels,
             )
 
         # Group steps by worker for parallel dispatch
@@ -2177,7 +2192,7 @@ class SentinalAISupervisor:
             _shadow.parity_log(evidence, context="_execute_playbook")
         return self._search_downstream_owners(
             evidence, incident_type, incident_id, service,
-            receipts, budget, cb_registry,
+            receipts, budget, cb_registry, step_labels,
         )
 
     def _execute_playbook_sequential(

@@ -293,12 +293,21 @@ def _is_unauthorized(exc: BaseException) -> bool:
     return False
 
 
-def _call_with_timeout(fn: Callable[[], Any], timeout_s: float) -> Any:
+def _call_with_timeout(
+    fn: Callable[[], Any],
+    timeout_s: float,
+    *,
+    on_timeout: Callable[[threading.Thread, dict[str, Any]], None] | None = None,
+) -> Any:
     """Run *fn* and raise TimeoutError if it has not finished in *timeout_s*.
 
     The worker is a daemon so a timed-out call cannot block process exit.
-    The caller turns TimeoutError into an error dict; it is not propagated
-    out of ``McpGateway.invoke``.
+    Anything the worker raises is re-raised on the caller. ``Exception`` is
+    unchanged. ``KeyboardInterrupt`` and ``SystemExit`` propagate unchanged.
+    Any other ``BaseException`` is wrapped so ``invoke`` can turn it into an
+    error dict instead of treating a dead worker as a ``None`` result.
+    ``on_timeout`` runs only when the worker is still alive, before the
+    TimeoutError is raised.
     """
     box: dict[str, Any] = {}
 
@@ -307,15 +316,64 @@ def _call_with_timeout(fn: Callable[[], Any], timeout_s: float) -> Any:
             box["value"] = fn()
         except Exception as exc:
             box["error"] = exc
+        except BaseException as exc:
+            # Not Exception: if this kills the worker, invoke sees None and
+            # reports raw_response "None" instead of the failure.
+            box["fatal"] = exc
 
     worker = threading.Thread(target=_run, name="mcp-call-timeout", daemon=True)
     worker.start()
     worker.join(timeout_s)
     if worker.is_alive():
+        if on_timeout is not None:
+            on_timeout(worker, box)
         raise TimeoutError(f"mcp call exceeded {timeout_s:g}s")
     if "error" in box:
         raise box["error"]
+    if "fatal" in box:
+        fatal = box["fatal"]
+        if isinstance(fatal, (KeyboardInterrupt, SystemExit)):
+            raise fatal
+        raise RuntimeError(f"{type(fatal).__name__}: {fatal}") from fatal
     return box.get("value")
+
+
+def _stop_abandoned_client(client: Any) -> None:
+    """Stop a session whose start() finished after the timeout already fired."""
+    stop = getattr(client, "stop", None)
+    if callable(stop):
+        try:
+            stop(None, None, None)
+            return
+        except TypeError:
+            try:
+                stop()
+                return
+            except Exception as exc:
+                logger.warning("Failed to stop MCP client after a timed-out start: %s", exc)
+                return
+        except Exception as exc:
+            logger.warning("Failed to stop MCP client after a timed-out start: %s", exc)
+            return
+    close = getattr(client, "close", None)
+    if not callable(close):
+        return
+    try:
+        close()
+    except Exception as exc:
+        logger.warning("Failed to close MCP client after a timed-out start: %s", exc)
+
+
+def _reap_late_start(client: Any, worker: threading.Thread, box: dict[str, Any]) -> None:
+    """If start() succeeds on the daemon after its timeout, close that session."""
+
+    def _reap() -> None:
+        worker.join()
+        if "error" in box or "fatal" in box:
+            return
+        _stop_abandoned_client(client)
+
+    threading.Thread(target=_reap, name="mcp-start-reap", daemon=True).start()
 
 
 def _failure_dict(mcp_tool_name: str, exc: BaseException, *, plain: bool) -> dict[str, Any]:
@@ -711,9 +769,12 @@ def normalize_mcp_result(result: Any, mcp_tool_name: str) -> dict[str, Any]:
     """Normalize an MCP tool result to a dict.
 
     A tool ``status == "error"`` becomes an error dict (never a stub).
-    An MCP envelope (``toolUseId`` + ``content``) is unwrapped so callers
-    see the tool JSON, including ``skipped: true``. A plain dict that is
-    already a tool payload is returned unchanged.
+    An MCP envelope (``toolUseId`` + ``content``) is unwrapped once so
+    callers see the tool JSON, including ``skipped: true``. If that JSON
+    is itself envelope-shaped, it is returned as-is and not opened again.
+    A plain dict that is already a tool payload is returned unchanged.
+    ``gateway_exception``, ``failed:``, and ``connection_state`` are left
+    in place.
     """
     if isinstance(result, dict):
         if "toolUseId" in result and isinstance(result.get("content"), list):
@@ -902,6 +963,19 @@ class RateLimiterRegistry:
 # McpGateway — singleton class fronting all MCP servers via AgentCore
 # =========================================================================
 
+# One guard for lazily attaching a build lock to ``McpGateway.__new__`` doubles.
+_MCP_CLIENT_LOCK_GUARD = threading.Lock()
+
+
+class _McpStartFlight:
+    """One in-flight create+start, shared by every waiter in that wave."""
+
+    def __init__(self) -> None:
+        self.done = threading.Event()
+        self.client: Any = None
+        self.error: BaseException | None = None
+
+
 class McpGateway:
     """Unified gateway that fronts all MCP tool targets on AgentCore.
 
@@ -940,6 +1014,9 @@ class McpGateway:
         rate_limiter: RateLimiterRegistry | None = None,
     ) -> None:
         self._mcp_client = None
+        self._mcp_client_lock = threading.Lock()
+        self._mcp_start_flight: _McpStartFlight | None = None
+        self._client_error_slot = threading.local()
         self._tools_cache: tuple[float, frozenset[str]] | None = None
         # Legacy boto3 client for backward compat during migration
         self._boto3_client = None
@@ -1106,11 +1183,10 @@ class McpGateway:
             client = self._get_mcp_client()
             if client is None:
                 if plain_mcp_enabled():
-                    return _failure_dict(
-                        mcp_tool_name,
-                        RuntimeError("MCP client could not be built"),
-                        plain=True,
+                    exc = self._consume_client_error() or RuntimeError(
+                        "MCP client could not be built",
                     )
+                    return _failure_dict(mcp_tool_name, exc, plain=True)
                 logger.warning("MCPClient unavailable — returning stub for %s", mcp_tool_name)
                 return _mark_stub_substitution(
                     _stub_response(mcp_tool_name, tool_action, params),
@@ -1131,7 +1207,7 @@ class McpGateway:
                 # The call may still be running on the daemon thread. Drop the
                 # client (and the session it owns) so the next invoke builds a
                 # new one instead of reusing a stuck connection.
-                self._mcp_client = None
+                self._drop_mcp_client()
                 return _failure_dict(mcp_tool_name, exc, plain=plain_mcp_enabled())
 
             elapsed_ms = (time.monotonic() - start) * 1000
@@ -1152,7 +1228,7 @@ class McpGateway:
                 )
                 self._oauth2_provider.invalidate()
                 # Force new MCPClient with fresh auth headers
-                self._mcp_client = None
+                self._drop_mcp_client()
                 return self._invoke_via_gateway(
                     mcp_tool_name, tool_action, params, _is_retry=True,
                 )
@@ -1199,12 +1275,143 @@ class McpGateway:
 
         return headers
 
+    def _ensure_client_state(self) -> None:
+        """Attach the build lock, flight slot, and per-thread error if needed."""
+        if (
+            getattr(self, "_mcp_client_lock", None) is not None
+            and getattr(self, "_client_error_slot", None) is not None
+            and hasattr(self, "_mcp_start_flight")
+        ):
+            return
+        with _MCP_CLIENT_LOCK_GUARD:
+            if getattr(self, "_mcp_client_lock", None) is None:
+                self._mcp_client_lock = threading.Lock()
+            if getattr(self, "_client_error_slot", None) is None:
+                self._client_error_slot = threading.local()
+            if not hasattr(self, "_mcp_start_flight"):
+                self._mcp_start_flight = None
+
+    def _remember_client_error(self, exc: BaseException | None) -> None:
+        """Record a build/start failure for the calling thread only."""
+        self._ensure_client_state()
+        slot = self._client_error_slot
+        if exc is None:
+            if hasattr(slot, "exc"):
+                del slot.exc
+            return
+        slot.exc = exc
+
+    def _consume_client_error(self) -> BaseException | None:
+        """Return and clear this thread's build/start failure, if any."""
+        self._ensure_client_state()
+        slot = self._client_error_slot
+        exc = getattr(slot, "exc", None)
+        if hasattr(slot, "exc"):
+            del slot.exc
+        return exc
+
+    def _drop_mcp_client(self) -> None:
+        """Forget the live client. The next call builds and starts a new one."""
+        self._ensure_client_state()
+        with self._mcp_client_lock:
+            self._mcp_client = None
+
+    def _claim_start_flight(self) -> tuple[Any, _McpStartFlight | None, bool]:
+        """Join the in-flight start, or become its leader.
+
+        Returns ``(client, flight, is_leader)``. ``client`` is the instance
+        observed while holding the lock when one is already published.
+        Callers must use that object: a later read of ``_mcp_client`` can
+        be ``None`` if a timeout drops it after this lock is released.
+        """
+        with self._mcp_client_lock:
+            client = self._mcp_client
+            if client is not None:
+                return client, None, False
+            flight = self._mcp_start_flight
+            if flight is not None:
+                return None, flight, False
+            flight = _McpStartFlight()
+            self._mcp_start_flight = flight
+            return None, flight, True
+
+    def _join_start_flight(self, flight: _McpStartFlight) -> Any:
+        """Return the leader's client, or None and the same failure."""
+        flight.done.wait()
+        if flight.client is not None:
+            return flight.client
+        self._remember_client_error(flight.error)
+        return None
+
+    def _finish_start_flight(self, flight: _McpStartFlight) -> None:
+        """End this wave. The slot is cleared before waiters wake, so a caller
+        that arrives as the wave ends may retry instead of joining it.
+        """
+        with self._mcp_client_lock:
+            if self._mcp_start_flight is flight:
+                self._mcp_start_flight = None
+        flight.done.set()
+
+    def _build_mcp_client(self, gateway_url: str) -> Any:
+        # Capture self for the lambda so auth headers are resolved
+        # dynamically on each connection (picks up refreshed tokens).
+        gw_self = self
+        return MCPClient(
+            lambda: streamablehttp_client(
+                url=gateway_url,
+                headers=gw_self._get_auth_headers(),
+            ),
+        )
+
+    def _lead_start_flight(self, flight: _McpStartFlight, gateway_url: str) -> Any:
+        """Create and start one client. Publish it only after start() returns."""
+        if not gateway_url.endswith("/mcp"):
+            gateway_url = f"{gateway_url}/mcp"
+        try:
+            client = self._build_mcp_client(gateway_url)
+        except Exception as exc:
+            logger.warning("Failed to create MCPClient: %s", exc)
+            flight.error = exc
+            self._remember_client_error(exc)
+            return None
+        try:
+            # strands MCPClient refuses call_tool_sync until start() has
+            # opened the session. Do not publish the client before that.
+            _call_with_timeout(
+                client.start,
+                mcp_call_timeout_seconds(),
+                on_timeout=lambda worker, box: _reap_late_start(client, worker, box),
+            )
+        except Exception as exc:
+            logger.warning("Failed to start MCPClient: %s", exc)
+            flight.error = exc
+            self._remember_client_error(exc)
+            return None
+        except BaseException as exc:
+            flight.error = exc
+            raise
+        with self._mcp_client_lock:
+            self._mcp_client = client
+        flight.client = client
+        logger.info("MCPClient connected to AgentCore gateway: %s", gateway_url)
+        return client
+
     def _get_mcp_client(self):
         """Lazily create the MCPClient connected to the AgentCore gateway.
 
         The transport factory lambda calls _get_auth_headers() on each
         connection so that refreshed OAuth2 tokens are picked up automatically.
+
+        One wave of concurrent first calls shares a single create+start.
+        Waiters receive that attempt's client or its failure. The client is
+        published only after ``start()`` returns. A later call, after the
+        wave has finished, may retry. A start failure is remembered on this
+        thread for plain mode; flag off still treats a missing client as a stub.
         """
+        self._ensure_client_state()
+        # Drop a stale failure before this attempt. Only an error raised
+        # below is reported to the caller.
+        self._remember_client_error(None)
         if self._mcp_client is not None:
             return self._mcp_client
         if not _MCP_SDK_AVAILABLE:
@@ -1213,33 +1420,15 @@ class McpGateway:
         gateway_url = resolved_gateway_url()
         if not gateway_url:
             return None
+        held, flight, leader = self._claim_start_flight()
+        if flight is None:
+            return held
+        if not leader:
+            return self._join_start_flight(flight)
         try:
-            if not gateway_url.endswith("/mcp"):
-                gateway_url = f"{gateway_url}/mcp"
-
-            # Capture self for the lambda so auth headers are resolved
-            # dynamically on each connection (picks up refreshed tokens).
-            gw_self = self
-
-            self._mcp_client = MCPClient(
-                lambda: streamablehttp_client(
-                    url=gateway_url,
-                    headers=gw_self._get_auth_headers(),
-                ),
-            )
-            # strands MCPClient refuses call_tool_sync until start() has
-            # opened the session. A start failure is "client could not be built".
-            try:
-                _call_with_timeout(self._mcp_client.start, mcp_call_timeout_seconds())
-            except Exception as exc:
-                logger.warning("Failed to start MCPClient: %s", exc)
-                self._mcp_client = None
-                return None
-            logger.info("MCPClient connected to AgentCore gateway: %s", gateway_url)
-            return self._mcp_client
-        except Exception as exc:
-            logger.warning("Failed to create MCPClient: %s", exc)
-            return None
+            return self._lead_start_flight(flight, gateway_url)
+        finally:
+            self._finish_start_flight(flight)
 
     # ------------------------------------------------------------------ #
     # Legacy invocation (invoke_inline_agent — deprecated)

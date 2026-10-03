@@ -685,28 +685,55 @@ def tool_identity(name: str) -> tuple[str, str] | None:
     return None
 
 
+def _parse_tool_text(text: str, status: Any, mcp_tool_name: str) -> dict[str, Any]:
+    """Parse tool content text. ``status == "error"`` stays an error dict."""
+    try:
+        parsed = json.loads(text) if text else {}
+    except (json.JSONDecodeError, TypeError):
+        if status == "error":
+            return _failure_dict(
+                mcp_tool_name, RuntimeError(text or "tool status error"), plain=plain_mcp_enabled(),
+            )
+        return {"raw_response": text}
+    if isinstance(parsed, dict):
+        if status == "error" and "error" not in parsed:
+            parsed = dict(parsed)
+            parsed["error"] = text or "tool status error"
+        return parsed
+    if status == "error":
+        return _failure_dict(
+            mcp_tool_name, RuntimeError(text or "tool status error"), plain=plain_mcp_enabled(),
+        )
+    return {"raw_response": text}
+
+
 def normalize_mcp_result(result: Any, mcp_tool_name: str) -> dict[str, Any]:
     """Normalize an MCP tool result to a dict.
 
     A tool ``status == "error"`` becomes an error dict (never a stub).
-    Successful dicts are returned unchanged.
+    An MCP envelope (``toolUseId`` + ``content``) is unwrapped so callers
+    see the tool JSON, including ``skipped: true``. A plain dict that is
+    already a tool payload is returned unchanged.
     """
     if isinstance(result, dict):
+        if "toolUseId" in result and isinstance(result.get("content"), list):
+            return _parse_tool_text(
+                _content_text(result.get("content")), result.get("status"), mcp_tool_name,
+            )
+        if result.get("status") == "error" and "error" not in result:
+            return _failure_dict(
+                mcp_tool_name,
+                RuntimeError(_content_text(result.get("content")) or "tool status error"),
+                plain=plain_mcp_enabled(),
+            )
         return result
     status = getattr(result, "status", None)
     content_parts = getattr(result, "content", None)
     if status == "error":
         text = _content_text(content_parts) or "tool status error"
-        return _failure_dict(mcp_tool_name, RuntimeError(text), plain=plain_mcp_enabled())
+        return _parse_tool_text(text, status, mcp_tool_name)
     if content_parts is not None:
-        combined = _content_text(content_parts)
-        try:
-            parsed = json.loads(combined) if combined else {}
-        except (json.JSONDecodeError, TypeError):
-            return {"raw_response": combined}
-        if isinstance(parsed, dict):
-            return parsed
-        return {"raw_response": combined}
+        return _parse_tool_text(_content_text(content_parts), status, mcp_tool_name)
     return {"raw_response": str(result)}
 
 
@@ -738,9 +765,13 @@ def tool_names_from_list(payload: Any) -> list[str]:
             names.append(item)
         elif isinstance(item, dict) and item.get("name"):
             names.append(str(item["name"]))
-        elif hasattr(item, "tool_name") and callable(item.tool_name):
-            names.append(str(item.tool_name()))
-        elif hasattr(item, "name"):
+        elif hasattr(item, "tool_name"):
+            # strands MCPAgentTool.tool_name is a string property. Older
+            # objects expose a tool_name() method. Accept both.
+            value = item.tool_name() if callable(item.tool_name) else item.tool_name
+            if value:
+                names.append(str(value))
+        elif getattr(item, "name", None):
             names.append(str(item.name))
     return names
 
@@ -1097,6 +1128,10 @@ class McpGateway:
                     timeout_s,
                 )
             except TimeoutError as exc:
+                # The call may still be running on the daemon thread. Drop the
+                # client (and the session it owns) so the next invoke builds a
+                # new one instead of reusing a stuck connection.
+                self._mcp_client = None
                 return _failure_dict(mcp_tool_name, exc, plain=plain_mcp_enabled())
 
             elapsed_ms = (time.monotonic() - start) * 1000

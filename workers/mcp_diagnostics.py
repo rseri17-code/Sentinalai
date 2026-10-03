@@ -432,19 +432,44 @@ def _strip_nondeterministic(value: Any) -> Any:
     return value
 
 
+# Contract v1 asked for these public names. They are not on the investigate()
+# result. v1.1 replaces them with fields that do exist:
+#   incident_type          → rca_report.incident_type
+#   hypothesis_ranking     → rca_report.winner_hypothesis + rca_report.hypothesis_count
+#   tool_call_sequence     → receipts (sequence_order, tool, action, params, status, error, missing_reason)
+REPLACED_REPLAY_FIELDS: tuple[str, ...] = (
+    "incident_type",
+    "hypothesis_ranking",
+    "tool_call_sequence",
+)
+
+_RECEIPT_FIELDS = (
+    "sequence_order", "tool", "action", "params", "status", "error", "missing_reason",
+)
+
+
+def _receipt_sort_key(row: Any) -> tuple[Any, ...]:
+    if not isinstance(row, dict):
+        return (10**9, "", "")
+    order = row.get("sequence_order")
+    if not isinstance(order, int):
+        order = 10**9
+    return (order, str(row.get("tool") or ""), str(row.get("action") or ""))
+
+
 def replay_canonical(
     result: dict[str, Any],
     connection_report: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     """Canonical replay document plus the names of fields that are absent.
 
-    Only public result keys are read. ``_hypotheses`` is popped before
-    ``investigate()`` returns, so it is not used as a stand-in for hypothesis
-    ranking. Receipts are not used as a stand-in for the tool-call sequence.
+    Absent fields are reported. Nothing is invented in their place.
+    ``incident_type`` (top-level), ``hypothesis_ranking``, and
+    ``tool_call_sequence`` are not read; see ``REPLACED_REPLAY_FIELDS``.
     """
     missing: list[str] = []
     document: dict[str, Any] = {}
-    for field in ("incident_id", "incident_type", "root_cause", "confidence"):
+    for field in ("incident_id", "root_cause", "confidence"):
         if field in result:
             document[field] = result[field]
         else:
@@ -454,25 +479,49 @@ def replay_canonical(
     else:
         missing.append("evidence_timeline")
 
-    ranking_key = next((key for key in ("hypothesis_ranking", "hypotheses") if key in result), None)
-    if ranking_key is None:
-        missing.append("hypothesis_ranking")
+    report = result.get("rca_report")
+    if not isinstance(report, dict):
+        missing.append("rca_report")
     else:
-        ranking = result[ranking_key]
-        document["hypothesis_ranking"] = [
-            {"name": item.get("name"), "score": item.get("score")}
-            for item in ranking
-            if isinstance(item, dict)
-        ] if isinstance(ranking, list) else ranking
+        rca: dict[str, Any] = {}
+        for key in ("incident_type", "winner_hypothesis", "hypothesis_count"):
+            if key in report:
+                rca[key] = report[key]
+            else:
+                missing.append(f"rca_report.{key}")
+        document["rca_report"] = rca
 
-    sequence_key = next(
-        (key for key in ("tool_call_sequence", "tool_calls", "call_sequence") if key in result),
-        None,
-    )
-    if sequence_key is None:
-        missing.append("tool_call_sequence")
+    receipts = result.get("receipts")
+    if isinstance(receipts, list):
+        projected: list[Any] = []
+        for item in receipts:
+            if not isinstance(item, dict):
+                projected.append(item)
+                continue
+            row = {key: item[key] for key in _RECEIPT_FIELDS if key in item}
+            projected.append(_strip_nondeterministic(row))
+        # sequence_order is the call order. The returned list is not always
+        # in that order (a historical-context future races the playbook), so
+        # the canonical list follows sequence_order.
+        projected.sort(key=_receipt_sort_key)
+        document["receipts"] = projected
     else:
-        document["tool_call_sequence"] = _strip_nondeterministic(result[sequence_key])
+        missing.append("receipts")
+
+    for field in (
+        "_evidence_lifecycle",
+        "citations",
+        "validated_claims",
+        "non_validated_claims",
+        "_corpus_version",
+    ):
+        if field not in result:
+            missing.append(field)
+            continue
+        if field == "_corpus_version":
+            document[field] = result[field]
+        else:
+            document[field] = _strip_nondeterministic(result[field])
 
     if connection_report is not None:
         document["connection_report"] = _strip_nondeterministic(connection_report)

@@ -1412,6 +1412,22 @@ def build_evidence_snapshot(evidence: dict | None) -> dict:
                         "timestamp": _record_ts(rec),
                     })
                     index += 1
+            # A single APM object, or {"signals": <object>}, has no list.
+            # It is still a consulted golden-signal record.
+            if not records:
+                from supervisor.receipt import _signal_payloads
+                for rec in _signal_payloads(val):
+                    raw = json.dumps(
+                        rec, sort_keys=True, default=str, separators=(",", ":"),
+                    ).encode()
+                    records.append({
+                        "index": index,
+                        "path": "golden_signals",
+                        "content_hash": hashlib.sha256(raw).hexdigest(),
+                        "service": str(rec.get("service") or val.get("service") or ""),
+                        "timestamp": _record_ts(rec) or _record_ts(val),
+                    })
+                    index += 1
         # Absent keys stay false so callers that test truthiness still
         # skip them. A filled key carries the record hashes.
         snap[key] = {"present": True, "records": records} if val else False

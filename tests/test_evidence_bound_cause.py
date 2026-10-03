@@ -1322,6 +1322,52 @@ class TestUnsaturatedPoolContradicts:
         assert outcomes[0] == outcomes[1] == outcomes[2] == outcomes[3]
         assert outcomes[0][1] < 60
 
+    def test_single_object_golden_signals_are_consulted(self):
+        # Expected before the run. The pool log plus a single-object APM
+        # payload (active 2, idle 40, max 50) does not bind pool exhaustion
+        # above 60. The contradiction names the unsaturated reading. The
+        # check_golden_signals snapshot records are non-empty, and the
+        # receipt does not say the call returned nothing. The same
+        # contradiction is recorded when that gauge is under signals.
+        from supervisor.helpers.cause_binding import build_evidence_snapshot
+        from supervisor.receipt import ReceiptCollector
+
+        evidence = _pool_candidate_evidence(_apm_pool())
+        evidence["check_golden_signals"] = evidence.pop("query_pool")
+        result = _v18_with_evidence("edge-api", evidence)
+        cause = result["cause"]
+        assert cause["confidence"] < 60
+        assert cause["confidence"] == _POOL_CONFLICT
+        assert "UNKNOWN" in cause["statement"]
+        assert cause["category"] != "connection_pool_exhaustion"
+        assert any(
+            item["statement"] == _UNSATURATED for item in cause["contradictions"]
+        )
+        snap = build_evidence_snapshot(evidence)
+        assert snap["check_golden_signals"]["records"]
+
+        collector = ReceiptCollector(case_id="INC-V18")
+        receipt = collector.start(
+            "dynatrace.get_metrics", "get_golden_signals", {"service": "edge-api"},
+        )
+        collector.finish(receipt, _apm_pool())
+        assert receipt.missing_reason != "no_evidence_returned"
+        assert receipt.result_count >= 1
+        assert receipt.consulted
+
+        wrapped = _pool_candidate_evidence(_signals_pool())
+        wrapped["check_golden_signals"] = wrapped.pop("query_pool")
+        wrapped_result = _v18_with_evidence("edge-api", wrapped)
+        wrapped_cause = wrapped_result["cause"]
+        assert wrapped_cause["confidence"] < 60
+        assert wrapped_cause["confidence"] == _POOL_CONFLICT
+        assert any(
+            item["statement"] == _UNSATURATED
+            for item in wrapped_cause["contradictions"]
+        )
+        wrapped_snap = build_evidence_snapshot(wrapped)
+        assert wrapped_snap["check_golden_signals"]["records"]
+
 
 def _failed_log_search():
     """Log search errored. A signal was retrieved and reported no window."""

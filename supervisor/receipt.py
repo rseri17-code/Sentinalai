@@ -108,11 +108,74 @@ def _iter_returned_records(result: dict | None) -> list:
     return found
 
 
+def _dict_has_value(obj: dict) -> bool:
+    for value in obj.values():
+        if isinstance(value, dict):
+            if _dict_has_value(value):
+                return True
+        elif isinstance(value, list):
+            if value:
+                return True
+        elif isinstance(value, (int, float)) and not isinstance(value, bool):
+            return True
+        elif value not in (None, "", False):
+            return True
+    return False
+
+
+def _carries_pool_or_signals(obj: dict) -> bool:
+    """A single APM object or a non-empty ``signals`` body.
+
+    An empty ``signals`` or ``metrics`` stub is not a record.
+    """
+    if not isinstance(obj, dict):
+        return False
+    for key in ("db_connection_pool", "connection_pool"):
+        body = obj.get(key)
+        if isinstance(body, dict) and body:
+            return True
+    golden = obj.get("golden_signals")
+    return isinstance(golden, dict) and _dict_has_value(golden)
+
+
+def _signal_payloads(result: dict | None) -> list:
+    """Golden-signal objects the list walker does not see.
+
+    Real APM results are a single object, sometimes with the gauges under
+    ``signals`` or ``signalfx_apm.signals``. Those are one consulted record
+    each. Empty stub objects stay uncounted.
+    """
+    if not isinstance(result, dict):
+        return []
+    found: list = []
+    seen: set[int] = set()
+
+    def _add(obj: Any) -> None:
+        if not isinstance(obj, dict) or id(obj) in seen:
+            return
+        if not _carries_pool_or_signals(obj):
+            return
+        seen.add(id(obj))
+        found.append(obj)
+
+    signals = result.get("signals")
+    if isinstance(signals, dict):
+        _add(signals)
+    signalfx = result.get("signalfx_apm")
+    if isinstance(signalfx, dict):
+        inner = signalfx.get("signals")
+        _add(inner if isinstance(inner, dict) else signalfx)
+    if not found:
+        _add(result)
+    return found
+
+
 def _counted_records(result: dict | None) -> list:
     """Every record ``_count_results`` counts, in the same order.
 
     A lone incident payload has no results list. It is still one record,
-    and the receipt has to hash it.
+    and the receipt has to hash it. A single-object APM payload, or a
+    ``signals`` object, is one record too. An empty stub is not.
     """
     records = _iter_returned_records(result)
     if records:
@@ -122,7 +185,7 @@ def _counted_records(result: dict | None) -> list:
         if isinstance(incident, dict):
             return [incident]
         return [{"incident": incident}]
-    return []
+    return _signal_payloads(result)
 
 
 def _consulted_records(result: dict | None) -> list:

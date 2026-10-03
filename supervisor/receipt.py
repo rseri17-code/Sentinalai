@@ -80,12 +80,7 @@ def _count_results(result: dict | None) -> int:
     return ``{"logs": {"results": [...], "count": N}}``; N can disagree
     with the list. The receipt count is the list length.
     """
-    records = _iter_returned_records(result)
-    if records:
-        return len(records)
-    if isinstance(result, dict) and "incident" in result:
-        return 1
-    return 0
+    return len(_counted_records(result))
 
 
 _RECORD_LIST_KEYS = (
@@ -113,23 +108,42 @@ def _iter_returned_records(result: dict | None) -> list:
     return found
 
 
+def _counted_records(result: dict | None) -> list:
+    """Every record ``_count_results`` counts, in the same order.
+
+    A lone incident payload has no results list. It is still one record,
+    and the receipt has to hash it.
+    """
+    records = _iter_returned_records(result)
+    if records:
+        return records
+    if isinstance(result, dict) and "incident" in result:
+        incident = result.get("incident")
+        if isinstance(incident, dict):
+            return [incident]
+        return [{"incident": incident}]
+    return []
+
+
 def _consulted_records(result: dict | None) -> list:
-    """Ref plus content hash for each dict record the call returned."""
+    """Ref plus content hash for each record the call returned."""
     import hashlib
     import json
 
     consulted = []
-    for index, rec in enumerate(_iter_returned_records(result)):
-        if not isinstance(rec, dict):
-            continue
+    for index, rec in enumerate(_counted_records(result)):
         raw = json.dumps(rec, sort_keys=True, default=str, separators=(",", ":")).encode()
+        if isinstance(rec, dict):
+            service = str(rec.get("service") or "")
+            timestamp = str(rec.get("_time") or rec.get("timestamp") or rec.get("ts") or "")
+        else:
+            service = ""
+            timestamp = ""
         consulted.append({
             "index": index,
             "content_hash": hashlib.sha256(raw).hexdigest(),
-            "service": str(rec.get("service") or ""),
-            "timestamp": str(
-                rec.get("_time") or rec.get("timestamp") or rec.get("ts") or ""
-            ),
+            "service": service,
+            "timestamp": timestamp,
         })
     return consulted
 

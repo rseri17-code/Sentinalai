@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import os
 import re
+import threading
+import time
 
 from supervisor.agent import SentinalAISupervisor
 from supervisor.evidence_citation import annotate_citations
@@ -14,7 +16,8 @@ from supervisor.guardrails import CircuitBreakerRegistry, ExecutionBudget
 from supervisor.helpers.cause_binding import build_evidence_snapshot
 from supervisor.helpers.timeout_evidence import resolve_evidence_ref
 from supervisor.receipt import ReceiptCollector
-from supervisor.tool_selector import INCIDENT_PLAYBOOKS
+from supervisor.strategy_evolver import should_skip_step
+from supervisor.tool_selector import INCIDENT_PLAYBOOKS, get_evolved_playbook
 
 # Answers written before the runs.
 EXPECTED = {
@@ -769,19 +772,134 @@ class TestDatabaseSlowStatement:
 
 _OWNER_CAP_REASON = "downstream owner search cap is 3"
 
+# One owner on each of the first four latency steps, in playbook order.
+# The fifth owner is the incident field. Steps land on different workers,
+# so a completion-order walk sees them backwards when those workers finish
+# in reverse.
+_OWNER_BY_LABEL = {
+    "search_latency_logs": "db-1",
+    "search_timed_out_logs": "db-2",
+    "check_golden_signals": "db-3",
+    "get_network_evidence": "db-4",
+}
+_ACTION_WORKER = {
+    "search_logs": "log_worker",
+    "get_change_data": "log_worker",
+    "get_golden_signals": "apm_worker",
+    "check_latency": "apm_worker",
+    "get_network_evidence": "network_worker",
+    "get_network_alerts": "network_worker",
+    "query_metrics": "metrics_worker",
+    "get_resource_metrics": "metrics_worker",
+    "get_events": "metrics_worker",
+}
 
-def _investigate_latency_owners(service, records, downstream):
+
+def _scheduled_latency_steps(service):
+    steps = []
+    for step in get_evolved_playbook("latency"):
+        label = step.get("label", step.get("action", ""))
+        if should_skip_step("latency", str(label), service):
+            continue
+        steps.append(step)
+    return steps
+
+
+def _owner_for_step(action, params):
+    query = str((params or {}).get("query") or "")
+    if action == "search_logs" and query.startswith("latency OR slow"):
+        return _OWNER_BY_LABEL["search_latency_logs"]
+    if action == "search_logs" and query == "timed out":
+        return _OWNER_BY_LABEL["search_timed_out_logs"]
+    if action == "get_golden_signals":
+        return _OWNER_BY_LABEL["check_golden_signals"]
+    if action == "get_network_evidence":
+        return _OWNER_BY_LABEL["get_network_evidence"]
+    return None
+
+
+class _ReverseFinishLogs:
+    """Playbook workers finish in the reverse of submission order."""
+
+    def __init__(self, service, delays):
+        self.service = service
+        self.delays = delays
+        self.services: list[str] = []
+        self.completed: list[str] = []
+        self._slept: set[str] = set()
+        self._lock = threading.Lock()
+
+    def execute(self, action, params):
+        params = params or {}
+        called = str(params.get("service") or "")
+        worker = _ACTION_WORKER.get(action, "")
+        # get_network_evidence builds no service param. Key off the action.
+        # Downstream searches reuse search_logs after the playbook groups
+        # have already finished, so they do not change group finish order.
+        if worker in self.delays:
+            with self._lock:
+                first = worker not in self._slept
+                if first:
+                    self._slept.add(worker)
+            if first:
+                time.sleep(self.delays[worker])
+            with self._lock:
+                self.completed.append(worker)
+        owner = _owner_for_step(action, params)
+        with self._lock:
+            self.services.append(called)
+        row = None
+        if owner:
+            row = {
+                "_time": "2024-11-04T07:59:10Z",
+                "service": self.service,
+                "downstream": owner,
+                "level": "ERROR",
+                "message": f"{self.service} latency waiting on {owner}",
+            }
+        if action == "search_logs" or str(action).startswith("search_"):
+            rows = [row] if row else []
+            return {"logs": {"results": rows, "count": len(rows)}}
+        if action in ("get_change_data", "get_change_records"):
+            return {"changes": []}
+        if action in ("get_golden_signals", "check_latency"):
+            payload = {"signals": {"golden_signals": {}}}
+            if row:
+                payload["logs"] = {"results": [row], "count": 1}
+            return payload
+        if action in ("get_network_evidence", "get_network_alerts"):
+            payload: dict = {"evidence": []}
+            if row:
+                payload["logs"] = {"results": [row], "count": 1}
+            return payload
+        if action in ("query_metrics", "get_resource_metrics"):
+            return {"metrics": {"metrics": []}}
+        if action == "get_events":
+            return {"events": []}
+        if row:
+            return {"logs": {"results": [row], "count": 1}}
+        return {}
+
+
+def _group_finish_order(events, workers):
+    last = {}
+    for index, worker in enumerate(events):
+        last[worker] = index
+    return sorted(workers, key=lambda worker: last[worker])
+
+
+def _investigate_latency_owners(service, downstream, delays):
     saved = {
         key: os.environ.get(key)
         for key in ("LLM_ENABLED", "PARALLEL_PLAYBOOK", "CALIBRATION_ENABLED")
     }
     os.environ["LLM_ENABLED"] = "false"
-    os.environ["PARALLEL_PLAYBOOK"] = "false"
+    os.environ["PARALLEL_PLAYBOOK"] = "true"
     os.environ["CALIBRATION_ENABLED"] = "false"
     try:
         sup = SentinalAISupervisor()
-        sup._parallel_playbook = False
-        gateway = _ServiceScopedLogs(records)
+        assert sup._parallel_playbook is True
+        gateway = _ReverseFinishLogs(service, delays)
         for name in list(sup.workers):
             sup.workers[name] = gateway
         incident = {
@@ -812,42 +930,49 @@ def _investigate_latency_owners(service, records, downstream):
 
 
 class TestDownstreamOwnerSearchCap:
-    """At most three downstream owners are searched.
+    """At most three downstream owners are searched, in playbook order.
 
-    Expected before the run, written against 2505022. Five distinct
-    owners: db-1 through db-4 on retrieved records, in that order, then
-    db-5 on the incident. The first three records are searched. db-4
-    and db-5 are listed under unchecked coverage with a reason. A second
-    run returns the same searches and the same unchecked list.
+    Expected before the run, written against 2ec296a. Parallel mode is
+    on. Workers are forced to finish in the reverse of playbook order.
+    Owners still follow playbook step, then record order within the
+    step, then the incident field. Five owners: three searched, two
+    listed under unchecked coverage. A second run matches the first.
     """
 
     def test_five_owners_search_three_and_list_the_rest(self):
-        records = [
-            {
-                "_time": "2024-11-04T07:59:10Z",
-                "service": "checkout-api",
-                "downstream": name,
-                "level": "ERROR",
-                "message": f"checkout-api latency waiting on {name}",
-            }
-            for name in ("db-1", "db-2", "db-3", "db-4")
-        ]
-        expected_searched = ["db-1", "db-2", "db-3"]
+        service = "checkout-api"
+        steps = _scheduled_latency_steps(service)
+        worker_order = []
+        owners = []
+        for step in steps:
+            worker = step["worker"]
+            if worker not in worker_order:
+                worker_order.append(worker)
+            label = step.get("label", step.get("action", ""))
+            owner = _OWNER_BY_LABEL.get(label)
+            if owner:
+                owners.append(owner)
+        owners.append("db-5")
+        delays = {
+            worker: 0.3 * (len(worker_order) - index)
+            for index, worker in enumerate(worker_order)
+        }
+        expected_finish = list(reversed(worker_order))
+        expected_searched = owners[:3]
         expected_unchecked = [
-            {"owner": "db-4", "reason": _OWNER_CAP_REASON},
-            {"owner": "db-5", "reason": _OWNER_CAP_REASON},
+            {"owner": name, "reason": _OWNER_CAP_REASON} for name in owners[3:]
         ]
 
         def _once():
-            result, gateway = _investigate_latency_owners(
-                "checkout-api", records, "db-5",
-            )
-            searched = [name for name in gateway.services if name != "checkout-api"]
+            result, gateway = _investigate_latency_owners(service, "db-5", delays)
+            searched = [name for name in gateway.services if name.startswith("db-")]
+            finish = _group_finish_order(gateway.completed, worker_order)
             coverage = result["_confidence_provenance"]["unchecked_coverage"]
-            return searched, coverage.get("unsearched_downstream_owners")
+            return searched, coverage.get("unsearched_downstream_owners"), finish
 
         first = _once()
         second = _once()
         assert first == second
+        assert first[2] == expected_finish
         assert first[0] == expected_searched
         assert first[1] == expected_unchecked

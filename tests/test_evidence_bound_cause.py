@@ -1543,3 +1543,74 @@ class TestConnectionPoolNotAnyPool:
                 _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
             ])
             _assert_not_a_pool(result)
+
+
+def _assert_connection_pool(result):
+    cause = result["cause"]
+    assert cause["statement"] == "connection pool exhausted on edge-api"
+    assert cause["confidence"] == _ONE_RAW
+    assert cause["category"] == "connection_pool_exhaustion"
+    assert {ref["signal"] for ref in cause["evidence_refs"]} == {
+        "connection_pool_exhausted",
+    }
+
+
+class TestConnectionPoolAllowList:
+    """v1.11 allow list, written against 2ec296a before the run.
+
+    A line binds only when pool is bare, the word in front is connection,
+    db, database, jdbc, or hikari, or the token is HikariPool, JdbcPool,
+    QueuePool, or AsyncAdaptedQueuePool. Any other word in front does not.
+    """
+
+    def test_unlisted_pools_do_not_bind(self):
+        lines = (
+            "executor pool limit reached",
+            "memory pool exhausted",
+            "object pool exhausted",
+            "task pool limit reached",
+            "goroutine pool overflow",
+        )
+        misses = []
+        for message in lines:
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            cause = result["cause"]
+            signals = _pool_signals(result)
+            if (
+                "pool" in cause["statement"].lower()
+                or cause["category"] == "connection_pool_exhaustion"
+                or signals
+            ):
+                misses.append(
+                    f"{message!r} -> {cause['statement']!r} "
+                    f"cat={cause['category']} signals={signals}"
+                )
+        assert misses == []
+
+    def test_listed_connection_pools_bind(self):
+        lines = (
+            "JdbcPool exhausted",
+            "database pool exhausted",
+            "QueuePool limit of size 8 overflow 12 reached, "
+            "connection timed out, timeout 20",
+            "AsyncAdaptedQueuePool limit of size 8 overflow 12 reached, "
+            "connection timed out, timeout 20",
+        )
+        misses = []
+        for message in lines:
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            cause = result["cause"]
+            signals = {ref["signal"] for ref in cause["evidence_refs"]}
+            try:
+                _assert_connection_pool(result)
+            except AssertionError:
+                misses.append(
+                    f"{message!r} -> {cause['statement']!r} "
+                    f"cat={cause['category']} conf={cause['confidence']} "
+                    f"signals={signals}"
+                )
+        assert misses == []

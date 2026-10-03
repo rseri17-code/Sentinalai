@@ -19,6 +19,8 @@ from supervisor.helpers.confidence import compute_confidence
 from supervisor.helpers.placeholders import is_placeholder
 from supervisor.helpers.timeout_evidence import (
     ALIGNMENT_WINDOW_MINUTES,
+    _POOL_PATTERNS,
+    _listed_pool_text,
     attach_cited_outputs,
     resolve_evidence_ref,
     ref_in_window,
@@ -1612,5 +1614,122 @@ class TestConnectionPoolAllowList:
                     f"{message!r} -> {cause['statement']!r} "
                     f"cat={cause['category']} conf={cause['confidence']} "
                     f"signals={signals}"
+                )
+        assert misses == []
+
+
+_ADO_NET_POOL = (
+    "Timeout expired. The timeout period elapsed prior to obtaining a "
+    "connection from the pool. This may have occurred because all pooled "
+    "connections were in use and max pool size was reached."
+)
+
+# One line per _POOL_PATTERNS entry, in the same order. Each line is
+# written to match that entry and no other entry after blanking.
+_POOL_PATTERN_EXAMPLES = (
+    "pool exhausted",
+    "connection pool is full",
+    "pool overflow on checkout",
+    "overflow, pool",
+    "pool size limit reached",
+    "limit reached, pool",
+    "unable to acquire connection from the server",
+    "connection is not available to the caller",
+    "hikari pool not available",
+    "pool wait queue length is 40",
+    "wait queue for a connection has 15 waiters",
+    "remaining connection slots: 0 of 100",
+    "too many clients already connected",
+    "cannot get a connection after 5 attempts",
+    "maximum pool size reached",
+    "connection pool held 20 connections",
+)
+
+
+class TestMaxPoolAndDriverPools:
+    """v1.11. max/maximum pool, and pgx/r2dbc, written against fbd7622.
+
+    max and maximum in front of pool bind only when the word before
+    them is empty, punctuation, a log level, an allowed pool word, or
+    a function word. A noun in that slot does not.
+    """
+
+    def test_max_pool_size_binds_when_the_lookback_allows_it(self):
+        lines = (
+            "maximum pool size reached",
+            "max pool size exceeded",
+            "connection max pool size reached",
+            _ADO_NET_POOL,
+        )
+        misses = []
+        for message in lines:
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            cause = result["cause"]
+            try:
+                _assert_connection_pool(result)
+            except AssertionError:
+                misses.append(
+                    f"{message!r} -> {cause['statement']!r} "
+                    f"cat={cause['category']} conf={cause['confidence']}"
+                )
+        assert misses == []
+
+    def test_a_noun_before_max_pool_does_not_bind(self):
+        for message in (
+            "executor max pool size reached",
+            "thread max pool size reached",
+        ):
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            _assert_not_a_pool(result)
+
+    def test_pgx_and_r2dbc_pools_bind(self):
+        for message in ("pgx pool exhausted", "r2dbc pool exhausted"):
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            _assert_connection_pool(result)
+
+
+class TestPoolPatternExamples:
+    """Each pool pattern has one example that survives blanking and binds.
+
+    The example count must equal the pattern count. An example that
+    matches a different entry, or no entry, fails this test.
+    """
+
+    def test_example_count_matches_pattern_count(self):
+        assert len(_POOL_PATTERN_EXAMPLES) == len(_POOL_PATTERNS)
+
+    def test_each_example_matches_only_its_own_pattern(self):
+        assert len(_POOL_PATTERN_EXAMPLES) == len(_POOL_PATTERNS)
+        misses = []
+        for index, line in enumerate(_POOL_PATTERN_EXAMPLES):
+            blanked = _listed_pool_text(line)
+            hits = [
+                i for i, pattern in enumerate(_POOL_PATTERNS)
+                if pattern.search(blanked)
+            ]
+            if hits != [index]:
+                misses.append(f"{index}: {line!r} hits {hits}")
+        assert misses == []
+
+    def test_each_example_binds_as_a_connection_pool(self):
+        assert len(_POOL_PATTERN_EXAMPLES) == len(_POOL_PATTERNS)
+        misses = []
+        for line in _POOL_PATTERN_EXAMPLES:
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", line),
+            ])
+            cause = result["cause"]
+            try:
+                _assert_connection_pool(result)
+            except AssertionError:
+                misses.append(
+                    f"{line!r} -> {cause['statement']!r} "
+                    f"cat={cause['category']} conf={cause['confidence']}"
                 )
         assert misses == []

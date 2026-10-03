@@ -976,3 +976,81 @@ class TestDownstreamOwnerSearchCap:
         assert first[2] == expected_finish
         assert first[0] == expected_searched
         assert first[1] == expected_unchecked
+
+
+class _EmptyLabelLogs:
+    def __init__(self):
+        self.services: list[str] = []
+
+    def execute(self, action, params):
+        params = params or {}
+        service = str(params.get("service") or "")
+        self.services.append(service)
+        if action == "search_logs" and service == "checkout-api":
+            return {"logs": {"results": [{
+                "_time": "2024-11-04T07:59:10Z",
+                "service": "checkout-api",
+                "downstream": "db-1",
+                "level": "ERROR",
+                "message": "checkout-api latency waiting on db-1",
+            }], "count": 1}}
+        if action == "search_logs":
+            return {"logs": {"results": [], "count": 0}}
+        return {}
+
+
+class TestEmptyPlaybookLabel:
+    """An empty step label uses the action as the evidence key.
+
+    Expected before the run, written against fbd7622. The owner walk
+    and the evidence dict must use that same key, so the downstream
+    owner on the step's log is searched.
+    """
+
+    def test_empty_label_still_searches_the_downstream_owner(self):
+        import supervisor.agent as agent_module
+
+        steps = [{
+            "worker": "log_worker",
+            "action": "search_logs",
+            "label": "",
+            "query_hint": "latency {service}",
+        }]
+        saved_env = {
+            key: os.environ.get(key)
+            for key in ("LLM_ENABLED", "PARALLEL_PLAYBOOK", "CALIBRATION_ENABLED")
+        }
+        saved_playbook = agent_module.get_evolved_playbook
+        os.environ["LLM_ENABLED"] = "false"
+        os.environ["PARALLEL_PLAYBOOK"] = "false"
+        os.environ["CALIBRATION_ENABLED"] = "false"
+        agent_module.get_evolved_playbook = lambda incident_type: list(steps)
+        try:
+            sup = SentinalAISupervisor()
+            sup._parallel_playbook = False
+            gateway = _EmptyLabelLogs()
+            for name in list(sup.workers):
+                sup.workers[name] = gateway
+            incident = {
+                "incident_id": "INC-FULL",
+                "affected_service": "checkout-api",
+                "summary": "checkout-api latency",
+                "start_time": _START,
+            }
+            sup._tls.current_incident = dict(incident)
+            sup._tls.run_started = "2024-11-04T12:00:00Z"
+            evidence = sup._execute_playbook(
+                "latency", "INC-FULL", "checkout-api",
+                ReceiptCollector(case_id="INC-FULL"),
+                ExecutionBudget(), CircuitBreakerRegistry(),
+            )
+        finally:
+            agent_module.get_evolved_playbook = saved_playbook
+            for key, value in saved_env.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+        assert "search_logs" in evidence
+        assert "" not in evidence
+        assert "db-1" in gateway.services

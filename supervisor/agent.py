@@ -2474,17 +2474,24 @@ class SentinalAISupervisor:
             _prov = dict(winner.bound_assessment.get("provenance") or {})
             _prov["unchecked_coverage"] = _cov
             winner.bound_assessment["provenance"] = _prov
+            # Every path names each failed search. A signal that did not
+            # report its window does not replace that record.
+            _unknowns = list(winner.bound_assessment.get("unknowns") or [])
+            for _row in _cov.get("tool_errors") or []:
+                _line = f"search did not happen: {_row.get('tool')}: {_row.get('error')}"
+                if _line not in _unknowns:
+                    _unknowns.append(_line)
+            _reason = str(winner.bound_assessment.get("reasoning") or "")
             if not _cov.get("searched_window_reported"):
-                _unknowns = list(winner.bound_assessment.get("unknowns") or [])
                 _note = "search did not report the window it covered"
                 if _note not in _unknowns:
                     _unknowns.append(_note)
-                winner.bound_assessment["unknowns"] = _unknowns
-                _reason = str(winner.bound_assessment.get("reasoning") or "")
                 if _note not in _reason:
-                    winner.bound_assessment["reasoning"] = (
+                    _reason = (
                         _reason + " Not established: " + _note + "."
                     ).strip()
+            winner.bound_assessment["unknowns"] = _unknowns
+            winner.bound_assessment["reasoning"] = _reason
 
         _bound_winner = bool(winner and winner.evidence_bound and winner.bound_assessment)
         if winner:

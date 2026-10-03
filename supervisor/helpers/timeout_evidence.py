@@ -195,7 +195,21 @@ def decide_timeout(
     contributions: list[dict] = []
     base = 0
 
-    if pool_views and slow_views:
+    unsaturated = contradicting_pool_readings(evidence, start, end)
+    if pool_views and unsaturated:
+        # A pool-exhaustion candidate plus a gauge that shows the pool
+        # is not saturated is an unresolved contradiction. The log does
+        # not outrank that reading.
+        conflict = unsaturated_pool_conflict(pool_views[0], unsaturated, "timeout")
+        contradictions = conflict["contradictions"]
+        unknowns.extend(conflict["unknowns"])
+        base = conflict["base"]
+        contributions = conflict["contributions"]
+        statement = conflict["statement"]
+        category = conflict["category"]
+        name = conflict["hypothesis_name"]
+        cause_refs = []
+    elif pool_views and slow_views:
         # Both mechanisms are directly evidenced. Neither is the unique
         # immediate cause, so the narrowest claim is UNKNOWN.
         pool_ref = _ref(pool_views[0], "connection_pool_exhausted", ds)
@@ -1056,6 +1070,364 @@ def _iter_latency(evidence: dict, signals: dict, metrics: dict) -> list[dict]:
             "baseline": latency.get("baseline_p95"),
         })
     return views[:1]
+
+
+def _fmt_gauge(value: float) -> str:
+    if float(value).is_integer():
+        return str(int(value))
+    return str(value)
+
+
+def _gauge(value: Any) -> float | None:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+    return None
+
+
+def _object_gauges(obj: dict) -> tuple[float | None, float | None, float | None]:
+    """active, idle, max from one pool object. Field names vary by worker."""
+    active = None
+    for key in ("active", "active_connections", "pool_active", "db_pool_active"):
+        active = _gauge(obj.get(key))
+        if active is not None:
+            break
+    idle = None
+    for key in ("idle", "idle_connections", "pool_idle", "db_pool_idle"):
+        idle = _gauge(obj.get(key))
+        if idle is not None:
+            break
+    limit = None
+    for key in (
+        "max", "pool_max", "pool_size", "max_connections",
+        "max_pool_size", "db_pool_max",
+    ):
+        limit = _gauge(obj.get(key))
+        if limit is not None:
+            break
+    return active, idle, limit
+
+
+def _series_role(name: str) -> str | None:
+    """active, idle, or max for a pool or connection gauge series."""
+    low = (name or "").lower().replace("-", "_")
+    if not re.search(r"pool|connection", low):
+        return None
+    if "idle" in low:
+        return "idle"
+    if re.search(
+        r"(^|_)(max|limit|capacity)(_|$)|pool_size|max_pool|pool_max",
+        low,
+    ):
+        return "max"
+    if re.search(r"active|in_use|busy|used", low):
+        return "active"
+    return None
+
+
+def _text_field(obj: dict, *keys: str) -> str:
+    for key in keys:
+        val = obj.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return ""
+
+
+def is_unsaturated_pool(record: dict) -> bool:
+    """True when the gauge shows the pool is not saturated.
+
+    Active is well below max, and many connections are idle. A series
+    that only reports active, including one that later hits the max,
+    is not this reading.
+    """
+    if not isinstance(record, dict):
+        return False
+    active = _gauge(record.get("active"))
+    idle = _gauge(record.get("idle"))
+    limit = _gauge(record.get("max"))
+    if active is None or idle is None or limit is None or limit <= 0:
+        return False
+    return active <= limit * 0.5 and idle >= active and idle >= limit * 0.25 and idle > 0
+
+
+def pool_reading_text(record: dict) -> str:
+    return (
+        f"pool not saturated: active {_fmt_gauge(float(record['active']))}, "
+        f"idle {_fmt_gauge(float(record['idle']))}, "
+        f"max {_fmt_gauge(float(record['max']))}"
+    )
+
+
+def _pool_reading_view(
+    active: float,
+    idle: float,
+    limit: float,
+    *,
+    ts: str,
+    seq: Any,
+    tool: str,
+    locator: dict,
+    service: str,
+) -> dict:
+    record: dict[str, Any] = {
+        "name": "db_connection_pool",
+        "value": active,
+        "active": active,
+        "idle": idle,
+        "max": limit,
+        "timestamp": ts,
+    }
+    if service:
+        record["service"] = service
+    return {
+        "record": record,
+        "kind": "metric",
+        "pool_reading": True,
+        "timestamp": ts,
+        "sequence_order": seq if isinstance(seq, int) else None,
+        "tool": tool,
+        "locator": locator,
+    }
+
+
+def _emit_pool_object(
+    obj: dict,
+    *,
+    ts: str,
+    seq: Any,
+    tool: str,
+    locator: dict,
+    service: str,
+) -> dict | None:
+    active, idle, limit = _object_gauges(obj)
+    if active is None or idle is None or limit is None:
+        return None
+    when = _text_field(obj, "timestamp", "_time", "ts") or ts
+    return _pool_reading_view(
+        active, idle, limit,
+        ts=when, seq=seq, tool=tool, locator=locator, service=service,
+    )
+
+
+def _pool_objects(val: dict, key: str, seq: Any, tool: str, service: str) -> list[dict]:
+    """db_connection_pool nested on the payload, on signals, or on golden signals."""
+    found: list[dict] = []
+    parents: list[tuple[dict, list]] = [(val, [])]
+    signals = val.get("signals")
+    if isinstance(signals, dict):
+        parents.append((signals, ["signals"]))
+        golden = signals.get("golden_signals")
+        if isinstance(golden, dict):
+            parents.append((golden, ["signals", "golden_signals"]))
+    golden = val.get("golden_signals")
+    if isinstance(golden, dict):
+        parents.append((golden, ["golden_signals"]))
+    for container, prefix in parents:
+        parent_ts = _text_field(container, "anomaly_start", "timestamp", "_time")
+        if not parent_ts:
+            parent_ts = _text_field(val, "anomaly_start", "timestamp", "_time")
+        for name in ("db_connection_pool", "connection_pool"):
+            obj = container.get(name)
+            if not isinstance(obj, dict):
+                continue
+            view = _emit_pool_object(
+                obj,
+                ts=parent_ts,
+                seq=seq,
+                tool=tool,
+                locator={"evidence_key": key, "path": prefix + [name]},
+                service=service or _text_field(container, "service") or _text_field(val, "service"),
+            )
+            if view is not None:
+                found.append(view)
+    return found
+
+
+def _absorb_point(buckets: dict[str, dict], point: dict, path: list, fallback_max: float | None) -> None:
+    if not isinstance(point, dict):
+        return
+    active, idle, limit = _object_gauges(point)
+    if active is not None and idle is not None and (limit is not None or fallback_max is not None):
+        ts = _text_field(point, "timestamp", "_time", "ts")
+        slot = buckets.setdefault(ts, {})
+        slot["active"] = active
+        slot["idle"] = idle
+        slot["max"] = limit if limit is not None else fallback_max
+        slot.setdefault("path", path)
+        return
+    role = _series_role(str(point.get("name") or point.get("metric") or ""))
+    value = _gauge(point.get("value"))
+    if role is None or value is None:
+        return
+    ts = _text_field(point, "timestamp", "_time", "ts")
+    slot = buckets.setdefault(ts, {})
+    slot[role] = value
+    if role == "active":
+        slot.setdefault("path", path)
+
+
+def _readings_from_buckets(
+    buckets: dict[str, dict],
+    *,
+    fallback_max: float | None,
+    seq: Any,
+    tool: str,
+    key: str,
+    service: str,
+) -> list[dict]:
+    found = []
+    for ts, slot in buckets.items():
+        active = slot.get("active")
+        idle = slot.get("idle")
+        limit = slot.get("max")
+        if limit is None:
+            limit = fallback_max
+        if active is None or idle is None or limit is None:
+            continue
+        found.append(_pool_reading_view(
+            float(active), float(idle), float(limit),
+            ts=ts,
+            seq=seq,
+            tool=tool,
+            locator={"evidence_key": key, "path": slot.get("path") or ["metrics"]},
+            service=service,
+        ))
+    return found
+
+
+def _pool_series(val: dict, key: str, seq: Any, tool: str, service: str) -> list[dict]:
+    """Flat Prometheus points, or a dict of named series with values."""
+    blob = val.get("metrics")
+    fallback = _gauge(val.get("pool_max"))
+    buckets: dict[str, dict] = {}
+    if isinstance(blob, list):
+        for index, point in enumerate(blob):
+            _absorb_point(buckets, point, ["metrics", index], fallback)
+    elif isinstance(blob, dict):
+        if fallback is None:
+            fallback = _gauge(blob.get("pool_max"))
+        nested = blob.get("metrics")
+        if isinstance(nested, list):
+            for index, point in enumerate(nested):
+                _absorb_point(buckets, point, ["metrics", "metrics", index], fallback)
+        else:
+            for name, body in blob.items():
+                if name in {"metrics", "baseline", "pattern", "pool_max", "note"}:
+                    continue
+                if isinstance(body, dict) and isinstance(body.get("values"), list):
+                    series_max = _gauge(body.get("pool_max"))
+                    if series_max is not None and fallback is None:
+                        fallback = series_max
+                    for index, point in enumerate(body["values"]):
+                        if isinstance(point, dict):
+                            named = dict(point)
+                            named.setdefault("name", name)
+                            _absorb_point(
+                                buckets, named,
+                                ["metrics", name, "values", index],
+                                series_max if series_max is not None else fallback,
+                            )
+                elif isinstance(body, list):
+                    for index, point in enumerate(body):
+                        if isinstance(point, dict):
+                            named = dict(point)
+                            named.setdefault("name", name)
+                            _absorb_point(
+                                buckets, named, ["metrics", name, index], fallback,
+                            )
+    return _readings_from_buckets(
+        buckets, fallback_max=fallback, seq=seq, tool=tool, key=key, service=service,
+    )
+
+
+def iter_pool_readings(evidence: dict | None) -> list[dict]:
+    """Pool gauges from every shape workers return.
+
+    Flat Prometheus series (a list of points, or a dict of named series)
+    and a ``db_connection_pool`` object on the payload or nested under
+    ``signals`` / golden signals. A failed search is not a reading.
+    """
+    found: list[dict] = []
+    for key, val in (evidence or {}).items():
+        if str(key).startswith("_") or not isinstance(val, dict):
+            continue
+        if tool_search_error(val) is not None:
+            continue
+        seq = val.get("_receipt_sequence_order")
+        tool = str(val.get("_receipt_tool") or "")
+        service = _text_field(val, "service")
+        seen: set[tuple] = set()
+        for view in (
+            _pool_objects(val, str(key), seq, tool, service)
+            + _pool_series(val, str(key), seq, tool, service)
+        ):
+            record = view["record"]
+            identity = (
+                view.get("timestamp") or "",
+                record.get("active"),
+                record.get("idle"),
+                record.get("max"),
+            )
+            if identity in seen:
+                continue
+            seen.add(identity)
+            found.append(view)
+    return found
+
+
+def contradicting_pool_readings(evidence: dict | None, start, end) -> list[dict]:
+    """In-window readings that show the pool is not saturated.
+
+    A reading with no timestamp was retrieved for this incident and
+    still counts. A timestamp outside the alignment window does not.
+    """
+    chosen = []
+    for view in iter_pool_readings(evidence):
+        if not is_unsaturated_pool(view.get("record") or {}):
+            continue
+        ts = str(view.get("timestamp") or "")
+        if ts and not _in_window(ts, start, end):
+            continue
+        chosen.append(view)
+    return chosen
+
+
+def unsaturated_pool_conflict(pool_view: dict, readings: list[dict], incident_type: str) -> dict:
+    """Pool exhaustion contradicted by a gauge that is not saturated."""
+    pool_ref = _ref(pool_view, "connection_pool_exhausted", "")
+    contradictions = [
+        {"statement": "connection pool exhaustion", "evidence_refs": [pool_ref]},
+    ]
+    contributions = [
+        _contrib("contradiction", pool_ref, CONFLICT_EACH, "direct", "contradiction"),
+    ]
+    for reading in readings:
+        ref = _ref(reading, "pool_not_saturated", "")
+        contradictions.append({
+            "statement": pool_reading_text(reading["record"]),
+            "evidence_refs": [ref],
+        })
+        contributions.append(
+            _contrib("contradiction", ref, CONFLICT_EACH, "direct", "contradiction"),
+        )
+    score = _clamp(CONFLICT_BASE + sum(item["delta"] for item in contributions))
+    score = min(score, 59)
+    label = incident_type or "incident"
+    statement = (
+        "timeout observed; cause UNKNOWN"
+        if label == "timeout"
+        else f"{label} observed; cause UNKNOWN"
+    )
+    return {
+        "hypothesis_name": "pool_metric_contradiction",
+        "statement": statement,
+        "category": "unknown",
+        "cause_confidence": score,
+        "cause_refs": [],
+        "contradictions": contradictions,
+        "unknowns": ["a retrieved pool metric shows the pool is not saturated"],
+        "contributions": contributions,
+        "base": CONFLICT_BASE,
+    }
 
 
 def tool_search_error(payload: dict) -> str | None:

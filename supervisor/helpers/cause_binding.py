@@ -28,10 +28,13 @@ from supervisor.helpers.timeout_evidence import (
     _record_downstream,
     _ref,
     dedupe_views,
+    is_unsaturated_pool,
+    iter_pool_readings,
     score_raw_support,
     successful_observation,
     tool_search_error,
     tool_search_errors,
+    unsaturated_pool_conflict,
 )
 
 # A raw symptom record exists, but it does not support the proposed cause.
@@ -376,6 +379,10 @@ def _collect_views(evidence, logs, signals, metrics, events, changes) -> list[di
             "tool": "",
             "locator": {"path": ["signals"]},
         })
+    # Pool gauges from Prometheus series and from signals.db_connection_pool.
+    # The same numbers are one reading whichever shape the worker used.
+    for reading in iter_pool_readings(evidence):
+        views.append(reading)
     return views
 
 
@@ -839,7 +846,7 @@ def _decide_from_views(
     if pool and slow:
         return _conflict(pool[0], slow[0], incident_type)
     if pool:
-        return _pool_cause(pool[0], views, service)
+        return _pool_cause(pool[0], views, service, incident_type)
     if slow:
         return _slow_cause(slow[0], service, views)
     exc = _exception_hit(logs)
@@ -896,7 +903,13 @@ def _conflict(pool: dict, slow: dict, incident_type: str) -> dict:
     }
 
 
-def _pool_cause(view: dict, views: list[dict], service: str) -> dict:
+def _pool_cause(view: dict, views: list[dict], service: str, incident_type: str = "timeout") -> dict:
+    unsaturated = [
+        item for item in views
+        if item.get("pool_reading") and is_unsaturated_pool(item.get("record") or {})
+    ]
+    if unsaturated:
+        return unsaturated_pool_conflict(view, unsaturated, incident_type)
     record = view["record"]
     own = _citation_service(record)
     pool_views = [
@@ -939,7 +952,9 @@ def _pool_cause(view: dict, views: list[dict], service: str) -> dict:
     refs = [_ref(v, "connection_pool_exhausted", "") for v in pool_views]
     for metric in dedupe_views([
         item for item in views
-        if item.get("kind") == "metric" and _pool_metric(item["record"])
+        if item.get("kind") == "metric"
+        and not item.get("pool_reading")
+        and _pool_metric(item["record"])
     ]):
         refs.append(_ref(metric, "connection_pool_exhausted", ""))
     return _direct(

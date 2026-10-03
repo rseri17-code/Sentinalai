@@ -1191,3 +1191,200 @@ class TestToolErrorIsUnchecked:
         snapshot = build_evidence_snapshot(evidence)
         assert "query_metrics" not in snapshot
         assert "search_timeout_logs" in snapshot
+
+
+# A pool gauge with active well below max and many idle. The conflict
+# score is 40 + (-8) for the pool line + (-8) for the reading.
+_POOL_CONFLICT = 40 + (-8) + (-8)
+_UNSATURATED = "pool not saturated: active 2, idle 40, max 50"
+_POOL_WHEN = "2024-08-01T12:00:10Z"
+
+
+def _pool_candidate_evidence(metric_payload):
+    return {
+        "search_timeout_logs": {
+            "_receipt_sequence_order": 2,
+            "_receipt_tool": "log_worker",
+            "logs": {
+                "results": [_pool_line_at("edge-api", _POOL_WHEN)],
+                "count": 1,
+            },
+        },
+        "query_pool": metric_payload,
+    }
+
+
+def _flat_pool_series():
+    """Prometheus-style list of points. Same numbers as the signals object."""
+    return {
+        "_receipt_sequence_order": 5,
+        "_receipt_tool": "metrics_worker",
+        "intent": "resource",
+        "metrics": [
+            {"name": "db_connection_pool_active", "timestamp": _POOL_WHEN, "value": 2},
+            {"name": "db_connection_pool_idle", "timestamp": _POOL_WHEN, "value": 40},
+            {"name": "db_connection_pool_max", "timestamp": _POOL_WHEN, "value": 50},
+        ],
+    }
+
+
+def _named_pool_series():
+    """Prometheus dict of series. pool_max lives on the active series."""
+    return {
+        "_receipt_sequence_order": 5,
+        "_receipt_tool": "metrics_worker",
+        "metrics": {
+            "db_connection_pool_active": {
+                "values": [{"timestamp": _POOL_WHEN, "value": 2}],
+                "pool_max": 50,
+            },
+            "db_connection_pool_idle": {
+                "values": [{"timestamp": _POOL_WHEN, "value": 40}],
+            },
+        },
+    }
+
+
+def _signals_pool():
+    """APM / golden-signals payload. The gauge is nested under signals."""
+    return {
+        "_receipt_sequence_order": 5,
+        "_receipt_tool": "apm_worker",
+        "signals": {
+            "anomaly_start": _POOL_WHEN,
+            "golden_signals": {
+                "latency": {"p95": 120, "baseline_p95": 80},
+            },
+            "db_connection_pool": {"active": 2, "idle": 40, "max": 50},
+        },
+    }
+
+
+def _apm_pool():
+    """APM object stored as the tool result. max_pool_size is the limit."""
+    return {
+        "_receipt_sequence_order": 5,
+        "_receipt_tool": "apm_worker",
+        "service": "edge-api",
+        "timestamp": _POOL_WHEN,
+        "db_connection_pool": {
+            "pool_name": "HikariPool-1",
+            "max_pool_size": 50,
+            "active": 2,
+            "idle": 40,
+            "pending": 0,
+        },
+    }
+
+
+def _contradiction_outcome(result):
+    cause = result["cause"]
+    return (
+        cause["statement"],
+        cause["confidence"],
+        cause["category"],
+        tuple(item["statement"] for item in cause["contradictions"]),
+        tuple(cause["evidence_refs"]),
+    )
+
+
+class TestUnsaturatedPoolContradicts:
+    """A pool metric that is not saturated contradicts exhaustion.
+
+    Expected before the run, for every payload shape:
+    statement ``timeout observed; cause UNKNOWN``, confidence 24
+    (below 60), no cause refs, and contradictions include
+    ``pool not saturated: active 2, idle 40, max 50``.
+    The flat series, the named series, the signals object, and the
+    APM object produce that same outcome.
+    """
+
+    def test_same_reading_contradicts_in_every_shape(self):
+        outcomes = [
+            _contradiction_outcome(_v18_with_evidence(
+                "edge-api", _pool_candidate_evidence(payload),
+            ))
+            for payload in (
+                _flat_pool_series(),
+                _named_pool_series(),
+                _signals_pool(),
+                _apm_pool(),
+            )
+        ]
+        expect = (
+            "timeout observed; cause UNKNOWN",
+            _POOL_CONFLICT,
+            "unknown",
+            ("connection pool exhaustion", _UNSATURATED),
+            (),
+        )
+        assert all(item == expect for item in outcomes)
+        assert outcomes[0] == outcomes[1] == outcomes[2] == outcomes[3]
+        assert outcomes[0][1] < 60
+
+
+def _failed_log_search():
+    """Log search errored. A signal was retrieved and reported no window."""
+    return {
+        "search_logs": {
+            "_receipt_sequence_order": 2,
+            "_receipt_tool": "log_worker",
+            "tool": "splunk.search_oneshot",
+            "tool_status": "error",
+            "error": "gateway_exception: connection reset",
+        },
+        "check_signals": {
+            "_receipt_sequence_order": 1,
+            "_receipt_tool": "apm_worker",
+            "signals": {
+                "anomaly_start": "2024-08-01T12:00:00Z",
+                "golden_signals": {
+                    "latency": {"p95": 900, "baseline_p95": 80},
+                    "errors": {"rate": 0.4, "baseline_rate": 0.01},
+                },
+            },
+        },
+    }
+
+
+_FAILED_LOG = {
+    "evidence_key": "search_logs",
+    "tool": "splunk.search_oneshot",
+    "error": "gateway_exception: connection reset",
+}
+
+
+class TestFailedSearchOnEveryPath:
+    """Latency and error_spike name a failed log search.
+
+    Expected before the run: ``unchecked_coverage.tool_errors`` is
+    exactly the splunk search and its gateway error. The cause
+    unknowns include ``search did not happen: splunk.search_oneshot:
+    gateway_exception: connection reset``. The error is not a
+    contradiction and not a cause ref.
+    """
+
+    def _assert_failed_log(self, incident_type):
+        result = _v18_with_evidence(
+            "edge-api", _failed_log_search(), incident_type=incident_type,
+        )
+        cause = result["cause"]
+        coverage = result["_confidence_provenance"]["unchecked_coverage"]
+        assert coverage["tool_errors"] == [_FAILED_LOG]
+        assert (
+            "search did not happen: splunk.search_oneshot: "
+            "gateway_exception: connection reset"
+        ) in cause["unknowns"]
+        assert cause["contradictions"] == []
+        assert all(
+            (ref.get("locator") or {}).get("evidence_key") != "search_logs"
+            for ref in cause["evidence_refs"]
+        )
+        assert "UNKNOWN" in cause["statement"]
+        assert cause["confidence"] < 60
+
+    def test_latency_log_search_error_is_unchecked(self):
+        self._assert_failed_log("latency")
+
+    def test_error_spike_log_search_error_is_unchecked(self):
+        self._assert_failed_log("error_spike")

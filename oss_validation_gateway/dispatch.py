@@ -55,15 +55,20 @@ def _range_window(params: dict[str, Any]) -> tuple[str, str]:
     return str(start), str(end)
 
 
-def _golden_values(backends: Backends, service: str) -> dict[str, float]:
+def _golden_values(
+    backends: Backends, service: str
+) -> tuple[dict[str, float], list[dict[str, str]]]:
     """Query the seven golden signals.
 
     A missing or invalid service raises ``ValueError`` from
-    ``_safe_service`` before any query. Prometheus failures still become
-    0.0 so one bad series does not drop the rest.
+    ``_safe_service`` before any query. A query that raises, or whose
+    Prometheus body reports status ``error``, is omitted and listed in
+    ``unavailable_signals`` with reason ``error``. A body with no samples
+    is omitted with reason ``empty``. A measured 0 stays 0.
     """
     safe = _safe_service(service)
     values: dict[str, float] = {}
+    unavailable: list[dict[str, str]] = []
     for key in (
         "latency_p95",
         "latency_baseline_p95",
@@ -75,11 +80,29 @@ def _golden_values(backends: Backends, service: str) -> dict[str, float]:
     ):
         try:
             payload = backends.prometheus_query(golden_signal_promql(key, safe))
-            values[key] = shaping.prometheus_scalar(payload, default=0.0)
         except Exception as exc:
             logger.warning("prometheus golden signal %s failed: %s", key, exc)
-            values[key] = 0.0
-    return values
+            unavailable.append({"signal": key, "reason": "error"})
+            continue
+        if str(payload.get("status") or "").lower() == "error":
+            logger.warning(
+                "prometheus golden signal %s failed: %s", key, payload.get("error")
+            )
+            unavailable.append({"signal": key, "reason": "error"})
+            continue
+        measured = shaping.prometheus_scalar(payload, default=None)
+        if measured is None:
+            unavailable.append({"signal": key, "reason": "empty"})
+            continue
+        values[key] = float(measured)
+    return values, unavailable
+
+
+def _shaped_golden(backends: Backends, service: str) -> dict[str, Any]:
+    values, unavailable = _golden_values(backends, service)
+    return shaping.shape_golden_signals(
+        values, service=service, unavailable_signals=unavailable
+    )
 
 
 def dispatch(tool_name: str, params: dict[str, Any] | None, backends: Backends) -> dict[str, Any]:
@@ -224,7 +247,7 @@ def _sysdig(operation: str, params: dict[str, Any], service: str, backends: Back
             prom_range = None
         shaped = shaping.shape_metrics(
             payload,
-            metric_name=metric or "request_rate",
+            metric_name=metric,
             service=service,
             limit=None,
             window_start=shaping.unix_to_iso(start),
@@ -235,8 +258,7 @@ def _sysdig(operation: str, params: dict[str, Any], service: str, backends: Back
         shaped["promql"] = promql
         return shaped
     if operation in {"golden_signals"}:
-        values = _golden_values(backends, service)
-        return shaping.shape_golden_signals(values, service=service)
+        return _shaped_golden(backends, service)
     if operation in {"get_events", "get_kubernetes_events"}:
         alerts = backends.alertmanager_alerts()
         return shaping.shape_events(alerts)
@@ -249,8 +271,7 @@ def _sysdig(operation: str, params: dict[str, Any], service: str, backends: Back
 
 def _dynatrace(operation: str, params: dict[str, Any], service: str, backends: Backends) -> dict[str, Any]:
     if operation in {"get_metrics"}:
-        values = _golden_values(backends, service)
-        return shaping.shape_golden_signals(values, service=service)
+        return _shaped_golden(backends, service)
     if operation == "get_problems":
         return shaping.shape_problems(backends.alertmanager_alerts())
     if operation == "get_events":
@@ -263,8 +284,7 @@ def _dynatrace(operation: str, params: dict[str, Any], service: str, backends: B
 
 def _signalfx(operation: str, params: dict[str, Any], service: str, backends: Backends) -> dict[str, Any]:
     if operation == "query_signalfx_metrics":
-        values = _golden_values(backends, service)
-        return shaping.shape_golden_signals(values, service=service)
+        return _shaped_golden(backends, service)
     if operation == "get_signalfx_active_incidents":
         return shaping.shape_incidents(backends.alertmanager_alerts())
     return shaping.shape_skip("signalfx", operation)

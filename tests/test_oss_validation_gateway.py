@@ -707,6 +707,44 @@ class TestDispatch:
         assert "empty" in result["error"]
         assert "payment-service" not in result["error"]
 
+    def _golden_by_query(self, saturation_payload: Any):
+        def route(method: str, url: str, params: dict[str, Any] | None, body: Any) -> Any:
+            query = str((params or {}).get("query") or "")
+            if "demo_saturation_pct" in query:
+                if isinstance(saturation_payload, Exception):
+                    raise saturation_payload
+                return saturation_payload
+            return _prom_vector(12.0)
+
+        return _backends({"/api/v1/query": route})
+
+    def test_saturation_error_is_unavailable_not_zero(self):
+        gw = self._golden_by_query(ConnectionError("prometheus down"))
+        result = dispatch("sysdig.golden_signals", {"service": "payment-service"}, gw)
+        golden = result["signals"]["golden_signals"]
+        assert "saturation" not in golden
+        assert "saturation_pct" not in result["metrics"]
+        assert {"signal": "saturation", "reason": "error"} in result["unavailable_signals"]
+        assert golden["latency"]["p95"] == 12.0
+
+    def test_saturation_empty_is_unavailable_not_zero(self):
+        empty = {"status": "success", "data": {"resultType": "vector", "result": []}}
+        gw = self._golden_by_query(empty)
+        result = dispatch("sysdig.golden_signals", {"service": "payment-service"}, gw)
+        golden = result["signals"]["golden_signals"]
+        assert "saturation" not in golden
+        assert "saturation_pct" not in result["metrics"]
+        assert {"signal": "saturation", "reason": "empty"} in result["unavailable_signals"]
+        assert golden["latency"]["p95"] == 12.0
+
+    def test_saturation_measured_zero_stays_zero(self):
+        gw = self._golden_by_query(_prom_vector(0.0))
+        result = dispatch("sysdig.golden_signals", {"service": "payment-service"}, gw)
+        golden = result["signals"]["golden_signals"]
+        assert golden["saturation"]["pct"] == 0
+        assert result["metrics"]["saturation_pct"] == 0
+        assert result.get("unavailable_signals", []) == []
+
     def test_golden_signals_missing_service_is_not_defaulted(self):
         gw = _backends({"/api/v1/query": _prom_vector(1.0)})
         result = dispatch("DynatraceTarget___get_metrics", {}, gw)

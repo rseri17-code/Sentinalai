@@ -390,7 +390,7 @@ def _prom_samples(payload: dict[str, Any]) -> list[tuple[float, float, dict[str,
     return samples
 
 
-def _scalar(payload: dict[str, Any], default: float = 0.0) -> float:
+def _scalar(payload: dict[str, Any], default: float | None = 0.0) -> float | None:
     samples = _prom_samples(payload)
     if not samples:
         return default
@@ -444,38 +444,60 @@ def shape_metrics(
 def shape_golden_signals(
     values: dict[str, float],
     service: str = "",
+    unavailable_signals: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
-    p95 = float(values.get("latency_p95") or 0)
-    baseline = float(values.get("latency_baseline_p95") or 0)
+    """Shape measured golden signals.
+
+    Keys absent from ``values`` are left out. A measured 0 stays 0.
+    ``unavailable_signals`` lists queries that failed or returned nothing.
+    """
+    latency: dict[str, float] = {}
+    for source, dest in (
+        ("latency_p95", "p95"),
+        ("latency_baseline_p95", "baseline_p95"),
+        ("latency_p50", "p50"),
+        ("latency_p99", "p99"),
+    ):
+        if source in values:
+            latency[dest] = float(values[source])
+    golden: dict[str, Any] = {}
+    if latency:
+        golden["latency"] = latency
+    if "error_rate" in values:
+        golden["errors"] = {"rate": float(values["error_rate"])}
+    if "request_rate" in values:
+        golden["traffic"] = {"rps": float(values["request_rate"])}
+    if "saturation" in values:
+        golden["saturation"] = {"pct": float(values["saturation"])}
+
+    metrics: dict[str, Any] = {"service": service}
+    if "error_rate" in values:
+        metrics["error_rate"] = float(values["error_rate"])
+    if "latency_p95" in values:
+        p95 = float(values["latency_p95"])
+        metrics["latency_p95"] = p95
+        metrics["p95_ms"] = p95
+    if "latency_p50" in values:
+        metrics["latency_p50_ms"] = float(values["latency_p50"])
+    if "latency_p99" in values:
+        metrics["latency_p99_ms"] = float(values["latency_p99"])
+    if "request_rate" in values:
+        rate = float(values["request_rate"])
+        metrics["request_rate"] = rate
+        metrics["rps"] = rate
+    if "saturation" in values:
+        metrics["saturation_pct"] = float(values["saturation"])
+
     shaped: dict[str, Any] = {
         "signals": {
-            "golden_signals": {
-                "latency": {
-                    "p95": p95,
-                    "baseline_p95": baseline,
-                    "p50": float(values.get("latency_p50") or 0),
-                    "p99": float(values.get("latency_p99") or 0),
-                },
-                "errors": {"rate": float(values.get("error_rate") or 0)},
-                "traffic": {"rps": float(values.get("request_rate") or 0)},
-                "saturation": {"pct": float(values.get("saturation") or 0)},
-            },
+            "golden_signals": golden,
             "service": service,
         },
-        "metrics": {
-            "service": service,
-            "error_rate": float(values.get("error_rate") or 0),
-            "latency_p95": p95,
-            "p95_ms": p95,
-            "latency_p50_ms": float(values.get("latency_p50") or 0),
-            "latency_p99_ms": float(values.get("latency_p99") or 0),
-            "request_rate": float(values.get("request_rate") or 0),
-            "rps": float(values.get("request_rate") or 0),
-            "saturation_pct": float(values.get("saturation") or 0),
-        },
+        "metrics": metrics,
         "source": "prometheus",
         "range": None,
         "step": None,
+        "unavailable_signals": list(unavailable_signals or []),
     }
     shaped.update(result_bounds(
         count=len(values),
@@ -573,5 +595,5 @@ def empty_stub_for(tool_name: str) -> dict[str, Any]:
     return shape_skip(server, operation)
 
 
-def prometheus_scalar(payload: dict[str, Any], default: float = 0.0) -> float:
+def prometheus_scalar(payload: dict[str, Any], default: float | None = 0.0) -> float | None:
     return _scalar(payload, default=default)

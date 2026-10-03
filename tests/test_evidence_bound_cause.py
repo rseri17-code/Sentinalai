@@ -737,3 +737,74 @@ class TestLlmRefineGate:
         assert result["confidence"] >= 60
         assert result["confidence"] != 97
         assert result["cause"]["confidence"] <= 100
+
+
+class TestGatewayTruncation:
+    """Truncation comes from the payload. A full list is not a complete search."""
+
+    def test_truncated_true_uses_gateway_timestamps(self):
+        from supervisor.helpers.cause_binding import unchecked_coverage
+
+        evidence = {
+            "search_logs": {
+                "logs": {
+                    "results": [{
+                        "_time": "1999-01-01T00:00:00Z",
+                        "message": "older than the gateway span",
+                    }],
+                    "count": 1,
+                },
+                "limit": 1,
+                "truncated": True,
+                "oldest_ts": "2024-11-04T07:00:00Z",
+                "newest_ts": "2024-11-04T07:59:00Z",
+            }
+        }
+        coverage = unchecked_coverage(None, evidence)
+        row = coverage["truncations"][0]
+        assert row["evidence_key"] == "search_logs"
+        assert row["truncated"] is True
+        assert row["truncation_unknown"] is False
+        assert row["oldest_ts"] == "2024-11-04T07:00:00Z"
+        assert row["newest_ts"] == "2024-11-04T07:59:00Z"
+        assert coverage["truncation_unknown"] is False
+
+    def test_truncated_false_is_an_explicit_report(self):
+        from supervisor.helpers.cause_binding import unchecked_coverage
+
+        evidence = {
+            "query_metrics": {
+                "metrics": {
+                    "metrics": [{"timestamp": "2024-11-04T07:15:00Z"}],
+                    "truncated": False,
+                    "oldest_ts": "2024-11-04T07:10:00Z",
+                    "newest_ts": "2024-11-04T07:40:00Z",
+                    "range": "30m",
+                    "step": "30s",
+                }
+            }
+        }
+        coverage = unchecked_coverage(None, evidence)
+        row = coverage["truncations"][0]
+        assert row["truncated"] is False
+        assert row["truncation_unknown"] is False
+        assert row["oldest_ts"] == "2024-11-04T07:10:00Z"
+        assert row["newest_ts"] == "2024-11-04T07:40:00Z"
+        assert coverage["truncation_unknown"] is False
+
+    def test_missing_truncated_is_unknown_even_when_count_equals_limit(self):
+        from supervisor.helpers.cause_binding import unchecked_coverage
+
+        evidence = {
+            "search_logs": {
+                "logs": {
+                    "results": [{"message": "row", "_time": "2024-11-04T07:30:00Z"}] * 50,
+                    "count": 50,
+                },
+                "limit": 50,
+            }
+        }
+        coverage = unchecked_coverage(None, evidence)
+        row = coverage["truncations"][0]
+        assert row == {"evidence_key": "search_logs", "truncation_unknown": True}
+        assert coverage["truncation_unknown"] is True

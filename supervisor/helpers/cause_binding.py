@@ -1118,12 +1118,57 @@ def _with_provenance(decision: dict, hypothesis_name: str) -> dict:
     return decision
 
 
+def _gateway_truncation(payload: dict) -> dict | None:
+    """Dict that carries the gateway's truncation fields, if it sent them.
+
+    The fields sit on the tool result. A logs or metrics object may carry
+    them too. A ``limit`` equal to the result count is not a truncation
+    report, and this function does not invent one.
+    """
+    candidates = [payload]
+    for key in ("logs", "metrics"):
+        nested = payload.get(key)
+        if isinstance(nested, dict):
+            candidates.append(nested)
+    for src in candidates:
+        if "truncated" in src:
+            return src
+    return None
+
+
+def _gateway_ts(src: dict, key: str) -> str:
+    val = src.get(key)
+    if isinstance(val, str) and val.strip():
+        return val.strip()
+    return ""
+
+
+def _truncation_entry(evidence_key: str, payload: dict) -> dict:
+    """One payload's truncation note.
+
+    ``truncated`` true or false is the gateway's report, with ``oldest_ts``
+    and ``newest_ts`` when the payload includes them. A missing flag is
+    ``truncation_unknown``. The returned rows are not treated as complete.
+    """
+    src = _gateway_truncation(payload)
+    if src is None or not isinstance(src.get("truncated"), bool):
+        return {"evidence_key": evidence_key, "truncation_unknown": True}
+    return {
+        "evidence_key": evidence_key,
+        "truncation_unknown": False,
+        "truncated": src["truncated"],
+        "oldest_ts": _gateway_ts(src, "oldest_ts"),
+        "newest_ts": _gateway_ts(src, "newest_ts"),
+    }
+
+
 def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started: str = "") -> dict:
     """What this run did not see.
 
     Requested window versus the windows the receipts say were searched,
-    a result cap that filled up, and any requested span after the run
-    started. These are notes on the cause. They are not replay fields.
+    whether the gateway said the result was truncated, and any requested
+    span after the run started. These are notes on the cause. They are
+    not replay fields.
     """
     start, end = _alignment_bounds(incident or {})
     requested = None
@@ -1144,26 +1189,9 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
         twe = str(val.get("_receipt_time_window_end") or "")
         if tws or twe:
             searched.append({"evidence_key": key, "start": tws, "end": twe})
+        truncations.append(_truncation_entry(str(key), val))
         results = _log_results(val) or []
         logs_obj = val.get("logs") if isinstance(val.get("logs"), dict) else {}
-        cap = val.get("_receipt_cap")
-        if not isinstance(cap, int):
-            for src in (logs_obj, val):
-                if isinstance(src, dict) and isinstance(src.get("limit"), int):
-                    cap = src["limit"]
-                    break
-        if isinstance(cap, int) and results and len(results) == cap:
-            times = sorted(
-                _record_ts(rec) for rec in results
-                if isinstance(rec, dict) and _record_ts(rec)
-            )
-            truncations.append({
-                "evidence_key": key,
-                "cap": cap,
-                "returned": len(results),
-                "covered_start": times[0] if times else "",
-                "covered_end": times[-1] if times else "",
-            })
         reported = logs_obj.get("count") if isinstance(logs_obj, dict) else None
         if isinstance(reported, int) and reported != len(results):
             count_gaps.append({
@@ -1188,6 +1216,7 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
         "searched_windows": searched,
         "searched_window_reported": bool(searched),
         "truncations": truncations,
+        "truncation_unknown": any(row.get("truncation_unknown") for row in truncations),
         "reported_count_disagrees": count_gaps,
         "after_run_start": after,
     }

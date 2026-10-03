@@ -1344,9 +1344,6 @@ class SentinalAISupervisor:
                     result["_receipt_action"] = action
                     result["_receipt_time_window_start"] = receipt.time_window_start or ""
                     result["_receipt_time_window_end"] = receipt.time_window_end or ""
-                    _cap = params.get("limit", params.get("max_results"))
-                    if isinstance(_cap, int):
-                        result["_receipt_cap"] = _cap
                 record_worker_call(worker_name, action, "success", call_elapsed)
                 if circuits:
                     circuits.get(worker_name).record_success(worker_name)

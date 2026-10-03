@@ -212,6 +212,10 @@ def _assert_full_return(result, gateway, evidence):
     assert "requested_window" in coverage
     assert "truncations" in coverage
     assert "after_run_start" in coverage
+    # This gateway does not send truncated. A full list is not complete.
+    assert coverage["truncation_unknown"] is True
+    assert coverage["truncations"]
+    assert all(row["truncation_unknown"] is True for row in coverage["truncations"])
 
 
 class TestUnderclaimFullLogs:

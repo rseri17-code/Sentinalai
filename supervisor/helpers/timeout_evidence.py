@@ -56,21 +56,30 @@ _NON_EVIDENCE_FIELDS = frozenset({
     "description", "root_cause_hint", "hint", "comment", "comments",
 })
 
+# A pool name is the word "pool", a CamelCase identifier ending in Pool
+# (HikariPool), or a lowercase token ending in pool (dbpool, connection_pool).
+# A rate, capacity, slot, or generic resource limit is not a pool name.
+_POOL_NAME = (
+    r"(?:\bpool\b|(?<![A-Za-z0-9_])[A-Za-z][A-Za-z0-9_]*pool\b)"
+)
+
 _POOL_PATTERNS = (
-    re.compile(r"pool[\s._-]*exhaust", re.I),
+    re.compile(rf"{_POOL_NAME}[\s._-]*exhaust", re.I),
     re.compile(
         r"connection\s+pool.{0,80}(exhaust|not available|unavailable|timed?\s*out|timeout|full|overflow|at capacity|waiting|limit)",
         re.I,
     ),
-    re.compile(r"\bresource\s+limit\b", re.I),
-    # "limit … reached" for a pool, overflow, or other resource. The words
-    # may sit in either order. A library's exact sentence is not required.
+    # Pool overflow, named on either side of the word.
+    re.compile(rf"{_POOL_NAME}.{{0,60}}\boverflow\b", re.I),
+    re.compile(rf"\boverflow\b.{{0,60}}{_POOL_NAME}", re.I),
+    # "limit … reached" only when a pool is named. Other words (overflow,
+    # a size) may sit between limit and reached.
     re.compile(
-        r"\b(?:pool|overflow|resource|connection|slot|capacity)\b.{0,60}\blimit\b.{0,40}\breached\b",
+        rf"{_POOL_NAME}.{{0,80}}\blimit\b.{{0,80}}\breached\b",
         re.I,
     ),
     re.compile(
-        r"\blimit\b.{0,40}\breached\b.{0,60}\b(?:pool|overflow|resource|slot|capacity)\b",
+        rf"\blimit\b.{{0,80}}\breached\b.{{0,80}}{_POOL_NAME}",
         re.I,
     ),
     re.compile(r"unable to acquire connection", re.I),

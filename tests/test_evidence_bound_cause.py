@@ -1388,3 +1388,87 @@ class TestFailedSearchOnEveryPath:
 
     def test_error_spike_log_search_error_is_unchecked(self):
         self._assert_failed_log("error_spike")
+
+
+def _pool_signals(result):
+    """Signals that cite a pool, on the cause or on a contradiction."""
+    cause = result["cause"]
+    signals = [
+        ref.get("signal")
+        for ref in cause.get("evidence_refs") or []
+        if "pool" in str(ref.get("signal") or "")
+    ]
+    for item in cause.get("contradictions") or []:
+        if "pool" in str(item.get("statement") or "").lower():
+            signals.append("contradiction:" + item["statement"])
+        for ref in item.get("evidence_refs") or []:
+            if "pool" in str(ref.get("signal") or ""):
+                signals.append(ref.get("signal"))
+    return signals
+
+
+def _assert_not_a_pool(result):
+    cause = result["cause"]
+    assert "pool" not in cause["statement"].lower()
+    assert cause["category"] != "connection_pool_exhaustion"
+    assert _pool_signals(result) == []
+
+
+class TestPoolWordingNamesAPool:
+    """v1.10. A limit is pool exhaustion only when the line names a pool.
+
+    Expected before the run, written against 0f527ba:
+    generic resource, rate, capacity, and slot limits produce no pool
+    statement and no pool ref. An identifier-named pool
+    (CamelCase ``...Pool`` or a lowercase token ending in ``pool``)
+    still binds when other words sit between ``limit`` and ``reached``.
+    The standalone word ``pool`` on ``pool size limit reached`` still binds.
+    """
+
+    def test_generic_limits_are_not_pool_exhaustion(self):
+        lines = (
+            "container cpu resource limit exceeded",
+            "container memory resource limit exceeded",
+            "connection rate limit reached",
+            "capacity limit reached",
+            "replication slot limit reached",
+        )
+        for message in lines:
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            _assert_not_a_pool(result)
+
+    def test_identifier_pool_limit_with_words_between(self):
+        # CamelCase class ending in Pool; overflow and size sit between
+        # limit and reached. Lowercase token ending in pool, same shape.
+        for message in (
+            "HikariPool limit overflow size reached",
+            "dbpool limit overflow size reached",
+        ):
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            cause = result["cause"]
+            assert cause["statement"] == "connection pool exhausted on edge-api"
+            assert cause["confidence"] == _ONE_RAW
+            assert cause["category"] == "connection_pool_exhaustion"
+            assert {ref["signal"] for ref in cause["evidence_refs"]} == {
+                "connection_pool_exhausted",
+            }
+
+    def test_standalone_pool_limit_reached_still_binds(self):
+        result, _ = _v18_timeout("edge-api", [
+            _pool_line_at(
+                "edge-api",
+                "2024-08-01T12:00:10Z",
+                "pool size limit reached and the connection timed out",
+            ),
+        ])
+        cause = result["cause"]
+        assert cause["statement"] == "connection pool exhausted on edge-api"
+        assert cause["confidence"] == _ONE_RAW
+        assert cause["category"] == "connection_pool_exhaustion"
+        assert {ref["signal"] for ref in cause["evidence_refs"]} == {
+            "connection_pool_exhausted",
+        }

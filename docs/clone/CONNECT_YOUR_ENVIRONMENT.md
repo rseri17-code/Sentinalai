@@ -97,11 +97,51 @@ them. To add team-specific names, edit `config/worker_aliases.yaml` or set
 `WORKER_ALIASES_PATH` to your overlay. That is a different layer from
 `AGENTCORE_TARGET_*` (tool routing vs playbook step names).
 
-## 5. OSS validation (Prometheus / Loki / Alertmanager)
+## 5. Plain MCP tool names (`PLAIN_MCP`, default off)
 
-`GATEWAY_MODE=live` still expects **AgentCore-shaped** tool names
-(`SplunkTarget___search_oneshot`). Pointing `MCP_GATEWAY_URL` at Grafana MCP
-or raw Prometheus/Loki HTTP does not work.
+Workers call dotted names (`splunk.search_oneshot`). With `PLAIN_MCP` unset
+or false, `McpGateway` still rewrites those to `{Target}___{operation}`.
+Set the flag to send the plain name and skip that rewrite:
+
+```bash
+export PLAIN_MCP=true
+export GATEWAY_MODE=live
+export MCP_GATEWAY_URL=https://your-mcp.example/mcp
+```
+
+The OSS validation shim already accepts both name forms. This flag does not
+reimplement that shim. With the flag off, names, stubs, and `GATEWAY_MODE`
+are unchanged.
+
+Plain mode never substitutes fixture data when a live call fails, times out,
+or the client cannot be built. The historical live path still substitutes a
+stub in those cases and labels that result `connection_state=stubbed`.
+
+Every live MCP call uses `MCP_CALL_TIMEOUT_SECONDS` (default 30). A timeout
+is an error dict, not an exception.
+
+### Model guard (until identifier masking is verified)
+
+Identifier masking before model calls does not exist yet. When `PLAIN_MCP`
+is on and the model layer is not NullInference (`LLM_ENABLED=false` or
+`LLM_PROVIDER=null`), the gateway refuses to fetch live tool evidence and
+returns `PlainMcpModelGuard`. Do not point a non-null model at live MCP
+output until masking has landed and been verified. The guard is then removed.
+
+Connection check (no secrets printed; exit 2 if a required worker is missing
+or failed):
+
+```bash
+python scripts/mcp_diagnostics.py
+python scripts/mcp_diagnostics.py --json
+```
+
+## 6. OSS validation (Prometheus / Loki / Alertmanager)
+
+With `PLAIN_MCP` unset, `GATEWAY_MODE=live` still expects **AgentCore-shaped**
+tool names (`SplunkTarget___search_oneshot`). The shim accepts plain names
+too when `PLAIN_MCP=true`. Pointing `MCP_GATEWAY_URL` at Grafana MCP or raw
+Prometheus/Loki HTTP does not work.
 
 For a clone that wants to validate the live MCP path against open-source
 backends (no Moogsoft/Splunk/Dynatrace), use the name-shim + compose stack:
@@ -117,7 +157,8 @@ AgentCore; ServiceNow/Confluence/GitHub stay skip/empty.
 
 ## Files
 
-- `workers/mcp_client.py` — URL alias, `AGENTCORE_TARGET_*`, `McpGateway.invoke()`
+- `workers/mcp_client.py` — URL alias, `AGENTCORE_TARGET_*`, `PLAIN_MCP`, `McpGateway.invoke()`
+- `workers/mcp_diagnostics.py` — connection report (`scripts/mcp_diagnostics.py`)
 - `supervisor/playbook_loader.py` — YAML load + alias map
 - `supervisor/tool_selector.py` — `YAML_PLAYBOOKS_ENABLED` gate, `INCIDENT_PLAYBOOKS`
 - `config/playbooks/*.yaml` — optional playbook source

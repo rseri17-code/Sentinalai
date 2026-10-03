@@ -35,7 +35,8 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -e ".[dev]"
-      - run: pip list --outdated --format=json | python3 -c "
+      - run: |
+          pip list --outdated --format=json | python3 -c "
           import json, sys
           pkgs = json.load(sys.stdin)
           if pkgs:
@@ -56,8 +57,7 @@ jobs:
           python-version: "3.11"
       - run: pip install -e ".[dev]"
       - run: |
-          python -m pytest tests/test_determinism.py tests/test_scoring_purity.py -v --count=100 2>/dev/null || \
-          python -m pytest tests/test_determinism.py tests/test_scoring_purity.py -v
+          python -m pytest tests/test_determinism.py tests/test_scoring_purity.py -v --count=100
 
   full-security-scan:
     name: Full security scan

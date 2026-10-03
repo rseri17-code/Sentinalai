@@ -2066,7 +2066,7 @@ class SentinalAISupervisor:
             wn = step["worker"]
             worker_groups.setdefault(wn, []).append(step)
 
-        evidence: dict[str, Any] = {}
+        evidence = {}
         # Phase 9 shadow ledger: None when EVIDENCE_LEDGER_SHADOW_ENABLED is off.
         # When on, mirrors evidence[k] = v writes for parity validation only.
         from supervisor.evidence_shadow import ShadowMirror

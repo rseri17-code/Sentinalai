@@ -398,15 +398,19 @@ class TestDiagnosticsStates:
         assert "[redacted]" in blob
 
 
-# Widened investigation hash of INC12345 (flag off, LLM off, GATEWAY_MODE=stub)
-# against the committed frozen corpus, when knowledge_worker.search_similar
-# has sequence_order 7. The historical-context future can land that call at
-# another position; the test retries until it sees 7, then compares this hash.
-# The v1 narrow hash was
+# Investigation-only replay hashes of INC12345 (flag off, LLM off,
+# GATEWAY_MODE=stub) against the committed frozen corpus. The historical
+# context future races the playbook, so knowledge_worker.search_similar lands
+# at sequence_order 7, 8, 9, or 10. Each position has one hash. An unknown
+# position or a different hash fails. The v1 narrow hash was
 # e528c42a50b4aaf30280c2418e9a8924178c7697bd76de4da928604f109d5f72.
-_INC12345_INVESTIGATION_HASH = "5411c9b66e7c69665cff32a828671317ca6192352fbb4188d988f7ef2f5560a1"
-_PINNED_ATTEMPTS = 20
-_SEARCH_SIMILAR_ORDER = 7
+_SEARCH_SIMILAR_HASHES = {
+    7: "5411c9b66e7c69665cff32a828671317ca6192352fbb4188d988f7ef2f5560a1",
+    8: "2e5a4bcb86966f093eb7dc6da6e09d05cf017718f26e4b848de93324aace986f",
+    9: "101b1bd3ddf17d178982ad220a83035d3a1e5cc578c6e28146fc66be0c72115f",
+    10: "5ee2e766f25414701c7b7ed7b32af9e35bf8e60e12d405cab99ce5148b89965d",
+}
+_PINNED_RUNS = 3
 
 
 # Committed paths. tests/conftest.py redirects the import-time env copies to an
@@ -577,41 +581,32 @@ class TestInc12345Unchanged:
         monkeypatch.setattr("supervisor.confidence_calibrator.CALIBRATION_ENABLED", False)
         snapshots = _pin_committed_corpus(tmp_path, monkeypatch)
 
-        # historical_future races the playbook. Retry until search_similar is
-        # at sequence_order 7, which is the pinned hash. Other landings are
-        # kept only to prove they differ by that position. Do not edit
-        # supervisor/ or the hash function to hide the race.
-        runs: list[tuple[dict, dict]] = []
-        anchor_result: dict | None = None
-        anchor_doc: dict | None = None
-        anchor_sup: SentinalAISupervisor | None = None
-        for attempt in range(_PINNED_ATTEMPTS):
+        # Fixed samples. search_similar may land at any pinned position.
+        # Do not retry for one position, and do not edit supervisor/ or the
+        # hash function to hide that race.
+        runs: list[tuple[dict, dict, SentinalAISupervisor]] = []
+        for attempt in range(_PINNED_RUNS):
             _reset_learning_snapshots(snapshots)
             sup = SentinalAISupervisor(replay_dir=str(tmp_path / f"run-{attempt}"))
             result = sup.investigate("INC12345")
             doc, missing_doc = replay_canonical(result, None)
             assert missing_doc == []
-            runs.append((result, doc))
-            if _search_similar_order(doc) == _SEARCH_SIMILAR_ORDER:
-                anchor_result, anchor_doc, anchor_sup = result, doc, sup
-                break
-        assert anchor_result is not None and anchor_doc is not None and anchor_sup is not None, (
-            "search_similar sequence_order over "
-            f"{len(runs)} pinned runs: "
-            + ", ".join(str(_search_similar_order(doc)) for _result, doc in runs)
-        )
-        from workers.mcp_diagnostics import canonical_json
-        for _result, doc in runs:
-            assert (
-                canonical_json(anchor_doc) == canonical_json(doc)
-                or _only_historical_race(anchor_doc, doc)
+            order = _search_similar_order(doc)
+            assert order in _SEARCH_SIMILAR_HASHES, (
+                f"search_similar sequence_order {order} is not a pinned variant"
             )
+            assert replay_hash(result, None) == _SEARCH_SIMILAR_HASHES[order]
+            runs.append((result, doc, sup))
+        for i in range(len(runs)):
+            for j in range(i + 1, len(runs)):
+                assert _only_historical_race(runs[i][1], runs[j][1])
 
+        first, first_doc, first_sup = runs[0]
         _reset_learning_snapshots(snapshots)
-        replayed = anchor_sup.investigate("INC12345", replay=True)
+        replayed = first_sup.investigate("INC12345", replay=True)
         report = diagnose()
 
-        _doc, missing = replay_canonical(anchor_result, report)
+        _doc, missing = replay_canonical(first, report)
         for replaced in REPLACED_REPLAY_FIELDS:
             assert replaced not in missing
             assert replaced not in _doc
@@ -646,12 +641,11 @@ class TestInc12345Unchanged:
             "_corpus_version",
         ]
         for key in d3:
-            for _result, doc in runs:
+            for _result, doc, _sup in runs:
                 assert d3[key] == doc[key]
-        assert replay_canonical(anchor_result, None)[1] == []
+        assert replay_canonical(first, None)[1] == []
 
-        for result, doc in runs:
-            if canonical_json(doc) == canonical_json(anchor_doc):
-                assert replay_hash(result, report) == replay_hash(anchor_result, report)
-
-        assert replay_hash(anchor_result, None) == _INC12345_INVESTIGATION_HASH
+        from workers.mcp_diagnostics import canonical_json
+        for result, doc, _sup in runs[1:]:
+            if canonical_json(doc) == canonical_json(first_doc):
+                assert replay_hash(result, report) == replay_hash(first, report)

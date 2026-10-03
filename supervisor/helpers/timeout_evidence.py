@@ -620,7 +620,8 @@ def dedupe_views(views: list[dict]) -> list[dict]:
     seen: set[tuple] = set()
     chosen: list[dict] = []
     for view in views:
-        record = view.get("record") if isinstance(view.get("record"), dict) else {}
+        raw = view.get("record")
+        record: dict = raw if isinstance(raw, dict) else {}
         value = record.get("value")
         if not isinstance(value, (int, float)) or isinstance(value, bool):
             value = ""

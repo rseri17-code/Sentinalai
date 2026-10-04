@@ -1441,6 +1441,67 @@ class TestUntimedPoolReadingStillContradicts:
         assert assessment["cause_refs"]
 
 
+class TestUntimedPoolReadingDoesNotSupport:
+    """A pool reading with no timestamp may only contradict.
+
+    Written against e3923cc. A saturated reading (active equals max)
+    must not change the confidence or the refs of the pool log, and
+    with no pool log it must not bind a pool cause.
+    """
+
+    def test_saturated_untimed_reading_adds_no_support(self):
+        log = {
+            "search_timeout_logs": {
+                "_receipt_sequence_order": 2,
+                "_receipt_tool": "log_worker",
+                "logs": {
+                    "results": [_pool_line_at("svc-alpha", _POOL_WHEN)],
+                    "count": 1,
+                },
+            },
+        }
+        with_reading = dict(log)
+        with_reading["query_pool"] = _pool_object(30, 0, 30)
+        incident = _v18_incident("svc-alpha")
+        hyp = Hypothesis(
+            name="generic",
+            root_cause="something else",
+            base_score=40,
+            evidence_refs=[],
+            reasoning="",
+        )
+
+        def _bind(evidence):
+            return bind_hypothesis(
+                hyp,
+                incident_type="timeout",
+                service="svc-alpha",
+                incident=incident,
+                evidence=evidence,
+            )
+
+        alone = _bind(log)
+        plus = _bind(with_reading)
+        assert plus["cause_confidence"] == alone["cause_confidence"]
+        assert plus["cause_refs"] == alone["cause_refs"]
+
+        published_alone = _v18_with_evidence("svc-alpha", log)
+        published_plus = _v18_with_evidence("svc-alpha", with_reading)
+        assert published_plus["cause"]["confidence"] == published_alone["cause"]["confidence"]
+        assert published_plus["cause"]["evidence_refs"] == published_alone["cause"]["evidence_refs"]
+
+    def test_saturated_untimed_reading_alone_binds_no_pool_cause(self):
+        result = _v18_with_evidence("svc-alpha", {
+            "query_pool": _pool_object(30, 0, 30),
+        })
+        cause = result["cause"]
+        assert "UNKNOWN" in cause["statement"]
+        assert "pool" not in cause["statement"].lower()
+        assert cause["category"] != "connection_pool_exhaustion"
+        assert cause["evidence_refs"] == []
+        assert cause["contradictions"] == []
+
+
 def _failed_log_search():
     """Log search errored. A signal was retrieved and reported no window."""
     return {

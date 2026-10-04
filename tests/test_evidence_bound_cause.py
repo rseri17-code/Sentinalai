@@ -1371,6 +1371,76 @@ class TestUnsaturatedPoolContradicts:
         assert wrapped_snap["check_golden_signals"]["records"]
 
 
+def _pool_object(active, idle, limit, timestamp=None):
+    """One db_connection_pool object. No timestamp unless one is passed."""
+    obj = {"active": active, "idle": idle, "max": limit}
+    if timestamp:
+        obj["timestamp"] = timestamp
+    return {
+        "_receipt_sequence_order": 5,
+        "_receipt_tool": "apm_worker",
+        "db_connection_pool": obj,
+    }
+
+
+def _bind_pool_with_reading(reading):
+    hyp = Hypothesis(
+        name="generic",
+        root_cause="something else",
+        base_score=40,
+        evidence_refs=[],
+        reasoning="",
+    )
+    evidence = _pool_candidate_evidence(reading)
+    return bind_hypothesis(
+        hyp,
+        incident_type="timeout",
+        service="edge-api",
+        incident=_v18_incident("edge-api"),
+        evidence=evidence,
+    )
+
+
+class TestUntimedPoolReadingStillContradicts:
+    """A pool reading with no timestamp still contradicts exhaustion.
+
+    Written against f3317e9. ``_windowed_views`` drops that reading
+    because ``_in_window`` treats an empty timestamp as outside the
+    window, so ``_pool_cause`` never sees it. An unsaturated reading
+    with a real timestamp outside the window stays ignored.
+    """
+
+    def test_untimed_unsaturated_reading_contradicts(self):
+        assessment = _bind_pool_with_reading(_pool_object(3, 27, 30))
+        assert assessment["statement"] == "timeout observed; cause UNKNOWN"
+        assert assessment["category"] == "unknown"
+        assert assessment["cause_confidence"] == _POOL_CONFLICT
+        assert assessment["cause_confidence"] < 60
+        assert assessment["cause_refs"] == []
+        assert [item["statement"] for item in assessment["contradictions"]] == [
+            "connection pool exhaustion",
+            "pool not saturated: active 3, idle 27, max 30",
+        ]
+
+    def test_untimed_saturated_reading_does_not_contradict(self):
+        assessment = _bind_pool_with_reading(_pool_object(30, 27, 30))
+        assert assessment["statement"] == "connection pool exhausted on edge-api"
+        assert assessment["category"] == "connection_pool_exhaustion"
+        assert assessment["cause_confidence"] == _ONE_RAW
+        assert assessment["contradictions"] == []
+        assert assessment["cause_refs"]
+
+    def test_out_of_window_unsaturated_reading_stays_ignored(self):
+        assessment = _bind_pool_with_reading(
+            _pool_object(3, 27, 30, "2024-08-01T10:00:00Z"),
+        )
+        assert assessment["statement"] == "connection pool exhausted on edge-api"
+        assert assessment["category"] == "connection_pool_exhaustion"
+        assert assessment["cause_confidence"] == _ONE_RAW
+        assert assessment["contradictions"] == []
+        assert assessment["cause_refs"]
+
+
 def _failed_log_search():
     """Log search errored. A signal was retrieved and reported no window."""
     return {

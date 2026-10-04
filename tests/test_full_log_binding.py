@@ -5,10 +5,14 @@ The strings are not taken from the OSS seed.
 """
 from __future__ import annotations
 
+import concurrent.futures
+import copy
 import os
 import re
 import threading
 import time
+
+import pytest
 
 from supervisor.agent import SentinalAISupervisor
 from supervisor.evidence_citation import annotate_citations
@@ -1057,29 +1061,34 @@ class TestEmptyPlaybookLabel:
 
 
 class _AlertTextGateway:
-    """Playbook logs for svc-alpha, plus an ITSM dependency list."""
+    """Playbook logs for svc-alpha, plus an ITSM dependency list.
+
+    Every call is kept as ``(action, service)``. A missing service is
+    recorded as ``""`` so a log search with no service stays visible.
+    """
 
     def __init__(self, dependencies, logs_for_query=None, owner_logs=None):
         self.dependencies = list(dependencies)
         self.logs_for_query = logs_for_query or {}
         self.owner_logs = owner_logs or {}
-        self.services: list[str] = []
+        self.calls: list[tuple[str, str]] = []
 
     def execute(self, action, params):
         params = params or {}
-        service = str(params.get("service") or "")
-        self.services.append(service)
+        raw = params.get("service")
+        service = "" if raw is None else str(raw)
+        self.calls.append((str(action), service))
         if action == "get_ci_details":
             return {"ci": {"name": service, "dependencies": list(self.dependencies)}}
-        if action in ("get_known_errors", "search_incidents"):
-            return {}
-        if action == "search_logs" or str(action).startswith("search_"):
+        if action == "search_logs":
             if service != "svc-alpha":
                 rows = [dict(row) for row in self.owner_logs.get(service, [])]
                 return {"logs": {"results": rows, "count": len(rows)}}
             query = str(params.get("query") or "")
             rows = [dict(row) for row in self.logs_for_query.get(query, [])]
             return {"logs": {"results": rows, "count": len(rows)}}
+        if action in ("get_known_errors", "search_incidents"):
+            return {}
         if action in ("get_change_data", "get_change_records"):
             return {"changes": []}
         if action in ("get_golden_signals", "check_latency"):
@@ -1153,6 +1162,11 @@ def _alert_incident(**extra):
     return incident
 
 
+def _search_log_services(gateway) -> list[str]:
+    """Services on search_logs calls, including an empty service."""
+    return [service for action, service in gateway.calls if action == "search_logs"]
+
+
 def _alert_snapshot(result, gateway, receipts):
     cause = result["cause"]
     coverage = result["_confidence_provenance"]["unchecked_coverage"]
@@ -1167,7 +1181,7 @@ def _alert_snapshot(result, gateway, receipts):
         "category": cause["category"],
         "refs": cause["evidence_refs"],
         "unchecked": coverage.get("unsearched_downstream_owners"),
-        "downstream": [name for name in gateway.services if name and name != "svc-alpha"],
+        "log_searches": _search_log_services(gateway),
         "marks": marks,
     }
 
@@ -1193,7 +1207,9 @@ class TestAlertTextDownstreamRetrieval:
                 description="svc-alpha is slow",
             ),
         )
-        assert gateway.services.count("ledger-store") == 1
+        assert _search_log_services(gateway) == [
+            "svc-alpha", "svc-alpha", "ledger-store",
+        ]
         assert ("ledger-store", "alert_text") in _alert_snapshot(result, gateway, receipts)["marks"]
 
     def test_unknown_alert_word_starts_no_search(self):
@@ -1205,8 +1221,7 @@ class TestAlertTextDownstreamRetrieval:
             gateway,
             _alert_incident(title="latency while calling widget-blob"),
         )
-        assert "widget-blob" not in gateway.services
-        assert "ledger-store" not in gateway.services
+        assert _search_log_services(gateway) == ["svc-alpha", "svc-alpha"]
         assert _alert_snapshot(_result, gateway, receipts)["marks"] == []
 
     def test_empty_alert_text_search_stays_unknown(self):
@@ -1215,10 +1230,13 @@ class TestAlertTextDownstreamRetrieval:
             logs_for_query={"latency OR slow svc-alpha": [_latency_line()]},
             owner_logs={"ledger-store": []},
         )
-        result, _gateway, _receipts = _run_alert_text(
+        result, gateway, _receipts = _run_alert_text(
             gateway,
             _alert_incident(description="callers are waiting on ledger-store"),
         )
+        assert _search_log_services(gateway) == [
+            "svc-alpha", "svc-alpha", "ledger-store",
+        ]
         cause = result["cause"]
         assert "UNKNOWN" in cause["statement"]
         assert cause["category"] == "unknown"
@@ -1259,7 +1277,7 @@ class TestAlertTextDownstreamRetrieval:
         finally:
             topo._singleton_graph, topo._singleton_learner = saved
         assert fresh == seeded
-        assert fresh["downstream"] == []
+        assert fresh["log_searches"] == ["svc-alpha", "svc-alpha"]
         assert fresh["marks"] == []
 
     def test_alert_text_owner_is_after_the_cap(self):
@@ -1277,14 +1295,17 @@ class TestAlertTextDownstreamRetrieval:
                 downstream_service="queue-beta",
             ),
         )
-        assert "index-eta" not in gateway.services
+        assert _search_log_services(gateway) == [
+            "svc-alpha",
+            "svc-alpha",
+            "ledger-store",
+            "cache-zeta",
+            "queue-beta",
+        ]
         coverage = result["_confidence_provenance"]["unchecked_coverage"]
         assert {"owner": "index-eta", "reason": _OWNER_CAP_REASON} in (
             coverage.get("unsearched_downstream_owners") or []
         )
-        assert [name for name in gateway.services if name and name != "svc-alpha"] == [
-            "ledger-store", "cache-zeta", "queue-beta",
-        ]
 
     def test_parallel_runs_match(self):
         incident = _alert_incident(title="latency while calling ledger-store")
@@ -1298,3 +1319,232 @@ class TestAlertTextDownstreamRetrieval:
             return _alert_snapshot(result, gateway, receipts)
 
         assert _once() == _once()
+
+
+_MEMORY_NAME = "ledger-sync-zz"
+
+
+def _memory_row():
+    return {"service": _MEMORY_NAME, "summary": "earlier latency on another run"}
+
+
+def _completed(value):
+    future = concurrent.futures.Future()
+    future.set_result(value)
+    return future
+
+
+def _memory_sources(place):
+    """Put the memory name in exactly one post-playbook source, or in all."""
+    row = _memory_row()
+    itsm = None
+    historical = None
+    kg = []
+    if place in ("similar_incidents", "all"):
+        itsm = {"similar_incidents": [dict(row)]}
+    if place in ("known_errors", "all"):
+        itsm = dict(itsm or {})
+        itsm["known_errors"] = [dict(row)]
+    if place in ("historical_context", "all"):
+        historical = {"similar_incidents": [dict(row)]}
+    if place in ("kg_similar", "all"):
+        kg = [dict(row)]
+    if itsm is not None:
+        itsm["ci"] = {"name": "svc-alpha", "dependencies": []}
+    return itsm, historical, kg
+
+
+def _nested_strings(value):
+    found = []
+    if isinstance(value, str):
+        found.append(value)
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            found.extend(_nested_strings(key))
+            found.extend(_nested_strings(item))
+    elif isinstance(value, list):
+        for item in value:
+            found.extend(_nested_strings(item))
+    return found
+
+
+def _retrieved_log_services(evidence):
+    names = []
+
+    def walk(value):
+        if isinstance(value, dict):
+            logs = value.get("logs")
+            if isinstance(logs, dict):
+                for row in logs.get("results") or []:
+                    if isinstance(row, dict):
+                        if row.get("service"):
+                            names.append(row["service"])
+                        if row.get("downstream"):
+                            names.append(row["downstream"])
+            for item in value.values():
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    walk(evidence)
+    return names
+
+
+def _assert_no_memory_search(gateway, receipts, evidence):
+    assert _search_log_services(gateway) == ["svc-alpha", "svc-alpha"]
+    assert all(
+        (receipt.params or {}).get("service") != _MEMORY_NAME
+        for receipt in receipts.receipts
+        if receipt.action == "search_logs"
+    )
+    assert all(
+        (receipt.params or {}).get("owner_source") != "alert_text"
+        for receipt in receipts.receipts
+    )
+    for receipt in receipts.receipts:
+        recorded = getattr(receipt, "topology_services", None) or []
+        assert _MEMORY_NAME not in recorded
+    assert _MEMORY_NAME not in _retrieved_log_services(evidence)
+
+
+def _run_memory_collect(place):
+    """Run collect so memory merges happen after the owner search."""
+    import supervisor.trace_correlation as traces
+    import workers.visual_evidence_worker as visual
+    from sentinel_core.context import ContextBuilder
+    from supervisor.phases.classify import ClassificationResult
+    from supervisor.phases.collect import CollectPhase
+
+    itsm, historical, kg = _memory_sources(place)
+    incident = _alert_incident(title=f"latency while calling {_MEMORY_NAME}")
+    saved_env = {
+        key: os.environ.get(key)
+        for key in (
+            "LLM_ENABLED",
+            "PARALLEL_PLAYBOOK",
+            "CALIBRATION_ENABLED",
+            "AGENTIC_PLANNER",
+            "LOOP_CONTROLLER_ENABLED",
+        )
+    }
+    saved_fns = (traces.correlate_traces, visual.collect_visual_evidence)
+    os.environ["LLM_ENABLED"] = "false"
+    os.environ["PARALLEL_PLAYBOOK"] = "false"
+    os.environ["CALIBRATION_ENABLED"] = "false"
+    os.environ["AGENTIC_PLANNER"] = "false"
+    os.environ["LOOP_CONTROLLER_ENABLED"] = "false"
+    traces.correlate_traces = lambda *_args, **_kwargs: None
+    visual.collect_visual_evidence = lambda *_args, **_kwargs: {}
+    try:
+        sup = SentinalAISupervisor()
+        sup._parallel_playbook = False
+        gateway = _AlertTextGateway(
+            [],
+            logs_for_query={
+                "latency OR slow svc-alpha": [_latency_line()],
+                "timed out": [_latency_line()],
+            },
+        )
+        for name in list(sup.workers):
+            sup.workers[name] = gateway
+        sup._tls.current_incident = dict(incident)
+        sup._tls.run_started = "2024-11-04T12:00:00Z"
+        receipts = ReceiptCollector(case_id="INC-ALERT")
+        budget = ExecutionBudget()
+        circuits = CircuitBreakerRegistry()
+        classification = ClassificationResult(
+            incident_type="latency",
+            severity=None,
+            budget=budget,
+            itsm_context=itsm,
+            confluence_context=None,
+            experience_future=_completed([]),
+            kg_future=_completed(kg),
+            historical_future=_completed(historical),
+        )
+        result = CollectPhase(sup).execute(
+            ContextBuilder.for_incident("INC-ALERT", incident=dict(incident)),
+            {
+                "incident": dict(incident),
+                "summary": incident["summary"],
+                "service": "svc-alpha",
+                "receipts": receipts,
+                "circuits": circuits,
+            },
+            classification,
+        )
+        evidence = result.output.result["collect"].evidence
+        return evidence, gateway, receipts
+    finally:
+        traces.correlate_traces, visual.collect_visual_evidence = saved_fns
+        for key, value in saved_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+class TestMemoryNamesAreNotKnownServices:
+    """Names carried in from memory are not known services for this run.
+
+    The owner search walks whatever is already in the evidence dict.
+    Collect merges ITSM similar incidents, known errors, historical
+    context, and KG similar incidents only after that search. These
+    guards fail if that merge moves ahead of the playbook.
+    """
+
+    @pytest.mark.parametrize("place", [
+        "similar_incidents",
+        "known_errors",
+        "historical_context",
+        "kg_similar",
+    ])
+    def test_memory_name_in_the_alert_starts_no_search(self, place):
+        evidence, gateway, receipts = _run_memory_collect(place)
+        _assert_no_memory_search(gateway, receipts, evidence)
+        if place == "similar_incidents":
+            assert evidence["itsm_context"]["similar_incidents"] == [_memory_row()]
+            assert "known_errors" not in evidence["itsm_context"]
+            assert "historical_context" not in evidence
+            assert "_kg_similar_incidents" not in evidence
+        elif place == "known_errors":
+            assert evidence["itsm_context"]["known_errors"] == [_memory_row()]
+            assert "similar_incidents" not in evidence["itsm_context"]
+            assert "historical_context" not in evidence
+            assert "_kg_similar_incidents" not in evidence
+        elif place == "historical_context":
+            assert evidence["historical_context"]["similar_incidents"] == [_memory_row()]
+            assert "itsm_context" not in evidence
+            assert "_kg_similar_incidents" not in evidence
+        else:
+            assert evidence["_kg_similar_incidents"] == [_memory_row()]
+            assert "itsm_context" not in evidence
+            assert "historical_context" not in evidence
+
+    def test_merged_evidence_is_absent_during_the_owner_search(self):
+        captured = {}
+        real = SentinalAISupervisor._search_downstream_owners
+
+        def _spy(self, evidence, *args, **kwargs):
+            captured["evidence"] = copy.deepcopy(evidence)
+            return real(self, evidence, *args, **kwargs)
+
+        SentinalAISupervisor._search_downstream_owners = _spy
+        try:
+            evidence, gateway, receipts = _run_memory_collect("all")
+        finally:
+            SentinalAISupervisor._search_downstream_owners = real
+
+        during = captured["evidence"]
+        memory_keys = {"itsm_context", "historical_context", "_kg_similar_incidents"}
+        assert memory_keys.isdisjoint(during)
+        assert _MEMORY_NAME not in _nested_strings(during)
+        assert memory_keys <= set(evidence)
+        assert set(during) <= set(evidence)
+        assert evidence["itsm_context"]["similar_incidents"] == [_memory_row()]
+        assert evidence["itsm_context"]["known_errors"] == [_memory_row()]
+        assert evidence["historical_context"]["similar_incidents"] == [_memory_row()]
+        assert evidence["_kg_similar_incidents"] == [_memory_row()]
+        assert _MEMORY_NAME in _nested_strings(evidence)
+        _assert_no_memory_search(gateway, receipts, evidence)

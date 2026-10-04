@@ -231,6 +231,119 @@ def playbook_step_label(step: dict) -> str:
     return str(action)
 
 
+_ALERT_TEXT_FIELDS = ("title", "description", "short_description")
+_SERVICE_NAME_FIELDS = (
+    "service", "service_id", "ci_name", "downstream", "downstream_service",
+)
+_NAME_TOKEN = re.compile(r"[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*")
+
+
+def _alert_text_tokens(incident: dict) -> list[str]:
+    """Service-shaped tokens from the alert title and description, in order."""
+    parts = []
+    for key in _ALERT_TEXT_FIELDS:
+        val = incident.get(key)
+        if isinstance(val, str) and val.strip():
+            parts.append(val)
+    seen: set[str] = set()
+    tokens: list[str] = []
+    for token in _NAME_TOKEN.findall("\n".join(parts)):
+        if token in seen:
+            continue
+        seen.add(token)
+        tokens.append(token)
+    return tokens
+
+
+def _collect_service_names(value: Any, found: list[str]) -> None:
+    """Service-name fields on this investigation's retrieved records."""
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if str(key).startswith("_"):
+                continue
+            if key in _SERVICE_NAME_FIELDS and isinstance(item, str) and item.strip():
+                found.append(item.strip())
+            else:
+                _collect_service_names(item, found)
+    elif isinstance(value, list):
+        for item in value:
+            _collect_service_names(item, found)
+
+
+def _topology_names_from_ci(ci: dict) -> list[str]:
+    names: list[str] = []
+
+    def add(item: Any) -> None:
+        if isinstance(item, str) and item.strip():
+            names.append(item.strip())
+        elif isinstance(item, dict):
+            for key in ("name", "service", "service_id", "ci_name"):
+                add(item.get(key))
+
+    add(ci.get("name"))
+    deps = ci.get("dependencies")
+    if isinstance(deps, list):
+        for item in deps:
+            add(item)
+    graph = ci.get("dependency_graph")
+    if isinstance(graph, dict):
+        for key, item in graph.items():
+            add(key)
+            if isinstance(item, list):
+                for child in item:
+                    add(child)
+    return names
+
+
+def _remember_topology(receipts: ReceiptCollector | None, result: dict) -> None:
+    """Keep this incident's ITSM service names on the fetch receipt.
+
+    The learned topology is not a source. The names stay on the receipt
+    object and are not added to the serialized params, so an existing
+    investigation hash does not change.
+    """
+    if receipts is None or not isinstance(result, dict):
+        return
+    ci = result.get("ci")
+    if not isinstance(ci, dict):
+        return
+    names = _topology_names_from_ci(ci)
+    if not names:
+        return
+    for receipt in reversed(receipts.receipts):
+        if receipt.tool == "itsm_worker" and receipt.action == "get_ci_details":
+            receipt.topology_services = names
+            return
+
+
+def _known_services(
+    evidence: dict, receipts: ReceiptCollector | None,
+) -> set[str]:
+    found: list[str] = []
+    _collect_service_names(evidence, found)
+    if receipts is not None:
+        for receipt in receipts.receipts:
+            recorded = getattr(receipt, "topology_services", None)
+            if isinstance(recorded, list):
+                found.extend(
+                    name.strip() for name in recorded
+                    if isinstance(name, str) and name.strip()
+                )
+    return set(found)
+
+
+def _mark_alert_text_source(receipts: ReceiptCollector | None, name: str) -> None:
+    if receipts is None:
+        return
+    for receipt in reversed(receipts.receipts):
+        if receipt.action != "search_logs":
+            continue
+        if str((receipt.params or {}).get("service") or "") != name:
+            continue
+        receipt.params["owner_source"] = "alert_text"
+        return
+
+
 class SentinalAISupervisor:
     """Autonomous incident RCA supervisor."""
 
@@ -1535,6 +1648,7 @@ class SentinalAISupervisor:
             return context or None
         if result.get("ci"):
             context["ci"] = result["ci"]
+            _remember_topology(receipts, result)
 
         # Known errors — check before deep investigation
         result = self._budgeted_worker_call(
@@ -1967,9 +2081,14 @@ class SentinalAISupervisor:
         """On the latency path, also search downstream owners' logs.
 
         Owners follow playbook step order, then record order within a
-        step, then an owner named only on the incident. At most three
-        are searched. The rest are listed for unchecked coverage. The
-        alerted service is already searched by the playbook.
+        step, then an owner named only on the incident, then a name
+        from the alert text that exactly matches a service known for
+        this investigation. Known names come from retrieved records or
+        from the ITSM topology on this incident's receipt. The learned
+        topology is not a source. At most three are searched. The rest
+        are listed for unchecked coverage. The alerted service is
+        already searched by the playbook. An alert-text name is only a
+        search. It is not an owner until a retrieved record says so.
         """
         if incident_type != "latency" or not isinstance(evidence, dict):
             return evidence
@@ -2012,6 +2131,16 @@ class SentinalAISupervisor:
         if isinstance(incident, dict):
             _add(incident.get("downstream"))
             _add(incident.get("downstream_service"))
+        alert_text: list[str] = []
+        if isinstance(incident, dict):
+            known = _known_services(evidence, receipts)
+            for token in _alert_text_tokens(incident):
+                if token not in known:
+                    continue
+                before = len(owners)
+                _add(token)
+                if len(owners) == before + 1:
+                    alert_text.append(token)
 
         cap = 3
         skipped = owners[cap:]
@@ -2038,6 +2167,8 @@ class SentinalAISupervisor:
                 worker, "search_logs", params, receipts, budget, "log_worker",
                 circuits=circuits,
             )
+            if name in alert_text:
+                _mark_alert_text_source(receipts, name)
         return evidence
 
     # ------------------------------------------------------------------ #

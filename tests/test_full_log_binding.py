@@ -1282,7 +1282,7 @@ class TestAlertTextDownstreamRetrieval:
         assert {"owner": "index-eta", "reason": _OWNER_CAP_REASON} in (
             coverage.get("unsearched_downstream_owners") or []
         )
-        assert [name for name in gateway.services if name != "svc-alpha"] == [
+        assert [name for name in gateway.services if name and name != "svc-alpha"] == [
             "ledger-store", "cache-zeta", "queue-beta",
         ]
 

@@ -1,22 +1,30 @@
 """Connection diagnostics for each worker's MCP server.
 
-One state per worker, sorted by worker name:
+One row per tool, plus one rollup per worker. Tool rows are sorted by
+worker name, then tool name. A worker's state is the worst state among
+its required tools (failed > missing > stubbed > reachable). Optional
+tools are reported and do not move the worker state.
 
-- reachable: the endpoint answered within the probe timeout and lists every
-  tool that worker calls, and a read-only probe is not an honest skip.
+- reachable: the endpoint answered within the probe timeout and the tool
+  is listed, and a read-only probe is not an honest skip.
 - stubbed: fixtures, because GATEWAY_MODE=stub or nothing is configured.
-- missing: this worker has no endpoint, or the endpoint is up but does not
-  provide a required tool (unlisted, or listed only as ``skipped: true``).
+- missing: no endpoint, or the endpoint is up but does not provide this
+  tool (unlisted, or listed only as ``skipped: true``).
 - failed: the probe errored, timed out, was rejected after one 401 retry,
   or the MCP client could not be built.
+
+Which tools are required does not change in this report. Every tool in
+``WORKER_TOOLS`` is required. ``splunk.get_change_data`` stays required,
+so a skip there keeps ``log_worker`` missing even when
+``splunk.search_oneshot`` is reachable.
 
 A tool the OSS validation shim advertises but answers with ``skipped: true``
 is not provided. That is missing, not stubbed and not reachable. The client
 does not reimplement the shim; it only reads the payload the shim already
 returns.
 
-The report is deterministic for the same inputs: workers are sorted, reasons
-are sorted, and the report has no timestamps. Secrets are scrubbed.
+The report is deterministic for the same inputs: workers and tools are
+sorted, and the report has no timestamps. Secrets are scrubbed.
 """
 
 from __future__ import annotations
@@ -156,6 +164,30 @@ def _has_endpoint(server: str, assume: bool | None) -> bool:
     return _endpoint_for(server)
 
 
+# failed > missing > stubbed > reachable. Optional tools are not included.
+STATE_RANK: dict[str, int] = {
+    "reachable": 0,
+    "stubbed": 1,
+    "missing": 2,
+    "failed": 3,
+}
+
+
+def worst_state(states: list[str]) -> str:
+    """Worst connection state among required tools. Empty is reachable.
+
+    An unrecognized state ranks as failed. A typo such as ``reachble`` cannot
+    pass as reachable.
+    """
+    if not states:
+        return "reachable"
+    failed_rank = STATE_RANK["failed"]
+    winner = max(states, key=lambda state: STATE_RANK.get(state, failed_rank))
+    if winner not in STATE_RANK:
+        return "failed"
+    return winner
+
+
 def _row(
     worker: str,
     servers: frozenset[str],
@@ -171,6 +203,29 @@ def _row(
         "reason": scrub_secrets(reason),
         "error_class": error_class,
     }
+
+
+def _tool_row(
+    worker: str,
+    tool: str,
+    required: bool,
+    state: str,
+    detail: str,
+    error_class: str | None = None,
+) -> dict[str, Any]:
+    """Public tool fields plus a private error class for the worker rollup."""
+    return {
+        "worker": worker,
+        "tool": tool,
+        "required": required,
+        "state": state,
+        "detail": scrub_secrets(detail),
+        "_error_class": error_class,
+    }
+
+
+def _public_tool(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in row.items() if key != "_error_class"}
 
 
 def _listed_identities(names: list[str]) -> set[tuple[str, str]]:
@@ -204,6 +259,84 @@ def _probe_is_failure(payload: Any) -> str | None:
     return None
 
 
+def _is_required_tool(tool: str, optional: frozenset[str]) -> bool:
+    return tool not in optional
+
+
+def _classify_tool(
+    tool: str,
+    found: set[tuple[str, str]],
+    call_tool: CallTool,
+    timeout_s: float,
+) -> tuple[str, str, str | None]:
+    """Return state, detail, error_class for one tool."""
+    if not _is_listed(tool, found):
+        return "missing", "unlisted", None
+    if tool in _MUTATING_TOOLS:
+        return "reachable", "listed", None
+    try:
+        payload = _call_with_timeout(partial(call_tool, tool), timeout_s)
+    except TimeoutError:
+        return "failed", f"probe timed out: {tool}", "TimeoutError"
+    except Exception as exc:
+        return "failed", f"{type(exc).__name__}: {exc}", type(exc).__name__
+    if isinstance(payload, dict) and payload.get("skipped") is True:
+        return "missing", "not_provided", None
+    failure = _probe_is_failure(payload)
+    if failure:
+        detail = ""
+        if isinstance(payload, dict) and payload.get("error"):
+            detail = str(payload.get("error"))
+        return "failed", detail or failure, failure
+    return "reachable", "listed", None
+
+
+def _worker_reason(tool_rows: list[dict[str, Any]], state: str) -> tuple[str, str | None]:
+    """Worker reason string compatible with the v1 report, plus error class."""
+    required = [row for row in tool_rows if row["required"]]
+    if state == "reachable":
+        return "listed", None
+    matching = [row for row in required if row["state"] == state]
+    if state == "missing":
+        unlisted = sorted(row["tool"] for row in matching if row["detail"] == "unlisted")
+        skipped = sorted(row["tool"] for row in matching if row["detail"] == "not_provided")
+        parts: list[str] = []
+        if unlisted:
+            parts.append("unlisted: " + ",".join(unlisted))
+        if skipped:
+            parts.append("not_provided: " + ",".join(skipped))
+        other = sorted(
+            row["tool"] for row in matching
+            if row["detail"] not in {"unlisted", "not_provided"}
+        )
+        if other and not parts:
+            parts.append(matching[0]["detail"])
+        elif other:
+            parts.append("missing: " + ",".join(other))
+        return ("; ".join(parts) or "missing"), None
+    if state == "failed":
+        pool = matching or [row for row in required if row["state"] not in STATE_RANK]
+        row = sorted(pool, key=lambda item: item["tool"])[0]
+        return row["detail"], row.get("_error_class")
+    if state == "stubbed":
+        return (matching[0]["detail"] if matching else "stubbed"), None
+    return state, None
+
+
+def _rollup(
+    worker: str,
+    servers: frozenset[str],
+    tool_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Worker state is the worst required tool. Optional tools stay on the side."""
+    required_states = [row["state"] for row in tool_rows if row["required"]]
+    if not required_states:
+        return _row(worker, servers, "reachable", "listed")
+    state = worst_state(required_states)
+    reason, error_class = _worker_reason(tool_rows, state)
+    return _row(worker, servers, state, reason, error_class)
+
+
 def _classify_listed(
     worker: str,
     servers: frozenset[str],
@@ -211,65 +344,66 @@ def _classify_listed(
     found: set[tuple[str, str]],
     call_tool: CallTool,
     timeout_s: float,
+    optional: frozenset[str],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    tool_rows: list[dict[str, Any]] = []
+    for tool in sorted(tools):
+        state, detail, error_class = _classify_tool(tool, found, call_tool, timeout_s)
+        tool_rows.append(_tool_row(
+            worker, tool, _is_required_tool(tool, optional), state, detail, error_class,
+        ))
+    return _rollup(worker, servers, tool_rows), tool_rows
+
+
+def _stub_report(
+    workers: dict[str, frozenset[str]],
+    reason: str,
+    tools_for: dict[str, tuple[str, ...]] | None,
+    optional: frozenset[str],
 ) -> dict[str, Any]:
-    missing = sorted(tool for tool in tools if not _is_listed(tool, found))
-    if missing:
-        return _row(worker, servers, "missing", "unlisted: " + ",".join(missing))
-    reads = sorted(tool for tool in tools if tool not in _MUTATING_TOOLS)
-    if not reads:
-        return _row(worker, servers, "reachable", "listed")
-    skipped: list[str] = []
-    for tool in reads:
-        try:
-            payload = _call_with_timeout(partial(call_tool, tool), timeout_s)
-        except TimeoutError:
-            return _row(worker, servers, "failed", f"probe timed out: {tool}", "TimeoutError")
-        except Exception as exc:
-            return _row(
-                worker, servers, "failed",
-                f"{type(exc).__name__}: {exc}",
-                type(exc).__name__,
-            )
-        if isinstance(payload, dict) and payload.get("skipped") is True:
-            skipped.append(tool)
-            continue
-        failure = _probe_is_failure(payload)
-        if failure:
-            detail = ""
-            if isinstance(payload, dict) and payload.get("error"):
-                detail = str(payload.get("error"))
-            return _row(worker, servers, "failed", detail or failure, failure)
-    if skipped:
-        return _row(worker, servers, "missing", "not_provided: " + ",".join(skipped))
-    return _row(worker, servers, "reachable", "listed")
+    rows: list[dict[str, Any]] = []
+    tool_rows: list[dict[str, Any]] = []
+    for name, servers in sorted(workers.items()):
+        rows.append(_row(name, servers, "stubbed", reason))
+        for tool in sorted(_tools_for(name, servers, tools_for)):
+            tool_rows.append(_tool_row(
+                name, tool, _is_required_tool(tool, optional), "stubbed", reason,
+            ))
+    return _envelope(rows, tool_rows, mode="stub")
 
 
-def _stub_report(workers: dict[str, frozenset[str]], reason: str) -> dict[str, Any]:
-    rows = [
-        _row(name, servers, "stubbed", reason)
-        for name, servers in sorted(workers.items())
-    ]
-    return _envelope(rows, mode="stub")
-
-
-def _envelope(rows: list[dict[str, Any]], mode: str) -> dict[str, Any]:
+def _envelope(
+    rows: list[dict[str, Any]],
+    tool_rows: list[dict[str, Any]],
+    mode: str,
+) -> dict[str, Any]:
+    rows = sorted(rows, key=lambda row: row["worker"])
+    public_tools = [_public_tool(row) for row in tool_rows]
+    public_tools.sort(key=lambda row: (row["worker"], row["tool"]))
     return {
         "gateway_mode": mode,
         "plain_mcp": bool(plain_mcp_enabled()),
         "workers": rows,
+        "tools": public_tools,
     }
 
 
 def _failed_dependents(
     pending: list[tuple[str, frozenset[str], tuple[str, ...]]],
     exc: BaseException,
-) -> list[dict[str, Any]]:
+    optional: frozenset[str],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     reason = f"{type(exc).__name__}: {exc}"
     error_class = type(exc).__name__
-    return [
-        _row(name, servers, "failed", reason, error_class)
-        for name, servers, _tools in pending
-    ]
+    rows: list[dict[str, Any]] = []
+    tool_rows: list[dict[str, Any]] = []
+    for name, servers, tools in pending:
+        rows.append(_row(name, servers, "failed", reason, error_class))
+        for tool in sorted(tools):
+            tool_rows.append(_tool_row(
+                name, tool, _is_required_tool(tool, optional), "failed", reason, error_class,
+            ))
+    return rows, tool_rows
 
 
 def diagnose(
@@ -281,21 +415,27 @@ def diagnose(
     timeout_s: float | None = None,
     configured: bool | None = None,
     assume_endpoint: bool | None = None,
+    optional_tools: frozenset[str] | None = None,
 ) -> dict[str, Any]:
     """Build the connection report. Inject list/call callables in tests.
 
     ``assume_endpoint`` overrides URL/ARN detection. Tests that inject
     ``list_tools`` pass True so classification uses the injected catalog.
+
+    ``optional_tools`` defaults to empty. Every ``WORKER_TOOLS`` entry stays
+    required unless a test names it here. Optional tools are still probed.
     """
     table = workers if workers is not None else worker_servers()
+    optional = optional_tools or frozenset()
     if configured is None:
         configured = (not force_stub_gateway()) and bool(resolved_gateway_url() or _has_any_arn())
     if not configured:
         reason = "GATEWAY_MODE=stub" if force_stub_gateway() else "nothing_configured"
-        return _stub_report(table, reason)
+        return _stub_report(table, reason, tools_for, optional)
 
     timeout = timeout_s if timeout_s is not None else mcp_call_timeout_seconds()
     rows: list[dict[str, Any]] = []
+    tool_rows: list[dict[str, Any]] = []
     pending: list[tuple[str, frozenset[str], tuple[str, ...]]] = []
     for name, servers in sorted(table.items()):
         tools = _tools_for(name, servers, tools_for)
@@ -304,26 +444,34 @@ def diagnose(
             continue
         if servers and not all(_has_endpoint(server, assume_endpoint) for server in servers):
             rows.append(_row(name, servers, "missing", "no endpoint configured"))
+            for tool in sorted(tools):
+                tool_rows.append(_tool_row(
+                    name, tool, _is_required_tool(tool, optional),
+                    "missing", "no endpoint configured",
+                ))
             continue
         pending.append((name, servers, tools))
 
     if not pending:
-        rows.sort(key=lambda row: row["worker"])
-        return _envelope(rows, mode="live")
+        return _envelope(rows, tool_rows, mode="live")
 
     lister, caller = _resolve_probes(list_tools, call_tool)
     try:
         names = _call_with_timeout(lister, timeout)
     except Exception as exc:
-        rows.extend(_failed_dependents(pending, exc))
-        rows.sort(key=lambda row: row["worker"])
-        return _envelope(rows, mode="live")
+        failed_rows, failed_tools = _failed_dependents(pending, exc, optional)
+        rows.extend(failed_rows)
+        tool_rows.extend(failed_tools)
+        return _envelope(rows, tool_rows, mode="live")
 
     found = _listed_identities(list(names or []))
     for name, servers, tools in pending:
-        rows.append(_classify_listed(name, servers, tools, found, caller, timeout))
-    rows.sort(key=lambda row: row["worker"])
-    return _envelope(rows, mode="live")
+        worker_row, classified = _classify_listed(
+            name, servers, tools, found, caller, timeout, optional,
+        )
+        rows.append(worker_row)
+        tool_rows.extend(classified)
+    return _envelope(rows, tool_rows, mode="live")
 
 
 def report_exit_code(report: dict[str, Any]) -> int:
@@ -335,16 +483,28 @@ def report_exit_code(report: dict[str, Any]) -> int:
 
 
 def format_text(report: dict[str, Any]) -> str:
-    """Stable human-readable report. No timestamps, no secrets."""
+    """Stable human-readable report. Worker line, then its tool rows.
+
+    No timestamps, no secrets.
+    """
     lines = [
         f"gateway_mode={report.get('gateway_mode', '')} plain_mcp={str(bool(report.get('plain_mcp'))).lower()}",
     ]
+    by_worker: dict[str, list[dict[str, Any]]] = {}
+    for tool in report.get("tools") or []:
+        by_worker.setdefault(str(tool.get("worker")), []).append(tool)
     for row in report.get("workers") or []:
         error_class = row.get("error_class") or "-"
         lines.append(
             f"{row['worker']}\t{row['state']}\trequired={str(bool(row['required'])).lower()}"
             f"\terror_class={error_class}\treason={row.get('reason', '')}"
         )
+        for tool in by_worker.get(row["worker"], []):
+            lines.append(
+                f"  {tool['tool']}\t{tool['state']}"
+                f"\trequired={str(bool(tool['required'])).lower()}"
+                f"\tdetail={tool.get('detail', '')}"
+            )
     return "\n".join(lines) + "\n"
 
 

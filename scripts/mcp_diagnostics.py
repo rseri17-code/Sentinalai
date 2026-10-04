@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Report whether each worker's MCP server is reachable, stubbed, missing, or failed.
+"""Report whether each worker's MCP tools are reachable, stubbed, missing, or failed.
 
 Usage:
     python scripts/mcp_diagnostics.py
     python scripts/mcp_diagnostics.py --json
+
+Text prints a worker line, then one indented row per tool. The worker
+state is the worst required tool (failed > missing > stubbed > reachable).
+JSON has ``workers`` and ``tools`` (sorted by worker, then tool).
 
 Exit 0 when every required worker is reachable or stubbed.
 Exit 2 when any required worker is missing or failed.

@@ -136,6 +136,17 @@ python scripts/mcp_diagnostics.py
 python scripts/mcp_diagnostics.py --json
 ```
 
+The text report prints one worker line, then one indented row per tool
+(`tool`, `state`, `required`, `detail`). JSON has the same worker rollup
+plus a `tools` array sorted by worker, then tool. Each tool row is
+`{worker, tool, required, state, detail}`. States are `reachable`,
+`stubbed`, `missing`, or `failed`. The worker state is the worst state
+among its required tools, in the order failed, then missing, then stubbed,
+then reachable. Optional tools are listed and do not change the worker
+state. Every tool the worker calls today is required, including
+`splunk.get_change_data`, so a skip on that tool keeps `log_worker`
+missing even when `splunk.search_oneshot` is reachable.
+
 ## 6. OSS validation (Prometheus / Loki / Alertmanager)
 
 With `PLAIN_MCP` unset, `GATEWAY_MODE=live` still expects **AgentCore-shaped**

@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from supervisor.tool_selector import get_evolved_playbook
-from supervisor.receipt import ReceiptCollector
+from supervisor.receipt import ReceiptCollector, begin_query, complete_query
 from supervisor.guardrails import (
     ExecutionBudget,
     CircuitBreakerRegistry,
@@ -1411,6 +1411,7 @@ class SentinalAISupervisor:
         worker_name: str = "",
         circuits: CircuitBreakerRegistry | None = None,
         policy_ref: str = "",
+        filter_source: str = "playbook_hint",
     ) -> dict:
         """Call worker.execute() with circuit breaker, timeout guard, and retry.
 
@@ -1454,6 +1455,8 @@ class SentinalAISupervisor:
                 time_window_start=str(_tw_start) if _tw_start else "",
                 time_window_end=str(_tw_end) if _tw_end else "",
             ) if receipts else None
+            if receipt is not None:
+                begin_query(receipt, params, filter_source)
             call_start = time.monotonic()
 
             try:
@@ -1478,6 +1481,7 @@ class SentinalAISupervisor:
                     result["_receipt_action"] = action
                     result["_receipt_time_window_start"] = receipt.time_window_start or ""
                     result["_receipt_time_window_end"] = receipt.time_window_end or ""
+                    result = complete_query(receipt, result)
                 record_worker_call(worker_name, action, "success", call_elapsed)
                 if circuits:
                     circuits.get(worker_name).record_success(worker_name)
@@ -2096,8 +2100,9 @@ class SentinalAISupervisor:
 
         owners: list[str] = []
         seen: set[str] = set()
+        origin: dict[str, str] = {}
 
-        def _add(name: Any) -> None:
+        def _add(name: Any, source: str) -> None:
             if not isinstance(name, str) or not name.strip() or is_placeholder(name):
                 return
             token = name.strip()
@@ -2105,6 +2110,7 @@ class SentinalAISupervisor:
                 return
             seen.add(token)
             owners.append(token)
+            origin[token] = source
 
         # Playbook step order, then record order within the step, then
         # an owner named only on the incident. Dict insertion follows
@@ -2118,7 +2124,7 @@ class SentinalAISupervisor:
                 return
             for row in results:
                 if isinstance(row, dict):
-                    _add(row.get("downstream"))
+                    _add(row.get("downstream"), "cited_record_field")
 
         labels = [label for label in (step_labels or []) if label]
         if labels:
@@ -2129,8 +2135,8 @@ class SentinalAISupervisor:
                 _take(value)
         incident = getattr(self._tls, "current_incident", None) or {}
         if isinstance(incident, dict):
-            _add(incident.get("downstream"))
-            _add(incident.get("downstream_service"))
+            _add(incident.get("downstream"), "structured_incident_field")
+            _add(incident.get("downstream_service"), "structured_incident_field")
         alert_text: list[str] = []
         if isinstance(incident, dict):
             known = _known_services(evidence, receipts)
@@ -2138,7 +2144,7 @@ class SentinalAISupervisor:
                 if token not in known:
                     continue
                 before = len(owners)
-                _add(token)
+                _add(token, "alert_text")
                 if len(owners) == before + 1:
                     alert_text.append(token)
 
@@ -2166,6 +2172,7 @@ class SentinalAISupervisor:
             evidence[label] = self._call_worker(
                 worker, "search_logs", params, receipts, budget, "log_worker",
                 circuits=circuits,
+                filter_source=origin.get(name, "cited_record_field"),
             )
             if name in alert_text:
                 _mark_alert_text_source(receipts, name)
@@ -2857,6 +2864,10 @@ class SentinalAISupervisor:
                 "contradictions": list(_assessment["contradictions"]),
                 "unknowns": list(_assessment["unknowns"]),
             }
+            if _assessment.get("other_changes"):
+                result["cause"]["other_changes"] = _assessment["other_changes"]
+            if _assessment.get("observations"):
+                result["cause"]["observations"] = _assessment["observations"]
             result["_evidence_bound_cause"] = True
             result["_confidence_provenance"] = _assessment["provenance"]
             result["reasoning"] = _assessment["reasoning"]

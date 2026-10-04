@@ -163,6 +163,206 @@ _QUERY_DURATION_FIELDS = ("query_duration_ms", "query_time_ms", "query_duration"
 _QUERY_COUNT_FIELDS = ("slow_query_count", "slow_queries")
 
 
+def _dependency_field(record: dict) -> str:
+    for key in ("target", "downstream", "downstream_service"):
+        val = _record_field(record, key)
+        if val:
+            return val
+    return ""
+
+
+def _view_in_bounds(view: dict, start, end) -> bool:
+    if start is None or end is None:
+        return True
+    return _in_window(view.get("timestamp") or "", start, end)
+
+
+def _is_separate_timeout(view: dict) -> bool:
+    """A timeout line that is not itself the pool record."""
+    record = view.get("record") or {}
+    if not isinstance(record, dict) or view.get("pool_reading"):
+        return False
+    if _is_derived_record(record) or _is_pool(record):
+        return False
+    kind = view.get("kind")
+    if kind not in (None, "", "log"):
+        return False
+    return _is_timeout_text(_raw_text(record))
+
+
+def _cited_structured_dependency(view: dict) -> str:
+    """Target or downstream on a timeout or error record from this incident."""
+    record = view.get("record") or {}
+    if not isinstance(record, dict) or view.get("pool_reading"):
+        return ""
+    if _is_derived_record(record) or _is_pool(record):
+        return ""
+    kind = view.get("kind")
+    if kind not in (None, "", "log"):
+        return ""
+    level = str(record.get("level") or record.get("severity") or "")
+    text = _raw_text(record)
+    is_error = level.upper() in {"ERROR", "FATAL", "CRITICAL"} or text.upper().startswith("ERROR")
+    if not _is_timeout_text(text) and not is_error:
+        return ""
+    return _dependency_field(record)
+
+
+def _span_dependency(views: list[dict], alerted: str) -> str:
+    from supervisor.helpers.service_match import service_names_match
+
+    for view in views:
+        record = view.get("record") or {}
+        if not isinstance(record, dict) or _is_derived_record(record):
+            continue
+        kind = str(view.get("kind") or record.get("span_kind") or record.get("kind") or "")
+        if kind.lower() not in {"span", "trace"} and not record.get("span_id"):
+            continue
+        dest = (
+            _record_field(record, "to")
+            or _record_field(record, "target")
+            or _record_field(record, "downstream")
+        )
+        if not dest:
+            continue
+        parent = _record_field(record, "from") or _record_field(record, "service")
+        if alerted and parent and not service_names_match(parent, alerted):
+            continue
+        if alerted and service_names_match(dest, alerted):
+            continue
+        return dest
+    return ""
+
+
+def _incident_structured_dependency(incident: dict | None) -> str:
+    if not isinstance(incident, dict):
+        return ""
+    for key in ("downstream", "downstream_service"):
+        val = incident.get(key)
+        if isinstance(val, str) and val.strip() and not is_placeholder(val):
+            return val.strip()
+    return ""
+
+
+def establish_failing_dependency(
+    views: list[dict],
+    incident: dict | None,
+    alerted: str,
+    start=None,
+    end=None,
+) -> tuple[str, str]:
+    """D_fail and how it was established.
+
+    ``structured``, ``span``, and ``incident`` come from fields. ``text``
+    is the legacy timeout line, kept so a name in the log message still
+    binds. ``missing`` means a separate timeout exists and none of those
+    named a dependency. ``""`` means there is no separate timeout.
+    Alert title, description, and summary are not read.
+    """
+    considered = [view for view in views if _view_in_bounds(view, start, end)]
+    for view in considered:
+        found = _cited_structured_dependency(view)
+        if found:
+            return found, "structured"
+    span = _span_dependency(considered, alerted)
+    if span:
+        return span, "span"
+    named = _incident_structured_dependency(incident)
+    if named:
+        return named, "incident"
+    for view in considered:
+        if not _is_separate_timeout(view):
+            continue
+        extracted = _extract_downstream(_raw_text(view.get("record") or {}))
+        if extracted:
+            return extracted, "text"
+    if any(_is_separate_timeout(view) for view in considered):
+        return "", "missing"
+    return "", ""
+
+
+def split_pools_for_dependency(
+    pool_views: list[dict],
+    d_fail: str,
+    alerted: str,
+) -> tuple[list[dict], list[dict]]:
+    """Pools whose own downstream matches D_fail, and the others.
+
+    A pool with no downstream does not match. A downstream that names a
+    different service is an observation, not a cause ref.
+    """
+    from supervisor.helpers.service_match import service_names_match
+
+    matched: list[dict] = []
+    observations: list[dict] = []
+    for view in pool_views:
+        record = view.get("record") or {}
+        d_pool = _dependency_field(record)
+        if not d_pool:
+            continue
+        if not service_names_match(d_pool, d_fail):
+            observations.append({
+                "statement": f"pool to {d_pool} exhausted",
+                "evidence_refs": [_ref(view, "pool_observation", "")],
+            })
+            continue
+        own = ""
+        raw = record.get("service")
+        if isinstance(raw, str) and raw.strip() and not is_placeholder(raw):
+            own = raw.strip()
+        if own and alerted and not service_names_match(own, alerted) and not service_names_match(own, d_fail):
+            continue
+        matched.append(view)
+    return matched, observations
+
+
+def _normalized_series(evidence: dict | None) -> list[dict]:
+    from supervisor.helpers.metric_series import normalize_metric_payload
+
+    found = []
+    for key, val in (evidence or {}).items():
+        if str(key).startswith("_") or not isinstance(val, dict):
+            continue
+        ref = {
+            "sequence_order": val.get("_receipt_sequence_order") if isinstance(val.get("_receipt_sequence_order"), int) else None,
+            "tool": str(val.get("_receipt_tool") or ""),
+            "locator": {"evidence_key": str(key), "path": ["metrics"]},
+            "service": "",
+            "timestamp": "",
+            "signal": "metric_series",
+            "evidence_class": "raw",
+        }
+        qid = val.get("_query_id")
+        if isinstance(qid, str) and qid:
+            ref["query_id"] = qid
+        for series in normalize_metric_payload(val, ref=ref):
+            series_ref = dict(series.get("ref") or {})
+            series_ref["service"] = series.get("service") or ""
+            points = series.get("points") or []
+            series_ref["timestamp"] = points[0][0] if points else ""
+            series["ref"] = series_ref
+            found.append(series)
+    return found
+
+
+def _contradicting_pool_series(evidence, owner: str, start, end) -> dict | None:
+    from supervisor.helpers.metric_series import series_contradicts_pool
+
+    for series in _normalized_series(evidence):
+        if series_contradicts_pool(series, owner, start, end, _in_window):
+            return series["ref"]
+    return None
+
+
+def _supporting_pool_series(evidence, owner: str, start, end) -> dict | None:
+    from supervisor.helpers.metric_series import series_supports_pool
+
+    for series in _normalized_series(evidence):
+        if series_supports_pool(series, owner, start, end, _in_window):
+            return series
+    return None
+
+
 def decide_timeout(
     *,
     service: str,
@@ -188,16 +388,39 @@ def decide_timeout(
 
     ds, timeout_views = _downstream(log_views, start, end)
     named_downstream = bool(ds)
+    d_fail, d_source = establish_failing_dependency(
+        log_views, incident, alerted, start, end,
+    )
+    pool_observations: list[dict] = []
     # A pool or query record on the alerted service still counts when no
-    # timeout line names a separate downstream token.
-    if not ds:
+    # separate timeout line names a downstream. A separate timeout that
+    # names nothing does not fall back to the alerted service.
+    if d_source == "missing":
+        ds = ""
+        named_downstream = False
+    elif d_source in {"structured", "span", "incident", "text"}:
+        ds = d_fail
+        named_downstream = True
+    elif not ds:
         ds = alerted
-    pool_views = [
+    in_window_pools = [
         v for v in log_views
-        if _in_window(v["timestamp"], start, end)
-        and _is_pool(v["record"])
-        and _concerns(v, ds, alerted, timeout_names_ds=named_downstream)
+        if _in_window(v["timestamp"], start, end) and _is_pool(v["record"])
     ]
+    if d_source in {"structured", "span", "incident"}:
+        pool_views, pool_observations = split_pools_for_dependency(
+            in_window_pools, d_fail, alerted,
+        )
+    elif d_source == "missing":
+        pool_views = []
+        _unused, pool_observations = split_pools_for_dependency(
+            in_window_pools, "", alerted,
+        )
+    else:
+        pool_views = [
+            v for v in in_window_pools
+            if _concerns(v, ds, alerted, timeout_names_ds=named_downstream)
+        ]
     slow_views = [
         v for v in log_views
         if _in_window(v["timestamp"], start, end)
@@ -287,33 +510,51 @@ def decide_timeout(
         name = "timeout_conflict"
         cause_refs = []
     elif pool_views and (ds or _record_downstream(pool_views[0]["record"])):
-        raw_pools = [
-            v for v in pool_views if not _is_derived_record(v["record"])
-        ]
-        pool_record = raw_pools[0]["record"]
-        cause_refs = [
-            _ref(v, "connection_pool_exhausted", ds) for v in raw_pools
-        ]
-        _score, contributions = score_raw_support(cause_refs)
-        # The owner is a cited record's downstream field when one is set.
-        # A timeout line that names a downstream still counts. When no
-        # cited record names one, the cause names the service.
-        field_record = next(
-            (v["record"] for v in raw_pools if _record_downstream(v["record"])),
-            None,
-        )
-        if field_record is not None:
-            statement, named = _pool_owner_statement(field_record)
-        elif named_downstream and ds:
-            statement = f"connection pool for {ds} exhausted"
-            named = ds
+        series_ref = _contradicting_pool_series(evidence, ds or alerted, start, end)
+        if series_ref is not None:
+            pool_ref = _ref(pool_views[0], "connection_pool_exhausted", ds)
+            contradictions = [
+                {"statement": "connection pool exhaustion", "evidence_refs": [pool_ref]},
+                {"statement": "normalized metric series contradicts the pool record", "evidence_refs": [series_ref]},
+            ]
+            unknowns.append("an aligned metric series contradicts the pool record")
+            base = CONFLICT_BASE
+            contributions = [
+                _contrib("contradiction", pool_ref, CONFLICT_EACH, "direct", "contradiction"),
+                _contrib("contradiction", series_ref, CONFLICT_EACH, "direct", "contradiction"),
+            ]
+            statement = "timeout observed; cause UNKNOWN"
+            category = "unknown"
+            name = "metric_series_contradiction"
+            cause_refs = []
         else:
-            statement, named = _pool_owner_statement(pool_record)
-            unknowns.append(DOWNSTREAM_UNKNOWN)
-        category = "connection_pool_exhaustion"
-        name = "connection_pool_exhaustion"
-        if named:
-            unknowns.append(f"why {named} refuses connections")
+            raw_pools = [
+                v for v in pool_views if not _is_derived_record(v["record"])
+            ]
+            pool_record = raw_pools[0]["record"]
+            cause_refs = [
+                _ref(v, "connection_pool_exhausted", ds) for v in raw_pools
+            ]
+            _score, contributions = score_raw_support(cause_refs)
+            # The owner is a cited record's downstream field when one is set.
+            # A timeout line that names a downstream still counts. When no
+            # cited record names one, the cause names the service.
+            field_record = next(
+                (v["record"] for v in raw_pools if _record_downstream(v["record"])),
+                None,
+            )
+            if field_record is not None:
+                statement, named = _pool_owner_statement(field_record)
+            elif named_downstream and ds:
+                statement = f"connection pool for {ds} exhausted"
+                named = ds
+            else:
+                statement, named = _pool_owner_statement(pool_record)
+                unknowns.append(DOWNSTREAM_UNKNOWN)
+            category = "connection_pool_exhaustion"
+            name = "connection_pool_exhaustion"
+            if named:
+                unknowns.append(f"why {named} refuses connections")
     elif slow_views and ds:
         raw_slow = [
             v for v in slow_views if not _is_derived_record(v["record"])
@@ -334,32 +575,51 @@ def decide_timeout(
         name = "latency_elevated_unknown"
         unknowns.append(f"why {ds} latency is elevated")
     else:
-        base = MISSING_CAUSE
-        statement = "timeout observed; cause UNKNOWN"
-        category = "unknown"
-        name = "timeout_unknown"
-        failed = tool_search_errors(evidence)
-        if failed and not successful_observation(evidence):
-            # Every search that could have bound a cause errored. Absence
-            # of records is not a finding.
-            for row in failed:
-                unknowns.append(
-                    f"search did not happen: {row['tool']}: {row['error']}"
-                )
+        required_owner = d_fail if d_source in {"structured", "span", "incident", "text"} else (ds or alerted)
+        supported = None if d_source == "missing" else _supporting_pool_series(
+            evidence, required_owner, start, end,
+        )
+        if supported is not None:
+            ref = dict(supported["ref"])
+            ref["signal"] = "connection_pool_exhausted"
+            ref["service"] = supported.get("service") or required_owner
+            cause_refs = [ref]
+            _score, contributions = score_raw_support(cause_refs)
+            named = supported.get("service") or required_owner
+            statement = f"connection pool exhausted on {named}"
+            category = "connection_pool_exhaustion"
+            name = "connection_pool_exhaustion"
+            unknowns.append(f"why {named} refuses connections")
+            unknowns.append(DOWNSTREAM_UNKNOWN)
         else:
-            if not ds:
-                unknowns.append("downstream not named by an in-window raw record")
+            base = MISSING_CAUSE
+            statement = "timeout observed; cause UNKNOWN"
+            category = "unknown"
+            name = "timeout_unknown"
+            failed = tool_search_errors(evidence)
+            if failed and not successful_observation(evidence):
+                # Every search that could have bound a cause errored. Absence
+                # of records is not a finding.
+                for row in failed:
+                    unknowns.append(
+                        f"search did not happen: {row['tool']}: {row['error']}"
+                    )
             else:
-                unknowns.append(f"no in-window mechanism record for {ds}")
-            failed_keys = {row["evidence_key"] for row in failed}
-            for src in unavailable:
-                if src in failed_keys:
-                    continue
-                unknowns.append(f"unavailable: {src}")
-            for row in failed:
-                unknowns.append(
-                    f"search did not happen: {row['tool']}: {row['error']}"
-                )
+                if d_source == "missing":
+                    unknowns.append("failing dependency not identified")
+                elif not ds:
+                    unknowns.append("downstream not named by an in-window raw record")
+                else:
+                    unknowns.append(f"no in-window mechanism record for {ds}")
+                failed_keys = {row["evidence_key"] for row in failed}
+                for src in unavailable:
+                    if src in failed_keys:
+                        continue
+                    unknowns.append(f"unavailable: {src}")
+                for row in failed:
+                    unknowns.append(
+                        f"search did not happen: {row['tool']}: {row['error']}"
+                    )
 
     cause_score = _clamp(base + sum(c["delta"] for c in contributions))
     if category == "unknown" or contradictions:
@@ -400,7 +660,7 @@ def decide_timeout(
         "symptom_contributions": symptom_contribs,
         "symptom_confidence": symptom_score,
     }
-    return {
+    decision = {
         "hypothesis_name": name,
         "statement": statement,
         "category": category,
@@ -413,6 +673,9 @@ def decide_timeout(
         "provenance": provenance,
         "downstream": ds,
     }
+    if pool_observations:
+        decision["observations"] = pool_observations
+    return decision
 
 
 def citations_for_bound_result(result: dict) -> list[dict] | None:
@@ -747,7 +1010,7 @@ def _ref(view: dict, signal: str, service: str) -> dict:
         own = raw.strip()
     else:
         own = _extract_downstream(_raw_text(record))
-    return {
+    ref = {
         "sequence_order": view.get("sequence_order"),
         "tool": view.get("tool") or "",
         "locator": view.get("locator"),
@@ -756,6 +1019,10 @@ def _ref(view: dict, signal: str, service: str) -> dict:
         "signal": signal,
         "evidence_class": _evidence_class(record),
     }
+    qid = view.get("query_id")
+    if isinstance(qid, str) and qid:
+        ref["query_id"] = qid
+    return ref
 
 
 def _reasoning(
@@ -1085,17 +1352,21 @@ def _iter_logs(evidence: dict, fallback: list[dict]) -> list[dict]:
         found = True
         seq = val.get("_receipt_sequence_order")
         tool = str(val.get("_receipt_tool") or "")
+        query_id = val.get("_query_id") if isinstance(val.get("_query_id"), str) else ""
         for i, entry in enumerate(results):
             if not isinstance(entry, dict):
                 continue
             ts = entry.get("_time") or entry.get("timestamp") or entry.get("ts") or ""
-            views.append({
+            view = {
                 "record": entry,
                 "timestamp": str(ts),
                 "sequence_order": seq if isinstance(seq, int) else entry.get("_receipt_sequence_order"),
                 "tool": tool or str(entry.get("_receipt_tool") or ""),
                 "locator": {"evidence_key": key, "path": prefix + [i]},
-            })
+            }
+            if query_id:
+                view["query_id"] = query_id
+            views.append(view)
     if found:
         return views
     for i, entry in enumerate(fallback or []):

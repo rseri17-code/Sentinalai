@@ -61,6 +61,18 @@ class Receipt:
     # Service names from this incident's ITSM topology fetch. Empty on
     # every other receipt, and omitted from to_dict when empty.
     topology_services: list = field(default_factory=list)
+    # Per-query coverage. Empty until a worker call is stamped, and
+    # omitted from to_dict when unset so older receipts stay the same.
+    # These are not copied into params, so they stay out of the replay hash.
+    query_id: str = ""
+    filter: str = ""
+    filter_source: str = ""
+    window_start: str = ""
+    window_end: str = ""
+    oldest_ts: str = ""
+    newest_ts: str = ""
+    limit: int | None = None
+    truncated: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize for persistence / replay."""
@@ -70,6 +82,16 @@ class Receipt:
             d.pop("output", None)
         if not d.get("topology_services"):
             d.pop("topology_services", None)
+        for key in (
+            "query_id", "filter", "filter_source",
+            "window_start", "window_end", "oldest_ts", "newest_ts",
+        ):
+            if not d.get(key):
+                d.pop(key, None)
+        if d.get("limit") is None:
+            d.pop("limit", None)
+        if d.get("truncated") is None:
+            d.pop("truncated", None)
         return d
 
     @classmethod
@@ -315,3 +337,83 @@ def _redact_output(result: dict[str, Any]) -> dict[str, Any]:
         else:
             redacted[k] = v
     return redacted
+
+
+_FILTER_KEYS = ("query", "metric", "service")
+_BOUND_KEYS = ("limit", "truncated", "oldest_ts", "newest_ts", "window_start", "window_end")
+
+
+def query_filter_text(params: dict | None) -> str:
+    if not isinstance(params, dict):
+        return ""
+    for key in _FILTER_KEYS:
+        val = params.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return ""
+
+
+def _param_window(params: dict | None, which: str) -> str:
+    if not isinstance(params, dict):
+        return ""
+    keys = ("start_time", "time_window_start") if which == "start" else ("end_time", "time_window_end")
+    for key in keys:
+        val = params.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return ""
+
+
+def _bound_source(result: dict | None) -> dict:
+    if not isinstance(result, dict):
+        return {}
+    candidates = [result]
+    for key in ("logs", "metrics", "signals"):
+        nested = result.get(key)
+        if isinstance(nested, dict):
+            candidates.append(nested)
+    for src in candidates:
+        if any(key in src for key in _BOUND_KEYS):
+            return src
+    return {}
+
+
+def begin_query(receipt: Receipt, params: dict | None, filter_source: str = "playbook_hint") -> None:
+    """Record the query on the receipt. Nothing is written into params."""
+    receipt.query_id = f"q{receipt.sequence_order}"
+    receipt.filter = query_filter_text(params)
+    receipt.filter_source = filter_source or "playbook_hint"
+    receipt.window_start = _param_window(params, "start")
+    receipt.window_end = _param_window(params, "end")
+
+
+def complete_query(receipt: Receipt, result: dict) -> dict:
+    """Copy gateway result bounds onto the receipt and the tool result."""
+    src = _bound_source(result)
+    window_start = src.get("window_start")
+    window_end = src.get("window_end")
+    if isinstance(window_start, str) and window_start.strip():
+        receipt.window_start = window_start.strip()
+    if isinstance(window_end, str) and window_end.strip():
+        receipt.window_end = window_end.strip()
+    oldest = src.get("oldest_ts")
+    newest = src.get("newest_ts")
+    receipt.oldest_ts = oldest.strip() if isinstance(oldest, str) else ""
+    receipt.newest_ts = newest.strip() if isinstance(newest, str) else ""
+    limit = src.get("limit")
+    receipt.limit = limit if isinstance(limit, int) and not isinstance(limit, bool) else None
+    truncated = src.get("truncated")
+    receipt.truncated = truncated if isinstance(truncated, bool) else None
+    stamped = dict(result)
+    stamped["_query_id"] = receipt.query_id
+    stamped["_filter"] = receipt.filter
+    stamped["_filter_source"] = receipt.filter_source
+    stamped["_window_start"] = receipt.window_start
+    stamped["_window_end"] = receipt.window_end
+    stamped["_oldest_ts"] = receipt.oldest_ts
+    stamped["_newest_ts"] = receipt.newest_ts
+    if receipt.limit is not None:
+        stamped["_limit"] = receipt.limit
+    if receipt.truncated is not None:
+        stamped["_truncated"] = receipt.truncated
+    return stamped

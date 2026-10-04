@@ -11,9 +11,18 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from supervisor.helpers.metric_series import (
+    classify_metric_payload,
+    series_contradicts_pool,
+    series_supports_pool,
+    unparsed_metric_signals,
+)
 from supervisor.helpers.placeholders import is_placeholder
+from supervisor.helpers.service_match import service_names_match
 from supervisor.helpers.timeout_evidence import (
     ALIGNMENT_WINDOW_MINUTES,
+    CONFLICT_BASE,
+    CONFLICT_EACH,
     DOWNSTREAM_UNKNOWN,
     _extract_downstream,
     _in_window,
@@ -22,15 +31,18 @@ from supervisor.helpers.timeout_evidence import (
     _is_pool,
     _is_slow_query,
     _is_timeout_text,
+    _normalized_series,
     _parse_ts,
     _pool_owner_statement,
     _raw_text,
     _record_downstream,
     _ref,
     dedupe_views,
+    establish_failing_dependency,
     is_unsaturated_pool,
     iter_pool_readings,
     score_raw_support,
+    split_pools_for_dependency,
     successful_observation,
     tool_search_error,
     tool_search_errors,
@@ -194,20 +206,26 @@ def bind_hypothesis(
         "symptom": symptom,
         "contributions": contributions,
     }
+    proposal = _attach_change_context(proposal, windowed, service)
     proposal = _with_provenance(proposal, name)
     _mention_service(proposal, service)
     # A supported slow query, pool record, or exception is the cause even
     # when the proposal already scored at or above 60 from another clause.
     # A derived label must not be what keeps that proposal in place.
     logs = [v for v in windowed if v.get("kind") == "log"]
-    scanned = _decide_from_views(windowed, service=service, incident_type=incident_type)
+    scanned = _decide_from_views(
+        windowed, service=service, incident_type=incident_type, incident=incident,
+    )
+    scanned = _apply_series_decision(
+        scanned, evidence, incident, service, incident_type, windowed,
+    )
     if scanned is None:
         return proposal
     scanned_raw = [
         r for r in (scanned.get("cause_refs") or [])
         if r.get("evidence_class") != "derived"
     ]
-    prefer = bool(scanned.get("contradictions")) or (
+    prefer = bool(scanned.get("pool_rejected")) or bool(scanned.get("contradictions")) or (
         scanned.get("category") in {
             "exception", "slow_queries", "connection_pool_exhaustion",
         }
@@ -226,6 +244,7 @@ def bind_hypothesis(
         if item not in merged:
             merged.append(item)
     scanned["unknowns"] = merged
+    scanned = _attach_change_context(scanned, windowed, service)
     scanned = _with_provenance(scanned, name)
     return _mention_service(scanned, service)
 
@@ -318,42 +337,50 @@ def _collect_views(evidence, logs, signals, metrics, events, changes) -> list[di
             continue
         seq = val.get("_receipt_sequence_order")
         tool = str(val.get("_receipt_tool") or "")
+        raw_qid = val.get("_query_id")
+        query_id = raw_qid if isinstance(raw_qid, str) else ""
         locator_key = key
+        metric_class = classify_metric_payload(val)
         results = _log_results(val)
         if results is not None:
             found_logs = True
             for i, entry in enumerate(results):
                 if isinstance(entry, dict):
-                    views.append(_view(entry, "log", seq, tool, {"evidence_key": locator_key, "path": ["logs", "results", i]}))
+                    views.append(_view(entry, "log", seq, tool, {"evidence_key": locator_key, "path": ["logs", "results", i]}, query_id))
         for i, entry in enumerate(val.get("events") or []):
             if isinstance(entry, dict):
-                views.append(_view(entry, "event", seq, tool, {"evidence_key": locator_key, "path": ["events", i]}))
+                views.append(_view(entry, "event", seq, tool, {"evidence_key": locator_key, "path": ["events", i]}, query_id))
         for i, entry in enumerate(val.get("changes") or []):
             if isinstance(entry, dict):
-                views.append(_view(entry, "change", seq, tool, {"evidence_key": locator_key, "path": ["changes", i]}))
+                views.append(_view(entry, "change", seq, tool, {"evidence_key": locator_key, "path": ["changes", i]}, query_id))
         for i, entry in enumerate(val.get("change_records") or []):
             if isinstance(entry, dict):
-                views.append(_view(entry, "change", seq, tool, {"evidence_key": locator_key, "path": ["change_records", i]}))
-        metric_blob = val.get("metrics")
-        if isinstance(metric_blob, dict):
-            for i, entry in enumerate(metric_blob.get("metrics") or []):
-                if isinstance(entry, dict):
-                    views.append(_view(entry, "metric", seq, tool, {"evidence_key": locator_key, "path": ["metrics", "metrics", i]}))
-        elif isinstance(metric_blob, list):
-            for i, entry in enumerate(metric_blob):
-                if isinstance(entry, dict):
-                    views.append(_view(entry, "metric", seq, tool, {"evidence_key": locator_key, "path": ["metrics", i]}))
-        sig = val.get("signals")
-        if isinstance(sig, dict) and sig.get("golden_signals"):
-            ts = str(sig.get("anomaly_start") or sig.get("timestamp") or "")
-            views.append({
-                "record": sig,
-                "kind": "signal",
-                "timestamp": ts,
-                "sequence_order": seq if isinstance(seq, int) else None,
-                "tool": tool,
-                "locator": {"evidence_key": locator_key, "path": ["signals"]},
-            })
+                views.append(_view(entry, "change", seq, tool, {"evidence_key": locator_key, "path": ["change_records", i]}, query_id))
+        # An unparsed metric body is not a series of zeros and not "no data".
+        if metric_class != "unparsed":
+            metric_blob = val.get("metrics")
+            if isinstance(metric_blob, dict):
+                for i, entry in enumerate(metric_blob.get("metrics") or []):
+                    if isinstance(entry, dict):
+                        views.append(_view(entry, "metric", seq, tool, {"evidence_key": locator_key, "path": ["metrics", "metrics", i]}, query_id))
+            elif isinstance(metric_blob, list):
+                for i, entry in enumerate(metric_blob):
+                    if isinstance(entry, dict):
+                        views.append(_view(entry, "metric", seq, tool, {"evidence_key": locator_key, "path": ["metrics", i]}, query_id))
+            sig = val.get("signals")
+            if isinstance(sig, dict) and sig.get("golden_signals"):
+                ts = str(sig.get("anomaly_start") or sig.get("timestamp") or "")
+                signal_view = {
+                    "record": sig,
+                    "kind": "signal",
+                    "timestamp": ts,
+                    "sequence_order": seq if isinstance(seq, int) else None,
+                    "tool": tool,
+                    "locator": {"evidence_key": locator_key, "path": ["signals"]},
+                }
+                if query_id:
+                    signal_view["query_id"] = query_id
+                views.append(signal_view)
     if not found_logs:
         for i, entry in enumerate(logs or []):
             if isinstance(entry, dict):
@@ -397,8 +424,8 @@ def _log_results(val: dict) -> list | None:
     return None
 
 
-def _view(record: dict, kind: str, seq: Any, tool: str, locator: dict) -> dict:
-    return {
+def _view(record: dict, kind: str, seq: Any, tool: str, locator: dict, query_id: str = "") -> dict:
+    view = {
         "record": record,
         "kind": kind,
         "timestamp": _record_ts(record),
@@ -406,6 +433,9 @@ def _view(record: dict, kind: str, seq: Any, tool: str, locator: dict) -> dict:
         "tool": tool or str(record.get("_receipt_tool") or ""),
         "locator": locator,
     }
+    if query_id:
+        view["query_id"] = query_id
+    return view
 
 
 def _record_ts(record: dict) -> str:
@@ -502,6 +532,278 @@ def _change_blob(record: dict) -> str:
     return " ".join(parts).lower()
 
 
+_CHANGE_IDENTITY_FIELDS = ("service", "ci", "ci_name", "configuration_item")
+_QUERY_FILTER_SOURCES = frozenset({
+    "playbook_hint",
+    "cited_record_field",
+    "structured_incident_field",
+    "alert_text",
+})
+
+
+def _change_identities(record: dict) -> list[str]:
+    found = []
+    if not isinstance(record, dict):
+        return found
+    for key in _CHANGE_IDENTITY_FIELDS:
+        val = record.get(key)
+        if isinstance(val, str) and val.strip() and not is_placeholder(val):
+            found.append(val.strip())
+    return found
+
+
+def _change_owner_status(record: dict, owner: str) -> str:
+    identities = _change_identities(record)
+    if not identities:
+        return "unidentified"
+    if any(service_names_match(item, owner) for item in identities):
+        return "match"
+    return "other"
+
+
+def _partition_changes(views: list[dict], owner: str) -> tuple[list[dict], list[dict], list[dict]]:
+    matched: list[dict] = []
+    others: list[dict] = []
+    unidentified: list[dict] = []
+    for view in views:
+        status = _change_owner_status(view.get("record") or {}, owner)
+        if status == "match":
+            matched.append(view)
+        elif status == "other":
+            others.append(view)
+        else:
+            unidentified.append(view)
+    return matched, others, unidentified
+
+
+def _is_change_view(view: dict) -> bool:
+    record = view.get("record") or {}
+    if not isinstance(record, dict):
+        return False
+    if view.get("kind") == "change":
+        return True
+    return _looks_like_change(record) or _is_deploy_view(view)
+
+
+def _change_ref(view: dict, signal: str) -> dict:
+    ref = _ref(view, signal, "")
+    if not ref.get("service"):
+        identities = _change_identities(view.get("record") or {})
+        if identities:
+            ref["service"] = identities[0]
+    return ref
+
+
+def _locator_identity(item: dict) -> tuple:
+    locator = item.get("locator") or {}
+    path = locator.get("path") or []
+    return (locator.get("evidence_key"), tuple(path))
+
+
+def _pool_rejected(incident_type: str, observations: list[dict], *, identified: bool) -> dict:
+    unknowns = []
+    if not identified:
+        unknowns.append("failing dependency not identified")
+    return {
+        "hypothesis_name": "pool_dependency_mismatch",
+        "statement": f"{incident_type} observed; cause UNKNOWN",
+        "category": "unknown",
+        "cause_confidence": SYMPTOM_ONLY,
+        "cause_refs": [],
+        "contradictions": [],
+        "unknowns": unknowns,
+        "observations": observations,
+        "contributions": [],
+        "pool_rejected": True,
+    }
+
+
+def _attach_change_context(decision: dict, views: list[dict], owner: str) -> dict:
+    """A change counts only when its own service or CI is the cause owner."""
+    changes = [view for view in views if _is_change_view(view)]
+    _matched, others, unidentified = _partition_changes(changes, owner)
+    unknowns = list(decision.get("unknowns") or [])
+    if unidentified and "change in window, service not identified" not in unknowns:
+        unknowns.append("change in window, service not identified")
+    foreign = {_locator_identity(view) for view in others + unidentified}
+    kept_refs = []
+    cited_match = False
+    for ref in decision.get("cause_refs") or []:
+        if _locator_identity(ref) in foreign:
+            continue
+        signal = str(ref.get("signal") or "")
+        if signal == "deployment" and service_names_match(str(ref.get("service") or ""), owner):
+            cited_match = True
+        kept_refs.append(ref)
+    if cited_match and "whether the change caused it" not in unknowns:
+        unknowns.append("whether the change caused it")
+    decision["unknowns"] = unknowns
+    previous = list(decision.get("cause_refs") or [])
+    if kept_refs != previous:
+        decision["cause_refs"] = kept_refs
+        if kept_refs:
+            score, contribs = score_raw_support(kept_refs)
+            decision["cause_confidence"] = score
+            decision["contributions"] = contribs
+        else:
+            decision["category"] = "unknown"
+            decision["cause_confidence"] = min(int(decision.get("cause_confidence") or 0), 59)
+            decision["contributions"] = []
+    if others:
+        decision["other_changes"] = {
+            "statement": "other changes in window",
+            "evidence_refs": [
+                _change_ref(view, "other_change") for view in dedupe_views(others)
+            ],
+        }
+    return decision
+
+
+def _series_conflict(pool_ref: dict, series_ref: dict, incident_type: str) -> dict:
+    return {
+        "hypothesis_name": "metric_series_contradiction",
+        "statement": f"{incident_type} observed; cause UNKNOWN",
+        "category": "unknown",
+        "cause_confidence": CONFLICT_BASE + (2 * CONFLICT_EACH),
+        "cause_refs": [],
+        "contradictions": [
+            {"statement": "connection pool exhaustion", "evidence_refs": [pool_ref]},
+            {
+                "statement": "normalized metric series contradicts the pool record",
+                "evidence_refs": [series_ref],
+            },
+        ],
+        "unknowns": ["an aligned metric series contradicts the pool record"],
+        "contributions": [],
+    }
+
+
+def _series_pool_decision(series: dict, owner: str) -> dict:
+    ref = dict(series.get("ref") or {})
+    ref["signal"] = "connection_pool_exhausted"
+    ref["service"] = series.get("service") or owner
+    ref["evidence_class"] = ref.get("evidence_class") or "raw"
+    score, contribs = score_raw_support([ref])
+    named = series.get("service") or owner
+    return {
+        "hypothesis_name": "connection_pool_exhaustion",
+        "statement": f"connection pool exhausted on {named}",
+        "category": "connection_pool_exhaustion",
+        "cause_confidence": score,
+        "cause_refs": [ref],
+        "contradictions": [],
+        "unknowns": [
+            f"why {named} refuses connections",
+            DOWNSTREAM_UNKNOWN,
+        ],
+        "contributions": contribs,
+    }
+
+
+def _apply_series_decision(
+    decision: dict | None,
+    evidence: dict | None,
+    incident: dict | None,
+    service: str,
+    incident_type: str,
+    views: list[dict],
+) -> dict | None:
+    start, end = _alignment_bounds(incident or {})
+    d_fail, d_source = establish_failing_dependency(views, incident, service)
+    owner = d_fail if d_source in {"structured", "span", "incident", "text"} else service
+    series_list = _normalized_series(evidence)
+    if isinstance(decision, dict) and decision.get("category") == "connection_pool_exhaustion":
+        pool_refs = decision.get("cause_refs") or []
+        pool_ref = pool_refs[0] if pool_refs else None
+        if pool_ref:
+            for series in series_list:
+                if series_contradicts_pool(series, owner or service, start, end, _in_window):
+                    return _series_conflict(pool_ref, series["ref"], incident_type)
+    if d_source == "missing":
+        return decision
+    unknown = decision is None or (
+        isinstance(decision, dict)
+        and decision.get("category") == "unknown"
+        and not decision.get("contradictions")
+        and not decision.get("pool_rejected")
+    )
+    if unknown:
+        for series in series_list:
+            if series_supports_pool(series, owner or service, start, end, _in_window):
+                return _series_pool_decision(series, owner or service)
+    return decision
+
+
+def query_ref_ok(
+    ref: dict,
+    evidence: dict | None = None,
+    receipts: list | None = None,
+) -> bool:
+    """A cause ref is gradable only when its query_id resolves.
+
+    The record's timestamp has to sit inside that query's requested window
+    and returned span when those bounds are present.
+    """
+    if not isinstance(ref, dict):
+        return False
+    qid = ref.get("query_id")
+    if not isinstance(qid, str) or not qid:
+        return False
+    found = _query_by_id(qid, evidence, receipts)
+    if found is None:
+        return False
+    source = str(found.get("filter_source") or found.get("_filter_source") or "")
+    if source not in _QUERY_FILTER_SOURCES:
+        return False
+    return _timestamp_in_query(str(ref.get("timestamp") or ""), found)
+
+
+def _query_by_id(qid: str, evidence: dict | None, receipts: list | None) -> dict | None:
+    for val in (evidence or {}).values():
+        if isinstance(val, dict) and val.get("_query_id") == qid:
+            return val
+    for receipt in receipts or []:
+        if isinstance(receipt, dict) and receipt.get("query_id") == qid:
+            return receipt
+        if getattr(receipt, "query_id", "") == qid:
+            return {
+                "query_id": receipt.query_id,
+                "filter_source": receipt.filter_source,
+                "window_start": receipt.window_start,
+                "window_end": receipt.window_end,
+                "oldest_ts": receipt.oldest_ts,
+                "newest_ts": receipt.newest_ts,
+            }
+    return None
+
+
+def _query_bound(query: dict, *keys: str) -> str:
+    for key in keys:
+        val = query.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return ""
+
+
+def _timestamp_in_query(ts: str, query: dict) -> bool:
+    parsed = _parse_ts(ts)
+    window_start = _parse_ts(_query_bound(query, "window_start", "_window_start"))
+    window_end = _parse_ts(_query_bound(query, "window_end", "_window_end"))
+    oldest = _parse_ts(_query_bound(query, "oldest_ts", "_oldest_ts"))
+    newest = _parse_ts(_query_bound(query, "newest_ts", "_newest_ts"))
+    if parsed is None:
+        return not any((window_start, window_end, oldest, newest))
+    if window_start and parsed < window_start:
+        return False
+    if window_end and parsed > window_end:
+        return False
+    if oldest and parsed < oldest:
+        return False
+    if newest and parsed > newest:
+        return False
+    return True
+
+
 def _error_rate(record: dict) -> float | None:
     gs = record.get("golden_signals") if isinstance(record, dict) else None
     if not isinstance(gs, dict):
@@ -518,10 +820,22 @@ def _kept_clauses(proposed: str, views: list[dict], service: str) -> tuple[list[
     low = text.lower()
     records = [v["record"] for v in views]
     blobs = [_blob(r) for r in records]
-    change_blobs = [_change_blob(r) for r in records if _looks_like_change(r)]
     unknowns: list[str] = []
     kept: list[str] = []
     category = "unknown"
+    change_blobs = []
+    for view in views:
+        record = view.get("record") or {}
+        if not isinstance(record, dict):
+            continue
+        if view.get("kind") != "change" and not _looks_like_change(record):
+            continue
+        status = _change_owner_status(record, service)
+        if status == "match":
+            change_blobs.append(_change_blob(record))
+        elif status == "unidentified":
+            if "change in window, service not identified" not in unknowns:
+                unknowns.append("change in window, service not identified")
 
     def any_blob(pattern: str) -> bool:
         return any(re.search(pattern, b, re.I) for b in blobs)
@@ -840,6 +1154,7 @@ def _decide_from_views(
     *,
     service: str,
     incident_type: str,
+    incident: dict | None = None,
 ) -> dict | None:
     """A specific cause the records support, or a conflict. None when they don't.
 
@@ -851,8 +1166,12 @@ def _decide_from_views(
     slow = [v for v in logs if _is_slow_query(v["record"])]
     if pool and slow:
         return _conflict(pool[0], slow[0], incident_type)
+    rejected = None
     if pool:
-        return _pool_cause(pool[0], views, service, incident_type)
+        decided = _pool_cause(pool[0], views, service, incident_type, incident)
+        if not decided.get("pool_rejected"):
+            return decided
+        rejected = decided
     if slow:
         return _slow_cause(slow[0], service, views)
     exc = _exception_hit(logs)
@@ -887,7 +1206,7 @@ def _decide_from_views(
         else:
             phrase = "thread pool saturation"
         return _direct(threads, phrase, "thread_pool", "thread_pool", service)
-    return None
+    return rejected
 
 
 def _conflict(pool: dict, slow: dict, incident_type: str) -> dict:
@@ -909,20 +1228,38 @@ def _conflict(pool: dict, slow: dict, incident_type: str) -> dict:
     }
 
 
-def _pool_cause(view: dict, views: list[dict], service: str, incident_type: str = "timeout") -> dict:
+def _pool_cause(
+    view: dict,
+    views: list[dict],
+    service: str,
+    incident_type: str = "timeout",
+    incident: dict | None = None,
+) -> dict:
     unsaturated = [
         item for item in views
         if item.get("pool_reading") and is_unsaturated_pool(item.get("record") or {})
     ]
     if unsaturated:
         return unsaturated_pool_conflict(view, unsaturated, incident_type)
-    record = view["record"]
-    own = _citation_service(record)
-    pool_views = [
+    d_fail, d_source = establish_failing_dependency(views, incident, service)
+    pool_candidates = [
         v for v in views
         if v.get("kind") == "log" and _is_connection_pool(v["record"])
         and not _is_derived_record(v["record"])
     ] or [view]
+    observations: list[dict] = []
+    if d_source in {"structured", "span", "incident"}:
+        pool_candidates, observations = split_pools_for_dependency(
+            pool_candidates, d_fail, service,
+        )
+        if not pool_candidates:
+            return _pool_rejected(incident_type, observations, identified=True)
+    elif d_source == "missing":
+        _matched, observations = split_pools_for_dependency(pool_candidates, "", service)
+        return _pool_rejected(incident_type, observations, identified=False)
+    record = pool_candidates[0]["record"]
+    own = _citation_service(record)
+    pool_views = pool_candidates
     # A downstream field on a cited pool record is the owner. Naming
     # only the caller is an overclaim. Text from another line is used
     # only when this record has no downstream field.
@@ -963,10 +1300,13 @@ def _pool_cause(view: dict, views: list[dict], service: str, incident_type: str 
         and _pool_metric(item["record"])
     ]):
         refs.append(_ref(metric, "connection_pool_exhausted", ""))
-    return _direct(
-        view, statement, "connection_pool_exhaustion", "connection_pool_exhausted",
+    decision = _direct(
+        pool_candidates[0], statement, "connection_pool_exhaustion", "connection_pool_exhausted",
         service, unknowns=unknowns, refs=refs,
     )
+    if observations:
+        decision["observations"] = observations
+    return decision
 
 
 def _slow_cause(view: dict, service: str, views: list[dict] | None = None) -> dict:
@@ -1041,29 +1381,39 @@ def _exception_cause(hit: dict, views: list[dict], service: str) -> dict:
     exc = hit["name"]
     own = _citation_service(view["record"]) or service
     version = _version_in_text(hit["text"])
-    deploy = _deploy_view(views)
-    if not version and deploy is not None:
-        version = _version([_change_blob(deploy["record"]) + " " + _raw_text(deploy["record"])])
+    deploys = _deploy_views(views)
+    matched, others, unidentified = _partition_changes(deploys, own)
+    if not version and matched:
+        blob = _change_blob(matched[0]["record"]) + " " + _raw_text(matched[0]["record"])
+        version = _version([blob])
     statement = f"{exc} in {own}"
     if version:
         statement = f"{exc} in {own} {version}"
     refs = [_ref(view, exc, "")]
     unknowns: list[str] = []
-    deploys = _deploy_views(views)
-    deploy = deploys[0] if deploys else None
-    if deploy is not None:
+    if matched:
+        deploy = matched[0]
         when = _record_ts(deploy["record"])
         if when:
             statement = f"{statement}, deployed at {when}"
-        for item in dedupe_views(deploys):
+        for item in dedupe_views(matched):
             refs.append(_ref(item, "deployment", ""))
         deploy_ts = _parse_ts(when)
         if not _error_absent_before_deploy(views, deploy_ts):
             unknowns.append("whether the deploy introduced the error")
-    return _direct(
+        unknowns.append("whether the change caused it")
+    if unidentified:
+        unknowns.append("change in window, service not identified")
+    decision = _direct(
         view, statement, "exception", exc, service,
         unknowns=unknowns, refs=refs,
     )
+    if others:
+        decision["other_changes"] = {
+            "statement": "other changes in window",
+            "evidence_refs": [_change_ref(item, "other_change") for item in dedupe_views(others)],
+        }
+    return decision
 
 
 def _is_deploy_view(view: dict) -> bool:
@@ -1329,6 +1679,7 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
     searched = []
     truncations = []
     count_gaps = []
+    query_gaps = []
     tool_errors = tool_search_errors(evidence)
     failed_keys = {row["evidence_key"] for row in tool_errors}
     for key, val in (evidence or {}).items():
@@ -1341,6 +1692,18 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
         if tws or twe:
             searched.append({"evidence_key": key, "start": tws, "end": twe})
         truncations.append(_truncation_entry(str(key), val))
+        if val.get("_truncated") is True:
+            query_gaps.append({
+                "evidence_key": str(key),
+                "query_id": str(val.get("_query_id") or ""),
+                "window_start": str(val.get("_window_start") or ""),
+                "window_end": str(val.get("_window_end") or ""),
+                "oldest_ts": str(val.get("_oldest_ts") or ""),
+                "newest_ts": str(val.get("_newest_ts") or ""),
+                "limit": val.get("_limit"),
+                "truncated": True,
+                "filter_source": str(val.get("_filter_source") or ""),
+            })
         results = _log_results(val) or []
         logs_obj = val.get("logs") if isinstance(val.get("logs"), dict) else {}
         reported = logs_obj.get("count") if isinstance(logs_obj, dict) else None
@@ -1377,6 +1740,8 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
         "unsearched_downstream_owners": [
             row for row in unsearched if isinstance(row, dict)
         ],
+        "query_gaps": query_gaps,
+        "unavailable_signals": unparsed_metric_signals(evidence),
     }
 
 
@@ -1637,7 +2002,8 @@ def _support_views(windowed, kept, series, service: str = "") -> list[dict]:
             for view in windowed:
                 record = view.get("record") or {}
                 if view.get("kind") == "change" or _looks_like_change(record):
-                    add(view)
+                    if _change_owner_status(record, service) == "match":
+                        add(view)
         elif "rebalanc" in low:
             for view in windowed:
                 if re.search(r"rebalanc", _raw_text(view.get("record") or {}), re.I):

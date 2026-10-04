@@ -58,6 +58,9 @@ class Receipt:
     # One digest per record actually returned, so a reviewer can check the
     # payload without depending on RECEIPT_CAPTURE_OUTPUT.
     consulted: list = field(default_factory=list)
+    # Service names from this incident's ITSM topology fetch. Empty on
+    # every other receipt, and omitted from to_dict when empty.
+    topology_services: list = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize for persistence / replay."""
@@ -65,6 +68,8 @@ class Receipt:
         # Omit output field if not captured to keep payloads small
         if d.get("output") is None:
             d.pop("output", None)
+        if not d.get("topology_services"):
+            d.pop("topology_services", None)
         return d
 
     @classmethod

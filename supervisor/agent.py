@@ -298,9 +298,9 @@ def _topology_names_from_ci(ci: dict) -> list[str]:
 def _remember_topology(receipts: ReceiptCollector | None, result: dict) -> None:
     """Keep this incident's ITSM service names on the fetch receipt.
 
-    The learned topology is not a source. The names stay on the receipt
-    object and are not added to the serialized params, so an existing
-    investigation hash does not change.
+    The learned topology is not a source. An empty list is omitted from
+    the serialized receipt, so an existing investigation hash does not
+    change.
     """
     if receipts is None or not isinstance(result, dict):
         return

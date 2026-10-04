@@ -1693,6 +1693,62 @@ class TestMaxPoolAndDriverPools:
             ])
             _assert_connection_pool(result)
 
+    def test_negated_max_pool_size_does_not_bind(self):
+        """The words between size and reached/exceeded are not free text.
+
+        Written against 1b35524, before the gap was limited to at most
+        two of was, is, has, have, had, been. A negation in that gap
+        must not produce a pool statement or a pool ref.
+        """
+        for message in (
+            "max pool size was not reached",
+            "max pool size has not been exceeded",
+            "max pool size never reached",
+            "max pool size is not yet reached",
+        ):
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            _assert_not_a_pool(result)
+
+    def test_affirmative_max_pool_size_still_binds(self):
+        for message in (
+            _ADO_NET_POOL,
+            "max pool size has been exceeded",
+            "max pool size reached",
+            "maximum pool size exceeded",
+        ):
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            _assert_connection_pool(result)
+
+    def test_joiner_attached_to_max_does_not_bind(self):
+        """A hyphen, underscore, or period glued to max joins the word before it.
+
+        Written against 1b35524. That joined word is in front of max,
+        so the line is not a bare max pool.
+        """
+        for message in (
+            "worker-max pool size reached",
+            "executor.max pool size reached",
+            "worker_max pool size reached",
+        ):
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            _assert_not_a_pool(result)
+
+    def test_spaced_punctuation_before_max_still_binds(self):
+        for message in (
+            "Timeout. max pool size reached",
+            "ERROR max pool size reached",
+        ):
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            _assert_connection_pool(result)
+
 
 class TestPoolPatternExamples:
     """Each pool pattern has one example that survives blanking and binds.

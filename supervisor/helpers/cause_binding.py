@@ -775,8 +775,21 @@ def _windowed_views(
     views = _collect_views(evidence, logs, signals, metrics, events, changes)
     start, end = _alignment_bounds(incident)
     if start is not None:
-        views = [v for v in views if _in_window(v["timestamp"], start, end)]
+        views = [v for v in views if _reading_counts_in_window(v, start, end)]
     return views
+
+
+def _reading_counts_in_window(view: dict, start, end) -> bool:
+    """A pool reading with no timestamp was retrieved for this incident.
+
+    An empty timestamp is not an out-of-window time, matching
+    contradicting_pool_readings. A timestamp outside the window still
+    drops the reading. Other records keep the window check.
+    """
+    ts = str(view.get("timestamp") or "").strip()
+    if view.get("pool_reading") and not ts:
+        return True
+    return _in_window(ts, start, end)
 
 
 def _symptom_for(views: list[dict], incident_type: str) -> dict:

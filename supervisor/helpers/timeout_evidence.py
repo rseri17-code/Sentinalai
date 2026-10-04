@@ -97,7 +97,7 @@ _POOL_NAME = (
 _POOL_PATTERNS = (
     re.compile(rf"{_POOL_NAME}[\s._-]*exhaust", re.I),
     re.compile(
-        r"connection\s+pool.{0,80}(exhaust|not available|unavailable|timed?\s*out|timeout|full|overflow|at capacity|waiting|limit)",
+        r"connection\s+pool.{0,80}(exhaust|not available|unavailable|timed?\s*out|timeout|full|overflow|at capacity|waiting|limit|(?<!not )saturat)",
         re.I,
     ),
     # Pool overflow, named on either side of the word.

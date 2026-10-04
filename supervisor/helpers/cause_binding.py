@@ -552,9 +552,29 @@ def _change_identities(record: dict) -> list[str]:
     return found
 
 
-def _change_owner_status(record: dict, owner: str) -> str:
+def _event_message_names_owner(record: dict, owner: str) -> bool:
+    """A deployment event can name its service in the message.
+
+    Change records still need their own service or CI field. An event
+    with no such field matches only when its message contains the owner
+    as a whole token.
+    """
+    if not owner:
+        return False
+    message = record.get("message")
+    if not isinstance(message, str):
+        return False
+    for token in re.findall(r"[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*", message):
+        if service_names_match(token, owner):
+            return True
+    return False
+
+
+def _change_owner_status(record: dict, owner: str, *, kind: str = "") -> str:
     identities = _change_identities(record)
     if not identities:
+        if kind == "event" and _event_message_names_owner(record, owner):
+            return "match"
         return "unidentified"
     if any(service_names_match(item, owner) for item in identities):
         return "match"
@@ -566,7 +586,9 @@ def _partition_changes(views: list[dict], owner: str) -> tuple[list[dict], list[
     others: list[dict] = []
     unidentified: list[dict] = []
     for view in views:
-        status = _change_owner_status(view.get("record") or {}, owner)
+        status = _change_owner_status(
+            view.get("record") or {}, owner, kind=str(view.get("kind") or ""),
+        )
         if status == "match":
             matched.append(view)
         elif status == "other":
@@ -830,7 +852,9 @@ def _kept_clauses(proposed: str, views: list[dict], service: str) -> tuple[list[
             continue
         if view.get("kind") != "change" and not _looks_like_change(record):
             continue
-        status = _change_owner_status(record, service)
+        status = _change_owner_status(
+            record, service, kind=str(view.get("kind") or ""),
+        )
         if status == "match":
             change_blobs.append(_change_blob(record))
         elif status == "unidentified":
@@ -2002,7 +2026,9 @@ def _support_views(windowed, kept, series, service: str = "") -> list[dict]:
             for view in windowed:
                 record = view.get("record") or {}
                 if view.get("kind") == "change" or _looks_like_change(record):
-                    if _change_owner_status(record, service) == "match":
+                    if _change_owner_status(
+                        record, service, kind=str(view.get("kind") or ""),
+                    ) == "match":
                         add(view)
         elif "rebalanc" in low:
             for view in windowed:

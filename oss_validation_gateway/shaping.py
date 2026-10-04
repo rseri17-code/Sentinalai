@@ -8,6 +8,25 @@ Contracts (from ``workers/mcp_client.py`` stubs + ``supervisor/agent.py`` extrac
 - signals:``{"signals": {"golden_signals": {"latency": {p95, baseline_p95}, "errors": {rate}}}}``
 - events: ``{"events": [...]}``
 - changes:``{"changes": []}``
+
+Result window
+-------------
+
+Every log, incident, alert, metric, and Kubernetes pod-log payload
+includes the same keys from ``result_bounds``:
+
+- ``limit`` — max records requested. ``None`` when this call has no count cap.
+- ``truncated`` — true when ``count == limit``, or when the backend payload
+  says it truncated (``truncated: true``, or a warning containing "truncat").
+- ``oldest_ts`` / ``newest_ts`` — UTC timestamps of the records returned.
+  ``None`` when those records have no timestamp.
+- ``window_start`` / ``window_end`` — requested window in UTC.
+  ``None`` when the caller did not request one.
+
+Prometheus payloads also carry ``range`` (window length, ``"<seconds>s"``)
+and ``step`` (``"30s"`` for a range query, ``None`` for an instant query).
+Kubernetes pod logs also carry ``pods_limit``, ``lines_per_pod_limit``,
+and ``pods_total`` (``None`` when the pod list was not returned).
 """
 
 from __future__ import annotations
@@ -16,6 +35,50 @@ from datetime import datetime, timezone
 from typing import Any
 
 from oss_validation_gateway.names import parse_tool_name
+
+
+def result_bounds(
+    *,
+    count: int,
+    timestamps: list[str],
+    limit: int | None,
+    window_start: str | None,
+    window_end: str | None,
+    backend_truncated: bool = False,
+) -> dict[str, Any]:
+    """Shared window fields. See the module docstring for the schema."""
+    stamps = [ts for ts in timestamps if ts]
+    hit_limit = limit is not None and count == limit
+    return {
+        "limit": limit,
+        "truncated": bool(backend_truncated) or hit_limit,
+        "oldest_ts": min(stamps) if stamps else None,
+        "newest_ts": max(stamps) if stamps else None,
+        "window_start": window_start,
+        "window_end": window_end,
+    }
+
+
+def backend_says_truncated(payload: Any) -> bool:
+    """True when a backend body says the result was cut short."""
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("truncated") is True:
+        return True
+    data = payload.get("data")
+    if isinstance(data, dict) and data.get("truncated") is True:
+        return True
+    warnings = payload.get("warnings") or []
+    if isinstance(warnings, list):
+        return any("truncat" in str(item).lower() for item in warnings)
+    return False
+
+
+def unix_to_iso(ts: Any) -> str:
+    try:
+        return datetime.fromtimestamp(float(ts), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    except (TypeError, ValueError, OSError):
+        return ""
 
 
 def _iso(ts: Any) -> str:
@@ -123,20 +186,57 @@ def shape_incident(alert: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def shape_incidents(alerts: list[dict[str, Any]]) -> dict[str, Any]:
+def shape_incidents(
+    alerts: list[dict[str, Any]],
+    *,
+    limit: int | None = None,
+    window_start: str | None = None,
+    window_end: str | None = None,
+    backend_truncated: bool = False,
+) -> dict[str, Any]:
     incidents = [shape_incident(a) for a in alerts]
-    return {"incidents": incidents, "count": len(incidents), "source": "alertmanager"}
+    payload: dict[str, Any] = {
+        "incidents": incidents,
+        "count": len(incidents),
+        "source": "alertmanager",
+    }
+    payload.update(result_bounds(
+        count=len(incidents),
+        timestamps=[str(item.get("created_at") or "") for item in incidents],
+        limit=limit,
+        window_start=window_start,
+        window_end=window_end,
+        backend_truncated=backend_truncated,
+    ))
+    return payload
 
 
 def shape_incident_wrapper(alert: dict[str, Any] | None, requested_id: str = "") -> dict[str, Any]:
     if alert is None:
-        return {
+        payload: dict[str, Any] = {
             "incident": None,
             "error": "incident_not_found",
             "incident_id": requested_id,
             "source": "alertmanager",
         }
-    return {"incident": shape_incident(alert), "source": "alertmanager"}
+        payload.update(result_bounds(
+            count=0,
+            timestamps=[],
+            limit=None,
+            window_start=None,
+            window_end=None,
+        ))
+        return payload
+    incident = shape_incident(alert)
+    payload = {"incident": incident, "source": "alertmanager"}
+    payload.update(result_bounds(
+        count=1,
+        timestamps=[str(incident.get("created_at") or "")],
+        limit=None,
+        window_start=None,
+        window_end=None,
+    ))
+    return payload
 
 
 def shape_alerts(alerts: list[dict[str, Any]]) -> dict[str, Any]:
@@ -152,7 +252,15 @@ def shape_alerts(alerts: list[dict[str, Any]]) -> dict[str, Any]:
             "summary": annotations.get("summary") or labels.get("alertname", ""),
             "fingerprint": str(alert.get("fingerprint") or ""),
         })
-    return {"alerts": items, "count": len(items), "source": "alertmanager"}
+    payload: dict[str, Any] = {"alerts": items, "count": len(items), "source": "alertmanager"}
+    payload.update(result_bounds(
+        count=len(items),
+        timestamps=[_iso(alert.get("startsAt") or alert.get("starts_at")) for alert in alerts],
+        limit=None,
+        window_start=None,
+        window_end=None,
+    ))
+    return payload
 
 
 def shape_problems(alerts: list[dict[str, Any]]) -> dict[str, Any]:
@@ -170,7 +278,22 @@ def shape_problems(alerts: list[dict[str, Any]]) -> dict[str, Any]:
     return {"problems": problems, "source": "alertmanager"}
 
 
-def shape_logs(loki_payload: dict[str, Any], service: str = "") -> dict[str, Any]:
+def shape_logs(
+    loki_payload: dict[str, Any],
+    service: str = "",
+    *,
+    limit: int | None = None,
+    window_start: str | None = None,
+    window_end: str | None = None,
+    backend_truncated: bool | None = None,
+) -> dict[str, Any]:
+    """Turn a Loki payload into the log shape workers already read.
+
+    ``logs.count`` is the number of records in ``logs.results``. This
+    payload has no ``result_count`` field. ``limit`` is the Loki line cap
+    (newest lines). ``truncated`` is true when that many lines came back,
+    or when the Loki body says it truncated.
+    """
     results: list[dict[str, Any]] = []
     data = loki_payload.get("data") if isinstance(loki_payload, dict) else None
     streams = []
@@ -206,7 +329,21 @@ def shape_logs(loki_payload: dict[str, Any], service: str = "") -> dict[str, Any
                 "message": line,
                 "downstream": _downstream_from_line(line),
             })
-    return {"logs": {"results": results, "count": len(results)}, "source": "loki"}
+    if backend_truncated is None:
+        backend_truncated = backend_says_truncated(loki_payload)
+    payload: dict[str, Any] = {
+        "logs": {"results": results, "count": len(results)},
+        "source": "loki",
+    }
+    payload.update(result_bounds(
+        count=len(results),
+        timestamps=[str(row.get("timestamp") or "") for row in results],
+        limit=limit,
+        window_start=window_start,
+        window_end=window_end,
+        backend_truncated=backend_truncated,
+    ))
+    return payload
 
 
 def _downstream_from_line(line: str) -> str:
@@ -253,14 +390,25 @@ def _prom_samples(payload: dict[str, Any]) -> list[tuple[float, float, dict[str,
     return samples
 
 
-def _scalar(payload: dict[str, Any], default: float = 0.0) -> float:
+def _scalar(payload: dict[str, Any], default: float | None = 0.0) -> float | None:
     samples = _prom_samples(payload)
     if not samples:
         return default
     return samples[-1][1]
 
 
-def shape_metrics(payload: dict[str, Any], metric_name: str = "", service: str = "") -> dict[str, Any]:
+def shape_metrics(
+    payload: dict[str, Any],
+    metric_name: str = "",
+    service: str = "",
+    *,
+    limit: int | None = None,
+    window_start: str | None = None,
+    window_end: str | None = None,
+    prom_range: str | None = None,
+    step: str | None = None,
+    backend_truncated: bool | None = None,
+) -> dict[str, Any]:
     points = []
     for ts, value, labels in _prom_samples(payload):
         points.append({
@@ -270,50 +418,95 @@ def shape_metrics(payload: dict[str, Any], metric_name: str = "", service: str =
             "service": labels.get("service") or service or "unknown",
         })
     baseline = points[0]["value"] if points else 0
-    return {
+    if backend_truncated is None:
+        backend_truncated = backend_says_truncated(payload)
+    shaped: dict[str, Any] = {
         "metrics": {
             "metrics": points,
             "baseline": baseline,
             "pattern": "none",
         },
         "source": "prometheus",
+        "range": prom_range,
+        "step": step,
     }
+    shaped.update(result_bounds(
+        count=len(points),
+        timestamps=[str(point.get("timestamp") or "") for point in points],
+        limit=limit,
+        window_start=window_start,
+        window_end=window_end,
+        backend_truncated=backend_truncated,
+    ))
+    return shaped
 
 
 def shape_golden_signals(
     values: dict[str, float],
     service: str = "",
+    unavailable_signals: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
-    p95 = float(values.get("latency_p95") or 0)
-    baseline = float(values.get("latency_baseline_p95") or 0)
-    return {
+    """Shape measured golden signals.
+
+    Keys absent from ``values`` are left out. A measured 0 stays 0.
+    ``unavailable_signals`` lists queries that failed or returned nothing.
+    """
+    latency: dict[str, float] = {}
+    for source, dest in (
+        ("latency_p95", "p95"),
+        ("latency_baseline_p95", "baseline_p95"),
+        ("latency_p50", "p50"),
+        ("latency_p99", "p99"),
+    ):
+        if source in values:
+            latency[dest] = float(values[source])
+    golden: dict[str, Any] = {}
+    if latency:
+        golden["latency"] = latency
+    if "error_rate" in values:
+        golden["errors"] = {"rate": float(values["error_rate"])}
+    if "request_rate" in values:
+        golden["traffic"] = {"rps": float(values["request_rate"])}
+    if "saturation" in values:
+        golden["saturation"] = {"pct": float(values["saturation"])}
+
+    metrics: dict[str, Any] = {"service": service}
+    if "error_rate" in values:
+        metrics["error_rate"] = float(values["error_rate"])
+    if "latency_p95" in values:
+        p95 = float(values["latency_p95"])
+        metrics["latency_p95"] = p95
+        metrics["p95_ms"] = p95
+    if "latency_p50" in values:
+        metrics["latency_p50_ms"] = float(values["latency_p50"])
+    if "latency_p99" in values:
+        metrics["latency_p99_ms"] = float(values["latency_p99"])
+    if "request_rate" in values:
+        rate = float(values["request_rate"])
+        metrics["request_rate"] = rate
+        metrics["rps"] = rate
+    if "saturation" in values:
+        metrics["saturation_pct"] = float(values["saturation"])
+
+    shaped: dict[str, Any] = {
         "signals": {
-            "golden_signals": {
-                "latency": {
-                    "p95": p95,
-                    "baseline_p95": baseline,
-                    "p50": float(values.get("latency_p50") or 0),
-                    "p99": float(values.get("latency_p99") or 0),
-                },
-                "errors": {"rate": float(values.get("error_rate") or 0)},
-                "traffic": {"rps": float(values.get("request_rate") or 0)},
-                "saturation": {"pct": float(values.get("saturation") or 0)},
-            },
+            "golden_signals": golden,
             "service": service,
         },
-        "metrics": {
-            "service": service,
-            "error_rate": float(values.get("error_rate") or 0),
-            "latency_p95": p95,
-            "p95_ms": p95,
-            "latency_p50_ms": float(values.get("latency_p50") or 0),
-            "latency_p99_ms": float(values.get("latency_p99") or 0),
-            "request_rate": float(values.get("request_rate") or 0),
-            "rps": float(values.get("request_rate") or 0),
-            "saturation_pct": float(values.get("saturation") or 0),
-        },
+        "metrics": metrics,
         "source": "prometheus",
+        "range": None,
+        "step": None,
+        "unavailable_signals": list(unavailable_signals or []),
     }
+    shaped.update(result_bounds(
+        count=len(values),
+        timestamps=[],
+        limit=None,
+        window_start=None,
+        window_end=None,
+    ))
+    return shaped
 
 
 def shape_events(alerts: list[dict[str, Any]]) -> dict[str, Any]:
@@ -402,5 +595,5 @@ def empty_stub_for(tool_name: str) -> dict[str, Any]:
     return shape_skip(server, operation)
 
 
-def prometheus_scalar(payload: dict[str, Any], default: float = 0.0) -> float:
+def prometheus_scalar(payload: dict[str, Any], default: float | None = 0.0) -> float | None:
     return _scalar(payload, default=default)

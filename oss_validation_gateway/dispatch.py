@@ -6,9 +6,10 @@ import logging
 import time
 from typing import Any
 
-from oss_validation_gateway.backends import Backends
+from oss_validation_gateway.backends import LOKI_LINE_LIMIT, Backends
 from oss_validation_gateway.names import parse_tool_name
 from oss_validation_gateway.queries import (
+    _safe_service,
     golden_signal_promql,
     metric_hint_to_promql,
     splunk_query_to_logql,
@@ -39,6 +40,14 @@ def _find_alert(alerts: list[dict[str, Any]], incident_id: str) -> dict[str, Any
 
 
 def _range_window(params: dict[str, Any]) -> tuple[str, str]:
+    """Unix-second window for Prometheus ``query_range``.
+
+    Clamped to 1–48 hours (default 2). This is not a sample cap. The query
+    uses a 30s step in ``prometheus_query_range``. Shaped metric payloads
+    report ``range``, ``step``, and ``truncated`` (true only when the
+    sample count equals ``limit``, or Prometheus says it truncated).
+    There is no sample ``limit`` on this path, so ``limit`` is null.
+    """
     hours = int(params.get("time_window_hours") or params.get("window_hours") or 2)
     hours = max(1, min(hours, 48))
     end = int(time.time())
@@ -46,13 +55,20 @@ def _range_window(params: dict[str, Any]) -> tuple[str, str]:
     return str(start), str(end)
 
 
-def _loki_window_ns(params: dict[str, Any]) -> tuple[str, str]:
-    start_s, end_s = _range_window(params)
-    return str(int(start_s) * 1_000_000_000), str(int(end_s) * 1_000_000_000)
+def _golden_values(
+    backends: Backends, service: str
+) -> tuple[dict[str, float], list[dict[str, str]]]:
+    """Query the seven golden signals.
 
-
-def _golden_values(backends: Backends, service: str) -> dict[str, float]:
+    A missing or invalid service raises ``ValueError`` from
+    ``_safe_service`` before any query. A query that raises, or whose
+    Prometheus body reports status ``error``, is omitted and listed in
+    ``unavailable_signals`` with reason ``error``. A body with no samples
+    is omitted with reason ``empty``. A measured 0 stays 0.
+    """
+    safe = _safe_service(service)
     values: dict[str, float] = {}
+    unavailable: list[dict[str, str]] = []
     for key in (
         "latency_p95",
         "latency_baseline_p95",
@@ -63,12 +79,30 @@ def _golden_values(backends: Backends, service: str) -> dict[str, float]:
         "saturation",
     ):
         try:
-            payload = backends.prometheus_query(golden_signal_promql(key, service or "payment-service"))
-            values[key] = shaping.prometheus_scalar(payload, default=0.0)
+            payload = backends.prometheus_query(golden_signal_promql(key, safe))
         except Exception as exc:
             logger.warning("prometheus golden signal %s failed: %s", key, exc)
-            values[key] = 0.0
-    return values
+            unavailable.append({"signal": key, "reason": "error"})
+            continue
+        if str(payload.get("status") or "").lower() == "error":
+            logger.warning(
+                "prometheus golden signal %s failed: %s", key, payload.get("error")
+            )
+            unavailable.append({"signal": key, "reason": "error"})
+            continue
+        measured = shaping.prometheus_scalar(payload, default=None)
+        if measured is None:
+            unavailable.append({"signal": key, "reason": "empty"})
+            continue
+        values[key] = float(measured)
+    return values, unavailable
+
+
+def _shaped_golden(backends: Backends, service: str) -> dict[str, Any]:
+    values, unavailable = _golden_values(backends, service)
+    return shaping.shape_golden_signals(
+        values, service=service, unavailable_signals=unavailable
+    )
 
 
 def dispatch(tool_name: str, params: dict[str, Any] | None, backends: Backends) -> dict[str, Any]:
@@ -164,9 +198,17 @@ def _splunk(operation: str, params: dict[str, Any], service: str, backends: Back
     if operation in {"search_oneshot", "search_export"}:
         query = str(params.get("query") or "")
         logql = splunk_query_to_logql(query, service)
-        start_ns, end_ns = _loki_window_ns(params)
+        start_s, end_s = _range_window(params)
+        start_ns = str(int(start_s) * 1_000_000_000)
+        end_ns = str(int(end_s) * 1_000_000_000)
         payload = backends.loki_query_range(logql, start_ns=start_ns, end_ns=end_ns)
-        shaped = shaping.shape_logs(payload, service=service)
+        shaped = shaping.shape_logs(
+            payload,
+            service=service,
+            limit=LOKI_LINE_LIMIT,
+            window_start=shaping.unix_to_iso(start_s),
+            window_end=shaping.unix_to_iso(end_s),
+        )
         shaped["logql"] = logql
         return shaped
     if operation in {"get_change_data", "app_change_data"}:
@@ -183,18 +225,40 @@ def _splunk(operation: str, params: dict[str, Any], service: str, backends: Back
 def _sysdig(operation: str, params: dict[str, Any], service: str, backends: Backends) -> dict[str, Any]:
     if operation in {"query_metrics", "get_host_metrics"}:
         metric = str(params.get("metric") or params.get("metric_hint") or "")
-        promql = metric_hint_to_promql(metric, service or "payment-service")
-        start, end = _range_window(params)
         try:
-            payload = backends.prometheus_query_range(promql, start=start, end=end)
+            promql = metric_hint_to_promql(metric, service)
+        except KeyError:
+            return {
+                "error": f"unknown_metric: {metric}",
+                "metric": metric,
+                "source": "oss_validation",
+                "server": "sysdig",
+                "operation": operation,
+                "metrics": {"metrics": [], "baseline": 0},
+            }
+        start, end = _range_window(params)
+        step = "30s"
+        try:
+            payload = backends.prometheus_query_range(promql, start=start, end=end, step=step)
+            prom_range = f"{int(end) - int(start)}s"
         except Exception:
             payload = backends.prometheus_query(promql)
-        shaped = shaping.shape_metrics(payload, metric_name=metric or "request_rate", service=service)
+            step = None
+            prom_range = None
+        shaped = shaping.shape_metrics(
+            payload,
+            metric_name=metric,
+            service=service,
+            limit=None,
+            window_start=shaping.unix_to_iso(start),
+            window_end=shaping.unix_to_iso(end),
+            prom_range=prom_range,
+            step=step,
+        )
         shaped["promql"] = promql
         return shaped
     if operation in {"golden_signals"}:
-        values = _golden_values(backends, service or "payment-service")
-        return shaping.shape_golden_signals(values, service=service)
+        return _shaped_golden(backends, service)
     if operation in {"get_events", "get_kubernetes_events"}:
         alerts = backends.alertmanager_alerts()
         return shaping.shape_events(alerts)
@@ -207,8 +271,7 @@ def _sysdig(operation: str, params: dict[str, Any], service: str, backends: Back
 
 def _dynatrace(operation: str, params: dict[str, Any], service: str, backends: Backends) -> dict[str, Any]:
     if operation in {"get_metrics"}:
-        values = _golden_values(backends, service or "payment-service")
-        return shaping.shape_golden_signals(values, service=service)
+        return _shaped_golden(backends, service)
     if operation == "get_problems":
         return shaping.shape_problems(backends.alertmanager_alerts())
     if operation == "get_events":
@@ -221,11 +284,41 @@ def _dynatrace(operation: str, params: dict[str, Any], service: str, backends: B
 
 def _signalfx(operation: str, params: dict[str, Any], service: str, backends: Backends) -> dict[str, Any]:
     if operation == "query_signalfx_metrics":
-        values = _golden_values(backends, service or "payment-service")
-        return shaping.shape_golden_signals(values, service=service)
+        return _shaped_golden(backends, service)
     if operation == "get_signalfx_active_incidents":
         return shaping.shape_incidents(backends.alertmanager_alerts())
     return shaping.shape_skip("signalfx", operation)
+
+
+# get_pod_logs reads at most this many pods and the last this many lines
+# of each pod. ``pod_count`` is the number of lines returned, not pods.
+# ``pods_total`` is the number of pods in the list when the API returned it.
+_KUBE_POD_CAP = 3
+_KUBE_LOG_TAIL = 50
+
+
+def _pod_log_bounds(
+    logs: list[str],
+    per_pod_lines: list[int],
+    pods_total: int | None,
+) -> dict[str, Any]:
+    line_limit = _KUBE_POD_CAP * _KUBE_LOG_TAIL
+    pod_cut = pods_total is not None and pods_total > _KUBE_POD_CAP
+    pod_line_cut = any(n == _KUBE_LOG_TAIL for n in per_pod_lines)
+    bounds = shaping.result_bounds(
+        count=len(logs),
+        timestamps=[],
+        limit=line_limit,
+        window_start=None,
+        window_end=None,
+        backend_truncated=pod_cut or pod_line_cut,
+    )
+    bounds.update({
+        "pods_limit": _KUBE_POD_CAP,
+        "lines_per_pod_limit": _KUBE_LOG_TAIL,
+        "pods_total": pods_total,
+    })
+    return bounds
 
 
 def _kubernetes(operation: str, params: dict[str, Any], service: str, backends: Backends) -> dict[str, Any]:
@@ -256,7 +349,14 @@ def _kubernetes(operation: str, params: dict[str, Any], service: str, backends: 
                 "source": "oss_validation",
             }
         if operation == "get_pod_logs":
-            return {"logs": [], "pod_count": 0, "error": "kubernetes_not_configured", "source": "oss_validation"}
+            body: dict[str, Any] = {
+                "logs": [],
+                "pod_count": 0,
+                "error": "kubernetes_not_configured",
+                "source": "oss_validation",
+            }
+            body.update(_pod_log_bounds([], [], None))
+            return body
         return {
             "success": False,
             "error": "kubernetes_not_configured",
@@ -283,20 +383,28 @@ def _kubernetes(operation: str, params: dict[str, Any], service: str, backends: 
     if operation == "get_pod_logs":
         path = f"/api/v1/namespaces/{namespace}/pods"
         listing = backends.kubernetes_get(path, params={"labelSelector": f"app={name}"})
-        items = listing.get("items") if isinstance(listing, dict) else []
+        items = listing.get("items") if isinstance(listing, dict) else None
         logs: list[str] = []
+        per_pod_lines: list[int] = []
+        pods_total = len(items) if isinstance(items, list) else None
         if isinstance(items, list):
-            for pod in items[:3]:
+            for pod in items[:_KUBE_POD_CAP]:
                 pod_name = (pod.get("metadata") or {}).get("name") if isinstance(pod, dict) else None
                 if not pod_name:
                     continue
                 raw = backends.kubernetes_get(
                     f"/api/v1/namespaces/{namespace}/pods/{pod_name}/log",
-                    params={"tailLines": "50"},
+                    params={"tailLines": str(_KUBE_LOG_TAIL)},
                 )
                 if isinstance(raw, str) and raw.strip():
-                    logs.extend(raw.splitlines()[-50:])
-        return {"logs": logs, "pod_count": len(logs), "source": "kubernetes"}
+                    kept = raw.splitlines()[-_KUBE_LOG_TAIL:]
+                    per_pod_lines.append(len(kept))
+                    logs.extend(kept)
+                else:
+                    per_pod_lines.append(0)
+        body = {"logs": logs, "pod_count": len(logs), "source": "kubernetes"}
+        body.update(_pod_log_bounds(logs, per_pod_lines, pods_total))
+        return body
 
     if operation == "rollback_deployment":
         return {

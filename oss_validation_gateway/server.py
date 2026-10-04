@@ -157,9 +157,22 @@ def create_app(
 app = create_app()
 
 
+def _revision() -> str:
+    path = "/etc/oss-gateway-revision"
+    if os.path.isfile(path):
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read().strip()
+            if text:
+                return text
+    return os.environ.get("OSS_GATEWAY_REVISION", "").strip()
+
+
 def main() -> None:
     import uvicorn
 
+    revision = _revision()
+    if revision:
+        print(f"oss-gateway-revision={revision}", flush=True)
     host = os.environ.get("OSS_GATEWAY_HOST", "0.0.0.0")
     port = int(os.environ.get("OSS_GATEWAY_PORT", "9080"))
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")

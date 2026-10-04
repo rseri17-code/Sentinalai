@@ -1054,3 +1054,247 @@ class TestEmptyPlaybookLabel:
         assert "search_logs" in evidence
         assert "" not in evidence
         assert "db-1" in gateway.services
+
+
+class _AlertTextGateway:
+    """Playbook logs for svc-alpha, plus an ITSM dependency list."""
+
+    def __init__(self, dependencies, logs_for_query=None, owner_logs=None):
+        self.dependencies = list(dependencies)
+        self.logs_for_query = logs_for_query or {}
+        self.owner_logs = owner_logs or {}
+        self.services: list[str] = []
+
+    def execute(self, action, params):
+        params = params or {}
+        service = str(params.get("service") or "")
+        self.services.append(service)
+        if action == "get_ci_details":
+            return {"ci": {"name": service, "dependencies": list(self.dependencies)}}
+        if action in ("get_known_errors", "search_incidents"):
+            return {}
+        if action == "search_logs" or str(action).startswith("search_"):
+            if service != "svc-alpha":
+                rows = [dict(row) for row in self.owner_logs.get(service, [])]
+                return {"logs": {"results": rows, "count": len(rows)}}
+            query = str(params.get("query") or "")
+            rows = [dict(row) for row in self.logs_for_query.get(query, [])]
+            return {"logs": {"results": rows, "count": len(rows)}}
+        if action in ("get_change_data", "get_change_records"):
+            return {"changes": []}
+        if action in ("get_golden_signals", "check_latency"):
+            return {"signals": {"golden_signals": {}}}
+        if action in ("get_network_evidence", "get_network_alerts"):
+            return {"evidence": []}
+        if action in ("query_metrics", "get_resource_metrics"):
+            return {"metrics": {"metrics": []}}
+        if action == "get_events":
+            return {"events": []}
+        return {}
+
+
+def _latency_line(downstream=""):
+    row = {
+        "_time": "2024-11-04T07:59:10Z",
+        "service": "svc-alpha",
+        "level": "ERROR",
+        "message": "svc-alpha latency elevated",
+    }
+    if downstream:
+        row["downstream"] = downstream
+    return row
+
+
+def _run_alert_text(gateway, incident, parallel=False):
+    saved = {
+        key: os.environ.get(key)
+        for key in ("LLM_ENABLED", "PARALLEL_PLAYBOOK", "CALIBRATION_ENABLED")
+    }
+    os.environ["LLM_ENABLED"] = "false"
+    os.environ["PARALLEL_PLAYBOOK"] = "true" if parallel else "false"
+    os.environ["CALIBRATION_ENABLED"] = "false"
+    try:
+        sup = SentinalAISupervisor()
+        sup._parallel_playbook = parallel
+        for name in list(sup.workers):
+            sup.workers[name] = gateway
+        sup._tls.current_incident = dict(incident)
+        sup._tls.run_started = "2024-11-04T12:00:00Z"
+        receipts = ReceiptCollector(case_id="INC-ALERT")
+        budget = ExecutionBudget()
+        circuits = CircuitBreakerRegistry()
+        sup._fetch_itsm_context(
+            "svc-alpha", incident.get("summary") or "", receipts, budget, circuits,
+        )
+        evidence = sup._execute_playbook(
+            "latency", "INC-ALERT", "svc-alpha", receipts, budget, circuits,
+        )
+        sup._tls.last_evidence = evidence
+        result = sup._analyze_evidence(
+            "INC-ALERT", dict(incident), "latency", evidence,
+        )
+        return result, gateway, receipts
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+def _alert_incident(**extra):
+    incident = {
+        "incident_id": "INC-ALERT",
+        "affected_service": "svc-alpha",
+        "summary": "svc-alpha latency",
+        "start_time": _START,
+    }
+    incident.update(extra)
+    return incident
+
+
+def _alert_snapshot(result, gateway, receipts):
+    cause = result["cause"]
+    coverage = result["_confidence_provenance"]["unchecked_coverage"]
+    marks = [
+        (receipt.params.get("service"), receipt.params.get("owner_source"))
+        for receipt in receipts.receipts
+        if receipt.action == "search_logs" and receipt.params.get("owner_source")
+    ]
+    return {
+        "statement": cause["statement"],
+        "confidence": cause["confidence"],
+        "category": cause["category"],
+        "refs": cause["evidence_refs"],
+        "unchecked": coverage.get("unsearched_downstream_owners"),
+        "downstream": [name for name in gateway.services if name and name != "svc-alpha"],
+        "marks": marks,
+    }
+
+
+class TestAlertTextDownstreamRetrieval:
+    """A downstream named only in the alert is retrieved, not cited.
+
+    Written against e3923cc. The name must exactly match a service in
+    this incident's ITSM topology receipt. The learned topology does
+    not count. Alert-text owners follow record and structured owners
+    and share the cap of 3.
+    """
+
+    def test_known_topology_name_in_the_alert_is_searched(self):
+        gateway = _AlertTextGateway(
+            ["ledger-store"],
+            logs_for_query={"latency OR slow svc-alpha": [_latency_line()]},
+        )
+        result, gateway, receipts = _run_alert_text(
+            gateway,
+            _alert_incident(
+                title="latency while calling ledger-store",
+                description="svc-alpha is slow",
+            ),
+        )
+        assert gateway.services.count("ledger-store") == 1
+        assert ("ledger-store", "alert_text") in _alert_snapshot(result, gateway, receipts)["marks"]
+
+    def test_unknown_alert_word_starts_no_search(self):
+        gateway = _AlertTextGateway(
+            ["ledger-store"],
+            logs_for_query={"latency OR slow svc-alpha": [_latency_line()]},
+        )
+        _result, gateway, receipts = _run_alert_text(
+            gateway,
+            _alert_incident(title="latency while calling widget-blob"),
+        )
+        assert "widget-blob" not in gateway.services
+        assert "ledger-store" not in gateway.services
+        assert _alert_snapshot(_result, gateway, receipts)["marks"] == []
+
+    def test_empty_alert_text_search_stays_unknown(self):
+        gateway = _AlertTextGateway(
+            ["ledger-store"],
+            logs_for_query={"latency OR slow svc-alpha": [_latency_line()]},
+            owner_logs={"ledger-store": []},
+        )
+        result, _gateway, _receipts = _run_alert_text(
+            gateway,
+            _alert_incident(description="callers are waiting on ledger-store"),
+        )
+        cause = result["cause"]
+        assert "UNKNOWN" in cause["statement"]
+        assert cause["category"] == "unknown"
+        assert "ledger-store" not in cause["statement"]
+        assert all(ref.get("service") != "ledger-store" for ref in cause["evidence_refs"])
+        assert all(
+            "ledger-store" not in str(ref.get("signal") or "")
+            for ref in cause["evidence_refs"]
+        )
+
+    def test_learned_topology_alone_starts_nothing(self):
+        import tempfile
+
+        import intelligence.topology_learner as topo
+        from intelligence.causal_graph import CausalGraph
+
+        incident = _alert_incident(title="latency while calling ledger-store")
+        saved = (topo._singleton_graph, topo._singleton_learner)
+
+        def _once():
+            gateway = _AlertTextGateway(
+                [],
+                logs_for_query={"latency OR slow svc-alpha": [_latency_line()]},
+            )
+            result, gateway, receipts = _run_alert_text(gateway, incident)
+            return _alert_snapshot(result, gateway, receipts)
+
+        try:
+            topo._singleton_graph = None
+            topo._singleton_learner = None
+            fresh = _once()
+            with tempfile.TemporaryDirectory() as directory:
+                graph = CausalGraph(storage_path=f"{directory}/topo.jsonl")
+                graph.record_co_failure("svc-alpha", "ledger-store", 12)
+                topo._singleton_graph = graph
+                topo._singleton_learner = topo.TopologyLearner(graph)
+                seeded = _once()
+        finally:
+            topo._singleton_graph, topo._singleton_learner = saved
+        assert fresh == seeded
+        assert fresh["downstream"] == []
+        assert fresh["marks"] == []
+
+    def test_alert_text_owner_is_after_the_cap(self):
+        gateway = _AlertTextGateway(
+            ["index-eta"],
+            logs_for_query={
+                "latency OR slow svc-alpha": [_latency_line("ledger-store")],
+                "timed out": [_latency_line("cache-zeta")],
+            },
+        )
+        result, gateway, _receipts = _run_alert_text(
+            gateway,
+            _alert_incident(
+                title="also see index-eta",
+                downstream_service="queue-beta",
+            ),
+        )
+        assert "index-eta" not in gateway.services
+        coverage = result["_confidence_provenance"]["unchecked_coverage"]
+        assert {"owner": "index-eta", "reason": _OWNER_CAP_REASON} in (
+            coverage.get("unsearched_downstream_owners") or []
+        )
+        assert [name for name in gateway.services if name != "svc-alpha"] == [
+            "ledger-store", "cache-zeta", "queue-beta",
+        ]
+
+    def test_parallel_runs_match(self):
+        incident = _alert_incident(title="latency while calling ledger-store")
+
+        def _once():
+            gateway = _AlertTextGateway(
+                ["ledger-store"],
+                logs_for_query={"latency OR slow svc-alpha": [_latency_line()]},
+            )
+            result, gateway, receipts = _run_alert_text(gateway, incident, parallel=True)
+            return _alert_snapshot(result, gateway, receipts)
+
+        assert _once() == _once()

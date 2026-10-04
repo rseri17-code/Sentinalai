@@ -60,8 +60,10 @@ _NON_EVIDENCE_FIELDS = frozenset({
 # word in front is connection, db, database, jdbc, hikari, pgx, or
 # r2dbc, or when the token is a DB pool class: HikariPool, JdbcPool,
 # QueuePool, AsyncAdaptedQueuePool. max/maximum in front counts only
-# when the word before that is empty, punctuation, a log level, an
-# allowed pool word, or a function word. Any other word does not.
+# when the word before that is empty, punctuation with a space after
+# it, a log level, an allowed pool word, or a function word. A hyphen,
+# underscore, or period glued to max joins the previous word, so that
+# word is the slot. Any other word does not.
 _ALLOWED_POOL_PREFIX = frozenset({
     "connection", "db", "database", "jdbc", "hikari", "pgx", "r2dbc",
 })
@@ -119,9 +121,11 @@ _POOL_PATTERNS = (
     re.compile(r"remaining connection slots", re.I),
     re.compile(r"too many clients already", re.I),
     re.compile(r"cannot get (a )?connection", re.I),
-    # "was" may sit between size and reached, as in the ADO.NET sentence.
+    # At most two words may sit between size and reached/exceeded, and
+    # each must be was, is, has, have, had, or been. "was reached" and
+    # "has been exceeded" still match. A negation does not.
     re.compile(
-        r"max(?:imum)? pool size(?:\s+\w+){0,3}\s+(?:reached|exceeded)",
+        r"max(?:imum)? pool size(?:\s+(?:was|is|has|have|had|been)){0,2}\s+(?:reached|exceeded)",
         re.I,
     ),
     re.compile(r"connection pool.{0,40}(held|waiting)", re.I),
@@ -855,8 +859,15 @@ def _max_pool_prefix_allowed(before: str) -> bool:
     """True when the word before max/maximum may introduce a pool.
 
     The slot is the single word before "max" or "maximum". Empty, the
-    start of a clause, and punctuation are allowed. A noun is not.
+    start of a clause, and punctuation with a space after it are
+    allowed. A hyphen, underscore, or period glued to max joins the
+    word before it, and that word is the slot. A noun is not.
     """
+    if before and before[-1] in "-_.":
+        found = re.search(r"[A-Za-z0-9]+$", before[:-1])
+        if not found:
+            return False
+        return _max_pool_lookback_word(found.group(0))
     trimmed = before.rstrip(" \t\r\n")
     if not trimmed:
         return True
@@ -865,11 +876,15 @@ def _max_pool_prefix_allowed(before: str) -> bool:
     found = re.search(r"[A-Za-z0-9]+$", trimmed)
     if not found:
         return True
-    word = found.group(0).lower()
+    return _max_pool_lookback_word(found.group(0))
+
+
+def _max_pool_lookback_word(word: str) -> bool:
+    token = word.lower()
     return (
-        word in _LOG_LEVEL
-        or word in _ALLOWED_POOL_PREFIX
-        or word in _MAX_POOL_FUNCTION_WORDS
+        token in _LOG_LEVEL
+        or token in _ALLOWED_POOL_PREFIX
+        or token in _MAX_POOL_FUNCTION_WORDS
     )
 
 

@@ -1774,6 +1774,7 @@ _POOL_PATTERN_EXAMPLES = (
     "cannot get a connection after 5 attempts",
     "maximum pool size reached",
     "connection pool held 20 connections",
+    "connection pool saturated",
 )
 
 
@@ -1879,6 +1880,47 @@ class TestMaxPoolAndDriverPools:
                 _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
             ])
             _assert_connection_pool(result)
+
+
+class TestSaturatedPoolWord:
+    """Pool exhaustion matches the whole word saturated.
+
+    A saturation percentage is a reading. A negation between pool and
+    saturated, including a run of spaces, is not exhaustion.
+    """
+
+    def test_saturated_and_is_saturated_bind(self):
+        for message in (
+            "connection pool saturated",
+            "connection pool is saturated",
+        ):
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            _assert_connection_pool(result)
+
+    def test_saturation_readings_and_negations_do_not_bind(self):
+        for message in (
+            "connection pool saturation 35%",
+            "unsaturated",
+            "isn't saturated",
+            "never saturated",
+            "not yet saturated",
+            "no longer saturated",
+            "not  saturated",
+            "connection pool unsaturated",
+            "connection pool isn't saturated",
+            "connection pool never saturated",
+            "connection pool not yet saturated",
+            "connection pool no longer saturated",
+            "connection pool not  saturated",
+            "connection pool is not saturated",
+            "connection pool NOT  SATURATED",
+        ):
+            result, _ = _v18_timeout("edge-api", [
+                _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
+            ])
+            _assert_not_a_pool(result)
 
 
 class TestPoolPatternExamples:

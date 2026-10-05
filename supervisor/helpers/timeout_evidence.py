@@ -97,7 +97,7 @@ _POOL_NAME = (
 _POOL_PATTERNS = (
     re.compile(rf"{_POOL_NAME}[\s._-]*exhaust", re.I),
     re.compile(
-        r"connection\s+pool.{0,80}(exhaust|not available|unavailable|timed?\s*out|timeout|full|overflow|at capacity|waiting|limit|(?<!not )saturat)",
+        r"connection\s+pool.{0,80}(exhaust|not available|unavailable|timed?\s*out|timeout|full|overflow|at capacity|waiting|limit)",
         re.I,
     ),
     # Pool overflow, named on either side of the word.
@@ -129,6 +129,14 @@ _POOL_PATTERNS = (
         re.I,
     ),
     re.compile(r"connection pool.{0,40}(held|waiting)", re.I),
+    # Whole word only. "saturation 35%" and "unsaturated" are readings.
+    # A negation anywhere between pool and saturated rejects the line.
+    re.compile(
+        r"connection\s+pool"
+        r"(?:(?!\b(?:not|never|without)\b|no\s+longer|n't).){0,80}?"
+        r"\bsaturated\b",
+        re.I,
+    ),
 )
 
 _SLOW_QUERY_PATTERNS = (

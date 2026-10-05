@@ -131,11 +131,14 @@ _POOL_PATTERNS = (
     ),
     re.compile(r"connection pool.{0,40}(held|waiting)", re.I),
     # Whole word only. "saturation 35%" and "unsaturated" are readings.
-    # A negation anywhere between pool and saturated rejects the line.
+    # A negation anywhere between pool and saturated rejects the line,
+    # including cannot, can not, and a curly apostrophe. A false value
+    # immediately after the word rejects it too.
     re.compile(
-        r"connection\s+pool"
-        r"(?:(?!\b(?:not|never|without)\b|no\s+longer|n't).){0,80}?"
-        r"\bsaturated\b",
+        "connection\\s+pool"
+        "(?:(?!\\b(?:not|never|without|cannot)\\b|can\\s+not|no\\s+longer|n['\u2019]t).){0,80}?"
+        "\\bsaturated\\b"
+        "(?!\\s*[=:]\\s*(?:no|false|0)\\b)",
         re.I,
     ),
 )

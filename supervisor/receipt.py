@@ -378,6 +378,20 @@ def _bound_source(result: dict | None) -> dict:
     return {}
 
 
+def engine_query_id(payload: dict | None) -> str:
+    """The query id this engine assigned when it recorded the call.
+
+    ``complete_query`` writes ``_query_id``. The worker body is not a
+    source, and a bare receipt sequence is not a query.
+    """
+    if not isinstance(payload, dict):
+        return ""
+    qid = payload.get("_query_id")
+    if isinstance(qid, str) and qid.strip():
+        return qid.strip()
+    return ""
+
+
 def begin_query(receipt: Receipt, params: dict | None, filter_source: str = "playbook_hint") -> None:
     """Record the query on the receipt. Nothing is written into params."""
     receipt.query_id = f"q{receipt.sequence_order}"

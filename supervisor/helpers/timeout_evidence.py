@@ -23,6 +23,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from supervisor.helpers.placeholders import is_placeholder
+from supervisor.receipt import engine_query_id
 
 # Records must fall in [incident_start - W, incident_end + W].
 ALIGNMENT_WINDOW_MINUTES = 15
@@ -340,8 +341,8 @@ def _normalized_series(evidence: dict | None) -> list[dict]:
             "signal": "metric_series",
             "evidence_class": "raw",
         }
-        qid = val.get("_query_id")
-        if isinstance(qid, str) and qid:
+        qid = engine_query_id(val)
+        if qid:
             ref["query_id"] = qid
         for series in normalize_metric_payload(val, ref=ref):
             series_ref = dict(series.get("ref") or {})
@@ -683,7 +684,8 @@ def decide_timeout(
     }
     if pool_observations:
         decision["observations"] = pool_observations
-    return decision
+    from supervisor.helpers.cause_binding import require_query_tie
+    return require_query_tie(decision, evidence)
 
 
 def citations_for_bound_result(result: dict) -> list[dict] | None:
@@ -1360,7 +1362,7 @@ def _iter_logs(evidence: dict, fallback: list[dict]) -> list[dict]:
         found = True
         seq = val.get("_receipt_sequence_order")
         tool = str(val.get("_receipt_tool") or "")
-        query_id = val.get("_query_id") if isinstance(val.get("_query_id"), str) else ""
+        query_id = engine_query_id(val)
         for i, entry in enumerate(results):
             if not isinstance(entry, dict):
                 continue
@@ -1422,14 +1424,17 @@ def _iter_latency(evidence: dict, signals: dict, metrics: dict) -> list[dict]:
                 saw_signal = True
                 ts = str(sig.get("anomaly_start") or sig.get("timestamp") or "")
                 record = dict(latency)
-                views.append({
+                view = {
                     "record": record,
                     "timestamp": ts,
                     "sequence_order": seq if isinstance(seq, int) else None,
                     "tool": tool,
                     "locator": {"evidence_key": key, "path": ["signals", "golden_signals", "latency"]},
                     "baseline": latency.get("baseline_p95"),
-                })
+                }
+                if engine_query_id(val):
+                    view["query_id"] = engine_query_id(val)
+                views.append(view)
         met = val.get("metrics")
         if isinstance(met, dict) and isinstance(met.get("metrics"), list):
             baseline = met.get("baseline")
@@ -1444,14 +1449,17 @@ def _iter_latency(evidence: dict, signals: dict, metrics: dict) -> list[dict]:
                 if name and not re.search(r"latency|response_time|duration", name, re.I):
                     continue
                 saw_metric = True
-                views.append({
+                view = {
                     "record": point,
                     "timestamp": str(point.get("timestamp") or point.get("_time") or ""),
                     "sequence_order": seq if isinstance(seq, int) else None,
                     "tool": tool,
                     "locator": {"evidence_key": key, "path": ["metrics", "metrics", i]},
                     "baseline": baseline,
-                })
+                }
+                if engine_query_id(val):
+                    view["query_id"] = engine_query_id(val)
+                views.append(view)
     if saw_signal or saw_metric:
         # Keep the raw points. A golden-signals summary may sit beside them;
         # callers that score a cause skip that summary.
@@ -1754,6 +1762,7 @@ def iter_pool_readings(evidence: dict | None) -> list[dict]:
         seq = val.get("_receipt_sequence_order")
         tool = str(val.get("_receipt_tool") or "")
         service = _text_field(val, "service")
+        qid = engine_query_id(val)
         seen: set[tuple] = set()
         for view in (
             _pool_objects(val, str(key), seq, tool, service)
@@ -1769,6 +1778,8 @@ def iter_pool_readings(evidence: dict | None) -> list[dict]:
             if identity in seen:
                 continue
             seen.add(identity)
+            if qid:
+                view["query_id"] = qid
             found.append(view)
     return found
 

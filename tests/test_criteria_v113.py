@@ -630,3 +630,48 @@ class TestQueryCoverage:
         stored = receipt.to_dict()
         assert stored["query_id"] == "q1"
         assert stored["truncated"] is True
+
+
+def _cited_refs(result: dict) -> list[dict]:
+    """Every ref in the cause output, including contradictions."""
+    cause = result.get("cause") or {}
+    found = []
+    for ref in cause.get("evidence_refs") or []:
+        if isinstance(ref, dict):
+            found.append(ref)
+    for group in cause.get("contradictions") or []:
+        if not isinstance(group, dict):
+            continue
+        for ref in group.get("evidence_refs") or []:
+            if isinstance(ref, dict):
+                found.append(ref)
+    symptom = result.get("symptom") or {}
+    for ref in symptom.get("evidence_refs") or []:
+        if isinstance(ref, dict):
+            found.append(ref)
+    return found
+
+
+def test_every_cited_cause_ref_resolves_to_its_query():
+    """C4. Each cited ref on the fixture incidents resolves to a receipt.
+
+    The id is the one the engine recorded for that query. The record's
+    timestamp sits inside that receipt's window and returned span.
+    """
+    from tests.fixtures.mock_mcp_responses import ALL_MOCKS
+    from tests.test_supervisor import _build_mock_workers
+
+    misses = []
+    for incident_id in ALL_MOCKS:
+        supervisor = SentinalAISupervisor()
+        _build_mock_workers(supervisor, incident_id)
+        result = supervisor.investigate(incident_id)
+        receipts = result.get("receipts") or []
+        for ref in _cited_refs(result):
+            if query_ref_ok(ref, receipts=receipts):
+                continue
+            misses.append(
+                f"{incident_id} signal={ref.get('signal')!r} "
+                f"query_id={ref.get('query_id')!r} ts={ref.get('timestamp')!r}"
+            )
+    assert misses == []

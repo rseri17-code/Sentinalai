@@ -18,6 +18,7 @@ from supervisor.helpers.metric_series import (
     unparsed_metric_signals,
 )
 from supervisor.helpers.placeholders import is_placeholder
+from supervisor.receipt import engine_query_id
 from supervisor.helpers.service_match import service_names_match
 from supervisor.helpers.timeout_evidence import (
     ALIGNMENT_WINDOW_MINUTES,
@@ -207,6 +208,7 @@ def bind_hypothesis(
         "contributions": contributions,
     }
     proposal = _attach_change_context(proposal, windowed, service)
+    proposal = require_query_tie(proposal, evidence)
     proposal = _with_provenance(proposal, name)
     _mention_service(proposal, service)
     # A supported slow query, pool record, or exception is the cause even
@@ -245,6 +247,7 @@ def bind_hypothesis(
             merged.append(item)
     scanned["unknowns"] = merged
     scanned = _attach_change_context(scanned, windowed, service)
+    scanned = require_query_tie(scanned, evidence)
     scanned = _with_provenance(scanned, name)
     return _mention_service(scanned, service)
 
@@ -337,8 +340,7 @@ def _collect_views(evidence, logs, signals, metrics, events, changes) -> list[di
             continue
         seq = val.get("_receipt_sequence_order")
         tool = str(val.get("_receipt_tool") or "")
-        raw_qid = val.get("_query_id")
-        query_id = raw_qid if isinstance(raw_qid, str) else ""
+        query_id = engine_query_id(val)
         locator_key = key
         metric_class = classify_metric_payload(val)
         results = _log_results(val)
@@ -382,35 +384,82 @@ def _collect_views(evidence, logs, signals, metrics, events, changes) -> list[di
                     signal_view["query_id"] = query_id
                 views.append(signal_view)
     if not found_logs:
-        for i, entry in enumerate(logs or []):
-            if isinstance(entry, dict):
-                views.append(_view(entry, "log", None, "", {"path": ["logs", i]}))
+        _append_fallback(views, evidence, logs or [], "log", ["logs"])
     if not any(v["kind"] == "event" for v in views):
-        for i, entry in enumerate(events or []):
-            if isinstance(entry, dict):
-                views.append(_view(entry, "event", None, "", {"path": ["events", i]}))
+        _append_fallback(views, evidence, events or [], "event", ["events"])
     if not any(v["kind"] == "change" for v in views):
-        for i, entry in enumerate(changes or []):
-            if isinstance(entry, dict):
-                views.append(_view(entry, "change", None, "", {"path": ["changes", i]}))
+        _append_fallback(views, evidence, changes or [], "change", ["changes"])
     if not any(v["kind"] == "metric" for v in views):
-        for i, entry in enumerate((metrics or {}).get("metrics") or []):
-            if isinstance(entry, dict):
-                views.append(_view(entry, "metric", None, "", {"path": ["metrics", i]}))
+        _append_fallback(
+            views, evidence, (metrics or {}).get("metrics") or [], "metric", ["metrics"],
+        )
     if not any(v["kind"] == "signal" for v in views) and (signals or {}).get("golden_signals"):
-        views.append({
+        parent = _payload_owning_signals(evidence, signals)
+        signal_view = {
             "record": signals,
             "kind": "signal",
             "timestamp": str((signals or {}).get("anomaly_start") or ""),
-            "sequence_order": None,
-            "tool": "",
+            "sequence_order": parent.get("_receipt_sequence_order") if isinstance(parent.get("_receipt_sequence_order"), int) else None,
+            "tool": str(parent.get("_receipt_tool") or ""),
             "locator": {"path": ["signals"]},
-        })
+        }
+        qid = engine_query_id(parent)
+        if qid:
+            signal_view["query_id"] = qid
+        views.append(signal_view)
     # Pool gauges from Prometheus series and from signals.db_connection_pool.
     # The same numbers are one reading whichever shape the worker used.
     for reading in iter_pool_readings(evidence):
         views.append(reading)
     return views
+
+
+def _contains_list(val: dict, items: list) -> bool:
+    for key in ("events", "changes", "change_records", "results"):
+        if val.get(key) is items:
+            return True
+    for key in ("logs", "metrics"):
+        nested = val.get(key)
+        if nested is items:
+            return True
+        if isinstance(nested, dict) and nested.get("results" if key == "logs" else "metrics") is items:
+            return True
+    return False
+
+
+def _payload_owning(evidence, items) -> dict:
+    if not isinstance(items, list):
+        return {}
+    for val in (evidence or {}).values():
+        if isinstance(val, dict) and _contains_list(val, items):
+            return val
+    return {}
+
+
+def _payload_owning_signals(evidence, signals) -> dict:
+    if not isinstance(signals, dict):
+        return {}
+    for val in (evidence or {}).values():
+        if isinstance(val, dict) and val.get("signals") is signals:
+            return val
+    return {}
+
+
+def _append_fallback(views: list[dict], evidence, items, kind: str, path_prefix: list) -> None:
+    """Records copied off a worker result still belong to that query."""
+    parent = _payload_owning(evidence, items if isinstance(items, list) else [])
+    qid = engine_query_id(parent)
+    seq = parent.get("_receipt_sequence_order")
+    tool = str(parent.get("_receipt_tool") or "")
+    for i, entry in enumerate(items or []):
+        if isinstance(entry, dict):
+            views.append(_view(
+                entry, kind,
+                seq if isinstance(seq, int) else None,
+                tool,
+                {"path": list(path_prefix) + [i]},
+                qid,
+            ))
 
 
 def _log_results(val: dict) -> list | None:
@@ -737,6 +786,75 @@ def _apply_series_decision(
         for series in series_list:
             if series_supports_pool(series, owner or service, start, end, _in_window):
                 return _series_pool_decision(series, owner or service)
+    return decision
+
+
+def _queries_recorded(evidence: dict | None) -> bool:
+    for val in (evidence or {}).values():
+        if isinstance(val, dict) and engine_query_id(val):
+            return True
+    return False
+
+
+def _tied_refs(refs, evidence: dict | None) -> list:
+    kept = []
+    for ref in refs or []:
+        if isinstance(ref, dict) and query_ref_ok(ref, evidence):
+            kept.append(ref)
+    return kept
+
+
+def require_query_tie(decision: dict, evidence: dict | None) -> dict:
+    """Drop cause support that does not resolve to a recorded query.
+
+    Unit tests that never record a query are unchanged. An investigation
+    that did record queries cannot cite a record that is not one of them.
+    """
+    if not isinstance(decision, dict) or not _queries_recorded(evidence):
+        return decision
+    refs = list(decision.get("cause_refs") or [])
+    kept = _tied_refs(refs, evidence)
+    if kept != refs:
+        decision["cause_refs"] = kept
+        if not kept:
+            decision["category"] = "unknown"
+            decision["cause_confidence"] = min(int(decision.get("cause_confidence") or 0), 59)
+            statement = str(decision.get("statement") or "")
+            if "UNKNOWN" not in statement:
+                decision["statement"] = "incident observed; cause UNKNOWN"
+            unknowns = list(decision.get("unknowns") or [])
+            note = "record not tied to a query"
+            if note not in unknowns:
+                unknowns.append(note)
+            decision["unknowns"] = unknowns
+            decision["contributions"] = []
+        else:
+            score, contribs = score_raw_support(kept)
+            if decision.get("category") == "unknown" or decision.get("contradictions"):
+                score = min(score, 59)
+            decision["cause_confidence"] = score
+            decision["contributions"] = contribs
+    symptom = decision.get("symptom")
+    if isinstance(symptom, dict):
+        srefs = list(symptom.get("evidence_refs") or [])
+        skept = _tied_refs(srefs, evidence)
+        if skept != srefs:
+            symptom["evidence_refs"] = skept
+    groups = []
+    changed_groups = False
+    for group in decision.get("contradictions") or []:
+        if not isinstance(group, dict):
+            groups.append(group)
+            continue
+        grefs = list(group.get("evidence_refs") or [])
+        gkept = _tied_refs(grefs, evidence)
+        if gkept != grefs:
+            group = dict(group)
+            group["evidence_refs"] = gkept
+            changed_groups = True
+        groups.append(group)
+    if changed_groups:
+        decision["contradictions"] = groups
     return decision
 
 

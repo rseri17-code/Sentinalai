@@ -804,36 +804,57 @@ def _tied_refs(refs, evidence: dict | None) -> list:
     return kept
 
 
+def _untied_note(ref: dict) -> str:
+    service = str(ref.get("service") or "").strip()
+    signal = str(ref.get("signal") or "").strip()
+    label = " ".join(part for part in (service, signal) if part) or "record"
+    return f"{label} not tied to a query"
+
+
+def _note_untied(decision: dict, dropped: list) -> None:
+    unknowns = list(decision.get("unknowns") or [])
+    for ref in dropped:
+        note = _untied_note(ref)
+        if note not in unknowns:
+            unknowns.append(note)
+    if "record not tied to a query" not in unknowns:
+        unknowns.append("record not tied to a query")
+    decision["unknowns"] = unknowns
+    statement = str(decision.get("statement") or "")
+    if "UNKNOWN" not in statement:
+        decision["statement"] = "incident observed; cause UNKNOWN"
+        decision["category"] = "unknown"
+
+
 def require_query_tie(decision: dict, evidence: dict | None) -> dict:
     """Drop cause support that does not resolve to a recorded query.
 
     Unit tests that never record a query are unchanged. An investigation
     that did record queries cannot cite a record that is not one of them.
+    Rescoring never raises the confidence that was already published.
     """
     if not isinstance(decision, dict) or not _queries_recorded(evidence):
         return decision
     refs = list(decision.get("cause_refs") or [])
     kept = _tied_refs(refs, evidence)
     if kept != refs:
+        previous = int(decision.get("cause_confidence") or 0)
+        dropped = [ref for ref in refs if ref not in kept]
         decision["cause_refs"] = kept
         if not kept:
             decision["category"] = "unknown"
-            decision["cause_confidence"] = min(int(decision.get("cause_confidence") or 0), 59)
-            statement = str(decision.get("statement") or "")
-            if "UNKNOWN" not in statement:
-                decision["statement"] = "incident observed; cause UNKNOWN"
-            unknowns = list(decision.get("unknowns") or [])
-            note = "record not tied to a query"
-            if note not in unknowns:
-                unknowns.append(note)
-            decision["unknowns"] = unknowns
+            decision["cause_confidence"] = min(previous, 59)
             decision["contributions"] = []
+            _note_untied(decision, dropped)
         else:
             score, contribs = score_raw_support(kept)
             if decision.get("category") == "unknown" or decision.get("contradictions"):
                 score = min(score, 59)
+            score = min(previous, score)
             decision["cause_confidence"] = score
             decision["contributions"] = contribs
+            if score < 60:
+                _note_untied(decision, dropped)
     symptom = decision.get("symptom")
     if isinstance(symptom, dict):
         srefs = list(symptom.get("evidence_refs") or [])

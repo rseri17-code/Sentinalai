@@ -9,6 +9,7 @@ from supervisor.agent import Hypothesis, SentinalAISupervisor
 from supervisor.helpers.cause_binding import (
     bind_hypothesis,
     query_ref_ok,
+    require_query_tie,
     unchecked_coverage,
 )
 from supervisor.helpers.metric_series import (
@@ -650,6 +651,55 @@ def _cited_refs(result: dict) -> list[dict]:
         if isinstance(ref, dict):
             found.append(ref)
     return found
+
+
+def test_query_tie_rescore_does_not_raise_confidence():
+    """Dropping an untied ref must not raise the published confidence.
+
+    One remaining raw ref would rescore to 62. The decision was already
+    at 34, so it stays 34, the loose record is not cited, and the result
+    is UNKNOWN because what remains is below 60.
+    """
+    evidence = {
+        "search_logs": {
+            "_query_id": "q1",
+            "_filter_source": "playbook_hint",
+            "_receipt_tool": "log_worker",
+            "logs": {"results": [], "count": 0},
+        },
+    }
+    tied = {
+        "query_id": "q1",
+        "signal": "IllegalStateException",
+        "service": "svc-alpha",
+        "timestamp": "",
+        "evidence_class": "raw",
+    }
+    loose = {
+        "query_id": "q-missing",
+        "signal": "deployment",
+        "service": "cache-zeta",
+        "timestamp": "2024-08-01T11:55:00Z",
+        "evidence_class": "raw",
+    }
+    decision = {
+        "statement": "IllegalStateException in svc-alpha",
+        "category": "exception",
+        "cause_confidence": 34,
+        "cause_refs": [tied, loose],
+        "contradictions": [],
+        "unknowns": [],
+        "contributions": [],
+    }
+    out = require_query_tie(decision, evidence)
+    assert out["cause_confidence"] <= 34
+    assert all(ref.get("service") != "cache-zeta" for ref in out["cause_refs"])
+    assert "cache-zeta" not in " ".join(
+        str(ref.get("signal") or "") for ref in out["cause_refs"]
+    )
+    named = " ".join(out["unknowns"])
+    assert "UNKNOWN" in out["statement"] or "cache-zeta" in named
+    assert out["cause_confidence"] < 60
 
 
 def test_every_cited_cause_ref_resolves_to_its_query():

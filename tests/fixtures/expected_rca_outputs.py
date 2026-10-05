@@ -89,9 +89,12 @@ EXPECTED_RCA = {
         "incident_id": "INC12347",
         "root_cause": "NullPointerException in payment-service v3.1.0, deployed at 2024-02-12T09:00:00Z",
         "root_cause_keywords": ["deployed", "v3.1.0", "NullPointerException"],
-        # Exception log plus the deploy event and the change record. 62 + 8 + 8.
-        "confidence_min": 78,
-        "confidence_max": 78,
+        # C1. The exception log plus the change record, which names
+        # payment-service. 62 + 8 = 70. The deploy event has no service
+        # or CI field, so it is not a third ref (that was 78). It is
+        # "change in window, service not identified".
+        "confidence_min": 70,
+        "confidence_max": 70,
         "required_evidence": [
             "deployment occurred",
             "errors started after deployment",

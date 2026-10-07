@@ -2736,8 +2736,6 @@ class SentinalAISupervisor:
                 _line = f"metric not read: {_signal} unparsed_format query_id={_qid}"
                 if _line not in _unknowns:
                     _unknowns.append(_line)
-                if _line not in _reason:
-                    _reason = (_reason + " " + _line + ".").strip()
             for _row in _cov.get("query_gaps") or []:
                 if not _row.get("truncated"):
                     continue
@@ -2751,8 +2749,6 @@ class SentinalAISupervisor:
                 )
                 if _line not in _unknowns:
                     _unknowns.append(_line)
-                if _line not in _reason:
-                    _reason = (_reason + " " + _line + ".").strip()
             if not _cov.get("searched_window_reported"):
                 _note = "search did not report the window it covered"
                 if _note not in _unknowns:

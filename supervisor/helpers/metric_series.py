@@ -61,13 +61,58 @@ def normalize_metric_payload(payload: Any, *, ref: dict | None = None) -> list[d
 
 
 def unparsed_metric_signals(evidence: dict | None) -> list[dict]:
+    """Metric bodies that match neither gateway shape.
+
+    Each row names the signal, the query that returned the body, and
+    ``unparsed_format``. The body was not read.
+    """
+    from supervisor.receipt import engine_query_id
+
     rows = []
     for key, val in (evidence or {}).items():
         if str(key).startswith("_") or not isinstance(val, dict):
             continue
-        if classify_metric_payload(val) == "unparsed":
-            rows.append({"evidence_key": str(key), "reason": "unparsed_format"})
+        if classify_metric_payload(val) != "unparsed":
+            continue
+        rows.append({
+            "evidence_key": str(key),
+            "signal": _unparsed_signal_name(val, str(key)),
+            "query_id": engine_query_id(val),
+            "reason": "unparsed_format",
+        })
     return rows
+
+
+def _unparsed_signal_name(payload: dict, evidence_key: str) -> str:
+    for key in ("signal", "name", "metric"):
+        val = payload.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    metrics = payload.get("metrics")
+    if isinstance(metrics, list):
+        for point in metrics:
+            if not isinstance(point, dict):
+                continue
+            for key in ("name", "metric", "signal"):
+                val = point.get(key)
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
+    if isinstance(metrics, dict):
+        for key in ("name", "metric", "signal"):
+            val = metrics.get(key)
+            if isinstance(val, str) and val.strip():
+                return val.strip()
+    signals = payload.get("signals")
+    if isinstance(signals, dict):
+        for key in signals:
+            if key == "golden_signals":
+                continue
+            if isinstance(key, str) and key.strip():
+                return key.strip()
+    filt = payload.get("_filter")
+    if isinstance(filt, str) and filt.strip() and " " not in filt.strip():
+        return filt.strip()
+    return evidence_key
 
 
 def series_supports_pool(series: dict, owner: str, start, end, in_window) -> bool:

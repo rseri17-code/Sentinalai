@@ -436,7 +436,12 @@ class TestMetricShapes:
             "vendor_body": {"_receipt_tool": "metrics_worker", **weird},
         })
         assert coverage["unavailable_signals"] == [
-            {"evidence_key": "vendor_body", "reason": "unparsed_format"},
+            {
+                "evidence_key": "vendor_body",
+                "signal": "db_pool_active",
+                "query_id": "",
+                "reason": "unparsed_format",
+            },
         ]
 
     def test_contradicting_series_keeps_the_cause_below_60(self):
@@ -700,6 +705,104 @@ def test_query_tie_rescore_does_not_raise_confidence():
     named = " ".join(out["unknowns"])
     assert "UNKNOWN" in out["statement"] or "cache-zeta" in named
     assert out["cause_confidence"] < 60
+
+
+def test_unparsed_metric_reaches_investigate_output(monkeypatch):
+    """A third metric shape is unchecked coverage, with its query id.
+
+    The slow-query cause still binds from the log. Confidence does not
+    rise, and the unread metric is not cited.
+    """
+    monkeypatch.setenv("LLM_ENABLED", "false")
+    monkeypatch.setenv("PARALLEL_PLAYBOOK", "false")
+    monkeypatch.setenv("CALIBRATION_ENABLED", "false")
+    incident = {
+        "id": "INC-QUILL",
+        "summary": "ledger-quill latency",
+        "affected_service": "ledger-quill",
+        "severity": "high",
+        "start_time": "2024-08-01T12:00:00Z",
+        "status": "open",
+    }
+    log = {
+        "_time": "2024-08-01T12:00:10Z",
+        "service": "ledger-quill",
+        "level": "ERROR",
+        "message": "slow query on ledger-quill took 4200ms",
+    }
+    third = {
+        "vendor_shape": "heap_rooms_v3",
+        "signal": "heap_rooms",
+        "signals": {"heap_rooms": {"buckets": [1, 2, 4], "unit": "rooms"}},
+    }
+
+    def run(metric_body):
+        sup = SentinalAISupervisor()
+        sup._parallel_playbook = False
+
+        class _Ops:
+            def execute(self, action, params):
+                if action == "get_incident_by_id":
+                    return {"incident": dict(incident)}
+                return {}
+
+        class _Logs:
+            def execute(self, action, params):
+                if action == "search_logs":
+                    return {"logs": {"results": [dict(log)], "count": 1}}
+                return {"changes": []}
+
+        class _Quiet:
+            def execute(self, action, params):
+                if action in ("get_golden_signals", "check_latency"):
+                    return {"signals": {}}
+                return {}
+
+        class _Metrics:
+            def execute(self, action, params):
+                if action in ("query_metrics", "get_resource_metrics") and metric_body:
+                    return dict(metric_body)
+                return {}
+
+        for name in list(sup.workers):
+            sup.workers[name] = _Quiet()
+        sup.workers["ops_worker"] = _Ops()
+        sup.workers["log_worker"] = _Logs()
+        sup.workers["metrics_worker"] = _Metrics()
+        return sup.investigate("INC-QUILL")
+
+    plain = run(None)
+    marked = run(third)
+    assert marked["confidence"] <= plain["confidence"]
+    assert marked["cause"]["statement"] == plain["cause"]["statement"]
+    assert "ledger-quill" in marked["cause"]["statement"]
+    coverage = marked["_confidence_provenance"]["unchecked_coverage"]
+    rows = [
+        row for row in coverage["unavailable_signals"]
+        if row.get("reason") == "unparsed_format"
+    ]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["signal"] == "heap_rooms"
+    assert row["evidence_key"]
+    query_id = row["query_id"]
+    assert query_id
+    metric_receipts = [
+        receipt for receipt in marked["receipts"]
+        if receipt.get("tool") == "metrics_worker" and receipt.get("action") == "query_metrics"
+    ]
+    assert metric_receipts[0]["query_id"] == query_id
+    unknowns = " ".join(marked["cause"]["unknowns"])
+    assert f"metric not read: heap_rooms unparsed_format query_id={query_id}" in unknowns
+    assert "unparsed_format" in str(marked)
+    assert query_id in str(marked)
+    cited = _cited_refs(marked)
+    assert all(ref.get("query_id") != query_id for ref in cited)
+    assert all("heap_rooms" not in str(ref) for ref in cited)
+    assert not any(
+        row.get("reason") == "unparsed_format"
+        for row in plain["_confidence_provenance"]["unchecked_coverage"]["unavailable_signals"]
+    )
 
 
 def test_every_cited_cause_ref_resolves_to_its_query():

@@ -2728,6 +2728,16 @@ class SentinalAISupervisor:
                 if _line not in _unknowns:
                     _unknowns.append(_line)
             _reason = str(winner.bound_assessment.get("reasoning") or "")
+            for _row in _cov.get("unavailable_signals") or []:
+                if _row.get("reason") != "unparsed_format":
+                    continue
+                _signal = str(_row.get("signal") or _row.get("evidence_key") or "metric")
+                _qid = str(_row.get("query_id") or "")
+                _line = f"metric not read: {_signal} unparsed_format query_id={_qid}"
+                if _line not in _unknowns:
+                    _unknowns.append(_line)
+                if _line not in _reason:
+                    _reason = (_reason + " " + _line + ".").strip()
             if not _cov.get("searched_window_reported"):
                 _note = "search did not report the window it covered"
                 if _note not in _unknowns:

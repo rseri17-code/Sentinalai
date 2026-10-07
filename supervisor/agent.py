@@ -2738,6 +2738,21 @@ class SentinalAISupervisor:
                     _unknowns.append(_line)
                 if _line not in _reason:
                     _reason = (_reason + " " + _line + ".").strip()
+            for _row in _cov.get("query_gaps") or []:
+                if not _row.get("truncated"):
+                    continue
+                _signal = str(_row.get("signal") or _row.get("evidence_key") or "query")
+                _qid = str(_row.get("query_id") or "")
+                _start = str(_row.get("window_start") or "")
+                _end = str(_row.get("window_end") or "")
+                _line = (
+                    f"capped query: {_signal} query_id={_qid} "
+                    f"window {_start} to {_end}"
+                )
+                if _line not in _unknowns:
+                    _unknowns.append(_line)
+                if _line not in _reason:
+                    _reason = (_reason + " " + _line + ".").strip()
             if not _cov.get("searched_window_reported"):
                 _note = "search did not report the window it covered"
                 if _note not in _unknowns:

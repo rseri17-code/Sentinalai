@@ -360,6 +360,7 @@ class TestUnderclaimFullLogs:
             {
                 "_time": "2024-11-04T07:59:20Z",
                 "service": "inventory-db",
+                "downstream": "inventory-db",
                 "level": "ERROR",
                 "message": "ERROR connection pool exhausted: 20/20 connections in use",
             },
@@ -408,6 +409,7 @@ class TestOverclaimFullLogs:
             {
                 "_time": "2024-11-04T07:59:20Z",
                 "service": "inventory-db",
+                "downstream": "inventory-db",
                 "level": "ERROR",
                 "message": "ERROR connection pool exhausted: 20/20 connections in use",
             },
@@ -440,6 +442,17 @@ class TestOverclaimFullLogs:
         assert result["confidence"] < expected["confidence_below"]
         for word in expected["forbidden"]:
             assert word not in result["root_cause"].lower()
+
+
+def _cited_timeout(service, downstream):
+    """A failure record. The pool line does not establish the dependency."""
+    return {
+        "_time": "2024-11-04T07:59:10Z",
+        "service": service,
+        "downstream": downstream,
+        "level": "ERROR",
+        "message": "ERROR the call timed out",
+    }
 
 
 def _caller_pool_record():
@@ -514,6 +527,7 @@ class TestResourceOwnerAndSymptom:
     def test_latency_names_the_downstream_owner(self):
         expected = EXPECTED["owner_latency"]
         records = [
+            _cited_timeout("fulfillment-api", "ledger-db"),
             _caller_pool_record(),
             {
                 "_time": "2024-11-04T07:59:40Z",
@@ -530,7 +544,10 @@ class TestResourceOwnerAndSymptom:
 
     def test_timeout_thin_evidence_names_the_downstream_owner(self):
         expected = EXPECTED["owner_timeout_thin"]
-        records = [_caller_pool_record()]
+        records = [
+            _cited_timeout("fulfillment-api", "ledger-db"),
+            _caller_pool_record(),
+        ]
         result, gateway, evidence = _investigate(
             expected["incident_type"], expected["service"], records,
         )
@@ -539,13 +556,16 @@ class TestResourceOwnerAndSymptom:
 
     def test_pool_limit_outranks_timeout_exception(self):
         expected = EXPECTED["pool_over_exception"]
-        records = [{
-            "_time": "2024-11-04T07:59:20Z",
-            "service": "invoicing-api",
-            "downstream": "invoice-store",
-            "level": "ERROR",
-            "message": "SocketTimeoutException: connection pool limit reached (slots=20)",
-        }]
+        records = [
+            _cited_timeout("invoicing-api", "invoice-store"),
+            {
+                "_time": "2024-11-04T07:59:20Z",
+                "service": "invoicing-api",
+                "downstream": "invoice-store",
+                "level": "ERROR",
+                "message": "SocketTimeoutException: connection pool limit reached (slots=20)",
+            },
+        ]
         result, gateway, evidence = _investigate(
             expected["incident_type"], expected["service"], records,
         )

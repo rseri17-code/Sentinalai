@@ -77,6 +77,7 @@ def _pool_line():
     return {
         "_time": "2024-06-21T03:44:19Z",
         "service": "payment-service",
+        "downstream": "payment-db",
         "message": "ERROR pool.exhausted service=payment-service waiting=47",
     }
 
@@ -152,7 +153,7 @@ class TestEvidenceBoundCause:
         }
         result = _run(evidence)
         cause = result["cause"]
-        assert cause["statement"] == "connection pool for payment-db exhausted"
+        assert cause["statement"] == "payment-service's connection pool to payment-db exhausted"
         assert result["root_cause"] == cause["statement"]
         assert cause["category"] == "connection_pool_exhaustion"
         assert cause["confidence"] == 62
@@ -193,12 +194,13 @@ class TestEvidenceBoundCause:
                 {
                     "_time": "2024-06-21T03:44:19Z",
                     "service": "payment-service",
+                    "downstream": "payment-db",
                     "message": "HikariPool-1 - Connection is not available, request timed out after 30000ms",
                 },
             ]),
         }
         pool = _run(evidence)
-        assert pool["cause"]["statement"] == "connection pool for payment-db exhausted"
+        assert pool["cause"]["statement"] == "payment-service's connection pool to payment-db exhausted"
         assert pool["cause"]["confidence"] == 62
 
         slow = _run({
@@ -600,11 +602,21 @@ class TestEveryWinnerIsRebound:
             "search_error_logs": {
                 "_receipt_sequence_order": 2,
                 "_receipt_tool": "log_worker",
-                "logs": {"results": [{
-                    "_time": "2024-06-21T03:44:19Z",
-                    "service": "payment-service",
-                    "message": "Connection pool exhausted: 50/50 connections in use",
-                }]},
+                "logs": {"results": [
+                    {
+                        "_time": "2024-06-21T03:44:10Z",
+                        "service": "payment-service",
+                        "level": "ERROR",
+                        "message": "ERROR the call timed out",
+                        "downstream": "payment-db",
+                    },
+                    {
+                        "_time": "2024-06-21T03:44:19Z",
+                        "service": "payment-service",
+                        "downstream": "payment-db",
+                        "message": "Connection pool exhausted: 50/50 connections in use",
+                    },
+                ]},
             }
         }
         assessment = bind_hypothesis(
@@ -614,7 +626,8 @@ class TestEveryWinnerIsRebound:
             incident={"start_time": "2024-06-21T03:44:21Z"},
             evidence=evidence,
         )
-        assert "connection pool exhausted" in assessment["statement"]
+        assert "connection pool" in assessment["statement"]
+        assert "exhausted" in assessment["statement"]
         assert "cascad" not in assessment["statement"].lower()
         assert "slow quer" not in assessment["statement"].lower()
         assert assessment["cause_confidence"] >= 60
@@ -832,8 +845,20 @@ def _v18_incident(service, start="2024-08-01T12:00:00Z"):
     }
 
 
+def _cited_dependency_failure(service, downstream="ledger-store"):
+    """A timeout record that names the dependency. The pool line does not."""
+    return {
+        "_time": "2024-08-01T12:00:01Z",
+        "service": service,
+        "level": "ERROR",
+        "message": "ERROR the call timed out",
+        "downstream": downstream,
+    }
+
+
 def _v18_timeout(service, records, signals=None):
     incident = _v18_incident(service)
+    records = [_cited_dependency_failure(service), *records]
     evidence = {
         "search_timeout_logs": {
             "_receipt_sequence_order": 2,
@@ -855,6 +880,7 @@ def _pool_line_at(service, when, message="connection pool exhausted"):
         "service": service,
         "level": "ERROR",
         "message": message,
+        "downstream": "ledger-store",
     }
 
 
@@ -945,7 +971,7 @@ class TestDerivedAndComputedConfidence:
         logs = {
             "_receipt_sequence_order": 2,
             "_receipt_tool": "log_worker",
-            "logs": {"results": [raw], "count": 1},
+            "logs": {"results": [_cited_dependency_failure("edge-api"), raw], "count": 2},
         }
         incident = _v18_incident("edge-api")
         hyp = Hypothesis(
@@ -990,8 +1016,9 @@ class TestDerivedAndComputedConfidence:
                 "_receipt_sequence_order": 2,
                 "_receipt_tool": "log_worker",
                 "logs": {"results": [
+                    _cited_dependency_failure("edge-api"),
                     _pool_line_at("edge-api", "2024-08-01T12:00:10Z"),
-                ], "count": 1},
+                ], "count": 2},
             },
             "check_signals": {
                 "_receipt_sequence_order": 1,
@@ -1032,10 +1059,10 @@ class TestDerivedAndComputedConfidence:
             ),
         ])
         statement = result["cause"]["statement"]
-        assert statement == "connection pool exhausted on edge-api"
+        assert statement == "edge-api's connection pool to ledger-store exhausted"
         assert result["cause"]["confidence"] == _ONE_RAW
         assert result["cause"]["category"] == "connection_pool_exhaustion"
-        assert _DOWNSTREAM_UNKNOWN in result["cause"]["unknowns"]
+        assert "why ledger-store refuses connections" in result["cause"]["unknowns"]
         assert not re.search(r"\d", statement)
         rate, _ = _v18_timeout("edge-api", [
             _pool_line_at(
@@ -1164,14 +1191,17 @@ class TestToolErrorIsUnchecked:
                 "_receipt_sequence_order": 3,
                 "_receipt_tool": "log_worker",
                 "logs": {
-                    "results": [_pool_line_at("edge-api", "2024-08-01T12:00:10Z")],
-                    "count": 1,
+                    "results": [
+                        _cited_dependency_failure("edge-api"),
+                        _pool_line_at("edge-api", "2024-08-01T12:00:10Z"),
+                    ],
+                    "count": 2,
                 },
             },
         }
         result = _v18_with_evidence("edge-api", evidence)
         cause = result["cause"]
-        assert cause["statement"] == "connection pool exhausted on edge-api"
+        assert cause["statement"] == "edge-api's connection pool to ledger-store exhausted"
         assert cause["confidence"] == _ONE_RAW
         assert cause["contradictions"] == []
         assert cause["evidence_refs"]
@@ -1208,8 +1238,11 @@ def _pool_candidate_evidence(metric_payload):
             "_receipt_sequence_order": 2,
             "_receipt_tool": "log_worker",
             "logs": {
-                "results": [_pool_line_at("edge-api", _POOL_WHEN)],
-                "count": 1,
+                "results": [
+                    _cited_dependency_failure("edge-api"),
+                    _pool_line_at("edge-api", _POOL_WHEN),
+                ],
+                "count": 2,
             },
         },
         "query_pool": metric_payload,
@@ -1424,7 +1457,7 @@ class TestUntimedPoolReadingStillContradicts:
 
     def test_untimed_saturated_reading_does_not_contradict(self):
         assessment = _bind_pool_with_reading(_pool_object(30, 27, 30))
-        assert assessment["statement"] == "connection pool exhausted on edge-api"
+        assert assessment["statement"] == "edge-api's connection pool to ledger-store exhausted"
         assert assessment["category"] == "connection_pool_exhaustion"
         assert assessment["cause_confidence"] == _ONE_RAW
         assert assessment["contradictions"] == []
@@ -1434,7 +1467,7 @@ class TestUntimedPoolReadingStillContradicts:
         assessment = _bind_pool_with_reading(
             _pool_object(3, 27, 30, "2024-08-01T10:00:00Z"),
         )
-        assert assessment["statement"] == "connection pool exhausted on edge-api"
+        assert assessment["statement"] == "edge-api's connection pool to ledger-store exhausted"
         assert assessment["category"] == "connection_pool_exhaustion"
         assert assessment["cause_confidence"] == _ONE_RAW
         assert assessment["contradictions"] == []
@@ -1629,7 +1662,7 @@ class TestPoolWordingNamesAPool:
                 _pool_line_at("edge-api", "2024-08-01T12:00:10Z", message),
             ])
             cause = result["cause"]
-            assert cause["statement"] == "connection pool exhausted on edge-api"
+            assert cause["statement"] == "edge-api's connection pool to ledger-store exhausted"
             assert cause["confidence"] == _ONE_RAW
             assert cause["category"] == "connection_pool_exhaustion"
             assert {ref["signal"] for ref in cause["evidence_refs"]} == {
@@ -1645,7 +1678,7 @@ class TestPoolWordingNamesAPool:
             ),
         ])
         cause = result["cause"]
-        assert cause["statement"] == "connection pool exhausted on edge-api"
+        assert cause["statement"] == "edge-api's connection pool to ledger-store exhausted"
         assert cause["confidence"] == _ONE_RAW
         assert cause["category"] == "connection_pool_exhaustion"
         assert {ref["signal"] for ref in cause["evidence_refs"]} == {
@@ -1680,7 +1713,7 @@ class TestConnectionPoolNotAnyPool:
 
 def _assert_connection_pool(result):
     cause = result["cause"]
-    assert cause["statement"] == "connection pool exhausted on edge-api"
+    assert cause["statement"] == "edge-api's connection pool to ledger-store exhausted"
     assert cause["confidence"] == _ONE_RAW
     assert cause["category"] == "connection_pool_exhaustion"
     assert {ref["signal"] for ref in cause["evidence_refs"]} == {

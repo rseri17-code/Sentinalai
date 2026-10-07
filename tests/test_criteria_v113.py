@@ -241,7 +241,7 @@ class TestPoolMatchesFailingDependency:
         observed = decision["observations"]
         assert observed[0]["statement"] == "pool to ledger-store exhausted"
         assert observed[0]["evidence_refs"][0]["service"] == "svc-alpha"
-        assert "failing dependency not identified" not in decision["unknowns"]
+        assert "failing dependency not identified" in decision["unknowns"]
 
     def test_pool_for_b_with_timeout_to_b_binds(self):
         decision = _timeout([
@@ -447,10 +447,18 @@ class TestMetricShapes:
     def test_contradicting_series_keeps_the_cause_below_60(self):
         evidence = _evidence([
             {
+                "_time": "2024-08-01T12:00:01Z",
+                "service": "svc-alpha",
+                "level": "ERROR",
+                "message": "ERROR the call timed out",
+                "downstream": "svc-alpha",
+            },
+            {
                 "_time": _LOG_TS,
                 "service": "svc-alpha",
                 "level": "ERROR",
                 "message": "ERROR connection pool exhausted",
+                "downstream": "svc-alpha",
             },
         ])
         evidence["query_metrics"] = {
@@ -581,6 +589,7 @@ class TestQueryCoverage:
         gaps = unchecked_coverage(_incident(), evidence)["query_gaps"]
         assert gaps == [{
             "evidence_key": "search_downstream_cache_zeta_logs",
+            "signal": "cache-zeta",
             "query_id": "q2",
             "window_start": "2024-08-01T11:45:00Z",
             "window_end": "2024-08-01T12:15:00Z",
@@ -705,6 +714,200 @@ def test_query_tie_rescore_does_not_raise_confidence():
     named = " ".join(out["unknowns"])
     assert "UNKNOWN" in out["statement"] or "cache-zeta" in named
     assert out["cause_confidence"] < 60
+
+
+def _quill_incident():
+    return {
+        "id": "INC-QUILL",
+        "summary": "ledger-quill timeout",
+        "affected_service": "ledger-quill",
+        "severity": "high",
+        "start_time": "2024-08-01T12:00:00Z",
+        "status": "open",
+    }
+
+
+def _dependency_failure(downstream):
+    return {
+        "_time": "2024-08-01T12:00:10Z",
+        "service": "ledger-quill",
+        "level": "ERROR",
+        "message": "ERROR timeout talking to upstream",
+        "downstream": downstream,
+    }
+
+
+def _named_pool(downstream=None):
+    row = {
+        "_time": "2024-08-01T12:00:12Z",
+        "service": "ledger-quill",
+        "level": "ERROR",
+        "message": "ERROR connection pool exhausted",
+    }
+    if downstream is not None:
+        row["downstream"] = downstream
+    return row
+
+
+def _investigate_quill(monkeypatch, choose):
+    """Run one timeout investigation. ``choose(query)`` is the log body."""
+    monkeypatch.setenv("LLM_ENABLED", "false")
+    monkeypatch.setenv("PARALLEL_PLAYBOOK", "false")
+    monkeypatch.setenv("CALIBRATION_ENABLED", "false")
+    incident = _quill_incident()
+    sup = SentinalAISupervisor()
+    sup._parallel_playbook = False
+
+    class _Ops:
+        def execute(self, action, params):
+            if action == "get_incident_by_id":
+                return {"incident": dict(incident)}
+            return {}
+
+    class _Logs:
+        def execute(self, action, params):
+            if action == "search_logs":
+                return choose(str((params or {}).get("query") or ""))
+            return {"changes": []}
+
+    class _Quiet:
+        def execute(self, action, params):
+            if action in ("get_golden_signals", "check_latency"):
+                return {"signals": {}}
+            return {}
+
+    for name in list(sup.workers):
+        sup.workers[name] = _Quiet()
+    sup.workers["ops_worker"] = _Ops()
+    sup.workers["log_worker"] = _Logs()
+    return sup.investigate("INC-QUILL")
+
+
+def _log_body(rows):
+    return {"logs": {"results": rows, "count": len(rows)}}
+
+
+def _assert_pool_unknown(result):
+    cause = result["cause"]
+    assert "UNKNOWN" in cause["statement"]
+    assert cause["confidence"] < 60
+    assert result["confidence"] < 60
+    assert "failing dependency not identified" in cause["unknowns"]
+    assert not any(
+        ref.get("signal") == "connection_pool_exhausted"
+        for ref in cause["evidence_refs"]
+    )
+
+
+def test_pool_binds_when_failure_names_the_same_dependency(monkeypatch):
+    result = _investigate_quill(monkeypatch, lambda query: _log_body(
+        [_dependency_failure("cache-zeta"), _named_pool("cache-zeta")]
+        if query.startswith("pool") or query.startswith("timeout")
+        else []
+    ))
+    cause = result["cause"]
+    assert cause["category"] == "connection_pool_exhaustion"
+    assert cause["confidence"] >= 60
+    assert "cache-zeta" in cause["statement"]
+    assert "failing dependency not identified" not in cause["unknowns"]
+    assert any(
+        ref.get("signal") == "connection_pool_exhausted" for ref in cause["evidence_refs"]
+    )
+
+
+def test_pool_line_alone_is_unknown(monkeypatch):
+    """The failure record is never returned. The pool line does not bind."""
+    result = _investigate_quill(monkeypatch, lambda query: _log_body(
+        [_named_pool("cache-zeta")] if query.startswith("pool") else []
+    ))
+    _assert_pool_unknown(result)
+
+
+def test_pool_for_another_dependency_is_unknown(monkeypatch):
+    result = _investigate_quill(monkeypatch, lambda query: _log_body(
+        [_dependency_failure("cache-zeta")] if query.startswith("timeout")
+        else [_named_pool("mint-ledger")] if query.startswith("pool")
+        else []
+    ))
+    _assert_pool_unknown(result)
+
+
+def test_pool_suffix_name_is_unknown(monkeypatch):
+    result = _investigate_quill(monkeypatch, lambda query: _log_body(
+        [_dependency_failure("cache-zeta")] if query.startswith("timeout")
+        else [_named_pool("cache-zeta-replica")] if query.startswith("pool")
+        else []
+    ))
+    _assert_pool_unknown(result)
+
+
+def test_pool_without_a_dependency_name_is_unknown(monkeypatch):
+    result = _investigate_quill(monkeypatch, lambda query: _log_body(
+        [_dependency_failure("cache-zeta")] if query.startswith("timeout")
+        else [_named_pool(None)] if query.startswith("pool")
+        else []
+    ))
+    _assert_pool_unknown(result)
+
+
+def test_only_the_capped_query_is_listed(monkeypatch):
+    """One capped search and one full search. Only the capped query is a gap."""
+    capped_window = ("2024-08-01T11:45:00Z", "2024-08-01T12:15:00Z")
+    full_window = ("2024-08-01T11:40:00Z", "2024-08-01T12:20:00Z")
+    slow = {
+        "_time": "2024-08-01T12:00:10Z",
+        "service": "ledger-quill",
+        "level": "ERROR",
+        "message": "slow query on ledger-quill took 4200ms",
+    }
+
+    def choose(query):
+        if query.startswith("pool"):
+            return {
+                "logs": {"results": [dict(slow)], "count": 1},
+                "truncated": True,
+                "limit": 1,
+                "window_start": capped_window[0],
+                "window_end": capped_window[1],
+                "oldest_ts": "2024-08-01T12:00:10Z",
+                "newest_ts": "2024-08-01T12:00:10Z",
+            }
+        if query.startswith("timeout"):
+            return {
+                "logs": {"results": [dict(slow)], "count": 1},
+                "truncated": False,
+                "limit": 5,
+                "window_start": full_window[0],
+                "window_end": full_window[1],
+                "oldest_ts": "2024-08-01T12:00:10Z",
+                "newest_ts": "2024-08-01T12:00:10Z",
+            }
+        return _log_body([])
+
+    result = _investigate_quill(monkeypatch, choose)
+    gaps = result["_confidence_provenance"]["unchecked_coverage"]["query_gaps"]
+    assert len(gaps) == 1
+    gap = gaps[0]
+    assert gap["truncated"] is True
+    assert gap["query_id"]
+    assert gap["signal"]
+    assert gap["window_start"] == capped_window[0]
+    assert gap["window_end"] == capped_window[1]
+    receipts = [
+        receipt for receipt in result["receipts"]
+        if receipt.get("action") == "search_logs"
+    ]
+    capped = next(receipt for receipt in receipts if receipt.get("truncated") is True)
+    full = next(receipt for receipt in receipts if receipt.get("truncated") is False)
+    assert gap["query_id"] == capped["query_id"]
+    assert gap["query_id"] != full["query_id"]
+    unknowns = " ".join(result["cause"]["unknowns"])
+    assert f"query_id={capped['query_id']}" in unknowns
+    assert capped["query_id"] in unknowns
+    assert full["query_id"] not in unknowns
+    assert "capped query" in unknowns
+    assert gap["signal"] in unknowns
+    assert capped_window[0] in unknowns
 
 
 def test_unparsed_metric_reaches_investigate_output(monkeypatch):

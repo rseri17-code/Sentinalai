@@ -590,9 +590,12 @@ class TestHelperMethods:
             },
             log_data={
                 "results": [
+                    {"_time": "2024-01-01T09:59:00Z", "level": "ERROR",
+                     "message": "ERROR the call timed out",
+                     "service": "auth-service", "downstream": "auth-db"},
                     {"_time": "2024-01-01T10:00:00Z", "level": "ERROR",
                      "message": "Authentication failed: connection pool exhausted",
-                     "service": "auth-service"},
+                     "service": "auth-service", "downstream": "auth-db"},
                 ],
             },
             signals_data={
@@ -717,7 +720,9 @@ class TestHelperMethods:
             },
         )
         result = supervisor.investigate("INC_H9")
-        assert result["confidence"] >= 60
+        # A pool line does not name the failing dependency, so it does not bind.
+        assert result["confidence"] < 60
+        assert "failing dependency not identified" in result["cause"]["unknowns"]
 
     def test_missing_worker_in_playbook(self):
         """If a worker is missing from the dict, playbook continues."""

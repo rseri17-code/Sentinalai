@@ -248,12 +248,13 @@ EXPECTED_RCA = {
     # =========================================================================
     "INC12353": {
         "incident_id": "INC12353",
-        "root_cause": "connection pool exhausted on auth-service; intermittent",
-        "root_cause_keywords": ["connection pool", "auth-service", "intermittent"],
-        # Three in-window pool logs and five pool points. 62 + 8*7 = 118, capped at 90.
-        # The 08:20:15 log is outside the window. No record names a downstream.
-        "confidence_min": 90,
-        "confidence_max": 90,
+        "root_cause": "flapping observed; cause UNKNOWN",
+        "root_cause_keywords": ["unknown"],
+        # The pool lines name no dependency, and no cited failure does either.
+        # Pool exhaustion does not bind. Cause confidence stays at the
+        # symptom-only score, 34.
+        "confidence_min": 34,
+        "confidence_max": 34,
         "required_evidence": [
             "intermittent connection pool exhaustion",
             "sawtooth pattern in connections",

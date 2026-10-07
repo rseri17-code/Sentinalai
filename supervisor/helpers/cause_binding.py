@@ -1393,14 +1393,16 @@ def _pool_cause(
         and not _is_derived_record(v["record"])
     ] or [view]
     observations: list[dict] = []
-    if d_source in {"structured", "span", "incident"}:
+    if d_source in {"structured", "span", "text"}:
         pool_candidates, observations = split_pools_for_dependency(
             pool_candidates, d_fail, service,
         )
         if not pool_candidates:
-            return _pool_rejected(incident_type, observations, identified=True)
-    elif d_source == "missing":
-        _matched, observations = split_pools_for_dependency(pool_candidates, "", service)
+            return _pool_rejected(incident_type, observations, identified=False)
+    else:
+        _matched, observations = split_pools_for_dependency(
+            pool_candidates, "", service,
+        )
         return _pool_rejected(incident_type, observations, identified=False)
     record = pool_candidates[0]["record"]
     own = _citation_service(record)
@@ -1840,6 +1842,7 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
         if val.get("_truncated") is True:
             query_gaps.append({
                 "evidence_key": str(key),
+                "signal": str(val.get("_filter") or key),
                 "query_id": str(val.get("_query_id") or ""),
                 "window_start": str(val.get("_window_start") or ""),
                 "window_end": str(val.get("_window_end") or ""),

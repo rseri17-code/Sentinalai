@@ -404,9 +404,8 @@ def decide_timeout(
         log_views, incident, alerted, start, end,
     )
     pool_observations: list[dict] = []
-    # A pool or query record on the alerted service still counts when no
-    # separate timeout line names a downstream. A separate timeout that
-    # names nothing does not fall back to the alerted service.
+    # A separate timeout that names nothing does not fall back to the
+    # alerted service. A pool line never supplies that name itself.
     if d_source == "missing":
         ds = ""
         named_downstream = False
@@ -419,20 +418,21 @@ def decide_timeout(
         v for v in log_views
         if _in_window(v["timestamp"], start, end) and _is_pool(v["record"])
     ]
-    if d_source in {"structured", "span", "incident"}:
+    # A pool line does not establish the failing dependency. Only a cited
+    # failure or timeout record does, and the pool's own dependency field
+    # has to match that name exactly. A suffix, a prefix, a different
+    # service, or a blank field does not.
+    cited_dependency = d_source in {"structured", "span", "text"}
+    if cited_dependency:
         pool_views, pool_observations = split_pools_for_dependency(
             in_window_pools, d_fail, alerted,
         )
-    elif d_source == "missing":
+    else:
         pool_views = []
         _unused, pool_observations = split_pools_for_dependency(
             in_window_pools, "", alerted,
         )
-    else:
-        pool_views = [
-            v for v in in_window_pools
-            if _concerns(v, ds, alerted, timeout_names_ds=named_downstream)
-        ]
+    pools_without_dependency = bool(in_window_pools) and not pool_views
     slow_views = [
         v for v in log_views
         if _in_window(v["timestamp"], start, end)
@@ -586,6 +586,12 @@ def decide_timeout(
         category = "unknown"
         name = "latency_elevated_unknown"
         unknowns.append(f"why {ds} latency is elevated")
+    elif pools_without_dependency:
+        base = MISSING_CAUSE
+        statement = "timeout observed; cause UNKNOWN"
+        category = "unknown"
+        name = "pool_dependency_mismatch"
+        unknowns.append("failing dependency not identified")
     else:
         required_owner = d_fail if d_source in {"structured", "span", "incident", "text"} else (ds or alerted)
         supported = None if d_source == "missing" else _supporting_pool_series(

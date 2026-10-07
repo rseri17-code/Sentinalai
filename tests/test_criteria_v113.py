@@ -749,12 +749,14 @@ def _named_pool(downstream=None):
     return row
 
 
-def _investigate_quill(monkeypatch, choose):
+def _investigate_quill(monkeypatch, choose, incident_extra=None):
     """Run one timeout investigation. ``choose(query)`` is the log body."""
     monkeypatch.setenv("LLM_ENABLED", "false")
     monkeypatch.setenv("PARALLEL_PLAYBOOK", "false")
     monkeypatch.setenv("CALIBRATION_ENABLED", "false")
     incident = _quill_incident()
+    if incident_extra:
+        incident.update(incident_extra)
     sup = SentinalAISupervisor()
     sup._parallel_playbook = False
 
@@ -838,6 +840,51 @@ def test_pool_suffix_name_is_unknown(monkeypatch):
         else [_named_pool("cache-zeta-replica")] if query.startswith("pool")
         else []
     ))
+    _assert_pool_unknown(result)
+
+
+def test_message_text_does_not_establish_the_dependency(monkeypatch):
+    """A target named only in the timeout message does not bind the pool."""
+    timeout = {
+        "_time": "2024-08-01T12:00:10Z",
+        "service": "ledger-quill",
+        "level": "ERROR",
+        "message": "upstream request timeout: vellum-cache:8080 (31000ms)",
+    }
+    result = _investigate_quill(monkeypatch, lambda query: _log_body(
+        [timeout, _named_pool("vellum-cache")]
+        if query.startswith("pool") or query.startswith("timeout")
+        else []
+    ))
+    _assert_pool_unknown(result)
+
+
+def test_alert_structured_downstream_binds_the_matching_pool(monkeypatch):
+    result = _investigate_quill(
+        monkeypatch,
+        lambda query: _log_body(
+            [_named_pool("vellum-cache")] if query.startswith("pool") else []
+        ),
+        {"downstream": "vellum-cache"},
+    )
+    cause = result["cause"]
+    assert cause["category"] == "connection_pool_exhaustion"
+    assert cause["confidence"] >= 60
+    assert "vellum-cache" in cause["statement"]
+    assert "failing dependency not identified" not in cause["unknowns"]
+    assert any(
+        ref.get("signal") == "connection_pool_exhausted" for ref in cause["evidence_refs"]
+    )
+
+
+def test_alert_structured_downstream_rejects_a_different_pool(monkeypatch):
+    result = _investigate_quill(
+        monkeypatch,
+        lambda query: _log_body(
+            [_named_pool("brine-ledger")] if query.startswith("pool") else []
+        ),
+        {"downstream": "vellum-cache"},
+    )
     _assert_pool_unknown(result)
 
 

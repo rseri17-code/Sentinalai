@@ -70,6 +70,7 @@ def _timeout_line():
         "_time": "2024-06-21T03:44:18Z",
         "service": "payment-service",
         "message": "ERROR timeout waiting for connection: payment-db",
+        "downstream": "payment-db",
     }
 
 

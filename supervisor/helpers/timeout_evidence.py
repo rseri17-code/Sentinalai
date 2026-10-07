@@ -265,11 +265,13 @@ def establish_failing_dependency(
 ) -> tuple[str, str]:
     """D_fail and how it was established.
 
-    ``structured``, ``span``, and ``incident`` come from fields. ``text``
-    is the legacy timeout line, kept so a name in the log message still
-    binds. ``missing`` means a separate timeout exists and none of those
-    named a dependency. ``""`` means there is no separate timeout.
-    Alert title, description, and summary are not read.
+    ``structured`` is a cited record's target or downstream field.
+    ``span`` is a trace field. ``incident`` is the alert's structured
+    downstream field. ``text`` is a name pulled from a timeout line's
+    message and does not establish a pool dependency. ``missing`` means
+    a separate timeout exists and none of the fields named a dependency.
+    ``""`` means there is no separate timeout. Alert title, description,
+    and summary are not read.
     """
     considered = [view for view in views if _view_in_bounds(view, start, end)]
     for view in considered:
@@ -418,11 +420,11 @@ def decide_timeout(
         v for v in log_views
         if _in_window(v["timestamp"], start, end) and _is_pool(v["record"])
     ]
-    # A pool line does not establish the failing dependency. Only a cited
-    # failure or timeout record does, and the pool's own dependency field
-    # has to match that name exactly. A suffix, a prefix, a different
-    # service, or a blank field does not.
-    cited_dependency = d_source in {"structured", "span", "text"}
+    # A pool line does not establish the failing dependency, and neither
+    # does message text. A cited record's target or downstream field does,
+    # or the alert's structured downstream field. The pool's own dependency
+    # field has to match that name exactly.
+    cited_dependency = d_source in {"structured", "span", "incident"}
     if cited_dependency:
         pool_views, pool_observations = split_pools_for_dependency(
             in_window_pools, d_fail, alerted,
@@ -593,8 +595,8 @@ def decide_timeout(
         name = "pool_dependency_mismatch"
         unknowns.append("failing dependency not identified")
     else:
-        required_owner = d_fail if d_source in {"structured", "span", "incident", "text"} else (ds or alerted)
-        supported = None if d_source == "missing" else _supporting_pool_series(
+        required_owner = d_fail if d_source in {"structured", "span", "incident"} else (ds or alerted)
+        supported = None if d_source in {"missing", "text"} else _supporting_pool_series(
             evidence, required_owner, start, end,
         )
         if supported is not None:

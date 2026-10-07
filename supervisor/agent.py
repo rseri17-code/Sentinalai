@@ -1582,6 +1582,12 @@ class SentinalAISupervisor:
                     legacy["start_time"] = raw["start_time"]
                 if raw.get("end_time"):
                     legacy["end_time"] = raw["end_time"]
+                # The canonical model drops these. Pool binding reads them
+                # as the alert's structured downstream, not as title text.
+                for _key in ("downstream", "downstream_service"):
+                    _named = raw.get(_key)
+                    if isinstance(_named, str) and _named.strip():
+                        legacy[_key] = _named.strip()
             return legacy
 
     def _fetch_historical_context(

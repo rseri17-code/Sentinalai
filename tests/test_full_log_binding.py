@@ -356,6 +356,7 @@ class TestUnderclaimFullLogs:
                 "service": "order-api",
                 "level": "ERROR",
                 "message": "ERROR timeout waiting for connection: inventory-db",
+                "downstream": "inventory-db",
             },
             {
                 "_time": "2024-11-04T07:59:20Z",
@@ -405,6 +406,7 @@ class TestOverclaimFullLogs:
                 "service": "order-api",
                 "level": "ERROR",
                 "message": "ERROR timeout waiting for connection: inventory-db",
+                "downstream": "inventory-db",
             },
             {
                 "_time": "2024-11-04T07:59:20Z",

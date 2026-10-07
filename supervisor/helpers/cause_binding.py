@@ -765,7 +765,7 @@ def _apply_series_decision(
 ) -> dict | None:
     start, end = _alignment_bounds(incident or {})
     d_fail, d_source = establish_failing_dependency(views, incident, service)
-    owner = d_fail if d_source in {"structured", "span", "incident", "text"} else service
+    owner = d_fail if d_source in {"structured", "span", "incident"} else service
     series_list = _normalized_series(evidence)
     if isinstance(decision, dict) and decision.get("category") == "connection_pool_exhaustion":
         pool_refs = decision.get("cause_refs") or []
@@ -774,7 +774,7 @@ def _apply_series_decision(
             for series in series_list:
                 if series_contradicts_pool(series, owner or service, start, end, _in_window):
                     return _series_conflict(pool_ref, series["ref"], incident_type)
-    if d_source == "missing":
+    if d_source in {"missing", "text"}:
         return decision
     unknown = decision is None or (
         isinstance(decision, dict)
@@ -1393,7 +1393,7 @@ def _pool_cause(
         and not _is_derived_record(v["record"])
     ] or [view]
     observations: list[dict] = []
-    if d_source in {"structured", "span", "text"}:
+    if d_source in {"structured", "span", "incident"}:
         pool_candidates, observations = split_pools_for_dependency(
             pool_candidates, d_fail, service,
         )

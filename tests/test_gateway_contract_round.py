@@ -930,6 +930,81 @@ def test_series_that_reaches_the_limit_does_not_contradict(monkeypatch):
         assert "db_connection_pool" not in metric
 
 
+def _irrelevant_series_stays_at_the_log_cause(monkeypatch, metric_body, case_id):
+    """A series that is not the owner's in-window pool does not move the cause."""
+    common = dict(
+        mode="frozen",
+        incident_type="timeout",
+        service="ledger-quill",
+        logs=[],
+        summary="ledger-quill timeout",
+        log_body=_pool_logs(),
+        start_time="2024-08-01T12:00:00Z",
+    )
+    baseline = _investigate(monkeypatch, case_id=f"{case_id}-BASE", **common)
+    marked = _investigate(
+        monkeypatch,
+        case_id=case_id,
+        metric_body=_tools_call(metric_body),
+        **common,
+    )
+    assert baseline["cause"]["category"] == "connection_pool_exhaustion"
+    assert baseline["confidence"] == 62
+    assert marked["cause"]["category"] == "connection_pool_exhaustion"
+    assert marked["cause"]["statement"] == baseline["cause"]["statement"]
+    assert marked["confidence"] == baseline["confidence"]
+    text = " ".join(
+        group.get("statement", "") for group in marked["cause"].get("contradictions") or []
+    )
+    assert "pool not saturated" not in text
+    for ref in marked["cause"].get("evidence_refs") or []:
+        row = _resolved(ref, marked) or {}
+        metric = str(row.get("metric") or row.get("name") or "")
+        assert "db_connection_pool" not in metric
+        assert "cpu_usage" not in metric
+
+
+def test_other_service_series_neither_supports_nor_contradicts(monkeypatch):
+    active = _prom_series("db_connection_pool_active", "brine-ledger", [
+        ("2024-08-01T12:00:00Z", 4),
+        ("2024-08-01T12:00:30Z", 5),
+        ("2024-08-01T12:01:00Z", 4),
+    ])
+    limit = _prom_series("db_connection_pool_max", "brine-ledger", [
+        ("2024-08-01T12:00:00Z", 50),
+        ("2024-08-01T12:00:30Z", 50),
+        ("2024-08-01T12:01:00Z", 50),
+    ])
+    _irrelevant_series_stays_at_the_log_cause(
+        monkeypatch, _merged_series(active, limit), "INC-CONTRA-OTHER-SVC",
+    )
+
+
+def test_other_resource_series_neither_supports_nor_contradicts(monkeypatch):
+    cpu = _prom_series("cpu_usage_percent", "ledger-quill", [
+        ("2024-08-01T12:00:00Z", 12),
+        ("2024-08-01T12:00:30Z", 14),
+        ("2024-08-01T12:01:00Z", 11),
+    ])
+    _irrelevant_series_stays_at_the_log_cause(monkeypatch, cpu, "INC-CONTRA-CPU")
+
+
+def test_out_of_window_series_neither_supports_nor_contradicts(monkeypatch):
+    active = _prom_series("db_connection_pool_active", "ledger-quill", [
+        ("2024-08-01T10:00:00Z", 4),
+        ("2024-08-01T10:00:30Z", 5),
+        ("2024-08-01T10:01:00Z", 4),
+    ])
+    limit = _prom_series("db_connection_pool_max", "ledger-quill", [
+        ("2024-08-01T10:00:00Z", 50),
+        ("2024-08-01T10:00:30Z", 50),
+        ("2024-08-01T10:01:00Z", 50),
+    ])
+    _irrelevant_series_stays_at_the_log_cause(
+        monkeypatch, _merged_series(active, limit), "INC-CONTRA-WINDOW",
+    )
+
+
 def test_unknown_metric_from_dispatch_is_unparsed(monkeypatch):
     """dispatch() builds the unread body. investigate() has to say so."""
     payload = dispatch(

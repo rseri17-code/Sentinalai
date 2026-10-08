@@ -1469,6 +1469,12 @@ class SentinalAISupervisor:
                     tool_span.set_attribute("status", "success")
                     tool_span.set_attribute("elapsed_ms", round(call_elapsed, 1))
 
+                if isinstance(result, dict):
+                    # The validation gateway returns a tools/call envelope.
+                    # Open it before the receipt is counted so the stored
+                    # body is the payload the citation locators walk.
+                    from supervisor.helpers.metric_series import unwrap_tool_payload
+                    result = unwrap_tool_payload(dict(result))
                 if receipt and receipts:
                     receipts.finish(receipt, result)
                 if isinstance(result, dict) and receipt is not None:

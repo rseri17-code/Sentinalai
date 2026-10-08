@@ -9,6 +9,7 @@ empty and it is not zero.
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
@@ -26,24 +27,64 @@ _POOL_SUPPORT = re.compile(r"pool", re.I)
 _POOL_MECHANISM = re.compile(r"exhaust|active|used|connections", re.I)
 
 
+def unwrap_tool_payload(payload: dict) -> dict:
+    """Open one MCP tools/call envelope the validation gateway returns.
+
+    The gateway's ``tools/call`` result is ``content[].text`` holding the
+    tool JSON. Receipt stamps on the wrapper are kept. A second envelope
+    inside that JSON is not opened. Text that is not JSON is unchanged.
+    """
+    if not isinstance(payload, dict) or not _is_tool_envelope(payload):
+        return payload
+    text = _envelope_text(payload)
+    if not text:
+        return payload
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return payload
+    if not isinstance(parsed, dict):
+        return payload
+    merged = dict(parsed)
+    for key, value in payload.items():
+        if str(key).startswith("_"):
+            merged[key] = value
+    return merged
+
+
 def classify_metric_payload(payload: Any) -> str:
     """``series``, ``golden``, ``empty``, ``unparsed``, or ``none``.
 
     ``none`` means this payload is not on the metrics path. ``empty`` is
     a recognized shape with no points, including the worker stubs
     ``{"signals": {}}`` and a series whose point list is empty.
+    A tools/call envelope is classified by the JSON inside it. An
+    envelope that is not JSON, a series whose points are not numbers,
+    and the gateway's ``unknown_metric`` shell are ``unparsed``.
     """
     if not isinstance(payload, dict):
         return "none"
+    if _is_tool_envelope(payload):
+        opened = unwrap_tool_payload(payload)
+        if opened is payload:
+            return "unparsed"
+        payload = opened
+    if _unknown_metric(payload):
+        return "unparsed"
     if _is_series_shape(payload):
         points = _series_points(payload)
-        if not _numeric_points(points):
+        numeric = _numeric_points(points)
+        if points and not numeric:
+            return "unparsed"
+        if not numeric:
             return "empty"
         return "series"
     if _is_golden_shape(payload):
         golden = _golden_dict(payload)
         if not golden:
             return "empty"
+        if not _golden_numeric(golden) and _golden_unreadable(golden):
+            return "unparsed"
         return "golden"
     if _reaches_metrics_path(payload):
         return "unparsed"
@@ -52,6 +93,8 @@ def classify_metric_payload(payload: Any) -> str:
 
 def normalize_metric_payload(payload: Any, *, ref: dict | None = None) -> list[dict]:
     """Normalized series for a recognized payload. Unparsed bodies yield []."""
+    if isinstance(payload, dict):
+        payload = unwrap_tool_payload(payload)
     kind = classify_metric_payload(payload)
     if kind == "series":
         return _normalize_series(payload, ref or {})
@@ -84,6 +127,13 @@ def unparsed_metric_signals(evidence: dict | None) -> list[dict]:
 
 
 def _unparsed_signal_name(payload: dict, evidence_key: str) -> str:
+    opened = unwrap_tool_payload(payload)
+    if opened is not payload:
+        return _unparsed_signal_name(opened, evidence_key)
+    if _unknown_metric(payload):
+        named = payload.get("metric")
+        if isinstance(named, str) and named.strip():
+            return named.strip()
     for key in ("signal", "name", "metric"):
         val = payload.get(key)
         if isinstance(val, str) and val.strip():
@@ -115,33 +165,54 @@ def _unparsed_signal_name(payload: dict, evidence_key: str) -> str:
     return evidence_key
 
 
+def _golden_or_cpu(metric: str) -> bool:
+    """Golden-signal saturation is CPU. It is not pool usage."""
+    return bool(re.search(r"cpu|saturation|latency|error_rate|golden", metric or "", re.I))
+
+
 def series_supports_pool(series: dict, owner: str, start, end, in_window) -> bool:
     """A flat in-window pool series for this owner supports pool exhaustion.
 
-    Golden-signal summaries do not. A latency series does not.
+    Golden-signal summaries do not. A latency series does not. A series
+    whose points stay at or below half of a limit carried on the series
+    does not: that series contradicts exhaustion.
     """
     if series.get("source_format") != SERIES_FORMAT:
         return False
     if not _names_match(series.get("service") or "", owner):
         return False
     metric = str(series.get("metric") or "")
+    if _golden_or_cpu(metric):
+        return False
     if not _POOL_SUPPORT.search(metric) or not _POOL_MECHANISM.search(metric):
         return False
     points = _aligned(series.get("points") or [], start, end, in_window)
     if not points:
         return False
     values = [value for _ts, value in points]
-    return min(values) == max(values) and min(values) >= 1
+    if min(values) != max(values) or min(values) < 1:
+        return False
+    limit = series.get("limit")
+    if isinstance(limit, (int, float)) and not isinstance(limit, bool) and limit > 0:
+        if max(values) <= float(limit) * 0.5:
+            return False
+    return True
 
 
 def series_contradicts_pool(series: dict, owner: str, start, end, in_window) -> bool:
-    """An in-window pool series whose latest point falls to half its peak."""
+    """An in-window pool series whose latest point falls to half its peak.
+
+    Golden-signal saturation is CPU and does not contradict a pool cause.
+    """
     if series.get("source_format") != SERIES_FORMAT:
         return False
     service = str(series.get("service") or "")
     if service and owner and not _names_match(service, owner):
         return False
-    if not _POOL_SUPPORT.search(str(series.get("metric") or "")):
+    metric = str(series.get("metric") or "")
+    if _golden_or_cpu(metric):
+        return False
+    if not _POOL_SUPPORT.search(metric):
         return False
     points = _aligned(series.get("points") or [], start, end, in_window)
     if len(points) < 2:
@@ -155,6 +226,50 @@ def series_contradicts_pool(series: dict, owner: str, start, end, in_window) -> 
 def _names_match(left: str, right: str) -> bool:
     from supervisor.helpers.service_match import service_names_match
     return service_names_match(left, right)
+
+
+def _is_tool_envelope(payload: dict) -> bool:
+    content = payload.get("content")
+    if not isinstance(content, list) or not content:
+        return False
+    return any(isinstance(part, dict) and isinstance(part.get("text"), str) for part in content)
+
+
+def _envelope_text(payload: dict) -> str:
+    parts = []
+    for part in payload.get("content") or []:
+        if isinstance(part, dict) and isinstance(part.get("text"), str):
+            parts.append(part["text"])
+    return "\n".join(parts)
+
+
+def _unknown_metric(payload: dict) -> bool:
+    err = payload.get("error")
+    return isinstance(err, str) and "unknown_metric" in err
+
+
+def _golden_numeric(golden: dict) -> bool:
+    for value in golden.values():
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return True
+        if isinstance(value, dict) and _golden_numeric(value):
+            return True
+    return False
+
+
+def _golden_unreadable(golden: dict) -> bool:
+    """True when the golden object holds a value that is not a number."""
+    for value in golden.values():
+        if isinstance(value, dict):
+            if _golden_unreadable(value):
+                return True
+            continue
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            continue
+        if isinstance(value, str):
+            continue
+        return True
+    return False
 
 
 def _is_series_shape(payload: dict) -> bool:

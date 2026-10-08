@@ -16,7 +16,9 @@ from supervisor.helpers.metric_series import (
     series_contradicts_pool,
     series_supports_pool,
     unparsed_metric_signals,
+    unwrap_tool_payload,
 )
+from supervisor.helpers.timeout_evidence import promote_structured_log_fields
 from supervisor.helpers.placeholders import is_placeholder
 from supervisor.receipt import engine_query_id
 from supervisor.helpers.service_match import service_names_match
@@ -40,9 +42,11 @@ from supervisor.helpers.timeout_evidence import (
     _ref,
     dedupe_views,
     establish_failing_dependency,
+    contradicting_pool_readings,
     is_unsaturated_pool,
     iter_pool_readings,
     score_raw_support,
+    seal_decision,
     split_pools_for_dependency,
     successful_observation,
     tool_search_error,
@@ -222,7 +226,9 @@ def bind_hypothesis(
         scanned, evidence, incident, service, incident_type, windowed,
     )
     if scanned is None:
-        return proposal
+        return seal_decision(
+            proposal, windowed, evidence, incident, service, incident_type,
+        )
     scanned_raw = [
         r for r in (scanned.get("cause_refs") or [])
         if r.get("evidence_class") != "derived"
@@ -234,7 +240,9 @@ def bind_hypothesis(
         and bool(scanned_raw)
     )
     if not prefer and proposal["cause_confidence"] >= 60:
-        return proposal
+        return seal_decision(
+            proposal, windowed, evidence, incident, service, incident_type,
+        )
     if scanned.get("category") == "connection_pool_exhaustion":
         scanned = _merge_pattern(scanned, proposed, windowed)
     if symptom["evidence_refs"]:
@@ -249,7 +257,10 @@ def bind_hypothesis(
     scanned = _attach_change_context(scanned, windowed, service)
     scanned = require_query_tie(scanned, evidence)
     scanned = _with_provenance(scanned, name)
-    return _mention_service(scanned, service)
+    return seal_decision(
+        _mention_service(scanned, service),
+        windowed, evidence, incident, service, incident_type,
+    )
 
 
 def narrow_statement(
@@ -336,6 +347,7 @@ def _collect_views(evidence, logs, signals, metrics, events, changes) -> list[di
             continue
         if not isinstance(val, dict):
             continue
+        val = unwrap_tool_payload(val)
         if tool_search_error(val) is not None:
             continue
         seq = val.get("_receipt_sequence_order")
@@ -348,6 +360,10 @@ def _collect_views(evidence, logs, signals, metrics, events, changes) -> list[di
             found_logs = True
             for i, entry in enumerate(results):
                 if isinstance(entry, dict):
+                    promoted = promote_structured_log_fields(entry)
+                    if promoted is not entry:
+                        results[i] = promoted
+                        entry = promoted
                     views.append(_view(entry, "log", seq, tool, {"evidence_key": locator_key, "path": ["logs", "results", i]}, query_id))
         for i, entry in enumerate(val.get("events") or []):
             if isinstance(entry, dict):
@@ -474,6 +490,8 @@ def _log_results(val: dict) -> list | None:
 
 
 def _view(record: dict, kind: str, seq: Any, tool: str, locator: dict, query_id: str = "") -> dict:
+    if kind == "log":
+        record = promote_structured_log_fields(record)
     view = {
         "record": record,
         "kind": kind,
@@ -594,6 +612,15 @@ def _change_identities(record: dict) -> list[str]:
     found = []
     if not isinstance(record, dict):
         return found
+    # A log line that names its own owner uses that, not the stream label
+    # the gateway stamped into ``service``.
+    line = record.get("_line_identities")
+    if isinstance(line, list):
+        for item in line:
+            if isinstance(item, str) and item.strip() and not is_placeholder(item):
+                found.append(item.strip())
+        if found:
+            return found
     for key in _CHANGE_IDENTITY_FIELDS:
         val = record.get(key)
         if isinstance(val, str) and val.strip() and not is_placeholder(val):
@@ -725,7 +752,7 @@ def _series_conflict(pool_ref: dict, series_ref: dict, incident_type: str) -> di
             {"statement": "connection pool exhaustion", "evidence_refs": [pool_ref]},
             {
                 "statement": "normalized metric series contradicts the pool record",
-                "evidence_refs": [series_ref],
+                "evidence_refs": [pool_ref, series_ref],
             },
         ],
         "unknowns": ["an aligned metric series contradicts the pool record"],
@@ -767,6 +794,21 @@ def _apply_series_decision(
     d_fail, d_source = establish_failing_dependency(views, incident, service)
     owner = d_fail if d_source in {"structured", "span", "incident"} else service
     series_list = _normalized_series(evidence)
+    pool_views = [
+        item for item in views
+        if item.get("kind") == "log" and _is_connection_pool(item.get("record") or {})
+    ]
+    readings = [
+        item for item in contradicting_pool_readings(evidence, start, end)
+        if _reading_for_owner(item, _citation_service((pool_views[0].get("record") if pool_views else {}) or {}) or service, service)
+    ]
+    if (
+        readings
+        and pool_views
+        and isinstance(decision, dict)
+        and decision.get("category") == "connection_pool_exhaustion"
+    ):
+        return unsaturated_pool_conflict(pool_views[0], readings, incident_type)
     if isinstance(decision, dict) and decision.get("category") == "connection_pool_exhaustion":
         pool_refs = decision.get("cause_refs") or []
         pool_ref = pool_refs[0] if pool_refs else None
@@ -782,6 +824,9 @@ def _apply_series_decision(
         and not decision.get("contradictions")
         and not decision.get("pool_rejected")
     )
+    if unknown and readings:
+        # A below-limit usage series does not become the pool cause.
+        return decision
     if unknown:
         for series in series_list:
             if series_supports_pool(series, owner or service, start, end, _in_window):
@@ -1380,9 +1425,12 @@ def _pool_cause(
     incident_type: str = "timeout",
     incident: dict | None = None,
 ) -> dict:
+    owner = _citation_service(view.get("record") or {}) or service
     unsaturated = [
         item for item in views
-        if item.get("pool_reading") and is_unsaturated_pool(item.get("record") or {})
+        if item.get("pool_reading")
+        and is_unsaturated_pool(item.get("record") or {})
+        and _reading_for_owner(item, owner, service)
     ]
     if unsaturated:
         return unsaturated_pool_conflict(view, unsaturated, incident_type)
@@ -1439,14 +1487,10 @@ def _pool_cause(
     if field_record is None and not named_by_text and not _views_name_downstream(pool_views):
         unknowns.append(DOWNSTREAM_UNKNOWN)
     pool_views = dedupe_views(pool_views)
+    # A usage series is not a pool-exhaustion record. Citing its points
+    # as support raised confidence to the raw cap when the series was
+    # the contradiction. The log line is the cause ref.
     refs = [_ref(v, "connection_pool_exhausted", "") for v in pool_views]
-    for metric in dedupe_views([
-        item for item in views
-        if item.get("kind") == "metric"
-        and not item.get("pool_reading")
-        and _pool_metric(item["record"])
-    ]):
-        refs.append(_ref(metric, "connection_pool_exhausted", ""))
     decision = _direct(
         pool_candidates[0], statement, "connection_pool_exhaustion", "connection_pool_exhausted",
         service, unknowns=unknowns, refs=refs,
@@ -1529,7 +1573,7 @@ def _exception_cause(hit: dict, views: list[dict], service: str) -> dict:
     own = _citation_service(view["record"]) or service
     version = _version_in_text(hit["text"])
     deploys = _deploy_views(views)
-    matched, others, unidentified = _partition_changes(deploys, own)
+    matched, others, unidentified = _partition_changes(deploys, service)
     if not version and matched:
         blob = _change_blob(matched[0]["record"]) + " " + _raw_text(matched[0]["record"])
         version = _version([blob])
@@ -1806,6 +1850,155 @@ def _truncation_entry(evidence_key: str, payload: dict) -> dict:
     }
 
 
+CAUSE_NOT_ESTABLISHED = "what caused the incident wasn't established"
+
+
+def _payload_limit(val: dict) -> int | None:
+    candidates = [val]
+    for key in ("logs", "metrics", "signals"):
+        nested = val.get(key)
+        if isinstance(nested, dict):
+            candidates.append(nested)
+    for src in candidates:
+        limit = src.get("limit")
+        if isinstance(limit, int) and not isinstance(limit, bool) and limit > 0:
+            return limit
+        stamped = src.get("_limit")
+        if isinstance(stamped, int) and not isinstance(stamped, bool) and stamped > 0:
+            return stamped
+    return None
+
+
+def _returned_count(val: dict) -> int | None:
+    logs = val.get("logs")
+    if isinstance(logs, dict) and isinstance(logs.get("results"), list):
+        return len(logs["results"])
+    if isinstance(logs, list):
+        return len(logs)
+    metrics = val.get("metrics")
+    if isinstance(metrics, dict) and isinstance(metrics.get("metrics"), list):
+        return len(metrics["metrics"])
+    if isinstance(metrics, list):
+        return len(metrics)
+    return None
+
+
+def _serve_capped(val: dict) -> bool:
+    """True when this query's own result was capped.
+
+    ``_truncated`` is the receipt flag. The payload's own ``truncated``
+    flag counts when the receipt never recorded it. An explicit false
+    is not a cap. When neither flag was set, count == limit is a cap.
+    """
+    if val.get("_truncated") is True:
+        return True
+    src = _gateway_truncation(val)
+    if isinstance(src, dict) and src.get("truncated") is True:
+        return True
+    # An explicit false is the gateway saying this result was not cut.
+    # A missing flag is not that report. count == limit is still a cap.
+    if val.get("_truncated") is False:
+        return False
+    if isinstance(src, dict) and src.get("truncated") is False:
+        return False
+    limit = _payload_limit(val)
+    count = _returned_count(val)
+    return limit is not None and count is not None and count == limit
+
+
+def _change_views_in(evidence: dict | None, views: list[dict]) -> list[dict]:
+    """Change rows on a tool result that were not already in ``views``.
+
+    The timeout decision is built from log lines. A change record from
+    its own query still has to be judged on this path.
+    """
+    from supervisor.helpers.metric_series import unwrap_tool_payload
+    from supervisor.receipt import engine_query_id
+
+    seen = set()
+    for view in views:
+        locator = view.get("locator") or {}
+        seen.add((locator.get("evidence_key"), tuple(locator.get("path") or [])))
+    found = []
+    for key, val in (evidence or {}).items():
+        if str(key).startswith("_") or not isinstance(val, dict):
+            continue
+        opened = unwrap_tool_payload(val)
+        seq = opened.get("_receipt_sequence_order")
+        if not isinstance(seq, int):
+            seq = val.get("_receipt_sequence_order")
+        tool = str(opened.get("_receipt_tool") or val.get("_receipt_tool") or "")
+        qid = engine_query_id(opened) or engine_query_id(val)
+        for label in ("changes", "change_records"):
+            entries = opened.get(label)
+            if not isinstance(entries, list):
+                continue
+            for i, entry in enumerate(entries):
+                if not isinstance(entry, dict):
+                    continue
+                locator = {"evidence_key": str(key), "path": [label, i]}
+                identity = (locator["evidence_key"], tuple(locator["path"]))
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                found.append(_view(
+                    entry, "change",
+                    seq if isinstance(seq, int) else None,
+                    tool, locator, qid,
+                ))
+    return found
+
+
+def note_unmatched_change(
+    decision: dict,
+    views: list[dict],
+    alerted: str,
+    incident_type: str,
+    evidence: dict | None = None,
+) -> dict:
+    """A change supports the alerted service only by an exact owner match.
+
+    A deployment ref whose service is not that owner drops the cause.
+    An unknown cause with only unmatched changes says so plainly.
+    """
+    if not isinstance(decision, dict):
+        return decision
+    from supervisor.helpers.timeout_evidence import _downgrade_unknown, _view_for_ref
+
+    views = list(views) + _change_views_in(evidence, views)
+    changes = [
+        view for view in views
+        if _is_change_view(view) or _is_deploy_view(view)
+    ]
+    bad_deploy = False
+    for ref in decision.get("cause_refs") or []:
+        if not isinstance(ref, dict) or str(ref.get("signal") or "") != "deployment":
+            continue
+        view = _view_for_ref(ref, views)
+        record = (view or {}).get("record") or {}
+        identities = _change_identities(record)
+        if identities:
+            if not any(service_names_match(item, alerted) for item in identities):
+                bad_deploy = True
+            continue
+        named = str(ref.get("service") or "")
+        if not named or not service_names_match(named, alerted):
+            bad_deploy = True
+    if bad_deploy:
+        decision = _downgrade_unknown(decision, incident_type, CAUSE_NOT_ESTABLISHED)
+        return decision
+    if decision.get("category") != "unknown" or not changes:
+        return decision
+    matched, others, unidentified = _partition_changes(changes, alerted)
+    if matched or not (others or unidentified):
+        return decision
+    unknowns = list(decision.get("unknowns") or [])
+    if CAUSE_NOT_ESTABLISHED not in unknowns:
+        unknowns.append(CAUSE_NOT_ESTABLISHED)
+    decision["unknowns"] = unknowns
+    return decision
+
+
 def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started: str = "") -> dict:
     """What this run did not see.
 
@@ -1832,6 +2025,7 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
     for key, val in (evidence or {}).items():
         if not isinstance(val, dict) or str(key).startswith("_"):
             continue
+        val = unwrap_tool_payload(val)
         if str(key) in failed_keys:
             continue
         tws = str(val.get("_receipt_time_window_start") or "")
@@ -1839,7 +2033,7 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
         if tws or twe:
             searched.append({"evidence_key": key, "start": tws, "end": twe})
         truncations.append(_truncation_entry(str(key), val))
-        if val.get("_truncated") is True:
+        if _serve_capped(val):
             query_gaps.append({
                 "evidence_key": str(key),
                 "signal": str(val.get("_filter") or key),
@@ -1848,7 +2042,7 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
                 "window_end": str(val.get("_window_end") or ""),
                 "oldest_ts": str(val.get("_oldest_ts") or ""),
                 "newest_ts": str(val.get("_newest_ts") or ""),
-                "limit": val.get("_limit"),
+                "limit": val.get("_limit") if val.get("_limit") is not None else _payload_limit(val),
                 "truncated": True,
                 "filter_source": str(val.get("_filter_source") or ""),
             })
@@ -2020,6 +2214,20 @@ def _cycle_series(views: list[dict]) -> list[dict]:
     return []
 
 
+def _reading_for_owner(item: dict, owner: str, alerted: str) -> bool:
+    """A pool gauge counts when it measures this owner's pool.
+
+    An empty service was not labeled. A golden-signal CPU saturation
+    reading is not a pool gauge and never reaches here.
+    """
+    service = str((item.get("record") or {}).get("service") or "").strip()
+    if not service:
+        return True
+    if owner and service_names_match(service, owner):
+        return True
+    return bool(alerted and service_names_match(service, alerted))
+
+
 def _pool_metric(record: dict) -> bool:
     if not isinstance(record, dict) or _is_derived_record(record):
         return False
@@ -2027,6 +2235,9 @@ def _pool_metric(record: dict) -> bool:
     if not isinstance(value, (int, float)) or isinstance(value, bool):
         return False
     name = str(record.get("name") or record.get("metric") or "")
+    # CPU saturation and a detector summary are not pool usage.
+    if re.search(r"cpu|saturation|latency|error_rate|golden", name, re.I):
+        return False
     return bool(re.search(r"pool|connection", name, re.I))
 
 
@@ -2091,8 +2302,9 @@ def _support_views(windowed, kept, series, service: str = "") -> list[dict]:
                 record = view.get("record") or {}
                 if view.get("kind") == "log" and _is_connection_pool(record):
                     add(view)
-                elif view.get("kind") == "metric" and _pool_metric(record):
-                    add(view)
+                # A pool-usage series is not the exhaustion record. A
+                # series below the pool limit is a contradiction, and a
+                # series that merely shares the word "pool" is not support.
         elif low == "intermittent":
             for view in series:
                 add(view)

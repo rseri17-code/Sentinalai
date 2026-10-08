@@ -192,25 +192,28 @@ class TestLLMFailure:
         assert "confidence" in result
         assert result.get("confidence_degraded") is True
 
-    def test_llm_reasoning_failure_sets_confidence_degraded(self):
-        """When _llm_generate_reasoning fails, result must carry confidence_degraded."""
+    def test_bound_winner_does_not_call_llm_reasoning(self):
+        """A cause already re-scored from cited refs does not ask the model for reasoning.
+
+        A failed reasoning call therefore cannot mark the result degraded.
+        """
         sup = _make_supervisor()
         _wire_ops_worker(sup, _MINIMAL_INCIDENT)
+        reasoning = Mock(return_value={
+            "reasoning": "Fallback reasoning.",
+            "llm_reasoning_status": "failed",
+            "llm_reasoning_error": "ModelNotFound",
+        })
 
         with patch("supervisor.evidence_gates.GATES_ENABLED", False), \
              patch("supervisor.agent._llm_enabled", return_value=True), \
              patch.object(sup, "_llm_refine_hypotheses", return_value={}), \
-             patch.object(
-                sup, "_llm_generate_reasoning",
-                return_value={
-                    "reasoning": "Fallback reasoning.",
-                    "llm_reasoning_status": "failed",
-                    "llm_reasoning_error": "ModelNotFound",
-                },
-             ):
+             patch.object(sup, "_llm_generate_reasoning", reasoning):
             result = sup.investigate("INC_TEST001")
 
-        assert result.get("confidence_degraded") is True
+        assert reasoning.call_count == 0
+        assert result.get("confidence_degraded") is not True
+        assert result.get("_evidence_bound_cause") is True
 
 
 # ---------------------------------------------------------------------------

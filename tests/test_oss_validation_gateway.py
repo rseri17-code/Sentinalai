@@ -914,6 +914,7 @@ class TestOssPlaybook:
         from supervisor.tool_selector import INCIDENT_PLAYBOOKS, get_playbook
         steps = get_playbook("timeout")
         assert steps == INCIDENT_PLAYBOOKS["timeout"]
+        assert "search_pool_logs" in [step.get("label") for step in steps]
 
 
 # ---------------------------------------------------------------------------

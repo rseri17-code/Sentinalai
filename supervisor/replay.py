@@ -14,6 +14,7 @@ Retention policy (applied on every save):
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -24,6 +25,50 @@ from pathlib import Path
 from typing import Any, Callable, Generator
 
 logger = logging.getLogger(__name__)
+
+
+def replay_result_payload(result: dict) -> dict:
+    """The fields a replay hash covers.
+
+    ``winner_hypothesis`` is read from the public key or the pre-persist
+    ``_winner_hypothesis`` key. ``symptom`` and ``cause`` are included whole.
+    """
+    winner = result.get("winner_hypothesis")
+    if not winner:
+        winner = result.get("_winner_hypothesis")
+    return {
+        "incident_id": result.get("incident_id"),
+        "incident_type": result.get("incident_type"),
+        "root_cause": result.get("root_cause"),
+        "confidence": result.get("confidence"),
+        "symptom": result.get("symptom"),
+        "cause": result.get("cause"),
+        "winner_hypothesis": winner,
+    }
+
+
+def replay_result_hash(result: dict) -> str:
+    """Stable 16-hex hash of the canonical replay fieldset."""
+    blob = json.dumps(
+        replay_result_payload(result),
+        sort_keys=True,
+        default=str,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(blob.encode()).hexdigest()[:16]
+
+# Canonical investigation hash. Replay and determinism tests compare these
+# fields. symptom and cause are part of the fieldset so a change to either
+# changes the hash.
+REPLAY_HASH_FIELDS = (
+    "incident_id",
+    "incident_type",
+    "root_cause",
+    "confidence",
+    "symptom",
+    "cause",
+    "winner_hypothesis",
+)
 
 DEFAULT_REPLAY_DIR = os.getenv("SENTINALAI_REPLAY_DIR", "/tmp/sentinalai_replays")
 _MAX_AGE_HOURS = float(os.getenv("REPLAY_MAX_AGE_HOURS", "24"))

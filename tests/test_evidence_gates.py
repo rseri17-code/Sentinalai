@@ -242,8 +242,9 @@ class TestCountEmptyEvidence:
     def test_skips_underscore_keys(self):
         assert _count_empty_evidence({"_meta": None}) == 0
 
-    def test_dict_with_error_is_empty(self):
-        assert _count_empty_evidence({"a": {"error": "timeout"}}) == 1
+    def test_tool_error_is_not_an_empty_result(self):
+        # A {"error": ...} payload is a search that did not happen.
+        assert _count_empty_evidence({"a": {"error": "timeout"}}) == 0
 
     def test_non_empty_dict_not_empty(self):
         assert _count_empty_evidence({"a": {"logs": ["entry"]}}) == 0

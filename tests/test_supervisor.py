@@ -246,8 +246,8 @@ class TestSupervisorWithMocks:
             assert req.lower() in evidence_text, f"Missing evidence: '{req}'"
 
         reasoning = result["reasoning"].lower()
-        assert any(kw in reasoning for kw in ("gradual", "increasing", "leak")), (
-            "Must identify memory leak pattern"
+        assert any(kw in reasoning for kw in ("memory", "oom", "increased")), (
+            "Must identify the memory growth the records show"
         )
 
         assert elapsed <= expected["investigation_time_max_seconds"]
@@ -257,11 +257,28 @@ class TestSupervisorWithMocks:
     # ===================================================================== #
 
     def test_error_spike_deployment_INC12347(self):
-        """Test investigation of error spike after deployment."""
+        """C1. The deploy event with no service or CI field is not the cause.
+
+        The sysdig event message names payment-service, and it used to be
+        a third raw ref (confidence 78). C1 does not match message text.
+        The event is "change in window, service not identified". The
+        change record still names the service, so confidence is 70.
+        """
         result, _ = self._run("INC12347")
+        expected = EXPECTED_RCA["INC12347"]
 
         root_cause = result["root_cause"].lower()
-        assert "deployment" in root_cause, "Must correlate with deployment"
+        assert "deploy" in root_cause, "Must name the deployment the records show"
+        assert "introduced" not in root_cause, "No pre-deploy baseline, so the statement does not say the deploy introduced the error"
+        assert expected["confidence_min"] <= result["confidence"] <= expected["confidence_max"]
+        unknowns = result["cause"]["unknowns"]
+        assert "change in window, service not identified" in unknowns
+        cited = result["cause"]["evidence_refs"]
+        assert any(ref.get("signal") == "deployment" and ref.get("service") for ref in cited)
+        assert not any(
+            ref.get("signal") == "deployment" and not ref.get("service")
+            for ref in cited
+        )
         assert "nullpointer" in root_cause or "exception" in root_cause, (
             "Must identify specific error type"
         )
@@ -341,9 +358,10 @@ class TestSupervisorWithMocks:
 
         assert expected["confidence_min"] <= result["confidence"] <= expected["confidence_max"]
 
-        # Must show cascade understanding
+        # Both mechanisms are in the window, so the cause stays UNKNOWN.
         reasoning = result["reasoning"].lower()
-        assert any(kw in reasoning for kw in ("cascade", "cascading", "downstream", "propagat"))
+        assert "unknown" in result["root_cause"].lower()
+        assert any(kw in reasoning for kw in ("pool", "index", "unknown", "cause"))
 
         assert elapsed <= expected["investigation_time_max_seconds"]
 

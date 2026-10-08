@@ -168,7 +168,8 @@ class TestErrorSpikeBranches:
             },
         )
         result = supervisor.investigate("INC_E2")
-        assert 40 <= result["confidence"] <= 60
+        assert result["confidence"] < 60
+        assert "UNKNOWN" in result["root_cause"]
 
 
 # =========================================================================
@@ -197,7 +198,8 @@ class TestLatencyFallback:
         )
         result = supervisor.investigate("INC_L1")
         assert "latency" in result["root_cause"].lower()
-        assert 45 <= result["confidence"] <= 65
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] < 60
 
 
 # =========================================================================
@@ -220,8 +222,10 @@ class TestSaturationBranches:
             changes_data={"changes": []},
         )
         result = supervisor.investigate("INC_S1")
-        assert "cpu" in result["root_cause"].lower()
-        assert 55 <= result["confidence"] <= 75
+        # A golden-signal CPU summary is the detector's conclusion. With no
+        # raw series behind it, the cause does not bind.
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] == 12
 
     def test_low_cpu_saturation(self):
         supervisor = _make_supervisor_with_data(
@@ -238,8 +242,8 @@ class TestSaturationBranches:
             changes_data={"changes": []},
         )
         result = supervisor.investigate("INC_S2")
-        assert "saturation" in result["root_cause"].lower()
-        assert 35 <= result["confidence"] <= 60
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] < 60
 
 
 # =========================================================================
@@ -282,8 +286,12 @@ class TestNetworkBranches:
             changes_data={"changes": []},
         )
         result = supervisor.investigate("INC_N2")
-        assert "network" in result["root_cause"].lower()
-        assert 30 <= result["confidence"] <= 60
+        # "connection refused" is a direct cause. It is not a dns claim
+        # and it is not a deployment claim.
+        assert "connection" in result["root_cause"].lower()
+        assert "dns" not in result["root_cause"].lower()
+        assert "deploy" not in result["root_cause"].lower()
+        assert result["confidence"] >= 60
 
 
 # =========================================================================
@@ -307,8 +315,8 @@ class TestCascadingFallback:
             changes_data={"changes": []},
         )
         result = supervisor.investigate("INC_C1")
-        assert "cascading" in result["root_cause"].lower()
-        assert 35 <= result["confidence"] <= 65
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] < 60
 
 
 # =========================================================================
@@ -360,8 +368,8 @@ class TestFlappingFallback:
             metrics_data={"metrics": [], "pattern": "flat"},
         )
         result = supervisor.investigate("INC_F1")
-        assert "intermittent" in result["root_cause"].lower()
-        assert 25 <= result["confidence"] <= 55
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] < 60
 
 
 # =========================================================================
@@ -414,8 +422,8 @@ class TestSilentFailureBranches:
             },
         )
         result = supervisor.investigate("INC_SF2")
-        assert "throughput" in result["root_cause"].lower()
-        assert 25 <= result["confidence"] <= 55
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] < 60
 
 
 # =========================================================================
@@ -582,9 +590,12 @@ class TestHelperMethods:
             },
             log_data={
                 "results": [
+                    {"_time": "2024-01-01T09:59:00Z", "level": "ERROR",
+                     "message": "ERROR the call timed out",
+                     "service": "auth-service", "downstream": "auth-db"},
                     {"_time": "2024-01-01T10:00:00Z", "level": "ERROR",
                      "message": "Authentication failed: connection pool exhausted",
-                     "service": "auth-service"},
+                     "service": "auth-service", "downstream": "auth-db"},
                 ],
             },
             signals_data={
@@ -624,7 +635,12 @@ class TestHelperMethods:
             },
         )
         result = supervisor.investigate("INC_H6")
-        assert result["confidence"] >= 50
+        # "connection timeout" names the symptom. It is not a mechanism,
+        # so the cause stays unbound and below 60.
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] == 34
+        assert result["symptom"]["statement"] == "timeout observed"
+        assert result["symptom"]["evidence_refs"][0]["evidence_class"] == "raw"
 
     def test_downstream_from_downstream_field(self):
         """Downstream service identified from log's 'downstream' field."""
@@ -633,6 +649,8 @@ class TestHelperMethods:
                 "incident_id": "INC_H7",
                 "summary": "API Gateway timeout spike",
                 "affected_service": "api-gateway",
+                # Alignment uses the incident clock. The log is at 10:00Z.
+                "start_time": "2024-01-01T10:00:00Z",
             },
             log_data={
                 "results": [
@@ -649,7 +667,15 @@ class TestHelperMethods:
             },
         )
         result = supervisor.investigate("INC_H7")
-        assert "payment-service" in result["root_cause"].lower()
+        # The downstream field is read. The timeout line and the derived
+        # latency summary do not name a mechanism, so the cause stays unbound.
+        assert "UNKNOWN" in result["root_cause"]
+        assert result["confidence"] < 60
+        assert "payment-service" in result["reasoning"].lower()
+        assert any(
+            "payment-service" in item
+            for item in result["cause"]["unknowns"]
+        )
 
     def test_resolve_hostname_dns_detection(self):
         """'resolve hostname' keyword triggers DNS detection."""
@@ -694,7 +720,9 @@ class TestHelperMethods:
             },
         )
         result = supervisor.investigate("INC_H9")
-        assert result["confidence"] >= 70
+        # A pool line does not name the failing dependency, so it does not bind.
+        assert result["confidence"] < 60
+        assert "failing dependency not identified" in result["cause"]["unknowns"]
 
     def test_missing_worker_in_playbook(self):
         """If a worker is missing from the dict, playbook continues."""

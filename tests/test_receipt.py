@@ -39,10 +39,13 @@ class TestReceiptCollector:
         receipt = rc.start("ops_worker", "get_incident_by_id", {"incident_id": "INC001"})
         assert receipt.status == "pending"
 
-        rc.finish(receipt, {"incident": {"id": "INC001"}})
+        rc.finish(receipt, {"incident": {"id": "INC001", "service": "payment-service"}})
         assert receipt.status == "success"
         assert receipt.elapsed_ms >= 0
         assert receipt.result_count == 1
+        assert len(receipt.consulted) == receipt.result_count
+        assert receipt.consulted[0]["service"] == "payment-service"
+        assert len(receipt.consulted[0]["content_hash"]) == 64
 
     def test_start_and_finish_error(self):
         rc = ReceiptCollector(case_id="INC002")
@@ -94,6 +97,17 @@ class TestCountResults:
 
     def test_nested_results(self):
         assert _count_results({"metrics": {"results": [1, 2]}}) == 2
+
+    def test_log_results_ignore_inflated_count(self):
+        payload = {"logs": {"results": [{"message": "a"}, {"message": "b"}], "count": 524}}
+        assert _count_results(payload) == 2
+
+    def test_consulted_length_matches_count(self):
+        from supervisor.receipt import _consulted_records
+        lists = {"results": [1, {"service": "a"}, "row"]}
+        assert len(_consulted_records(lists)) == _count_results(lists)
+        incident = {"incident": {"id": "INC1"}}
+        assert len(_consulted_records(incident)) == _count_results(incident) == 1
 
 
 class TestRedactParams:

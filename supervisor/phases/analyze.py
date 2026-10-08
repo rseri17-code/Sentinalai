@@ -298,9 +298,8 @@ class AnalyzePhase:
         _annotate_online(result, online_score)
 
         # --- Evidence snapshot for experience_store (avoid holding full evidence) ---
-        result["_evidence_snapshot"] = {
-            k: bool(v) for k, v in evidence.items() if not k.startswith("_")
-        }
+        from supervisor.helpers.cause_binding import build_evidence_snapshot
+        result["_evidence_snapshot"] = build_evidence_snapshot(evidence)
 
         # --- F-obs: surface degraded/unavailable evidence sources to the
         # operator (report + shadow metadata). Additive; never changes RCA. ---

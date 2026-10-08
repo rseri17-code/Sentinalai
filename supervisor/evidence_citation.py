@@ -69,6 +69,20 @@ def annotate_citations(result: dict[str, Any], evidence: dict[str, Any]) -> dict
     Never raises — if citation fails the result is returned unmodified.
     """
     try:
+        from supervisor.helpers.timeout_evidence import citations_for_bound_result
+        bound = citations_for_bound_result(result)
+        if bound is not None:
+            # Winner refs, not keyword overlap. An explicit UNKNOWN statement
+            # is the claim; do not append [UNVERIFIED] on top of it.
+            citations = bound
+            result["citations"] = citations
+            result["citation_coverage"] = 1.0 if citations else 0.0
+            result["cited_root_cause"] = _cite_root_cause(
+                result.get("root_cause", ""), citations
+            )
+            result["hallucination_risk"] = False
+            return result
+
         citations = _build_citations(result, evidence)
         result["citations"] = citations
         coverage = _coverage(result, citations)

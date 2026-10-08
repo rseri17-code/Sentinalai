@@ -55,6 +55,24 @@ class Receipt:
     signal_strength: float | None = None # 0.0–1.0 quality hint (set by collector)
     missing_reason: str | None = None    # why evidence was absent, if applicable
     sequence_order: int = 0              # call order within the investigation
+    # One digest per record actually returned, so a reviewer can check the
+    # payload without depending on RECEIPT_CAPTURE_OUTPUT.
+    consulted: list = field(default_factory=list)
+    # Service names from this incident's ITSM topology fetch. Empty on
+    # every other receipt, and omitted from to_dict when empty.
+    topology_services: list = field(default_factory=list)
+    # Per-query coverage. Empty until a worker call is stamped, and
+    # omitted from to_dict when unset so older receipts stay the same.
+    # These are not copied into params, so they stay out of the replay hash.
+    query_id: str = ""
+    filter: str = ""
+    filter_source: str = ""
+    window_start: str = ""
+    window_end: str = ""
+    oldest_ts: str = ""
+    newest_ts: str = ""
+    limit: int | None = None
+    truncated: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize for persistence / replay."""
@@ -62,6 +80,18 @@ class Receipt:
         # Omit output field if not captured to keep payloads small
         if d.get("output") is None:
             d.pop("output", None)
+        if not d.get("topology_services"):
+            d.pop("topology_services", None)
+        for key in (
+            "query_id", "filter", "filter_source",
+            "window_start", "window_end", "oldest_ts", "newest_ts",
+        ):
+            if not d.get(key):
+                d.pop(key, None)
+        if d.get("limit") is None:
+            d.pop("limit", None)
+        if d.get("truncated") is None:
+            d.pop("truncated", None)
         return d
 
     @classmethod
@@ -71,22 +101,141 @@ class Receipt:
 
 
 def _count_results(result: dict | None) -> int:
-    """Heuristically count result items for receipt metadata."""
-    if not result or not isinstance(result, dict):
-        return 0
-    # Check common patterns
-    for key in ("results", "events", "changes", "metrics", "similar_incidents"):
+    """Count records present on the payload.
+
+    A nested ``count`` field is not the number of records. Log searches
+    return ``{"logs": {"results": [...], "count": N}}``; N can disagree
+    with the list. The receipt count is the list length.
+    """
+    return len(_counted_records(result))
+
+
+_RECORD_LIST_KEYS = (
+    "results", "events", "changes", "metrics", "similar_incidents", "logs", "log_lines",
+)
+
+
+def _iter_returned_records(result: dict | None) -> list:
+    """Records on the payload. A sibling ``count`` field is ignored."""
+    if not isinstance(result, dict):
+        return []
+    found: list = []
+    for key in _RECORD_LIST_KEYS:
         val = result.get(key)
         if isinstance(val, list):
-            return len(val)
-        if isinstance(val, dict):
-            inner = val.get("results") or val.get("metrics")
+            found.extend(val)
+            continue
+        if not isinstance(val, dict):
+            continue
+        for inner_key in ("results", "metrics", "events", "changes"):
+            inner = val.get(inner_key)
             if isinstance(inner, list):
-                return len(inner)
-    # Has an incident?
-    if "incident" in result:
-        return 1
-    return 0
+                found.extend(inner)
+                break
+    return found
+
+
+def _dict_has_value(obj: dict) -> bool:
+    for value in obj.values():
+        if isinstance(value, dict):
+            if _dict_has_value(value):
+                return True
+        elif isinstance(value, list):
+            if value:
+                return True
+        elif isinstance(value, (int, float)) and not isinstance(value, bool):
+            return True
+        elif value not in (None, "", False):
+            return True
+    return False
+
+
+def _carries_pool_or_signals(obj: dict) -> bool:
+    """A single APM object or a non-empty ``signals`` body.
+
+    An empty ``signals`` or ``metrics`` stub is not a record.
+    """
+    if not isinstance(obj, dict):
+        return False
+    for key in ("db_connection_pool", "connection_pool"):
+        body = obj.get(key)
+        if isinstance(body, dict) and body:
+            return True
+    golden = obj.get("golden_signals")
+    return isinstance(golden, dict) and _dict_has_value(golden)
+
+
+def _signal_payloads(result: dict | None) -> list:
+    """Golden-signal objects the list walker does not see.
+
+    Real APM results are a single object, sometimes with the gauges under
+    ``signals`` or ``signalfx_apm.signals``. Those are one consulted record
+    each. Empty stub objects stay uncounted.
+    """
+    if not isinstance(result, dict):
+        return []
+    found: list = []
+    seen: set[int] = set()
+
+    def _add(obj: Any) -> None:
+        if not isinstance(obj, dict) or id(obj) in seen:
+            return
+        if not _carries_pool_or_signals(obj):
+            return
+        seen.add(id(obj))
+        found.append(obj)
+
+    signals = result.get("signals")
+    if isinstance(signals, dict):
+        _add(signals)
+    signalfx = result.get("signalfx_apm")
+    if isinstance(signalfx, dict):
+        inner = signalfx.get("signals")
+        _add(inner if isinstance(inner, dict) else signalfx)
+    if not found:
+        _add(result)
+    return found
+
+
+def _counted_records(result: dict | None) -> list:
+    """Every record ``_count_results`` counts, in the same order.
+
+    A lone incident payload has no results list. It is still one record,
+    and the receipt has to hash it. A single-object APM payload, or a
+    ``signals`` object, is one record too. An empty stub is not.
+    """
+    records = _iter_returned_records(result)
+    if records:
+        return records
+    if isinstance(result, dict) and "incident" in result:
+        incident = result.get("incident")
+        if isinstance(incident, dict):
+            return [incident]
+        return [{"incident": incident}]
+    return _signal_payloads(result)
+
+
+def _consulted_records(result: dict | None) -> list:
+    """Ref plus content hash for each record the call returned."""
+    import hashlib
+    import json
+
+    consulted = []
+    for index, rec in enumerate(_counted_records(result)):
+        raw = json.dumps(rec, sort_keys=True, default=str, separators=(",", ":")).encode()
+        if isinstance(rec, dict):
+            service = str(rec.get("service") or "")
+            timestamp = str(rec.get("_time") or rec.get("timestamp") or rec.get("ts") or "")
+        else:
+            service = ""
+            timestamp = ""
+        consulted.append({
+            "index": index,
+            "content_hash": hashlib.sha256(raw).hexdigest(),
+            "service": service,
+            "timestamp": timestamp,
+        })
+    return consulted
 
 
 class ReceiptCollector:
@@ -139,6 +288,7 @@ class ReceiptCollector:
         else:
             receipt.status = "success"
             receipt.result_count = _count_results(result)
+            receipt.consulted = _consulted_records(result)
             if receipt.result_count == 0:
                 receipt.missing_reason = "no_evidence_returned"
             # G5.1: Capture full output when enabled
@@ -187,3 +337,97 @@ def _redact_output(result: dict[str, Any]) -> dict[str, Any]:
         else:
             redacted[k] = v
     return redacted
+
+
+_FILTER_KEYS = ("query", "metric", "service")
+_BOUND_KEYS = ("limit", "truncated", "oldest_ts", "newest_ts", "window_start", "window_end")
+
+
+def query_filter_text(params: dict | None) -> str:
+    if not isinstance(params, dict):
+        return ""
+    for key in _FILTER_KEYS:
+        val = params.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return ""
+
+
+def _param_window(params: dict | None, which: str) -> str:
+    if not isinstance(params, dict):
+        return ""
+    keys = ("start_time", "time_window_start") if which == "start" else ("end_time", "time_window_end")
+    for key in keys:
+        val = params.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return ""
+
+
+def _bound_source(result: dict | None) -> dict:
+    if not isinstance(result, dict):
+        return {}
+    candidates = [result]
+    for key in ("logs", "metrics", "signals"):
+        nested = result.get(key)
+        if isinstance(nested, dict):
+            candidates.append(nested)
+    for src in candidates:
+        if any(key in src for key in _BOUND_KEYS):
+            return src
+    return {}
+
+
+def engine_query_id(payload: dict | None) -> str:
+    """The query id this engine assigned when it recorded the call.
+
+    ``complete_query`` writes ``_query_id``. The worker body is not a
+    source, and a bare receipt sequence is not a query.
+    """
+    if not isinstance(payload, dict):
+        return ""
+    qid = payload.get("_query_id")
+    if isinstance(qid, str) and qid.strip():
+        return qid.strip()
+    return ""
+
+
+def begin_query(receipt: Receipt, params: dict | None, filter_source: str = "playbook_hint") -> None:
+    """Record the query on the receipt. Nothing is written into params."""
+    receipt.query_id = f"q{receipt.sequence_order}"
+    receipt.filter = query_filter_text(params)
+    receipt.filter_source = filter_source or "playbook_hint"
+    receipt.window_start = _param_window(params, "start")
+    receipt.window_end = _param_window(params, "end")
+
+
+def complete_query(receipt: Receipt, result: dict) -> dict:
+    """Copy gateway result bounds onto the receipt and the tool result."""
+    src = _bound_source(result)
+    window_start = src.get("window_start")
+    window_end = src.get("window_end")
+    if isinstance(window_start, str) and window_start.strip():
+        receipt.window_start = window_start.strip()
+    if isinstance(window_end, str) and window_end.strip():
+        receipt.window_end = window_end.strip()
+    oldest = src.get("oldest_ts")
+    newest = src.get("newest_ts")
+    receipt.oldest_ts = oldest.strip() if isinstance(oldest, str) else ""
+    receipt.newest_ts = newest.strip() if isinstance(newest, str) else ""
+    limit = src.get("limit")
+    receipt.limit = limit if isinstance(limit, int) and not isinstance(limit, bool) else None
+    truncated = src.get("truncated")
+    receipt.truncated = truncated if isinstance(truncated, bool) else None
+    stamped = dict(result)
+    stamped["_query_id"] = receipt.query_id
+    stamped["_filter"] = receipt.filter
+    stamped["_filter_source"] = receipt.filter_source
+    stamped["_window_start"] = receipt.window_start
+    stamped["_window_end"] = receipt.window_end
+    stamped["_oldest_ts"] = receipt.oldest_ts
+    stamped["_newest_ts"] = receipt.newest_ts
+    if receipt.limit is not None:
+        stamped["_limit"] = receipt.limit
+    if receipt.truncated is not None:
+        stamped["_truncated"] = receipt.truncated
+    return stamped

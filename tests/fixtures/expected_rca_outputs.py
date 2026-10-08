@@ -9,10 +9,12 @@ EXPECTED_RCA = {
     # =========================================================================
     "INC12345": {
         "incident_id": "INC12345",
-        "root_cause": "payment-service database slow queries",
-        "root_cause_keywords": ["payment-service", "database", "slow", "queries"],
-        "confidence_min": 90,
-        "confidence_max": 100,
+        # Three in-window raw latency points. The golden-signals summary is
+        # derived and is not scored. 34 + 8 + 8. The cause stays UNKNOWN.
+        "root_cause": "payment-service latency elevated; cause UNKNOWN",
+        "root_cause_keywords": ["payment-service", "latency", "elevated", "unknown"],
+        "confidence_min": 50,
+        "confidence_max": 50,
         "required_evidence": [
             "payment-service latency spike",
             "api-gateway timeout errors",
@@ -58,13 +60,12 @@ EXPECTED_RCA = {
     # =========================================================================
     "INC12346": {
         "incident_id": "INC12346",
-        "root_cause": "memory leak in user-service",
-        "root_cause_keywords": ["memory", "leak", "user-service"],
-        # R2: recalibrated 85 -> 80 after the confidence double-count fix
-        # (source_count + corroborating_sources credited the same evidence
-        # twice). RCA/winner unchanged; only the inflated value was corrected.
-        "confidence_min": 80,
-        "confidence_max": 92,
+        "root_cause": "OOMKill; memory usage increased in user-service",
+        "root_cause_keywords": ["memory", "oom", "user-service"],
+        # OOM log, OOM event, and two in-window memory points. 62 + 8*3.
+        # Points before 14:07:33 are outside the window and are not scored.
+        "confidence_min": 86,
+        "confidence_max": 86,
         "required_evidence": [
             "OOMKill event",
             "gradual memory increase",
@@ -86,10 +87,14 @@ EXPECTED_RCA = {
     # =========================================================================
     "INC12347": {
         "incident_id": "INC12347",
-        "root_cause": "deployment v3.1.0 introduced NullPointerException",
-        "root_cause_keywords": ["deployment", "v3.1.0", "NullPointerException"],
-        "confidence_min": 88,
-        "confidence_max": 95,
+        "root_cause": "NullPointerException in payment-service v3.1.0, deployed at 2024-02-12T09:00:00Z",
+        "root_cause_keywords": ["deployed", "v3.1.0", "NullPointerException"],
+        # C1. The exception log plus the change record, which names
+        # payment-service. 62 + 8 = 70. The deploy event has no service
+        # or CI field, so it is not a third ref (that was 78). It is
+        # "change in window, service not identified".
+        "confidence_min": 70,
+        "confidence_max": 70,
         "required_evidence": [
             "deployment occurred",
             "errors started after deployment",
@@ -111,10 +116,11 @@ EXPECTED_RCA = {
     # =========================================================================
     "INC12348": {
         "incident_id": "INC12348",
-        "root_cause": "Elasticsearch cluster rebalancing causing slow queries in search-service",
-        "root_cause_keywords": ["elasticsearch", "rebalancing", "search-service"],
-        "confidence_min": 85,
-        "confidence_max": 100,
+        "root_cause": "slow queries on elasticsearch in search-service",
+        "root_cause_keywords": ["elasticsearch", "slow", "search-service"],
+        # Two in-window slow-query lines. 62 + 8.
+        "confidence_min": 70,
+        "confidence_max": 70,
         "required_evidence": [
             "search-service latency spike",
             "elasticsearch rebalancing event",
@@ -135,10 +141,12 @@ EXPECTED_RCA = {
     # =========================================================================
     "INC12349": {
         "incident_id": "INC12349",
-        "root_cause": "infinite loop in order-service validation after config change",
+        "root_cause": "cpu exhaustion; thread pool saturation; config change in order-service",
         "root_cause_keywords": ["order-service", "cpu", "config"],
-        "confidence_min": 85,
-        "confidence_max": 100,
+        # Four cpu points, two thread-pool lines, and the config change.
+        # 62 + 8*6 = 110, capped at 90.
+        "confidence_min": 90,
+        "confidence_max": 90,
         "required_evidence": [
             "CPU saturation at 99%",
             "config change preceded CPU spike",
@@ -160,10 +168,11 @@ EXPECTED_RCA = {
     # =========================================================================
     "INC12350": {
         "incident_id": "INC12350",
-        "root_cause": "DNS resolution failure after DNS server maintenance",
+        "root_cause": "dns resolution failure; maintenance; dns in inventory-service",
         "root_cause_keywords": ["dns", "resolution", "maintenance"],
-        "confidence_min": 88,
-        "confidence_max": 100,
+        # Five dns lines and the maintenance change. 62 + 8*5 = 102, capped at 90.
+        "confidence_min": 90,
+        "confidence_max": 90,
         "required_evidence": [
             "DNS maintenance event",
             "connection refused errors across multiple services",
@@ -185,10 +194,12 @@ EXPECTED_RCA = {
     # =========================================================================
     "INC12351": {
         "incident_id": "INC12351",
-        "root_cause": "database connection pool exhaustion in payment-service caused by slow queries after index drop",
-        "root_cause_keywords": ["connection pool", "payment-service", "index"],
-        "confidence_min": 80,
-        "confidence_max": 100,  # v2 grounding scores well-evidenced cascades higher
+        # Pool and slow-query records both sit in the window, so neither binds.
+        # 40 + (-8) + (-8).
+        "root_cause": "cascading observed; cause UNKNOWN",
+        "root_cause_keywords": ["unknown"],
+        "confidence_min": 24,
+        "confidence_max": 24,
         "required_evidence": [
             "database slow queries",
             "connection pool exhaustion",
@@ -215,10 +226,11 @@ EXPECTED_RCA = {
     # =========================================================================
     "INC12352": {
         "incident_id": "INC12352",
-        "root_cause": "Redis connection failure affecting notification-service",
+        "root_cause": "Redis connection failure; redis in notification-service",
         "root_cause_keywords": ["redis", "connection", "notification-service"],
-        "confidence_min": 60,
-        "confidence_max": 88,
+        # Two redis logs and the unreachable event. 62 + 8 + 8.
+        "confidence_min": 78,
+        "confidence_max": 78,
         "required_evidence": [
             "Redis connection refused",
         ],
@@ -236,10 +248,13 @@ EXPECTED_RCA = {
     # =========================================================================
     "INC12353": {
         "incident_id": "INC12353",
-        "root_cause": "connection pool leak in auth-service causing intermittent exhaustion",
-        "root_cause_keywords": ["connection pool", "auth-service", "intermittent"],
-        "confidence_min": 75,
-        "confidence_max": 90,
+        "root_cause": "flapping observed; cause UNKNOWN",
+        "root_cause_keywords": ["unknown"],
+        # The pool lines name no dependency, and no cited failure does either.
+        # Pool exhaustion does not bind. Cause confidence stays at the
+        # symptom-only score, 34.
+        "confidence_min": 34,
+        "confidence_max": 34,
         "required_evidence": [
             "intermittent connection pool exhaustion",
             "sawtooth pattern in connections",
@@ -259,10 +274,12 @@ EXPECTED_RCA = {
     # =========================================================================
     "INC12354": {
         "incident_id": "INC12354",
-        "root_cause": "data pipeline failure causing stale cache in recommendation-service",
+        "root_cause": "data pipeline failure; stale data in recommendation-service",
         "root_cause_keywords": ["pipeline", "stale", "recommendation-service"],
-        "confidence_min": 78,
-        "confidence_max": 92,
+        # The in-window pipeline line and the stale line. Earlier pipeline
+        # lines are outside the window. 62 + 8.
+        "confidence_min": 70,
+        "confidence_max": 70,
         "required_evidence": [
             "data pipeline failure",
             "stale cache",

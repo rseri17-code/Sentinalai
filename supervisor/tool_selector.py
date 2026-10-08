@@ -33,6 +33,9 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
     # result is discarded because _analyze_evidence uses the Phase 0 incident dict.
     "timeout": [
         {"worker": "log_worker", "action": "search_logs", "query_hint": "timeout {service}", "label": "search_timeout_logs"},
+        # Pool exhaustion is a separate log line from the timeout line.
+        # The timeout query does not retrieve it.
+        {"worker": "log_worker", "action": "search_logs", "query_hint": "pool {service}", "label": "search_pool_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "network_worker", "action": "get_network_alerts", "label": "get_network_alerts"},
         {"worker": "metrics_worker", "action": "query_metrics", "metric_hint": "response_time_ms", "label": "check_latency_metrics"},
@@ -53,6 +56,9 @@ INCIDENT_PLAYBOOKS: dict[str, list[dict]] = {
     ],
     "latency": [
         {"worker": "log_worker", "action": "search_logs", "query_hint": "latency OR slow {service}", "label": "search_latency_logs"},
+        # "timed out" is not retrieved by latency/slow. Two words, under the
+        # gateway cap of 3 per hint. OR alternatives stay in their own hint.
+        {"worker": "log_worker", "action": "search_logs", "query_hint": "timed out", "label": "search_timed_out_logs"},
         {"worker": "apm_worker", "action": "get_golden_signals", "label": "check_golden_signals"},
         {"worker": "network_worker", "action": "get_network_evidence", "label": "get_network_evidence"},
         {"worker": "metrics_worker", "action": "query_metrics", "metric_hint": "response_time_ms", "label": "check_latency_metrics"},

@@ -546,6 +546,8 @@ class TestQueryCoverage:
             "_query_id": query_id,
             "_filter": "svc-alpha" if source == "playbook_hint" else "cache-zeta",
             "_filter_source": source,
+            "_receipt_time_window_start": "2024-08-01T11:45:00Z",
+            "_receipt_time_window_end": "2024-08-01T12:15:00Z",
             "_window_start": "2024-08-01T11:45:00Z",
             "_window_end": "2024-08-01T12:15:00Z",
             "_oldest_ts": "2024-08-01T12:00:00Z",
@@ -938,8 +940,8 @@ def test_only_the_capped_query_is_listed(monkeypatch):
     assert gap["truncated"] is True
     assert gap["query_id"]
     assert gap["signal"]
-    assert gap["window_start"] == capped_window[0]
-    assert gap["window_end"] == capped_window[1]
+    assert "window_start" not in gap
+    assert "window_end" not in gap
     receipts = [
         receipt for receipt in result["receipts"]
         if receipt.get("action") == "search_logs"
@@ -954,7 +956,8 @@ def test_only_the_capped_query_is_listed(monkeypatch):
     assert full["query_id"] not in unknowns
     assert "capped query" in unknowns
     assert gap["signal"] in unknowns
-    assert capped_window[0] in unknowns
+    assert "window  to " not in unknowns
+    assert capped_window[0] not in unknowns
 
 
 def test_unparsed_metric_reaches_investigate_output(monkeypatch):

@@ -1469,6 +1469,19 @@ class SentinalAISupervisor:
                     tool_span.set_attribute("status", "success")
                     tool_span.set_attribute("elapsed_ms", round(call_elapsed, 1))
 
+                if (
+                    action in (
+                        "query_metrics", "get_resource_metrics",
+                        "get_golden_signals", "check_latency",
+                    )
+                    and result is not None
+                    and not isinstance(result, dict)
+                ):
+                    # A metrics call that did not return an object is still
+                    # that query's body. Keep it attached so the receipt can
+                    # name the query. The logs path is left as the worker
+                    # returned it.
+                    result = {"_body": result}
                 if isinstance(result, dict):
                     # The validation gateway returns a tools/call envelope.
                     # Open it before the receipt is counted so the stored
@@ -2741,11 +2754,15 @@ class SentinalAISupervisor:
                     _unknowns.append(_line)
             _reason = str(winner.bound_assessment.get("reasoning") or "")
             for _row in _cov.get("unavailable_signals") or []:
-                if _row.get("reason") != "unparsed_format":
-                    continue
+                _signal_reason = str(_row.get("reason") or "")
                 _signal = str(_row.get("signal") or _row.get("evidence_key") or "metric")
                 _qid = str(_row.get("query_id") or "")
-                _line = f"metric not read: {_signal} unparsed_format query_id={_qid}"
+                if _signal_reason == "unparsed_format":
+                    _line = f"metric not read: {_signal} unparsed_format query_id={_qid}"
+                elif _signal_reason == "absent":
+                    _line = f"metric absent: {_signal} query_id={_qid}"
+                else:
+                    continue
                 if _line not in _unknowns:
                     _unknowns.append(_line)
             for _row in _cov.get("query_gaps") or []:
@@ -2753,12 +2770,15 @@ class SentinalAISupervisor:
                     continue
                 _signal = str(_row.get("signal") or _row.get("evidence_key") or "query")
                 _qid = str(_row.get("query_id") or "")
-                _start = str(_row.get("window_start") or "")
-                _end = str(_row.get("window_end") or "")
-                _line = (
-                    f"capped query: {_signal} query_id={_qid} "
-                    f"window {_start} to {_end}"
-                )
+                _start = str(_row.get("window_start") or "").strip()
+                _end = str(_row.get("window_end") or "").strip()
+                if _start and _end:
+                    _line = (
+                        f"capped query: {_signal} query_id={_qid} "
+                        f"window {_start} to {_end}"
+                    )
+                else:
+                    _line = f"capped query: {_signal} query_id={_qid}"
                 if _line not in _unknowns:
                     _unknowns.append(_line)
             if not _cov.get("searched_window_reported"):

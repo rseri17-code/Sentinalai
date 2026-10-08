@@ -2166,7 +2166,7 @@ def _below_limit_views(opened: list[tuple[str, dict]], already: list[dict]) -> l
             continue
         if any(value > limit * 0.5 for value in actives):
             continue
-        record: dict[str, Any] = {
+        reading: dict[str, Any] = {
             "name": "db_connection_pool",
             "value": max(actives),
             "active": max(actives),
@@ -2175,9 +2175,9 @@ def _below_limit_views(opened: list[tuple[str, dict]], already: list[dict]) -> l
             "below_limit_series": True,
         }
         if service:
-            record["service"] = service
+            reading["service"] = service
         view = {
-            "record": record,
+            "record": reading,
             "kind": "metric",
             "pool_reading": True,
             "timestamp": slot["timestamp"],

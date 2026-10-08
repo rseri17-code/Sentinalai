@@ -103,27 +103,129 @@ def normalize_metric_payload(payload: Any, *, ref: dict | None = None) -> list[d
     return []
 
 
-def unparsed_metric_signals(evidence: dict | None) -> list[dict]:
-    """Metric bodies that match neither gateway shape.
+_METRIC_ACTIONS = frozenset({
+    "query_metrics",
+    "get_resource_metrics",
+    "get_golden_signals",
+    "check_latency",
+})
 
-    Each row names the signal, the query that returned the body, and
-    ``unparsed_format``. The body was not read.
+
+def _on_metrics_path(evidence_key: str, payload: Any) -> bool:
+    """True when this evidence row is a metrics or golden-signal query.
+
+    The logs path is not this path, even when the log body uses a vendor
+    search shape.
+    """
+    if isinstance(payload, dict):
+        action = str(payload.get("_receipt_action") or "")
+        if action in _METRIC_ACTIONS:
+            return True
+    return str(evidence_key) in _METRIC_ACTIONS
+
+
+def _metrics_body_empty(payload: Any) -> bool:
+    """True when a metrics-path body has no fields to read."""
+    if not isinstance(payload, dict):
+        if payload is None:
+            return True
+        if isinstance(payload, str) and not payload.strip():
+            return True
+        return False
+    if "_body" in payload:
+        return _metrics_body_empty(payload.get("_body"))
+    for key, value in payload.items():
+        if str(key).startswith("_"):
+            continue
+        if value in (None, "", [], {}):
+            continue
+        return False
+    return True
+
+
+def unparsed_metric_signals(evidence: dict | None) -> list[dict]:
+    """Metric bodies the run could not use.
+
+    A body on the metrics path that is not one of the gateway's shapes is
+    ``unparsed_format``. A recognized shape with no points is ``absent``.
+    A vendor search body on the logs path is neither.
     """
     from supervisor.receipt import engine_query_id
 
     rows = []
     for key, val in (evidence or {}).items():
-        if str(key).startswith("_") or not isinstance(val, dict):
+        if str(key).startswith("_"):
             continue
-        if classify_metric_payload(val) != "unparsed":
+        on_path = _on_metrics_path(str(key), val)
+        if isinstance(val, dict):
+            kind = classify_metric_payload(val)
+        elif on_path:
+            kind = "empty" if _metrics_body_empty(val) else "unparsed"
+        else:
+            continue
+        if kind not in ("unparsed", "empty") and on_path and kind == "none":
+            if isinstance(val, dict):
+                from supervisor.helpers.timeout_evidence import tool_search_error
+                if tool_search_error(val) is not None:
+                    continue
+            kind = "empty" if _metrics_body_empty(val) else "unparsed"
+        if kind == "unparsed":
+            reason = "unparsed_format"
+        elif kind == "empty" and (on_path or _recognized_empty(val)):
+            reason = "absent"
+        else:
             continue
         rows.append({
             "evidence_key": str(key),
-            "signal": _unparsed_signal_name(val, str(key)),
-            "query_id": engine_query_id(val),
-            "reason": "unparsed_format",
+            "signal": _coverage_signal_name(val, str(key)),
+            "query_id": engine_query_id(val) if isinstance(val, dict) else "",
+            "reason": reason,
         })
     return rows
+
+
+def _recognized_empty(payload: Any) -> bool:
+    """An empty gateway series or golden body, wherever it was stored."""
+    return isinstance(payload, dict) and classify_metric_payload(payload) == "empty"
+
+
+def _coverage_signal_name(payload: Any, evidence_key: str) -> str:
+    """Name the metric without reading its values."""
+    if not isinstance(payload, dict):
+        return evidence_key
+    opened = unwrap_tool_payload(payload)
+    if opened is not payload and isinstance(opened, dict):
+        named = _coverage_signal_name(opened, evidence_key)
+        if named != evidence_key:
+            return named
+    vendor = _vendor_signal_name(opened if isinstance(opened, dict) else payload)
+    if vendor:
+        return vendor
+    if isinstance(opened, dict):
+        return _unparsed_signal_name(opened, evidence_key)
+    return evidence_key
+
+
+def _vendor_signal_name(payload: dict) -> str:
+    """A metric id carried on a non-gateway body. Values are not read."""
+    series = payload.get("series")
+    if isinstance(series, list):
+        for item in series:
+            if not isinstance(item, dict):
+                continue
+            for key in ("metric", "metric_name", "display_name"):
+                val = item.get(key)
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
+    result = payload.get("result")
+    if isinstance(result, list):
+        for item in result:
+            if not isinstance(item, dict):
+                continue
+            metric_id = item.get("metricId")
+            if isinstance(metric_id, str) and metric_id.strip():
+                return metric_id.strip()
+    return ""
 
 
 def _unparsed_signal_name(payload: dict, evidence_key: str) -> str:

@@ -1853,57 +1853,17 @@ def _truncation_entry(evidence_key: str, payload: dict) -> dict:
 CAUSE_NOT_ESTABLISHED = "what caused the incident wasn't established"
 
 
-def _payload_limit(val: dict) -> int | None:
-    candidates = [val]
-    for key in ("logs", "metrics", "signals"):
-        nested = val.get(key)
-        if isinstance(nested, dict):
-            candidates.append(nested)
-    for src in candidates:
-        limit = src.get("limit")
-        if isinstance(limit, int) and not isinstance(limit, bool) and limit > 0:
-            return limit
-        stamped = src.get("_limit")
-        if isinstance(stamped, int) and not isinstance(stamped, bool) and stamped > 0:
-            return stamped
-    return None
+def _requested_window(val: dict) -> tuple[str, str]:
+    """Window the investigator asked for, or nothing.
 
-
-def _returned_count(val: dict) -> int | None:
-    logs = val.get("logs")
-    if isinstance(logs, dict) and isinstance(logs.get("results"), list):
-        return len(logs["results"])
-    if isinstance(logs, list):
-        return len(logs)
-    metrics = val.get("metrics")
-    if isinstance(metrics, dict) and isinstance(metrics.get("metrics"), list):
-        return len(metrics["metrics"])
-    if isinstance(metrics, list):
-        return len(metrics)
-    return None
-
-
-def _serve_capped(val: dict) -> bool:
-    """True when this query's own result was capped.
-
-    ``_truncated`` is the receipt flag. The payload's own ``truncated``
-    flag counts when the receipt never recorded it. An explicit false
-    is not a cap. When neither flag was set, count == limit is a cap.
+    Both ends have to be on the request. The window a search reports back
+    is not a substitute, and a missing end is not filled in.
     """
-    if val.get("_truncated") is True:
-        return True
-    src = _gateway_truncation(val)
-    if isinstance(src, dict) and src.get("truncated") is True:
-        return True
-    # An explicit false is the gateway saying this result was not cut.
-    # A missing flag is not that report. count == limit is still a cap.
-    if val.get("_truncated") is False:
-        return False
-    if isinstance(src, dict) and src.get("truncated") is False:
-        return False
-    limit = _payload_limit(val)
-    count = _returned_count(val)
-    return limit is not None and count is not None and count == limit
+    start = str(val.get("_receipt_time_window_start") or "").strip()
+    end = str(val.get("_receipt_time_window_end") or "").strip()
+    if start and end:
+        return start, end
+    return "", ""
 
 
 def _change_views_in(evidence: dict | None, views: list[dict]) -> list[dict]:
@@ -2033,19 +1993,22 @@ def unchecked_coverage(incident: dict | None, evidence: dict | None, run_started
         if tws or twe:
             searched.append({"evidence_key": key, "start": tws, "end": twe})
         truncations.append(_truncation_entry(str(key), val))
-        if _serve_capped(val):
-            query_gaps.append({
+        if val.get("_truncated") is True:
+            gap = {
                 "evidence_key": str(key),
                 "signal": str(val.get("_filter") or key),
                 "query_id": str(val.get("_query_id") or ""),
-                "window_start": str(val.get("_window_start") or ""),
-                "window_end": str(val.get("_window_end") or ""),
                 "oldest_ts": str(val.get("_oldest_ts") or ""),
                 "newest_ts": str(val.get("_newest_ts") or ""),
-                "limit": val.get("_limit") if val.get("_limit") is not None else _payload_limit(val),
+                "limit": val.get("_limit"),
                 "truncated": True,
                 "filter_source": str(val.get("_filter_source") or ""),
-            })
+            }
+            window_start, window_end = _requested_window(val)
+            if window_start and window_end:
+                gap["window_start"] = window_start
+                gap["window_end"] = window_end
+            query_gaps.append(gap)
         results = _log_results(val) or []
         logs_obj = val.get("logs") if isinstance(val.get("logs"), dict) else {}
         reported = logs_obj.get("count") if isinstance(logs_obj, dict) else None

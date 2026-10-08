@@ -467,7 +467,8 @@ def regression_counts(monkeypatch) -> dict:
             stream_for = None
             if name == "foreign_deploy" and mode == "loki":
                 # The stream label is the alerted service. The line names another owner.
-                stream_for = lambda _rec: "ledger-quill"
+                def stream_for(_rec, _service="ledger-quill"):
+                    return _service
             result = _investigate(
                 monkeypatch,
                 mode=mode,
@@ -1020,12 +1021,157 @@ def test_unknown_metric_from_dispatch_is_unparsed(monkeypatch):
         if row.get("reason") == "unparsed_format"
     ]
     assert empty_rows == []
+    absent_rows = [
+        row for row in absent["_confidence_provenance"]["unchecked_coverage"]["unavailable_signals"]
+        if row.get("reason") == "absent"
+    ]
+    assert absent_rows
+    assert absent_rows[0]["evidence_key"]
+    assert absent_rows[0]["query_id"]
+    absent_unknowns = " ".join(absent["cause"]["unknowns"])
+    assert f"metric absent: {absent_rows[0]['signal']} query_id={absent_rows[0]['query_id']}" in absent_unknowns
+    assert "unparsed_format" not in absent_unknowns
     assert rows[0]["reason"] == "unparsed_format"
     assert rows[0]["evidence_key"]
     assert rows[0]["query_id"]
-    assert rows[0]["query_id"] not in {
-        row.get("query_id") for row in empty_rows
+    marked_absent = {
+        row.get("query_id")
+        for row in marked["_confidence_provenance"]["unchecked_coverage"]["unavailable_signals"]
+        if row.get("reason") == "absent"
     }
+    assert rows[0]["query_id"] not in marked_absent
+
+
+_DATADOG = {
+    "status": "ok",
+    "res_type": "time_series",
+    "series": [{
+        "metric": "ledger.quill.pool.active",
+        "pointlist": [[1722506410000, 4.0], [1722506440000, 5.0]],
+        "scope": "service:ledger-quill",
+    }],
+}
+_DYNATRACE = {
+    "totalCount": 1,
+    "result": [{
+        "metricId": "builtin:service.pool.used",
+        "data": [{"timestamps": [1722506410000], "values": [4.0]}],
+    }],
+}
+_SPLUNK_JSON = {
+    "preview": False,
+    "init_offset": 0,
+    "results": [{
+        "_time": "2024-08-01T12:00:10Z",
+        "metric_name": "pool_active",
+        "_raw": "pool_active=4",
+    }],
+}
+_SPLUNK_XML = (
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+    "<results preview=\"0\"><result>"
+    "<field k=\"metric_name\"><value><text>pool_active</text></value></field>"
+    "</result></results>"
+)
+_TRUNCATED_JSON = '{"series": [{"metric": "ledger.quill.pool.active", "pointlist": ['
+_UNEXPECTED = {"widget": "gauge", "bands": ["green", "red"], "reading": 4}
+
+
+@pytest.mark.parametrize("body,signal", [
+    (_DATADOG, "ledger.quill.pool.active"),
+    (_DYNATRACE, "builtin:service.pool.used"),
+    (_SPLUNK_JSON, ""),
+    (_SPLUNK_XML, ""),
+    (_TRUNCATED_JSON, ""),
+    (_UNEXPECTED, ""),
+])
+def test_metrics_path_vendor_body_is_unparsed(monkeypatch, body, signal):
+    """A non-gateway body on the metrics path is unparsed, values unread."""
+    slow = {
+        "_time": "2024-08-01T12:00:10Z",
+        "service": "ledger-quill",
+        "level": "ERROR",
+        "message": "slow query on ledger-quill took 4200ms",
+    }
+    plain = _investigate(
+        monkeypatch,
+        mode="all_logs",
+        incident_type="latency",
+        service="ledger-quill",
+        logs=[slow],
+        summary="ledger-quill latency",
+        case_id="INC-C3-VENDOR-PLAIN",
+        start_time="2024-08-01T12:00:00Z",
+    )
+    # The metrics worker returns this body on query_metrics. A dict is the
+    # gateway tools/call envelope. A string is the raw body on that same path.
+    metric_body = _tools_call(body) if isinstance(body, dict) else body
+    marked = _investigate(
+        monkeypatch,
+        mode="all_logs",
+        incident_type="latency",
+        service="ledger-quill",
+        logs=[slow],
+        summary="ledger-quill latency",
+        case_id="INC-C3-VENDOR",
+        start_time="2024-08-01T12:00:00Z",
+        metric_body=metric_body,
+    )
+    assert marked["confidence"] <= plain["confidence"]
+    assert marked["cause"]["statement"] == plain["cause"]["statement"]
+    coverage = marked["_confidence_provenance"]["unchecked_coverage"]["unavailable_signals"]
+    rows = [row for row in coverage if row.get("reason") == "unparsed_format"]
+    assert rows
+    if signal:
+        assert any(row.get("signal") == signal for row in rows)
+    unknowns = " ".join(marked["cause"]["unknowns"])
+    published = {ref.get("query_id") for ref in _published(marked)}
+    metric_ids = {
+        receipt.get("query_id")
+        for receipt in marked["receipts"]
+        if receipt.get("action") in (
+            "query_metrics", "get_resource_metrics",
+            "get_golden_signals", "check_latency",
+        )
+    }
+    log_ids = {
+        receipt.get("query_id")
+        for receipt in marked["receipts"]
+        if receipt.get("action") == "search_logs"
+    }
+    for row in rows:
+        assert row["evidence_key"]
+        assert row["query_id"]
+        assert row["query_id"] in metric_ids
+        assert row["query_id"] not in log_ids
+        assert row["query_id"] not in published
+        assert f"metric not read: {row['signal']} unparsed_format query_id={row['query_id']}" in unknowns
+    assert all(row.get("reason") != "unparsed_format" for row in coverage if row.get("reason") == "absent")
+
+
+def test_vendor_log_search_is_outside_unparsed_metrics(monkeypatch):
+    """The same Splunk body on the logs path is not an unparsed metric."""
+    slow = {
+        "_time": "2024-08-01T12:00:10Z",
+        "service": "ledger-quill",
+        "level": "ERROR",
+        "message": "slow query on ledger-quill took 4200ms",
+    }
+    result = _investigate(
+        monkeypatch,
+        mode="all_logs",
+        incident_type="latency",
+        service="ledger-quill",
+        logs=[slow],
+        summary="ledger-quill latency",
+        case_id="INC-C3-LOG-VENDOR",
+        start_time="2024-08-01T12:00:00Z",
+        log_body=dict(_SPLUNK_JSON),
+        metric_body={"metrics": {"metrics": [], "baseline": 0}},
+    )
+    coverage = result["_confidence_provenance"]["unchecked_coverage"]["unavailable_signals"]
+    assert not any(row.get("reason") == "unparsed_format" for row in coverage)
+    assert any(row.get("reason") == "absent" for row in coverage)
 
 
 @pytest.mark.parametrize("incident_type,summary,needle", [
@@ -1033,10 +1179,17 @@ def test_unknown_metric_from_dispatch_is_unparsed(monkeypatch):
     ("latency", "ledger-quill latency", "slow"),
     ("error_spike", "ledger-quill error spike", "error"),
 ])
-def test_capped_serve_without_a_receipt_flag_lists_its_query(monkeypatch, incident_type, summary, needle):
-    """Each search path lists its own capped query, keyed by query_id."""
-    window_start = "2024-08-01T11:45:00Z"
-    window_end = "2024-08-01T12:15:00Z"
+@pytest.mark.parametrize("case", ["requested", "unwindowed", "mismatch"])
+def test_capped_query_gap_uses_the_requested_window(
+    monkeypatch, incident_type, summary, needle, case,
+):
+    """The gap keeps the window the query asked for, not the one the search returned."""
+    requested = ("2024-08-01T11:45:00Z", "2024-08-01T12:15:00Z")
+    reported = ("2024-08-01T10:00:00Z", "2024-08-01T10:30:00Z")
+    if case == "requested":
+        returned = requested
+    else:
+        returned = reported
     line = _shaped_logs([
         {
             "_time": "2024-08-01T12:00:10Z",
@@ -1044,13 +1197,9 @@ def test_capped_serve_without_a_receipt_flag_lists_its_query(monkeypatch, incide
             "level": "ERROR",
             "message": "slow query on ledger-quill took 4200ms",
         }
-    ], limit=1, window_start=window_start, window_end=window_end)
+    ], limit=1, window_start=returned[0], window_end=returned[1])
     assert line["truncated"] is True
-    assert line["limit"] == 1
-    assert line["window_start"] == window_start
-    # The rows and the limit are the gateway's. The flag was not copied.
-    unmarked = dict(line)
-    unmarked.pop("truncated", None)
+    assert line["window_start"] == returned[0]
     full = _shaped_logs([
         {
             "_time": "2024-08-01T12:00:10Z",
@@ -1064,7 +1213,7 @@ def test_capped_serve_without_a_receipt_flag_lists_its_query(monkeypatch, incide
     def choose(action, params):
         query = str((params or {}).get("query") or "")
         if action == "search_logs" and needle in query:
-            return unmarked
+            return line
         if action == "search_logs":
             return full
         return {"changes": []}
@@ -1073,7 +1222,7 @@ def test_capped_serve_without_a_receipt_flag_lists_its_query(monkeypatch, incide
     monkeypatch.setenv("PARALLEL_PLAYBOOK", "false")
     monkeypatch.setenv("CALIBRATION_ENABLED", "false")
     incident = {
-        "id": f"INC-C4-{incident_type}",
+        "id": f"INC-C4-{incident_type}-{case}",
         "summary": summary,
         "affected_service": "ledger-quill",
         "severity": "high",
@@ -1082,6 +1231,17 @@ def test_capped_serve_without_a_receipt_flag_lists_its_query(monkeypatch, incide
     }
     sup = SentinalAISupervisor()
     sup._parallel_playbook = False
+    original = sup._build_params
+
+    def build_params(step, incident_id, service):
+        params = original(step, incident_id, service)
+        if case != "unwindowed" and step.get("action") == "search_logs":
+            if needle in str(params.get("query") or ""):
+                params["start_time"] = requested[0]
+                params["end_time"] = requested[1]
+        return params
+
+    sup._build_params = build_params
 
     class _Ops:
         def execute(self, action, params):
@@ -1107,24 +1267,47 @@ def test_capped_serve_without_a_receipt_flag_lists_its_query(monkeypatch, incide
     sup.workers["log_worker"] = _Logs()
     result = sup.investigate(incident["id"])
     gaps = result["_confidence_provenance"]["unchecked_coverage"]["query_gaps"]
-    assert len(gaps) == 1, (incident_type, gaps)
+    assert len(gaps) == 1, (incident_type, case, gaps)
     gap = gaps[0]
     receipts = [row for row in result["receipts"] if row.get("action") == "search_logs"]
     capped = next(row for row in receipts if needle in str(row.get("filter") or ""))
     others = [row for row in receipts if row is not capped]
-    assert "truncated" not in capped
+    assert capped.get("truncated") is True
     assert gap["query_id"] == capped["query_id"]
     assert gap["query_id"]
     assert gap["signal"]
     assert needle in gap["signal"]
-    assert gap["window_start"] == window_start
-    assert gap["window_end"] == window_end
+    assert gap["truncated"] is True
     assert all(gap["query_id"] != row.get("query_id") for row in others)
     unknowns = " ".join(result["cause"]["unknowns"])
-    assert f"query_id={gap['query_id']}" in unknowns
-    assert gap["signal"] in unknowns
-    assert gap["window_start"] in unknowns
-    truncations = result["_confidence_provenance"]["unchecked_coverage"]["truncations"]
-    capped_report = next(row for row in truncations if row.get("evidence_key") == gap["evidence_key"])
-    assert capped_report["truncation_unknown"] is True
-    assert "truncated" not in capped_report
+    asked = None if case == "unwindowed" else {"start": requested[0], "end": requested[1]}
+    if asked is None:
+        disclosure = f"capped query: {gap['signal']} query_id={gap['query_id']}"
+    else:
+        disclosure = (
+            f"capped query: {gap['signal']} query_id={gap['query_id']} "
+            f"window {asked['start']} to {asked['end']}"
+        )
+    # Recorded for this case: the window the query asked for, the cap,
+    # the query id, and the disclosure the final output must carry.
+    recorded = {
+        "requested_window": asked,
+        "cap": {"truncated": line["truncated"], "limit": line["limit"]},
+        "query_id": gap["query_id"],
+        "disclosure": disclosure,
+    }
+    assert recorded["cap"] == {"truncated": True, "limit": 1}
+    assert recorded["query_id"] == capped["query_id"]
+    assert recorded["disclosure"] in unknowns
+    assert "window  to " not in unknowns
+    if recorded["requested_window"] is None:
+        assert "window_start" not in gap
+        assert "window_end" not in gap
+        assert reported[0] not in unknowns
+        assert "search did not report the window it covered" in unknowns
+    else:
+        assert gap["window_start"] == recorded["requested_window"]["start"]
+        assert gap["window_end"] == recorded["requested_window"]["end"]
+        if case == "mismatch":
+            assert gap["window_start"] != returned[0]
+            assert returned[0] not in unknowns
